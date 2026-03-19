@@ -8,5 +8,5 @@
 |------|------|--------|
 | `manim-to-video-claw/` | Manim 视频渲染技术参考 | - |
 | `openmaic/` | OpenMAIC 多 Agent 协作参考 | AGPL-3.0 |
-| `RuoYi-Vue-Plus-5.X/` | RuoYi Java 管理后台框架 | MIT |
-| `ruoyi-plus-soybean-master/` | RuoYi React 版本 | MIT |
+|                        |                            |          |
+|                        |                            |          |
