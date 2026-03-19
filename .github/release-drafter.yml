@@ -1,0 +1,42 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  # 变更内容
+
+  $CHANGES
+
+  **完整变更日志**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: '破坏性变更'
+    label: 'type: breaking'
+  - title: '新功能'
+    label: 'type: feature'
+  - title: 'Bug 修复'
+    label: 'type: bug'
+  - title: '维护更新'
+    label: 'type: maintenance'
+  - title: '文档更新'
+    label: 'type: docs'
+  - title: '其他变更'
+  - title: '依赖更新'
+    label: 'type: dependencies'
+    collapse-after: 5
+
+version-resolver:
+  major:
+    labels:
+      - 'type: breaking'
+  minor:
+    labels:
+      - 'type: feature'
+  patch:
+    labels:
+      - 'type: bug'
+      - 'type: maintenance'
+      - 'type: docs'
+      - 'type: dependencies'
+      - 'type: security'
+
+exclude-labels:
+  - 'skip-changelog'

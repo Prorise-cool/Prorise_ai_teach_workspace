@@ -1,0 +1,8 @@
+# 自动分配审核人员
+
+addReviewers: true
+addAssignees: author
+reviewers:
+  - reviewer1
+  - reviewer2
+numberOfReviewers: 1
