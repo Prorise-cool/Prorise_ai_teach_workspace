@@ -16,15 +16,6 @@ node_modules/
 !.yarn/versions
 pnpm-debug.log*
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
-*.egg
-
 # ===========================================
 # Build Outputs
 # ===========================================
@@ -77,12 +68,10 @@ Thumbs.db
 # Worktrees & Git Internals
 # ===========================================
 .worktrees/
-.git/
 
 # ===========================================
 # Generated / Cache
 # ===========================================
-.gh-bootstrap-cache/
 .cache/
 data/
 *.sqlite
@@ -93,49 +82,103 @@ tmp/
 temp/
 
 # ===========================================
-# References (External Projects - Read Only)
+# Python (All Projects)
 # ===========================================
-references/manim-to-video-claw/node_modules/
-references/manim-to-video-claw/dist/
-references/manim-to-video-claw/build/
-references/manim-to-video-claw/__pycache__/
-references/manim-to-video-claw/.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+*.egg-link
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.manifest
 
+# ===========================================
+# Java / Maven / Gradle (RuoYi)
+# ===========================================
+packages/RuoYi-Vue-Plus-5.X/target/
+packages/RuoYi-Vue-Plus-5.X/.mvn/wrapper/
+packages/RuoYi-Vue-Plus-5.X/*.jar
+packages/RuoYi-Vue-Plus-5.X/spring-boot-starter-*.jar
+packages/RuoYi-Vue-Plus-5.X/.classpath
+packages/RuoYi-Vue-Plus-5.X/.project
+packages/RuoYi-Vue-Plus-5.X/.settings/
+packages/RuoYi-Vue-Plus-5.X/hspider/
+packages/RuoYi-Vue-Plus-5.X/ruoYi-admin/src/main/resources/application-druid.yml
+packages/RuoYi-Vue-Plus-5.X/ruoYi-admin/src/main/resources/generator/
+
+# ===========================================
+# React / Frontend (ruoyi-plus-soybean-master)
+# ===========================================
+packages/ruoyi-plus-soybean-master/node_modules/
+packages/ruoyi-plus-soybean-master/.next/
+packages/ruoyi-plus-soybean-master/out/
+packages/ruoyi-plus-soybean-master/dist/
+packages/ruoyi-plus-soybean-master/build/
+packages/ruoyi-plus-soybean-master/.expo/
+packages/ruoyi-plus-soybean-master/.turbo/
+packages/ruoyi-plus-soybean-master/coverage/
+packages/ruoyi-plus-soybean-master/*.local
+
+# ===========================================
+# FastAPI Backend (fastapi-backend)
+# ===========================================
+packages/fastapi-backend/__pycache__/
+packages/fastapi-backend/*.pyc
+packages/fastapi-backend/.venv/
+packages/fastapi-backend/venv/
+packages/fastapi-backend/.env
+packages/fastapi-backend/.pytest_cache/
+packages/fastapi-backend/.mypy_cache/
+packages/fastapi-backend/htmlcov/
+packages/fastapi-backend/.coverage
+
+# ===========================================
+# OpenMAIC Reference (references/openmaic)
+# ===========================================
 references/openmaic/node_modules/
 references/openmaic/.next/
 references/openmaic/out/
 references/openmaic/data/
 references/openmaic/logs/
 references/openmaic/server-providers*.yml
-references/openmaic/.vercel
-
-references/RuoYi-Vue-Plus-5.X/node_modules/
-references/RuoYi-Vue-Plus-5.X/target/
-references/RuoYi-Vue-Plus-5.X/*.jar
-references/RuoYi-Vue-Plus-5.X/.env
-
-references/ruoyi-plus-soybean-master/node_modules/
-references/ruoyi-plus-soybean-master/dist/
-references/ruoyi-plus-soybean-master/build/
-references/ruoyi-plus-soybean-master/.env
+references/openmaic/.vercel/
+references/openmaic/pnpm-store/
 
 # ===========================================
-# Packages (Local Development)
+# Manim Reference (references/manim-to-video-claw)
 # ===========================================
-packages/*/node_modules/
-packages/*/dist/
-packages/*/build/
-packages/*/.turbo/
-packages/*/coverage/
+references/manim-to-video-claw/node_modules/
+references/manim-to-video-claw/dist/
+references/manim-to-video-claw/build/
+references/manim-to-video-claw/__pycache__/
+references/manim-to-video-claw/.env
+references/manim-to-video-claw/manimtovideo/media/
+references/manim-to-video-claw/scenext/media/
+references/manim-to-video-claw/scenext-forwarding/media/
+references/manim-to-video-claw/storyboard/media/
+references/manim-to-video-claw/*.egg-info/
 
 # ===========================================
 # BMAD System (Development Tools)
 # ===========================================
 _bmad/_memory/
 _bmad/_config/local*
+_bmad-output/.cache/
 
 # ===========================================
 # Vercel / Deployment
 # ===========================================
 .vercel
 *.tgz
+
+# ===========================================
+# Temporary Files
+# ===========================================
+*.swp
+*.swo
+*~
