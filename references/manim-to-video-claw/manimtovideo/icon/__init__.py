@@ -1,0 +1,1 @@
+from .icon_gene import svg_img_main
