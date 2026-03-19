@@ -133,8 +133,6 @@ packages/*/coverage/
 # ===========================================
 _bmad/_memory/
 _bmad/_config/local*
-_bmad-output/
-!.bmad-output/.gitkeep
 
 # ===========================================
 # Vercel / Deployment

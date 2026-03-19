@@ -8,5 +8,3 @@
 |------|------|--------|
 | `manim-to-video-claw/` | Manim 视频渲染技术参考 | - |
 | `openmaic/` | OpenMAIC 多 Agent 协作参考 | AGPL-3.0 |
-|                        |                            |          |
-|                        |                            |          |
