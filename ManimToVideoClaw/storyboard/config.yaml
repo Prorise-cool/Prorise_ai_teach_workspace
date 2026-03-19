@@ -1,0 +1,49 @@
+# 列出模型名称即可,目的多平台负载均衡，
+models:
+  deepseek_r1:
+    - platform: DOUBAO
+      model_name: deepseek-r1-250528
+    - platform: DEEPSEEK
+      model_name: deepseek-reasoner
+  
+  deepseek_v3: 
+    - platform: DOUBAO
+      model_name: deepseek-v3-250324
+    - platform: DEEPSEEK
+      model_name: deepseek-chat
+
+  visual_model: 
+    - platform: SF
+      model_name: Qwen/Qwen2.5-VL-72B-Instruct
+
+  qwen_32b:
+    - platform: SF
+      model_name: Qwen/Qwen2.5-32B-Instruct
+
+  doubao:
+    - platform: DOUBAO
+      model_name: doubao-seed-1-6-250615
+
+
+# 或者用agent功能分,agent中只写模型名称，然后直接去上面获取信息
+agents:
+  code_agent: # 写代码的agent
+    model: deepseek_v3
+
+  visual_agent: # 可以看图的agent
+    model: visual_model
+
+  student_agent: # 模拟学生的agent
+    model: deepseek_v3
+
+  teacher_agent: # 模拟老师的agent
+    model: deepseek_v3
+
+  task_classification_agent: # 任务分类agent
+    model: deepseek_v3
+
+  solve_agent: 
+    model: deepseek_r1
+
+api_endpoint: 
+  scenext_url: https://<domain>/task
