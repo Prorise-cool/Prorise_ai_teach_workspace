@@ -164,13 +164,6 @@ references/manim-to-video-claw/storyboard/media/
 references/manim-to-video-claw/*.egg-info/
 
 # ===========================================
-# BMAD System (Development Tools)
-# ===========================================
-_bmad/_memory/
-_bmad/_config/local*
-_bmad-output/.cache/
-
-# ===========================================
 # Vercel / Deployment
 # ===========================================
 .vercel
