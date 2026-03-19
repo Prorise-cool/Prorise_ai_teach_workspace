@@ -1,0 +1,219 @@
+from manim import *
+import numpy as np
+import os
+import math
+{% if aspectRatio=="4:3" %}
+config.frame_height = 6  # 设置帧高度
+config.frame_width = 8  # 设置帧宽度
+config.pixel_height = 720  # 设置像素高度
+config.pixel_width = 960  # 设置像素宽度
+{% endif %}
+{% if aspectRatio=="9:16" %}
+config.frame_height = 16  # 设置帧高度
+config.frame_width = 9  # 设置帧宽度
+config.pixel_height = 1920  # 设置像素高度
+config.pixel_width = 1080  # 设置像素宽度
+{% endif %}
+
+
+class FlexibleElementsScene(MovingCameraScene):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # 跟踪最后添加的元素，用于后续元素的相对定位
+        self.last_element = None
+        # 存储所有添加的元素，便于后续引用
+        self.element_list = []
+        self.current_scale = 1.0
+    
+    def check_and_adjust_camera(self, element, run_time=0.5):
+        """检查元素是否超出画面，如果是则调整相机"""
+        if not hasattr(self.camera, "frame"):
+            return False
+        
+        camera_frame = self.camera.frame
+        frame_width = camera_frame.width
+        frame_height = camera_frame.height
+        frame_center = camera_frame.get_center()
+        
+        # 获取元素的边界点
+        element_left = element.get_critical_point(LEFT)[0]
+        element_right = element.get_critical_point(RIGHT)[0]
+        element_top = element.get_critical_point(UP)[1]
+        element_bottom = element.get_critical_point(DOWN)[1]
+        
+        # 计算相机视野的边界
+        left_bound = frame_center[0] - frame_width/2
+        right_bound = frame_center[0] + frame_width/2
+        top_bound = frame_center[1] + frame_height/2
+        bottom_bound = frame_center[1] - frame_height/2
+        
+        # 检查元素是否超出视野
+        exceed_left = element_left < left_bound
+        exceed_right = element_right > right_bound
+        exceed_top = element_top > top_bound
+        exceed_bottom = element_bottom < bottom_bound
+        
+        # 如果元素超出了任何边界
+        if exceed_left or exceed_right or exceed_top or exceed_bottom:
+            # 计算所需的横向和纵向缩放比例
+            padding = 0.9  # 给一点边距
+            
+            width_ratio = 1.0
+            if exceed_left or exceed_right:
+                element_width = element_right - element_left
+                width_ratio = element_width / frame_width
+            
+            height_ratio = 1.0
+            if exceed_top or exceed_bottom:
+                element_height = element_top - element_bottom
+                height_ratio = element_height / frame_height
+            
+            # 取较大的比例进行缩放，确保元素完全在视野内
+            scale_factor = 1 / max(width_ratio, height_ratio) * padding
+            
+            # 只有在需要缩小时才应用缩放
+            if scale_factor < 1.0:
+                # 计算元素中心位置
+                element_center = element.get_center()
+                
+                # 应用缩放并移动到元素中心
+                self.play(
+                    camera_frame.animate.scale(1/scale_factor).move_to(element_center),
+                    run_time=run_time
+                )
+                self.current_scale *= 1/scale_factor
+                return True
+        
+        return False
+    
+    def add_element(self, content, 
+                   buff=0.3,                # 元素间的缓冲距离
+                   center_on_previous=False, # 是否将相机对准前一个元素而非当前元素
+                   run_time=1
+                   ):   
+        """
+        向场景中添加具有灵活定位和样式的Manim元素
+        
+        参数:
+            content: 任何Manim对象(Mobject)或字符串(将被转换为Text对象)
+            buff: 缓冲空间距离
+            center_on_previous: 为True时，相机对准前一个元素而非当前元素
+        """
+        # 根据输入类型创建内容对象
+        if isinstance(content, str):
+            # 如果是字符串，转换为Text对象
+            content_obj = Text(content, font_size=30)
+        elif isinstance(content, VMobject) or isinstance(content, Mobject):
+            # 如果已经是Manim对象，直接使用
+            content_obj = content
+        else:
+            # 如果既不是字符串也不是Manim对象，抛出类型错误
+            raise TypeError("Content必须是字符串或Manim Mobject对象")
+            
+        # 使用内容对象作为元素
+        element = content_obj
+  
+        if self.last_element is not None:
+            # 相对于最后一个元素定位
+            element.next_to(self.last_element, DOWN, buff=buff)
+        else:
+            # 第一个元素 - 居中放置在屏幕上
+            element.move_to(ORIGIN)
+
+        
+        # 使用淡入动画添加元素
+        self.play(FadeIn(element), run_time=run_time)
+
+        
+        # 如果请求，移动相机中心 - 包含安全检查
+        try:
+            # 确定目标
+            if center_on_previous and self.last_element is not None:
+                # 相机对准前一个元素
+                camera_target = self.last_element
+            else:
+                # 相机对准当前元素
+                camera_target = element
+            
+            # 验证目标中心点是否有效（非无穷大值）
+            target_center = camera_target.get_center()
+            if np.all(np.isfinite(target_center)):
+                # 如果中心点有效，移动相机
+                if hasattr(self.camera, "frame"):
+                    # 2D 相机移动方法
+                    if self.current_scale == 1.0:
+                        self.play(
+                            self.camera.frame.animate.move_to(target_center).scale(1.2),
+                            run_time=run_time/2
+                        )
+                        self.current_scale = 1.2
+                    else:
+                        self.play(
+                            self.camera.frame.animate.move_to(target_center).scale(1.2/self.current_scale),
+                            run_time=run_time/2
+                        )
+                        self.current_scale *= 1.2/self.current_scale
+                elif hasattr(self, "move_camera"):  # 检查是否为ThreeDScene
+                    # 使用 ThreeDScene 的 move_camera 方法
+                    self.move_camera(
+                        frame_center=target_center,
+                        run_time=run_time/2
+                    )
+                else:
+                    print(f"警告: 无法确定相机类型，跳过相机移动")
+            else:
+                # 中心点无效时打印警告
+                print(f"警告: 跳过相机移动 - 无效的中心点: {target_center}")
+        except Exception as e:
+            # 捕获并打印移动相机过程中的任何错误
+            print(f"警告: 移动相机时出错: {e}")
+        
+        # 更新最后一个元素引用并添加到元素列表
+        self.last_element = element
+        self.element_list.append(element)
+        
+        # 检测元素是否超出画面，并在需要时自动调整相机
+        self.check_and_adjust_camera(element, run_time=run_time/2)
+        
+        # 返回创建的元素
+        return element
+
+    def add_elements(self, *elements, 
+                    buff=0.3,               # 元素间的缓冲距离
+                    run_time=1
+                    ):
+        """
+        一次添加多个元素，从上到下垂直排列。
+        每个元素放置在前一个元素下方。
+        
+        参数:
+            *elements: 要添加的可变数量元素（字符串或Manim对象）
+            buff: 元素间的缓冲距离
+        
+        返回:
+            添加的元素列表
+        """
+        # 创建添加元素的空列表
+        added_elements = []
+        
+        # 逐个添加每个元素
+        for i, element in enumerate(elements):
+            
+            # 使用现有的add_element方法添加元素
+            added = self.add_element(
+                content=element,
+                buff=buff,
+                run_time=run_time
+            )
+            
+            # 将添加的元素添加到列表中
+            added_elements.append(added)
+        
+        # 返回添加的所有元素列表
+        return added_elements
+
+config.background_color = {{background_color}}
+class MyScene(FlexibleElementsScene):
+    def construct(self):
+        
+        {{- current_code_info | indent(8,true,true)}}

@@ -1,0 +1,27 @@
+# ===========================================
+# Monorepo Root Configuration
+# ===========================================
+
+# Package Manager
+packageManager: pnpm@9.0.0
+
+# ===========================================
+# Workspaces
+# ===========================================
+packages:
+  - 'packages/*'
+
+# ===========================================
+# Scripts (Root level only for tooling)
+# ===========================================
+scripts:
+  # Install all workspaces
+  install:all: pnpm install
+  # Build all workspaces
+  build:all: pnpm -r run build
+  # Clean all workspaces
+  clean:all: pnpm -r run clean
+  # Lint all workspaces
+  lint:all: pnpm -r run lint
+  # Test all workspaces
+  test:all: pnpm -r run test

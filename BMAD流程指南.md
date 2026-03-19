@@ -1,0 +1,254 @@
+# BMAD 开发流程指南
+
+> 本文档映射 BMAD 方法中所有指令/代理与开发阶段的对应关系，帮助你确定在什么阶段执行什么流程、调用哪个命令。
+
+---
+
+## 概览：三大模块
+
+| 模块 | 用途 | 核心代理 |
+|------|------|---------|
+| **BMM** (Business Model Method) | 完整项目管理流程 | PM、Scrum Master、Developer、Analyst、Architect |
+| **CIS** (Creative Innovation Suite) | 创意发散与问题解决 | Innovation Strategist、Creative Problem Solver、Design Thinking Coach、Brainstorming Coach、Storyteller |
+| **WDS** (Wikki Design System) | UX 设计驱动开发 | Saga Analyst、Freya UX |
+| **TEA** (Testing Academy) | 测试工程 | Tea (测试导师) |
+| **CORE** | 通用工具 | Tech Writer、Brainstorming、Party Mode 等 |
+
+---
+
+## BMM 模块 — 完整开发流程
+
+### Phase 1: Analysis（分析阶段）
+
+| 顺序 | 工作流 | 命令 | 代理 | 说明 |
+|------|--------|------|------|------|
+| 10 | Brainstorm Project | `/bmad-brainstorming` | Mary 📊 | 引导式头脑风暴，使用单一或多种技术 |
+| 20 | Market Research | `/bmad-bmm-market-research` | Mary 📊 | 市场竞争分析、客户需求与趋势 |
+| 21 | Domain Research | `/bmad-bmm-domain-research` | Mary 📊 | 行业领域深度研究、主题专业知识 |
+| 22 | Technical Research | `/bmad-bmm-technical-research` | Mary 📊 | 技术可行性、架构选项与实施方案 |
+| 30 | Create Brief | `/bmad-bmm-create-product-brief` | Mary 📊 | 引导式产品愿景确认 |
+
+**产出**: `planning_artifacts/` 下的研究报告、产品简报
+
+---
+
+### Phase 2: Planning（规划阶段）
+
+| 顺序 | 工作流 | 命令 | 代理 | 必做 | 说明 |
+|------|--------|------|------|------|------|
+| 10 | **Create PRD** | `/bmad-bmm-create-prd` | John 📋 | ✅ | 生成产品需求文档 |
+| 20 | Validate PRD | `/bmad-bmm-validate-prd` | John 📋 | | 验证 PRD 完整性 |
+| 25 | Edit PRD | `/bmad-bmm-edit-prd` | John 📋 | | 改进现有 PRD |
+| 30 | Create UX | `/bmad-bmm-create-ux-design` | Sally 🎨 | | UX 设计指导（如果 UI 是主要部分，推荐执行）|
+
+**产出**: `planning_artifacts/prd.md`
+
+---
+
+### Phase 3: Solutioning（方案设计阶段）
+
+| 顺序 | 工作流 | 命令 | 代理 | 必做 | 说明 |
+|------|--------|------|------|------|------|
+| 10 | **Create Architecture** | `/bmad-bmm-create-architecture` | Winston 🏗️ | ✅ | 技术决策文档 |
+| 30 | **Create Epics and Stories** | `/bmad-bmm-create-epics-and-stories` | John 📋 | ✅ | 创建史诗与故事列表 |
+| 70 | **Check Implementation Readiness** | `/bmad-bmm-check-implementation-readiness` | Winston 🏗️ | ✅ | 确保 PRD、UX、架构与故事对齐 |
+
+**产出**: `planning_artifacts/architecture.md`、`epics-and-stories.md`
+
+---
+
+### Phase 4: Implementation（实施阶段）
+
+#### 故事循环（Story Cycle）
+
+```
+CS (Create Story) → VS (Validate Story) → DS (Dev Story) → CR (Code Review) → (返回 DS 如需修复) → 下一故事或 ER
+```
+
+| 顺序 | 工作流 | 命令 | 代理 | 必做 | 说明 |
+|------|--------|------|------|------|------|
+| 10 | **Sprint Planning** | `/bmad-bmm-sprint-planning` | Bob 🏃 | ✅ | 生成冲刺计划，启动实施阶段 |
+| 20 | Sprint Status | `/bmad-bmm-sprint-status` | Bob 🏃 | | 随时查看冲刺状态 |
+| 30 | **Create Story** | `/bmad-bmm-create-story` | Bob 🏃 | ✅ | 故事循环起点 |
+| 35 | Validate Story | `/bmad-bmm-create-story` (Validate Mode) | Bob 🏃 | | 开发前验证故事就绪状态 |
+| 40 | **Dev Story** | `/bmad-bmm-dev-story` | Amelia 💻 | ✅ | 故事实施 + 执行测试 |
+| 45 | QA Automation Test | `/bmad-bmm-qa-automate` | Quinn 🧪 | | 为已实现代码生成自动化测试 |
+| 50 | Code Review | `/bmad-bmm-code-review` | Amelia 💻 | | 审查通过 → 下一故事；有问题 → 返回 DS |
+| 60 | Retrospective | `/bmad-bmm-retrospective` | Bob 🏃 | | 史诗结尾可选：回顾经验教训 |
+
+**产出**: `implementation_artifacts/` 下的故事、测试、代码
+
+---
+
+### Anytime（任意时刻可用）
+
+| 工作流 | 命令 | 代理 | 说明 |
+|--------|------|------|------|
+| Document Project | `/bmad-bmm-document-project` | Mary 📊 | 分析现有项目生成文档 |
+| Generate Project Context | `/bmad-bmm-generate-project-context` | Mary 📊 | 扫描代码库生成 LLM 优化的 project-context.md |
+| **Quick Spec** | `/bmad-bmm-quick-spec` | Barry 🚀 | 快速一次性任务、小改动，不需要完整 BMM 流程时使用 |
+| **Quick Dev** | `/bmad-bmm-quick-dev` | Barry 🚀 | 快速开发任务，无须详细规划 |
+| Quick Dev New Preview | `/bmad-bmm-quick-dev-new-preview` | Barry 🚀 | 实验性统一快速流程：澄清意图→计划→实施→审查→展示 |
+| **Correct Course** | `/bmad-bmm-correct-course` | Bob 🏃 | 导航重大变化：可建议重新开始、更新 PRD、重做架构或冲刺规划 |
+| Write Document | `tech-writer` 代理 | Paige 📚 | 详细描述需求，代理按文档最佳实践执行 |
+| Update Standards | `tech-writer` 代理 | Paige 📚 | 更新文档规范 |
+| Mermaid Generate | `tech-writer` 代理 | Paige 📚 | 根据描述创建 Mermaid 图表 |
+| Validate Document | `tech-writer` 代理 | Paige 📚 | 审查文档是否符合标准 |
+| Explain Concept | `tech-writer` 代理 | Paige 📚 | 为复杂概念创建清晰的技术解释 |
+
+---
+
+## CIS 模块 — 创意创新套件
+
+> 所有工作流均为 `anytime`，可在任意阶段使用
+
+| 工作流 | 命令 | 代理 | 说明 |
+|--------|------|------|------|
+| Innovation Strategy | `/bmad-cis-innovation-strategy` | Victor ⚡ | 识别颠覆机会，架构商业模式创新 |
+| Problem Solving | `/bmad-cis-problem-solving` | Dr. Quinn 🔬 | 应用系统化方法解决复杂挑战 |
+| Design Thinking | `/bmad-cis-design-thinking` | Maya 🎨 | 同理心驱动的人本设计流程 |
+| Brainstorming | `/bmad-cis-brainstorming` | Carson 🧠 | 使用一种或多种技术的头脑风暴 |
+| Storytelling | `/bmad-cis-storytelling` | Sophia 📖 | 使用故事框架制作引人入胜的叙事 |
+
+---
+
+## WDS 模块 — Wikki 设计系统
+
+### Phase 0: Agent Activation（代理激活）
+
+| 工作流 | 命令 | 代理 | 说明 |
+|--------|------|------|------|
+| Wake Saga | `/bmad-wds-saga` | Saga | 唤醒 Saga（战略分析师），处理 Phase 1-2 |
+| Wake Freya | `/bmad-wds-freya` | Freya | 唤醒 Freya（UX 设计师），处理 Phase 3-4 |
+
+---
+
+### Phase 1: Strategy（策略阶段）
+
+| 顺序 | 工作流 | 命令 | 必做 | 说明 |
+|------|--------|------|------|------|
+| 10 | **Project Brief** | `/bmad-wds-project-brief` | ✅ | 产品愿景、定位、竞争分析、成功标准 |
+| 20 | **Trigger Mapping** | `/bmad-wds-trigger-mapping` | ✅ | 业务目标映射到用户心理，5 个研讨会 |
+| 30 | Platform Requirements | `/bmad-wds-platform-requirements` | | 技术边界定义（可选，推荐复杂产品使用）|
+| - | Alignment & Signoff | `/bmad-wds-alignment` | | 可选：获取利益相关者签署，适用于客户项目 |
+
+**产出**: `design_artifacts/A-Product-Brief/`、`design_artifacts/B-Trigger-Map/`
+
+---
+
+### Phase 2: Design（设计阶段）
+
+| 顺序 | 工作流 | 命令 | 必做 | 说明 |
+|------|--------|------|------|------|
+| 10 | **Outline Scenarios** | `/bmad-wds-outline-scenarios` | ✅ | 定义用户旅程，连接到 Trigger Map |
+| 20 | Conceptual Sketching | `/bmad-wds-conceptual-sketching` | | 快速粗略视觉探索（可选，推荐复杂流程）|
+| 30 | Storyboarding | `/bmad-wds-storyboarding` | | 屏幕时序、入口、转换、状态（可选）|
+| 40 | **Conceptual Specifications** | `/bmad-wds-conceptual-specs` | ✅ | 核心：记录每个设计决策（页面→章节→组件→元素→状态）|
+| 50 | Functional Components | `/bmad-wds-functional-components` | | 提取可复用组件模式 |
+| 60 | Visual Design | `/bmad-wds-visual-design` | | 视觉原型、HTML 原型、Figma 集成 |
+| 70 | Design System | `/bmad-wds-design-system` | | 组件库管理 |
+| 80 | **Design Delivery** | `/bmad-wds-design-delivery` | ✅ | 验证并打包交付物，生成 DD yaml 文件 |
+
+**产出**: `design_artifacts/C-UX-Scenarios/`、`design_artifacts/D-Design-System/`、`design_artifacts/E-PRD/Design-Deliveries/`
+
+---
+
+### Phase 3: Build（构建阶段）
+
+| 顺序 | 工作流 | 命令 | 说明 |
+|------|--------|------|------|
+| 10 | Agentic Development | `/bmad-wds-agentic-development` | 设计日志追踪，迭代构建，逐项验证 |
+| 20 | Acceptance Testing | `/bmad-wds-usability-testing` | 真实用户测试 |
+| 30 | Product Evolution | `/bmad-wds-product-evolution` | 持续改进：WDS 流程微型化处理反馈 |
+
+---
+
+## TEA 模块 — 测试学院
+
+### Phase 0: Learning
+
+| 工作流 | 命令 | 说明 |
+|--------|------|------|
+| Teach Me Testing | `/bmad-tea-teach-me-testing` | 通过 7 个会话学习测试基础 |
+
+### Phase 3: Solutioning
+
+| 工作流 | 命令 | 说明 |
+|--------|------|------|
+| Test Design | `/bmad-tea-testarch-test-design` | 基于风险的测试规划 |
+| Test Framework | `/bmad-tea-testarch-framework` | 初始化生产级测试框架 |
+| CI Setup | `/bmad-tea-testarch-ci` | 配置 CI/CD 质量流水线 |
+
+### Phase 4: Implementation
+
+| 工作流 | 命令 | 说明 |
+|--------|------|------|
+| ATDD | `/bmad-tea-testarch-atdd` | 生成失败测试（TDD 红阶段）|
+| Test Automation | `/bmad-tea-testarch-automate` | 扩展测试覆盖率 |
+| Test Review | `/bmad-tea-testarch-test-review` | 质量审计（0-100 评分）|
+| NFR Assessment | `/bmad-tea-testarch-nfr` | 非功能性需求评估 |
+| Traceability | `/bmad-tea-testarch-trace` | 覆盖率追溯与质量门禁 |
+
+---
+
+## CORE 模块 — 通用工具
+
+| 工作流 | 命令 | 说明 |
+|--------|------|------|
+| Brainstorming | `/bmad-brainstorming` | 生成多样化想法 |
+| Party Mode | `/bmad-party-mode` | 多代理讨论协作 |
+| bmad-help | `/bmad-help` | 显示下一步工作流 |
+| Index Docs | `/bmad-index-docs` | 创建轻量索引供 LLM 快速扫描 |
+| Shard Document | `/bmad-shard-doc` | 拆分大型文档（>500 行）|
+| Editorial Review - Prose | `/bmad-editorial-review-prose` | 文风润色 |
+| Editorial Review - Structure | `/bmad-editorial-review-structure` | 结构审查与重组 |
+| Adversarial Review | `/bmad-review-adversarial-general` | 批判性审查找问题 |
+| Edge Case Hunter Review | `/bmad-review-edge-case-hunter` | 边界条件与分支路径分析 |
+| Distillator | `/bmad-distillator` | LLM 优化的无损文档压缩 |
+
+---
+
+## 快速参考：何时使用何种命令
+
+### 我想要...
+| 场景 | 推荐命令 |
+|------|---------|
+| 产生创意想法 | `/bmad-brainstorming` 或 `/bmad-cis-brainstorming` |
+| 研究市场/竞品 | `/bmad-bmm-market-research` |
+| 确认产品方向 | `/bmad-bmm-create-product-brief` |
+| 完整规划产品 | `/bmad-bmm-create-prd` → `/bmad-bmm-create-architecture` → `/bmad-bmm-create-epics-and-stories` |
+| 做 UX 设计驱动开发 | 唤醒 Saga `/bmad-wds-saga` → 走 WDS Phase 1-3 流程 |
+| 解决复杂问题 | `/bmad-cis-problem-solving` |
+| 寻找颠覆机会 | `/bmad-cis-innovation-strategy` |
+| 快速实现一个小功能 | `/bmad-bmm-quick-dev` 或 `/bmad-bmm-quick-spec` |
+| 完整开发一个故事 | Sprint Planning `/bmad-bmm-sprint-planning` → Story Cycle |
+| 纠正项目方向 | `/bmad-bmm-correct-course` |
+| 写技术文档 | `tech-writer` 代理 |
+| 自动化测试 | `/bmad-bmm-qa-automate` 或 TEA 模块相关命令 |
+| 学习测试 | `/bmad-tea-teach-me-testing` |
+
+---
+
+## 流程图
+
+```
+BMM 完整流程:
+Phase 1: Analysis → Phase 2: Planning → Phase 3: Solutioning → Phase 4: Implementation
+   ↓                    ↓                    ↓                    ↓
+Brainstorm            Create PRD          Create Arch          Sprint Planning
+Market Research       Validate PRD        Create Epics&Stories  Story Cycle
+Domain Research       Edit PRD            Check Readiness       (CS→VS→DS→CR→DS...)
+Technical Research    Create UX
+Create Brief
+
+WDS 流程:
+Phase 0 → Phase 1 (Strategy) → Phase 2 (Design) → Phase 3 (Build)
+  ↓              ↓                    ↓                 ↓
+Wake Saga    Project Brief        Outline Scenarios    Agentic Dev
+Wake Freya   Trigger Mapping      Conceptual Specs    Acceptance Test
+             Platform Reqs        Design Delivery     Product Evolution
+```
+
+---
+
+*本文档由 `/bmad-help` 技能生成，基于 `_bmad/_config/bmad-help.csv` 配置*

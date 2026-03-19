@@ -1,43 +1,143 @@
-# 依赖
+# ===========================================
+# Monorepo Root .gitignore
+# Prorise AI Teach Workspace
+# ===========================================
+
+# ===========================================
+# Dependencies
+# ===========================================
 node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+pnpm-debug.log*
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-
-# 构建产物
-dist/
-build/
 *.egg-info/
 *.egg
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# ===========================================
+# Build Outputs
+# ===========================================
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
 
-# 环境配置
+# ===========================================
+# Testing
+# ===========================================
+coverage/
+
+# ===========================================
+# Environment & Secrets
+# ===========================================
 .env
 .env.local
 .env.*.local
+!.env.example
 
-# 日志
+# ===========================================
+# Logs
+# ===========================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# 系统文件
+# ===========================================
+# OS Files
+# ===========================================
 .DS_Store
 Thumbs.db
 
-# 缓存
+# ===========================================
+# IDE
+# ===========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===========================================
+# Worktrees & Git Internals
+# ===========================================
+.worktrees/
+.git/
+
+# ===========================================
+# Generated / Cache
+# ===========================================
 .gh-bootstrap-cache/
 .cache/
+data/
+*.sqlite
+*.db
+*.tmp
+*.temp
+tmp/
+temp/
 
-# Claude 配置（如果需要保留）
-# .claude/
-# .agents/
+# ===========================================
+# References (External Projects - Read Only)
+# ===========================================
+references/manim-to-video-claw/node_modules/
+references/manim-to-video-claw/dist/
+references/manim-to-video-claw/build/
+references/manim-to-video-claw/__pycache__/
+references/manim-to-video-claw/.env
+
+references/openmaic/node_modules/
+references/openmaic/.next/
+references/openmaic/out/
+references/openmaic/data/
+references/openmaic/logs/
+references/openmaic/server-providers*.yml
+references/openmaic/.vercel
+
+references/RuoYi-Vue-Plus-5.X/node_modules/
+references/RuoYi-Vue-Plus-5.X/target/
+references/RuoYi-Vue-Plus-5.X/*.jar
+references/RuoYi-Vue-Plus-5.X/.env
+
+references/ruoyi-plus-soybean-master/node_modules/
+references/ruoyi-plus-soybean-master/dist/
+references/ruoyi-plus-soybean-master/build/
+references/ruoyi-plus-soybean-master/.env
+
+# ===========================================
+# Packages (Local Development)
+# ===========================================
+packages/*/node_modules/
+packages/*/dist/
+packages/*/build/
+packages/*/.turbo/
+packages/*/coverage/
+
+# ===========================================
+# BMAD System (Development Tools)
+# ===========================================
+_bmad/_memory/
+_bmad/_config/local*
+_bmad-output/
+!.bmad-output/.gitkeep
+
+# ===========================================
+# Vercel / Deployment
+# ===========================================
+.vercel
+*.tgz
