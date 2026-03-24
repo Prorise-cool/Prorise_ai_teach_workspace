@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - 风格选择</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,'SF Pro','PingFang SC','Helvetica Neue',sans-serif;
+    background-color:#f5ede1;
+    color:#3b1701;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:'';position:absolute;
+    top:-180px;left:50%;transform:translateX(-50%);
+    width:800px;height:800px;
+    background:radial-gradient(circle,rgba(245,197,71,.2) 0%,transparent 70%);
+    pointer-events:none;z-index:0;
+  }
+
+  /* 进度指示器 */
+  .progress-bar{
+    position:relative;z-index:1;
+    max-width:600px;margin:0 auto;
+    padding:32px 40px 0;
+    display:flex;align-items:center;
+    gap:0;
+  }
+  .step{
+    display:flex;align-items:center;
+    font-size:13px;font-weight:600;
+    color:#6b4421;opacity:.4;
+    white-space:nowrap;
+  }
+  .step.active{opacity:1;color:#3b1701}
+  .step.done{opacity:.7;color:#52c41a}
+  .step-num{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:28px;height:28px;
+    border-radius:50%;
+    border:2px solid currentColor;
+    font-size:13px;font-weight:700;
+    margin-right:8px;
+    flex-shrink:0;
+  }
+  .step.active .step-num{
+    background:#f5c547;border-color:#f5c547;color:#fff;
+  }
+  .step.done .step-num{
+    background:#52c41a;border-color:#52c41a;color:#fff;
+  }
+  .step-line{
+    flex:1;height:2px;
+    background:rgba(59,23,1,.1);
+    margin:0 12px;
+    min-width:40px;
+  }
+  .step-line.done{background:#52c41a}
+
+  /* 主容器 */
+  .main{
+    position:relative;z-index:1;
+    max-width:900px;margin:0 auto;
+    padding:48px 40px 60px;
+    text-align:center;
+  }
+  .title{font-size:36px;font-weight:800;margin-bottom:8px}
+  .subtitle{font-size:16px;color:#6b4421;margin-bottom:48px}
+
+  /* 风格卡片网格 */
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+    margin-bottom:48px;
+  }
+
+  .card{
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border:2px solid rgba(59,23,1,.08);
+    border-radius:20px;
+    padding:32px 28px;
+    cursor:pointer;
+    transition:all .35s cubic-bezier(.4,0,.2,1);
+    position:relative;
+    overflow:hidden;
+    text-align:left;
+  }
+  .card::before{
+    content:'';position:absolute;
+    top:0;left:0;right:0;bottom:0;
+    border-radius:20px;
+    opacity:0;
+    transition:opacity .35s;
+    pointer-events:none;
+  }
+  .card:hover{
+    transform:translateY(-4px) scale(1.02);
+    box-shadow:0 12px 40px rgba(0,0,0,.08);
+  }
+  .card:hover::before{opacity:1}
+  .card.selected{
+    transform:translateY(-4px) scale(1.02);
+  }
+  .card.selected .check{
+    opacity:1;transform:scale(1);
+  }
+
+  /* 各风格颜色 */
+  .card[data-style="serious"]{--accent:#4a6fa5}
+  .card[data-style="serious"]::before{background:radial-gradient(circle at top right,rgba(74,111,165,.12),transparent 60%)}
+  .card[data-style="serious"].selected{border-color:#4a6fa5;box-shadow:0 8px 32px rgba(74,111,165,.2)}
+
+  .card[data-style="humor"]{--accent:#ff9500}
+  .card[data-style="humor"]::before{background:radial-gradient(circle at top right,rgba(255,149,0,.12),transparent 60%)}
+  .card[data-style="humor"].selected{border-color:#ff9500;box-shadow:0 8px 32px rgba(255,149,0,.2)}
+
+  .card[data-style="patient"]{--accent:#52c41a}
+  .card[data-style="patient"]::before{background:radial-gradient(circle at top right,rgba(82,196,26,.12),transparent 60%)}
+  .card[data-style="patient"].selected{border-color:#52c41a;box-shadow:0 8px 32px rgba(82,196,26,.2)}
+
+  .card[data-style="efficient"]{--accent:#722ed1}
+  .card[data-style="efficient"]::before{background:radial-gradient(circle at top right,rgba(114,46,209,.12),transparent 60%)}
+  .card[data-style="efficient"].selected{border-color:#722ed1;box-shadow:0 8px 32px rgba(114,46,209,.2)}
+
+  /* 头像 */
+  .avatar{
+    width:56px;height:56px;
+    border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;
+    margin-bottom:16px;
+    background:rgba(255,255,255,.9);
+    border:2px solid var(--accent);
+  }
+
+  .card-name{
+    font-size:20px;font-weight:700;
+    margin-bottom:4px;
+    color:var(--accent);
+  }
+  .card-desc{
+    font-size:14px;color:#6b4421;
+    margin-bottom:16px;
+  }
+  .card-quote{
+    font-size:13px;
+    color:#3b1701;
+    background:rgba(0,0,0,.03);
+    border-radius:10px;
+    padding:12px 16px;
+    line-height:1.6;
+    font-style:italic;
+    border-left:3px solid var(--accent);
+  }
+
+  /* 选中勾号 */
+  .check{
+    position:absolute;top:16px;right:16px;
+    width:28px;height:28px;
+    border-radius:50%;
+    background:var(--accent);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;
+    opacity:0;
+    transform:scale(.5);
+    transition:all .3s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* 按钮 */
+  .btn-start{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:56px;min-width:220px;padding:0 40px;
+    font-size:18px;font-weight:700;font-family:inherit;
+    color:#fff;
+    background:linear-gradient(135deg,#f5c547,#e6b030);
+    border:none;border-radius:14px;
+    cursor:pointer;
+    transition:all .3s;
+    box-shadow:0 4px 16px rgba(245,197,71,.35);
+  }
+  .btn-start:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 28px rgba(245,197,71,.45);
+  }
+  .btn-start:disabled{
+    opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;
+  }
+</style>
+</head>
+<body>
+
+<!-- 进度指示器 -->
+<div class="progress-bar">
+  <div class="step done">
+    <span class="step-num">&#10003;</span>选择主题
+  </div>
+  <div class="step-line done"></div>
+  <div class="step active">
+    <span class="step-num">2</span>选择风格
+  </div>
+  <div class="step-line"></div>
+  <div class="step">
+    <span class="step-num">3</span>生成课堂
+  </div>
+</div>
+
+<main class="main">
+  <h1 class="title">选择教学风格</h1>
+  <p class="subtitle">每位老师都有独特的教学方式，选一位最适合你的</p>
+
+  <div class="grid">
+    <!-- 严肃型 -->
+    <div class="card" data-style="serious">
+      <span class="check">&#10003;</span>
+      <div class="avatar">&#128104;&#8205;&#127979;</div>
+      <div class="card-name">严老师</div>
+      <div class="card-desc">专业严谨，逻辑清晰</div>
+      <div class="card-quote">"递归是一种算法思想，让我们从定义开始..."</div>
+    </div>
+
+    <!-- 幽默型 -->
+    <div class="card" data-style="humor">
+      <span class="check">&#10003;</span>
+      <div class="avatar">&#128516;</div>
+      <div class="card-name">小幽默</div>
+      <div class="card-desc">轻松有趣，寓教于乐</div>
+      <div class="card-quote">"让我们用俄罗斯套娃来理解递归！"</div>
+    </div>
+
+    <!-- 耐心型 -->
+    <div class="card" data-style="patient">
+      <span class="check">&#10003;</span>
+      <div class="avatar">&#129303;</div>
+      <div class="card-name">耐心姐</div>
+      <div class="card-desc">一步一步，不急不躁</div>
+      <div class="card-quote">"别着急，我们先理解这个概念的基础..."</div>
+    </div>
+
+    <!-- 高效型 -->
+    <div class="card" data-style="efficient">
+      <span class="check">&#10003;</span>
+      <div class="avatar">&#128640;</div>
+      <div class="card-name">快博士</div>
+      <div class="card-desc">直奔主题，快速掌握</div>
+      <div class="card-quote">"核心要点就这三个，记住即可"</div>
+    </div>
+  </div>
+
+  <button class="btn-start" id="btnStart" disabled>开始生成</button>
+</main>
+
+<script>
+  const cards = document.querySelectorAll('.card');
+  const btn = document.getElementById('btnStart');
+  let selectedStyle = null;
+
+  cards.forEach(card => {
+    card.addEventListener('click', function() {
+      cards.forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedStyle = this.getAttribute('data-style');
+      btn.disabled = false;
+    });
+  });
+
+  btn.addEventListener('click', function() {
+    if (!this.disabled) {
+      window.location.href = '03-generating.html';
+    }
+  });
+</script>
+
+</body>
+</html>

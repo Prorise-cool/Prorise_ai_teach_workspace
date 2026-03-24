@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小麦 - 历史记录</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, 'SF Pro', 'PingFang SC', sans-serif;
+      background-color: #f5ede1;
+      color: #3b1701;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 6vh 20px;
+    }
+
+    .page-container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* -- Header -- */
+    .page-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      color: #3b1701;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(59, 23, 1, 0.06);
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      padding-right: 40px;
+    }
+
+    /* -- Filter Bar -- */
+    .filter-bar {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 24px rgba(59, 23, 1, 0.06);
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-label {
+      font-size: 14px;
+      color: #6b4421;
+      margin-right: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .filter-tab {
+      padding: 7px 16px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: #6b4421;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .filter-tab:hover {
+      background: rgba(245, 197, 71, 0.1);
+    }
+
+    .filter-tab.active {
+      background: #f5c547;
+      color: #3b1701;
+      font-weight: 600;
+    }
+
+    /* -- History List -- */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .history-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 24px rgba(59, 23, 1, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .history-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(59, 23, 1, 0.1);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .history-thumb {
+      width: 80px;
+      height: 60px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #e8dcc8 0%, #d4c4a8 100%);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #6b4421;
+    }
+
+    .history-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .history-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .type-tag {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .type-tag.classroom {
+      background: rgba(74, 111, 165, 0.12);
+      color: #4a6fa5;
+    }
+
+    .type-tag.qa {
+      background: rgba(255, 149, 0, 0.12);
+      color: #ff9500;
+    }
+
+    .history-time {
+      font-size: 12px;
+      color: #6b4421;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(245, 237, 225, 0.6);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(245, 197, 71, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.view-btn:hover {
+      background: rgba(74, 111, 165, 0.12);
+    }
+
+    .action-btn.fav-btn:hover {
+      background: rgba(245, 197, 71, 0.2);
+    }
+
+    .action-btn.del-btn:hover {
+      background: rgba(255, 77, 79, 0.1);
+    }
+
+    /* -- Load More -- */
+    .load-more {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: 2px dashed #d4c4a8;
+      border-radius: 14px;
+      background: transparent;
+      color: #6b4421;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+
+    .load-more:hover {
+      border-color: #f5c547;
+      color: #3b1701;
+      background: rgba(245, 197, 71, 0.06);
+    }
+
+    /* -- Empty State (hidden by default, shown via comment) -- */
+    /*
+    <div class="empty-state">
+      <div class="empty-icon">&#128230;</div>
+      <div class="empty-text">还没有学习记录</div>
+      <button class="empty-action">开始学习</button>
+    </div>
+    */
+    .empty-state {
+      display: none; /* Toggle to flex to preview empty state */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 18px;
+      color: #6b4421;
+      margin-bottom: 24px;
+    }
+
+    .empty-action {
+      padding: 12px 32px;
+      border-radius: 12px;
+      border: none;
+      background: #f5c547;
+      color: #3b1701;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+
+    .empty-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(245, 197, 71, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <a class="back-btn" href="01-profile.html">&larr;</a>
+      <h1 class="page-title">历史记录</h1>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">类型</span>
+        <button class="filter-tab active">全部</button>
+        <button class="filter-tab">课堂</button>
+        <button class="filter-tab">视频</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">时间</span>
+        <button class="filter-tab active">今天</button>
+        <button class="filter-tab">本周</button>
+        <button class="filter-tab">本月</button>
+        <button class="filter-tab">全部</button>
+      </div>
+    </div>
+
+    <!-- History List -->
+    <div class="history-list">
+
+      <!-- Item 1 -->
+      <div class="history-card">
+        <div class="history-thumb">&#128218;</div>
+        <div class="history-info">
+          <div class="history-title">递归算法入门</div>
+          <div class="history-meta">
+            <span class="type-tag classroom">初学场景</span>
+            <span class="history-time">2小时前</span>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn fav-btn" title="收藏">&#9825;</button>
+          <button class="action-btn del-btn" title="删除">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="history-card">
+        <div class="history-thumb">&#127909;</div>
+        <div class="history-info">
+          <div class="history-title">二叉树的前序遍历</div>
+          <div class="history-meta">
+            <span class="type-tag qa">问答Agent</span>
+            <span class="history-time">5小时前</span>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn fav-btn" title="收藏">&#9825;</button>
+          <button class="action-btn del-btn" title="删除">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="history-card">
+        <div class="history-thumb">&#128218;</div>
+        <div class="history-info">
+          <div class="history-title">微积分基础 - 极限与连续</div>
+          <div class="history-meta">
+            <span class="type-tag classroom">初学场景</span>
+            <span class="history-time">昨天</span>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn fav-btn" title="收藏">&#9829;</button>
+          <button class="action-btn del-btn" title="删除">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 4 -->
+      <div class="history-card">
+        <div class="history-thumb">&#127909;</div>
+        <div class="history-info">
+          <div class="history-title">快速排序算法讲解</div>
+          <div class="history-meta">
+            <span class="type-tag qa">问答Agent</span>
+            <span class="history-time">3天前</span>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn fav-btn" title="收藏">&#9825;</button>
+          <button class="action-btn del-btn" title="删除">&#128465;</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Load More -->
+    <button class="load-more">加载更多</button>
+
+    <!-- Empty State (toggle display to preview) -->
+    <div class="empty-state">
+      <div class="empty-icon">&#128230;</div>
+      <div class="empty-text">还没有学习记录</div>
+      <button class="empty-action">开始学习</button>
+    </div>
+
+  </div>
+
+  <script>
+    // Filter tab switching
+    document.querySelectorAll('.filter-group').forEach(function(group) {
+      var tabs = group.querySelectorAll('.filter-tab');
+      tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          tabs.forEach(function(t) { t.classList.remove('active'); });
+          tab.classList.add('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

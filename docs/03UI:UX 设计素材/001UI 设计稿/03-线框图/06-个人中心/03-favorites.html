@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小麦 - 收藏夹</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, 'SF Pro', 'PingFang SC', sans-serif;
+      background-color: #f5ede1;
+      color: #3b1701;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 6vh 20px;
+    }
+
+    .page-container {
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* -- Header -- */
+    .page-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      color: #3b1701;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(59, 23, 1, 0.06);
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+      padding-right: 40px;
+    }
+
+    /* -- Folder Tabs -- */
+    .folder-bar {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 24px rgba(59, 23, 1, 0.06);
+      margin-bottom: 24px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .folder-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .folder-tab {
+      padding: 8px 20px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: #6b4421;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      font-family: inherit;
+      position: relative;
+    }
+
+    .folder-tab:hover {
+      background: rgba(245, 197, 71, 0.08);
+    }
+
+    .folder-tab.active {
+      color: #3b1701;
+      font-weight: 600;
+      background: transparent;
+    }
+
+    .folder-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 3px;
+      background: #f5c547;
+      border-radius: 2px;
+    }
+
+    .folder-tab.add-folder {
+      color: #f5c547;
+      font-weight: 600;
+      border: 1.5px dashed #f5c547;
+      border-radius: 10px;
+    }
+
+    .folder-tab.add-folder:hover {
+      background: rgba(245, 197, 71, 0.1);
+    }
+
+    /* -- Favorites List -- */
+    .favorites-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .fav-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 24px rgba(59, 23, 1, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .fav-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(59, 23, 1, 0.1);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .fav-thumb {
+      width: 80px;
+      height: 60px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #e8dcc8 0%, #d4c4a8 100%);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #6b4421;
+    }
+
+    .fav-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .fav-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fav-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .type-tag {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+
+    .type-tag.classroom {
+      background: rgba(74, 111, 165, 0.12);
+      color: #4a6fa5;
+    }
+
+    .type-tag.qa {
+      background: rgba(255, 149, 0, 0.12);
+      color: #ff9500;
+    }
+
+    .folder-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(245, 197, 71, 0.12);
+      color: #b8860b;
+      font-weight: 500;
+    }
+
+    .fav-time {
+      font-size: 12px;
+      color: #6b4421;
+    }
+
+    .fav-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(245, 237, 225, 0.6);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: rgba(245, 197, 71, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.move-btn:hover {
+      background: rgba(74, 111, 165, 0.1);
+    }
+
+    .action-btn.del-btn:hover {
+      background: rgba(255, 77, 79, 0.1);
+    }
+
+    /* -- Load More -- */
+    .load-more {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: 2px dashed #d4c4a8;
+      border-radius: 14px;
+      background: transparent;
+      color: #6b4421;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+
+    .load-more:hover {
+      border-color: #f5c547;
+      color: #3b1701;
+      background: rgba(245, 197, 71, 0.06);
+    }
+
+    /* -- Modal Overlay -- */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(59, 23, 1, 0.3);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-overlay.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 32px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 16px 48px rgba(59, 23, 1, 0.15);
+      transform: translateY(20px);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.visible .modal {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e6dcc8;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      color: #3b1701;
+      outline: none;
+      transition: border-color 0.2s ease;
+      background: #faf7f2;
+    }
+
+    .modal-input:focus {
+      border-color: #f5c547;
+    }
+
+    .modal-input::placeholder {
+      color: #b8a88a;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-btn {
+      padding: 10px 24px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .modal-btn.cancel {
+      background: transparent;
+      color: #6b4421;
+    }
+
+    .modal-btn.cancel:hover {
+      background: rgba(245, 237, 225, 0.5);
+    }
+
+    .modal-btn.confirm {
+      background: #f5c547;
+      color: #3b1701;
+    }
+
+    .modal-btn.confirm:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 197, 71, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <a class="back-btn" href="01-profile.html">&larr;</a>
+      <h1 class="page-title">收藏夹</h1>
+    </div>
+
+    <!-- Folder Tabs -->
+    <div class="folder-bar">
+      <button class="folder-tab active">全部收藏</button>
+      <button class="folder-tab">微积分</button>
+      <button class="folder-tab">数据结构</button>
+      <button class="folder-tab add-folder" id="openModalBtn">+ 新建</button>
+    </div>
+
+    <!-- Favorites List -->
+    <div class="favorites-list">
+
+      <!-- Item 1 -->
+      <div class="fav-card">
+        <div class="fav-thumb">&#128218;</div>
+        <div class="fav-info">
+          <div class="fav-title">递归算法入门</div>
+          <div class="fav-meta">
+            <span class="type-tag classroom">初学场景</span>
+            <span class="folder-tag">数据结构</span>
+            <span class="fav-time">收藏于 3天前</span>
+          </div>
+        </div>
+        <div class="fav-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn move-btn" title="移动">&#128193;</button>
+          <button class="action-btn del-btn" title="取消收藏">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="fav-card">
+        <div class="fav-thumb">&#127909;</div>
+        <div class="fav-info">
+          <div class="fav-title">极限的定义与计算</div>
+          <div class="fav-meta">
+            <span class="type-tag qa">问答Agent</span>
+            <span class="folder-tag">微积分</span>
+            <span class="fav-time">收藏于 1周前</span>
+          </div>
+        </div>
+        <div class="fav-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn move-btn" title="移动">&#128193;</button>
+          <button class="action-btn del-btn" title="取消收藏">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="fav-card">
+        <div class="fav-thumb">&#128218;</div>
+        <div class="fav-info">
+          <div class="fav-title">快速排序与归并排序对比</div>
+          <div class="fav-meta">
+            <span class="type-tag classroom">初学场景</span>
+            <span class="folder-tag">数据结构</span>
+            <span class="fav-time">收藏于 2周前</span>
+          </div>
+        </div>
+        <div class="fav-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn move-btn" title="移动">&#128193;</button>
+          <button class="action-btn del-btn" title="取消收藏">&#128465;</button>
+        </div>
+      </div>
+
+      <!-- Item 4 -->
+      <div class="fav-card">
+        <div class="fav-thumb">&#127909;</div>
+        <div class="fav-info">
+          <div class="fav-title">导数的几何意义</div>
+          <div class="fav-meta">
+            <span class="type-tag qa">问答Agent</span>
+            <span class="folder-tag">微积分</span>
+            <span class="fav-time">收藏于 3周前</span>
+          </div>
+        </div>
+        <div class="fav-actions">
+          <button class="action-btn view-btn" title="查看">&#128065;</button>
+          <button class="action-btn move-btn" title="移动">&#128193;</button>
+          <button class="action-btn del-btn" title="取消收藏">&#128465;</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Load More -->
+    <button class="load-more">加载更多</button>
+
+  </div>
+
+  <!-- New Folder Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-title">新建文件夹</div>
+      <input class="modal-input" type="text" placeholder="输入文件夹名称" autofocus>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" id="cancelBtn">取消</button>
+        <button class="modal-btn confirm">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Folder tab switching
+    var folderTabs = document.querySelectorAll('.folder-tab:not(.add-folder)');
+    folderTabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        folderTabs.forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+      });
+    });
+
+    // Modal open/close
+    var overlay = document.getElementById('modalOverlay');
+    document.getElementById('openModalBtn').addEventListener('click', function() {
+      overlay.classList.add('visible');
+    });
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+      overlay.classList.remove('visible');
+    });
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.classList.remove('visible');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小麦布局草图 V2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Mono', 'Monaco', monospace; background: #f5f5f5; padding: 40px; font-size: 12px; color: #333; }
+
+        .section { background: white; border: 2px solid #333; margin-bottom: 200px; padding: 20px; }
+        .section-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+        .section-title .num { width: 32px; height: 32px; border: 2px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .section-title .line { flex: 1; border-bottom: 2px dashed #333; }
+
+        /* 通用草图元素 */
+        .box { border: 2px solid #333; display: flex; align-items: center; justify-content: center; position: relative; }
+        .box-dashed { border: 2px dashed #999; }
+        .placeholder { border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; }
+
+        .pill { border: 2px solid #333; border-radius: 999px; padding: 6px 16px; display: inline-flex; align-items: center; gap: 8px; }
+        .btn { border: 2px solid #333; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px; }
+        .avatar { width: 32px; height: 32px; border: 2px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .avatar-sm { width: 24px; height: 24px; }
+        .avatar-lg { width: 48px; height: 48px; }
+
+        .text-line { border-bottom: 2px solid #333; height: 0; }
+        .text-line-gray { border-bottom: 2px dashed #999; }
+
+        /* 布局容器 */
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .flex-1 { flex: 1; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .p-2 { padding: 8px; }
+        .p-3 { padding: 12px; }
+        .p-4 { padding: 16px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-2 { margin-top: 8px; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .space-y-2 > * + * { margin-top: 8px; }
+        .rounded { border-radius: 8px; }
+        .rounded-lg { border-radius: 16px; }
+        .rounded-full { border-radius: 999px; }
+        .w-1\/5 { width: 20%; }
+        .w-1\/4 { width: 25%; }
+        .w-1\/3 { width: 33.33%; }
+        .w-1\/2 { width: 50%; }
+        .h-screen { height: 100vh; }
+        .overflow-auto { overflow: auto; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; font-size: 28px; margin-bottom: 60px;">
+        小麦 (XiaoMai) 布局草图 V2
+    </h1>
+
+    <!-- ==================== 1. 落地页 ==================== -->
+    <div class="section">
+        <div class="section-title">
+            <div class="num">1</div>
+            <span>落地页 - 展示案例</span>
+            <div class="line"></div>
+        </div>
+
+        <div style="min-height: 600px; display: flex; flex-direction: column;">
+            <!-- 顶部导航 -->
+            <div class="box" style="height: 60px; justify-content: space-between; padding: 0 30px; margin-bottom: 20px;">
+                <div class="flex gap-3 items-center">
+                    <div class="placeholder" style="width: 40px; height: 40px; border-radius: 50%;">L</div>
+                    <div class="text-line" style="width: 80px;"></div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <div class="pill">功能介绍</div>
+                    <div class="pill">案例展示</div>
+                    <div class="pill">关于我们</div>
+                    <div class="btn rounded-full">登录 / 注册</div>
+                </div>
+            </div>
+
+            <!-- Hero 区域 -->
+            <div style="text-align: center; padding: 60px 20px;">
+                <div class="flex gap-3 items-center justify-center mb-4">
+                    <div class="placeholder" style="width: 48px; height: 48px; border-radius: 50%; transform: rotate(45deg);">
+                        <div style="transform: rotate(-45deg);">麦</div>
+                    </div>
+                    <div class="text-line" style="width: 120px; height: 12px;"></div>
+                </div>
+                <div class="text-line" style="width: 400px; height: 16px; margin: 0 auto 20px;"></div>
+                <div class="text-line text-line-gray" style="width: 500px; margin: 0 auto 40px;"></div>
+
+                <div class="flex gap-3 justify-center mb-4">
+                    <div class="btn rounded-full" style="background: #fffbe6;">
+                        <div class="placeholder avatar-sm">▶</div>
+                        <div class="text-line" style="width: 60px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 案例展示区 -->
+            <div style="padding: 0 40px; flex: 1;">
+                <div class="flex gap-3 mb-4 justify-center">
+                    <div class="text-line" style="width: 100px; height: 8px;"></div>
+                </div>
+                <div class="flex gap-4" style="justify-content: center;">
+                    <!-- 案例卡片 1 -->
+                    <div class="box" style="width: 280px; height: 200px; flex-direction: column; border-radius: 16px; padding: 16px;">
+                        <div class="box-dashed flex-1 mb-3 rounded" style="width: 100%;">📹 视频案例1</div>
+                        <div class="text-line" style="width: 80%;"></div>
+                        <div class="text-line text-line-gray" style="width: 60%; margin-top: 8px;"></div>
+                    </div>
+                    <!-- 案例卡片 2 -->
+                    <div class="box" style="width: 280px; height: 200px; flex-direction: column; border-radius: 16px; padding: 16px;">
+                        <div class="box-dashed flex-1 mb-3 rounded" style="width: 100%;">📹 视频案例2</div>
+                        <div class="text-line" style="width: 80%;"></div>
+                        <div class="text-line text-line-gray" style="width: 60%; margin-top: 8px;"></div>
+                    </div>
+                    <!-- 案例卡片 3 -->
+                    <div class="box" style="width: 280px; height: 200px; flex-direction: column; border-radius: 16px; padding: 16px;">
+                        <div class="box-dashed flex-1 mb-3 rounded" style="width: 100%;">📹 视频案例3</div>
+                        <div class="text-line" style="width: 80%;"></div>
+                        <div class="text-line text-line-gray" style="width: 60%; margin-top: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA 按钮 -->
+            <div style="text-align: center; padding: 40px;">
+                <div class="btn rounded-full" style="padding: 16px 40px; background: #f5c547; border-color: #f5c547;">
+                    <div class="text-line" style="width: 100px; border-color: #333;"></div>
+                    <div class="placeholder avatar-sm">→</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 2. 双入口选择页 ==================== -->
+    <div class="section">
+        <div class="section-title">
+            <div class="num">2</div>
+            <span>双入口选择页</span>
+            <div class="line"></div>
+        </div>
+
+        <div style="min-height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+            <!-- Logo + 标题 -->
+            <div class="flex gap-3 items-center mb-4">
+                <div class="placeholder" style="width: 48px; height: 48px; border-radius: 50%;">麦</div>
+                <div class="text-line" style="width: 100px; height: 12px;"></div>
+            </div>
+            <div class="text-line text-line-gray" style="width: 300px; margin-bottom: 50px;"></div>
+
+            <!-- 双入口卡片 -->
+            <div class="flex gap-6">
+                <!-- 入口1：我想学 -->
+                <div class="box" style="width: 320px; height: 220px; flex-direction: column; border-radius: 20px; cursor: pointer; padding: 30px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
+                    <div class="text-line" style="width: 120px; height: 10px; margin-bottom: 10px;"></div>
+                    <div class="text-line text-line-gray" style="width: 180px; margin-bottom: 5px;"></div>
+                    <div class="text-line text-line-gray" style="width: 140px;"></div>
+                </div>
+                <!-- 入口2：帮我讲解 -->
+                <div class="box" style="width: 320px; height: 220px; flex-direction: column; border-radius: 20px; cursor: pointer; padding: 30px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">❓</div>
+                    <div class="text-line" style="width: 140px; height: 10px; margin-bottom: 10px;"></div>
+                    <div class="text-line text-line-gray" style="width: 180px; margin-bottom: 5px;"></div>
+                    <div class="text-line text-line-gray" style="width: 140px;"></div>
+                </div>
+            </div>
+
+            <!-- 底部提示 -->
+            <div class="text-line text-line-gray" style="width: 250px; margin-top: 40px;"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 3. 主工作区 - 三栏布局 ==================== -->
+    <div class="section">
+        <div class="section-title">
+            <div class="num">3</div>
+            <span>主工作区 - 三栏布局（参考 OpenMAIC）</span>
+            <div class="line"></div>
+        </div>
+
+        <div class="flex" style="height: 600px; gap: 8px;">
+
+            <!-- 左侧边栏 (导航/大纲) -->
+            <div class="box flex-col" style="width: 18%;">
+                <!-- Logo 区域 -->
+                <div class="flex justify-between items-center p-3" style="border-bottom: 2px solid #333;">
+                    <div class="flex gap-2 items-center">
+                        <div class="placeholder avatar">L</div>
+                        <div class="text-line" style="width: 50px;"></div>
+                    </div>
+                    <div class="placeholder avatar-sm"></div>
+                </div>
+
+                <!-- 缩略图列表 -->
+                <div class="flex-1 overflow-auto p-2 space-y-2">
+                    <div class="box" style="padding: 8px; flex-direction: column; align-items: stretch;">
+                        <div class="flex gap-2 items-center mb-2">
+                            <div class="placeholder avatar-sm">1</div>
+                            <div class="text-line" style="flex: 1;"></div>
+                        </div>
+                        <div class="box-dashed" style="height: 50px; font-size: 10px;">Slide 1</div>
+                    </div>
+                    <div class="box" style="padding: 8px; flex-direction: column; align-items: stretch; background: #fffbe6;">
+                        <div class="flex gap-2 items-center mb-2">
+                            <div class="placeholder avatar-sm">2</div>
+                            <div class="text-line" style="flex: 1;"></div>
+                        </div>
+                        <div class="box-dashed" style="height: 50px; font-size: 10px;">Slide 2 ←</div>
+                    </div>
+                    <div class="box" style="padding: 8px; flex-direction: column; align-items: stretch;">
+                        <div class="flex gap-2 items-center mb-2">
+                            <div class="placeholder avatar-sm">3</div>
+                            <div class="text-line" style="flex: 1;"></div>
+                        </div>
+                        <div class="box-dashed" style="height: 50px; font-size: 10px;">Slide 3</div>
+                    </div>
+                    <div class="box" style="padding: 8px; flex-direction: column; align-items: stretch;">
+                        <div class="flex gap-2 items-center mb-2">
+                            <div class="placeholder avatar-sm">4</div>
+                            <div class="text-line" style="flex: 1;"></div>
+                        </div>
+                        <div class="box-dashed" style="height: 50px; font-size: 10px;">Slide 4</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间主区域 -->
+            <div class="flex flex-col flex-1 gap-2">
+                <!-- 顶部导航栏 -->
+                <div class="box" style="height: 50px; justify-content: space-between; padding: 0 16px;">
+                    <div class="flex gap-3 items-center">
+                        <div class="placeholder avatar-sm">←</div>
+                        <div class="text-line" style="width: 150px;"></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="btn rounded-full" style="padding: 4px 12px;">
+                            <div class="text-line" style="width: 30px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 核心展示区 -->
+                <div class="box flex-col flex-1 p-4">
+                    <div class="box flex-col flex-1 p-6">
+                        <div style="position: absolute; top: 10px; right: 10px; font-size: 24px; font-weight: bold;">01</div>
+                        <!-- 标题 -->
+                        <div class="text-line" style="width: 60%; height: 10px; margin: 0 auto 30px;"></div>
+
+                        <!-- 内容区 -->
+                        <div class="flex flex-1 gap-6">
+                            <!-- 左：视频/动画区 -->
+                            <div class="flex flex-col gap-2" style="width: 50%;">
+                                <div class="box-dashed flex-1">📹 Manim 动画</div>
+                                <div class="text-line" style="width: 50%; margin: 0 auto;"></div>
+                                <div class="text-line text-line-gray" style="width: 70%; margin: 0 auto;"></div>
+                            </div>
+
+                            <!-- 右：要点区 -->
+                            <div class="flex flex-col gap-4 justify-center" style="width: 50%;">
+                                <div class="flex gap-3">
+                                    <div class="placeholder avatar">1</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 80%; margin-bottom: 8px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 90%;"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <div class="placeholder avatar">2</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 70%; margin-bottom: 8px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 80%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 控制工具栏 -->
+                <div class="box" style="height: 40px; justify-content: space-between; padding: 0 16px;">
+                    <div class="flex gap-2 items-center">
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="text-line" style="width: 40px;"></div>
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <div class="placeholder avatar rounded-full"></div>
+                        <div class="text-line" style="width: 30px;"></div>
+                        <div class="placeholder avatar-sm">←</div>
+                        <div class="placeholder avatar-sm">→</div>
+                        <div class="placeholder avatar-sm"></div>
+                    </div>
+                    <div class="placeholder avatar-sm"></div>
+                </div>
+
+                <!-- 底部对话输入区 -->
+                <div class="box p-3 gap-3" style="height: 100px; align-items: stretch;">
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="placeholder avatar-lg">我</div>
+                    </div>
+
+                    <div class="flex-1 box rounded-lg p-3">
+                        <div class="flex flex-col gap-2 flex-1">
+                            <div class="text-line text-line-gray" style="width: 100%;"></div>
+                            <div class="text-line text-line-gray" style="width: 100%;"></div>
+                            <div class="text-line text-line-gray" style="width: 60%;"></div>
+                        </div>
+                        <div class="placeholder avatar-sm" style="position: absolute; right: 10px; bottom: 10px;">→</div>
+                    </div>
+
+                    <div class="flex flex-col gap-2" style="border-left: 2px solid #333; padding-left: 12px;">
+                        <div class="flex gap-1">
+                            <div class="placeholder avatar-sm rounded-full"></div>
+                            <div class="placeholder avatar-sm rounded-full"></div>
+                            <div class="placeholder avatar-sm rounded-full"></div>
+                        </div>
+                        <div class="flex gap-1">
+                            <div class="placeholder avatar-sm rounded-full"></div>
+                            <div class="placeholder avatar-sm rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧边栏 (笔记/问答) -->
+            <div class="box flex-col" style="width: 22%;">
+                <!-- Tab 切换 -->
+                <div class="flex" style="height: 45px; border-bottom: 2px solid #333;">
+                    <div class="flex items-center justify-center" style="width: 50%; border-right: 2px solid #333; position: relative;">
+                        笔记
+                        <div style="position: absolute; bottom: 0; width: 40%; height: 3px; background: #333;"></div>
+                    </div>
+                    <div class="flex items-center justify-center" style="width: 50%;">
+                        问答
+                    </div>
+                </div>
+
+                <!-- 内容列表 -->
+                <div class="flex-1 overflow-auto p-4 space-y-2">
+                    <div class="flex gap-2 items-center mb-3">
+                        <div class="placeholder avatar-sm rounded-full" style="background: #333;"></div>
+                        <div class="text-line" style="width: 50px;"></div>
+                    </div>
+                    <div class="text-line" style="width: 80%; height: 6px; margin-bottom: 15px;"></div>
+
+                    <div class="flex gap-2">
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="flex-1">
+                            <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                            <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                            <div class="text-line text-line-gray" style="width: 80%;"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="flex-1">
+                            <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                            <div class="text-line text-line-gray" style="width: 90%; margin-bottom: 4px;"></div>
+                            <div class="text-line text-line-gray" style="width: 70%;"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="placeholder avatar-sm"></div>
+                        <div class="flex-1">
+                            <div class="text-line text-line-gray" style="width: 100%; margin-bottom: 4px;"></div>
+                            <div class="text-line text-line-gray" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 4. 风格选择下拉组件 ==================== -->
+    <div class="section">
+        <div class="section-title">
+            <div class="num">4</div>
+            <span>风格选择 - 下拉组件（不显式展示）</span>
+            <div class="line"></div>
+        </div>
+
+        <div style="display: flex; gap: 80px;">
+            <!-- 状态1：未展开 -->
+            <div style="flex: 1;">
+                <div class="flex gap-3 items-center mb-4">
+                    <div class="num" style="background: #333; color: white;">1</div>
+                    <span style="font-weight: bold;">未展开状态</span>
+                </div>
+
+                <!-- 输入框区域 -->
+                <div class="box flex-col rounded-lg p-4" style="min-height: 200px; align-items: stretch;">
+                    <!-- 顶部栏 -->
+                    <div class="flex justify-between items-center mb-4">
+                        <!-- 左：用户/入口 -->
+                        <div class="pill">
+                            <div class="placeholder avatar-sm"></div>
+                            <div class="text-line" style="width: 60px;"></div>
+                            <div style="font-size: 8px;">▼</div>
+                        </div>
+                        <!-- 右：风格选择（收起状态） -->
+                        <div class="pill">
+                            <div class="text-line" style="width: 80px;"></div>
+                            <div class="placeholder avatar-sm rounded-full"></div>
+                            <div style="font-size: 8px;">▼</div>
+                        </div>
+                    </div>
+
+                    <!-- 中间输入区 -->
+                    <div class="flex-1 flex flex-col gap-2">
+                        <div class="text-line" style="width: 40%;"></div>
+                        <div class="text-line text-line-gray" style="width: 60%;"></div>
+                        <div class="text-line text-line-gray" style="width: 50%;"></div>
+                    </div>
+
+                    <!-- 底部工具栏 -->
+                    <div class="flex justify-between items-center">
+                        <div class="flex gap-2">
+                            <div class="placeholder avatar-sm rounded-full">📷</div>
+                            <div class="placeholder avatar-sm rounded-full">📎</div>
+                        </div>
+                        <div class="btn rounded-full">
+                            <div class="text-line" style="width: 40px;"></div>
+                            <div style="font-size: 8px;">→</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 状态2：展开 -->
+            <div style="flex: 1;">
+                <div class="flex gap-3 items-center mb-4">
+                    <div class="num" style="background: #333; color: white;">2</div>
+                    <span style="font-weight: bold;">展开状态</span>
+                </div>
+
+                <!-- 输入框区域 -->
+                <div class="box flex-col rounded-lg p-4" style="min-height: 200px; align-items: stretch; position: relative;">
+                    <!-- 顶部栏 -->
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="pill">
+                            <div class="placeholder avatar-sm"></div>
+                            <div class="text-line" style="width: 60px;"></div>
+                            <div style="font-size: 8px;">▼</div>
+                        </div>
+                    </div>
+
+                    <!-- 下拉面板 -->
+                    <div class="box flex-col rounded-lg" style="position: absolute; top: 50px; right: 10px; width: 280px; background: white; z-index: 10;">
+                        <!-- 面板头部 -->
+                        <div class="flex justify-between items-center p-3" style="border-bottom: 2px solid #333;">
+                            <div class="text-line" style="width: 80px;"></div>
+                            <div class="flex gap-2 items-center">
+                                <div class="placeholder avatar-sm rounded-full"></div>
+                                <div style="font-size: 8px;">▲</div>
+                            </div>
+                        </div>
+
+                        <!-- Tab -->
+                        <div class="p-3">
+                            <div class="box rounded-full p-1 mb-3">
+                                <div class="flex" style="width: 100%;">
+                                    <div class="box rounded-full flex-1 py-1">
+                                        <div class="text-line" style="width: 40px; margin: 0 auto;"></div>
+                                    </div>
+                                    <div class="flex-1 py-1 justify-center">
+                                        <div class="text-line text-line-gray" style="width: 40px; margin: 0 auto;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 风格列表 -->
+                            <div class="space-y-2">
+                                <div class="flex gap-2 items-center p-2" style="background: #fffbe6; border-radius: 8px;">
+                                    <div class="placeholder avatar-sm">✓</div>
+                                    <div class="placeholder avatar-sm rounded-full">严肃</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 50px; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 100%;"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-center p-2">
+                                    <div style="width: 24px;"></div>
+                                    <div class="placeholder avatar-sm rounded-full">幽默</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 50px; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 90%;"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-center p-2">
+                                    <div style="width: 24px;"></div>
+                                    <div class="placeholder avatar-sm rounded-full">耐心</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 50px; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 85%;"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-center p-2">
+                                    <div style="width: 24px;"></div>
+                                    <div class="placeholder avatar-sm rounded-full">高效</div>
+                                    <div class="flex-1">
+                                        <div class="text-line" style="width: 50px; margin-bottom: 4px;"></div>
+                                        <div class="text-line text-line-gray" style="width: 80%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 中间输入区 -->
+                    <div class="flex-1 flex flex-col gap-2">
+                        <div class="text-line" style="width: 40%;"></div>
+                        <div class="text-line text-line-gray" style="width: 60%;"></div>
+                    </div>
+
+                    <!-- 底部工具栏 -->
+                    <div class="flex justify-between items-center">
+                        <div class="flex gap-2">
+                            <div class="placeholder avatar-sm rounded-full">📷</div>
+                            <div class="placeholder avatar-sm rounded-full">📎</div>
+                        </div>
+                        <div class="btn rounded-full">
+                            <div class="text-line" style="width: 40px;"></div>
+                            <div style="font-size: 8px;">→</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 总结 ==================== -->
+    <div style="background: #fffbe6; padding: 30px; border-radius: 12px; border: 2px solid #f5c547;">
+        <h2 style="margin-bottom: 20px;">布局架构总结</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <tr style="background: #f5ede1;">
+                <th style="padding: 12px; border: 1px solid #ccc; text-align: left;">页面</th>
+                <th style="padding: 12px; border: 1px solid #ccc;">布局</th>
+                <th style="padding: 12px; border: 1px solid #ccc;">核心功能</th>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border: 1px solid #ccc; font-weight: bold;">落地页</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">全宽单列</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">案例展示 + 品牌介绍 + CTA</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border: 1px solid #ccc; font-weight: bold;">双入口选择</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">居中双卡片</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">「我想学」「帮我讲解」二选一</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border: 1px solid #ccc; font-weight: bold;">主工作区</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">三栏（左18%+中60%+右22%）</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">幻灯片/视频 + 对话 + 笔记</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px; border: 1px solid #ccc; font-weight: bold;">风格选择</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">下拉面板</td>
+                <td style="padding: 12px; border: 1px solid #ccc;">可扩展，不占主界面空间</td>
+            </tr>
+        </table>
+
+        <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+            <strong>与参考设计的差异化：</strong>
+            <ul style="margin-top: 10px; padding-left: 20px; line-height: 1.8;">
+                <li>✅ 新增落地页 - 品牌展示 + 案例预览</li>
+                <li>✅ 双入口选择页 - 明确的学习场景区分</li>
+                <li>✅ 三栏布局参考 OpenMAIC - 合理且优雅</li>
+                <li>✅ 风格选择下拉化 - 可扩展，不显式占用空间</li>
+                <li>✅ 底部对话输入区 - 保持与 OpenMAIC 一致</li>
+            </ul>
+        </div>
+    </div>
+
+</body>
+</html>

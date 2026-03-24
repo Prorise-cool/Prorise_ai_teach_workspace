@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - 完善个人信息</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,'SF Pro','PingFang SC','Helvetica Neue',sans-serif;
+    background-color:#f5ede1;
+    color:#3b1701;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  body::before{
+    content:'';position:absolute;
+    top:-120px;left:50%;transform:translateX(-50%);
+    width:600px;height:600px;
+    background:radial-gradient(circle,rgba(245,197,71,.35) 0%,rgba(245,197,71,.08) 50%,transparent 70%);
+    pointer-events:none;z-index:0;
+  }
+  body::after{
+    content:'';position:absolute;
+    bottom:-200px;right:-100px;
+    width:500px;height:500px;
+    background:radial-gradient(circle,rgba(245,197,71,.18) 0%,transparent 60%);
+    pointer-events:none;z-index:0;
+  }
+
+  .card{
+    position:relative;z-index:1;
+    width:100%;max-width:440px;
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-radius:20px;
+    padding:40px 36px 36px;
+    box-shadow:0 8px 32px rgba(59,23,1,.08);
+  }
+
+  /* 顶栏 */
+  .top-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .top-bar h1{font-size:24px;font-weight:700;color:#3b1701}
+  .skip-link{
+    font-size:14px;color:#b8a88a;
+    text-decoration:none;
+    transition:color .2s;
+  }
+  .skip-link:hover{color:#e6b030}
+
+  .subtitle{
+    font-size:14px;color:#6b4421;
+    margin-bottom:24px;
+  }
+
+  /* 进度指示器 */
+  .progress{
+    display:flex;align-items:center;justify-content:center;
+    gap:8px;margin-bottom:32px;
+  }
+  .progress-step{
+    width:32px;height:4px;border-radius:2px;
+    background:#e6dcc8;transition:background .3s;
+  }
+  .progress-step.active{background:#f5c547}
+  .progress-label{
+    font-size:12px;color:#b8a88a;
+    text-align:center;margin-top:-4px;margin-bottom:4px;
+  }
+
+  /* 头像上传 */
+  .avatar-section{
+    display:flex;flex-direction:column;
+    align-items:center;margin-bottom:28px;
+  }
+  .avatar-upload{
+    position:relative;
+    width:120px;height:120px;
+    border-radius:50%;
+    background:#f5ede1;
+    border:3px dashed #e6dcc8;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:border-color .25s,background .25s;
+    overflow:hidden;
+  }
+  .avatar-upload:hover{
+    border-color:#f5c547;
+    background:#fdf8ec;
+  }
+  .avatar-upload.has-image{
+    border:3px solid #f5c547;
+  }
+  .avatar-upload .camera-icon{
+    font-size:28px;color:#b8a88a;
+    margin-bottom:4px;
+    transition:color .25s;
+  }
+  .avatar-upload:hover .camera-icon{color:#e6b030}
+  .avatar-upload .upload-text{
+    font-size:12px;color:#b8a88a;
+  }
+  .avatar-upload .preview-img{
+    position:absolute;top:0;left:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    display:none;
+  }
+  .avatar-upload.has-image .camera-icon,
+  .avatar-upload.has-image .upload-text{display:none}
+  .avatar-upload.has-image .preview-img{display:block}
+  .avatar-upload input[type="file"]{
+    position:absolute;top:0;left:0;
+    width:100%;height:100%;
+    opacity:0;cursor:pointer;
+  }
+  .avatar-edit-badge{
+    position:absolute;bottom:4px;right:4px;
+    width:28px;height:28px;
+    background:#f5c547;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;color:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+    display:none;
+  }
+  .avatar-upload.has-image .avatar-edit-badge{display:flex}
+
+  /* 表单 */
+  .form-group{margin-bottom:20px;position:relative}
+  .form-label{
+    display:block;font-size:13px;font-weight:600;color:#6b4421;
+    margin-bottom:6px;
+  }
+  .form-label .optional{
+    font-weight:400;color:#b8a88a;font-size:12px;
+    margin-left:4px;
+  }
+
+  .input-wrap{
+    display:flex;align-items:center;
+    border:2px solid #e6dcc8;border-radius:8px;
+    background:#fff;
+    transition:border-color .25s,box-shadow .25s;
+    overflow:hidden;
+  }
+  .input-wrap:focus-within{
+    border-color:#f5c547;
+    box-shadow:0 0 0 3px rgba(245,197,71,.18);
+  }
+  .input-wrap.error{
+    border-color:#ff4d4f;
+    box-shadow:0 0 0 3px rgba(255,77,79,.12);
+  }
+  .input-wrap.success{border-color:#52c41a}
+
+  .input-field{
+    flex:1;border:none;outline:none;
+    padding:0 14px;height:44px;
+    font-size:15px;color:#3b1701;
+    background:transparent;font-family:inherit;
+  }
+  .input-field::placeholder{color:#b8a88a}
+
+  .char-count{
+    padding-right:12px;font-size:12px;color:#b8a88a;
+    white-space:nowrap;
+  }
+
+  .success-icon{
+    padding-right:12px;color:#52c41a;font-size:16px;display:none;
+  }
+  .input-wrap.success .success-icon{display:block}
+
+  .error-msg{
+    font-size:12px;color:#ff4d4f;margin-top:4px;display:none;
+  }
+  .form-group.has-error .error-msg{display:block}
+  .form-group.has-error .input-wrap{
+    border-color:#ff4d4f;
+    box-shadow:0 0 0 3px rgba(255,77,79,.12);
+  }
+
+  /* 下拉搜索 */
+  .select-wrap{
+    position:relative;
+  }
+  .select-field{
+    width:100%;
+    border:2px solid #e6dcc8;border-radius:8px;
+    background:#fff;
+    padding:0 14px;height:44px;
+    font-size:15px;color:#3b1701;font-family:inherit;
+    cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236b4421' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    transition:border-color .25s,box-shadow .25s;
+  }
+  .select-field:focus{
+    outline:none;
+    border-color:#f5c547;
+    box-shadow:0 0 0 3px rgba(245,197,71,.18);
+  }
+  .select-field.error{border-color:#ff4d4f}
+  .select-field.success{border-color:#52c41a}
+
+  .dropdown{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;
+    background:#fff;border:1px solid #e6dcc8;
+    border-radius:8px;
+    box-shadow:0 8px 24px rgba(59,23,1,.1);
+    max-height:180px;overflow-y:auto;
+    z-index:10;display:none;
+  }
+  .dropdown.open{display:block}
+  .dropdown-search{
+    border:none;border-bottom:1px solid #e6dcc8;
+    width:100%;padding:10px 14px;
+    font-size:14px;color:#3b1701;font-family:inherit;
+    outline:none;
+  }
+  .dropdown-search::placeholder{color:#b8a88a}
+  .dropdown-item{
+    padding:10px 14px;font-size:14px;color:#3b1701;
+    cursor:pointer;transition:background .15s;
+  }
+  .dropdown-item:hover{background:#fdf8ec}
+  .dropdown-item.selected{
+    background:#fdf8ec;color:#e6b030;font-weight:600;
+  }
+
+  /* 角色选择 */
+  .role-section{margin-bottom:24px}
+  .role-cards{display:flex;gap:12px}
+  .role-card{
+    flex:1;
+    border:2px solid #e6dcc8;border-radius:12px;
+    padding:16px 8px;
+    text-align:center;cursor:pointer;
+    transition:border-color .25s,background .25s,transform .15s;
+    background:#fff;
+  }
+  .role-card:hover{
+    border-color:#f5c547;
+    background:#fdf8ec;
+    transform:translateY(-2px);
+  }
+  .role-card.selected{
+    border-color:#f5c547;
+    background:linear-gradient(135deg,rgba(245,197,71,.12),rgba(245,197,71,.05));
+    box-shadow:0 4px 12px rgba(245,197,71,.15);
+  }
+  .role-card .role-icon{
+    font-size:28px;
+    margin-bottom:6px;
+    display:block;
+    /* 使用纯文字符号代替 emoji */
+    color:#e6b030;
+    font-weight:700;
+  }
+  .role-card .role-name{
+    font-size:14px;font-weight:600;color:#3b1701;
+    margin-bottom:2px;
+  }
+  .role-card .role-desc{
+    font-size:11px;color:#b8a88a;
+  }
+  .role-card.selected .role-name{color:#e6b030}
+  .role-check{
+    display:none;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:#f5c547;color:#fff;
+    font-size:12px;font-weight:700;
+    align-items:center;justify-content:center;
+    margin:8px auto 0;
+  }
+  .role-card.selected .role-check{display:flex}
+
+  /* 完成按钮 */
+  .submit-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:100%;height:48px;
+    background:linear-gradient(135deg,#f5c547,#e6b030);
+    border:none;border-radius:8px;
+    color:#fff;font-size:16px;font-weight:700;
+    cursor:pointer;font-family:inherit;
+    margin-top:8px;
+    transition:opacity .2s,transform .1s,box-shadow .2s;
+    box-shadow:0 4px 14px rgba(245,197,71,.3);
+    position:relative;overflow:hidden;
+  }
+  .submit-btn:hover{opacity:.92;box-shadow:0 6px 20px rgba(245,197,71,.35)}
+  .submit-btn:active{transform:scale(.985)}
+  .submit-btn:disabled{
+    background:#e6dcc8;color:#b8a88a;
+    cursor:not-allowed;box-shadow:none;
+  }
+  .submit-btn.loading .btn-text{visibility:hidden}
+  .submit-btn.loading::after{
+    content:'';position:absolute;
+    width:22px;height:22px;
+    border:3px solid rgba(255,255,255,.3);
+    border-top-color:#fff;border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .demo-panel{
+    position:fixed;top:16px;right:16px;z-index:99;
+    background:rgba(255,255,255,.9);backdrop-filter:blur(8px);
+    border-radius:12px;padding:16px;
+    box-shadow:0 4px 16px rgba(0,0,0,.1);
+    font-size:12px;color:#6b4421;
+  }
+  .demo-panel h4{margin-bottom:8px;font-size:13px;color:#3b1701}
+  .demo-panel button{
+    display:block;width:100%;
+    margin-bottom:6px;padding:6px 10px;
+    border:1px solid #e6dcc8;border-radius:6px;
+    background:#fff;font-size:12px;color:#3b1701;
+    cursor:pointer;font-family:inherit;text-align:left;
+    transition:background .15s;
+  }
+  .demo-panel button:hover{background:#f5ede1}
+  .demo-panel button:last-child{margin-bottom:0}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- 顶栏 -->
+  <div class="top-bar">
+    <h1>完善你的信息</h1>
+    <a href="#" class="skip-link">跳过</a>
+  </div>
+  <p class="subtitle">让我们更好地了解你，为你推荐合适的学习内容</p>
+
+  <!-- 进度指示器 -->
+  <div class="progress-label">步骤 2/2</div>
+  <div class="progress">
+    <div class="progress-step active"></div>
+    <div class="progress-step active"></div>
+  </div>
+
+  <form id="profileForm" onsubmit="return false">
+    <!-- 头像上传 -->
+    <div class="avatar-section">
+      <div class="avatar-upload" id="avatarUpload">
+        <span class="camera-icon">&#9788;</span>
+        <span class="upload-text">点击上传</span>
+        <img class="preview-img" id="previewImg" alt="头像预览">
+        <span class="avatar-edit-badge">&#9998;</span>
+        <input type="file" accept="image/*" id="avatarInput" onchange="handleAvatarChange(this)">
+      </div>
+    </div>
+
+    <!-- 昵称 -->
+    <div class="form-group" id="nickGroup">
+      <label class="form-label">昵称</label>
+      <div class="input-wrap" id="nickWrap">
+        <input class="input-field" id="nickInput" type="text" placeholder="给自己取个名字吧" maxlength="20" autocomplete="nickname">
+        <span class="char-count" id="nickCount">0/20</span>
+        <span class="success-icon">&#10003;</span>
+      </div>
+      <div class="error-msg" id="nickError">昵称长度为 2-20 个字符</div>
+    </div>
+
+    <!-- 学校选择 -->
+    <div class="form-group" id="schoolGroup">
+      <label class="form-label">学校 <span class="optional">(选填)</span></label>
+      <div class="select-wrap" id="schoolWrap">
+        <div class="input-wrap" id="schoolInputWrap">
+          <input class="input-field" id="schoolInput" type="text" placeholder="搜索或选择你的学校" autocomplete="off" onfocus="openDropdown()" oninput="filterSchools()">
+        </div>
+        <div class="dropdown" id="schoolDropdown">
+          <div class="dropdown-item" onclick="selectSchool(this)">北京大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">清华大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">浙江大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">复旦大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">上海交通大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">南京大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">武汉大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">中山大学</div>
+          <div class="dropdown-item" onclick="selectSchool(this)">其他</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 角色选择 -->
+    <div class="form-group role-section">
+      <label class="form-label">你的身份</label>
+      <div class="role-cards">
+        <div class="role-card" onclick="selectRole(this,'student')">
+          <span class="role-icon">S</span>
+          <div class="role-name">学生</div>
+          <div class="role-desc">在校学习中</div>
+          <div class="role-check">&#10003;</div>
+        </div>
+        <div class="role-card" onclick="selectRole(this,'teacher')">
+          <span class="role-icon">T</span>
+          <div class="role-name">教师</div>
+          <div class="role-desc">教育工作者</div>
+          <div class="role-check">&#10003;</div>
+        </div>
+        <div class="role-card" onclick="selectRole(this,'self')">
+          <span class="role-icon">L</span>
+          <div class="role-name">自学者</div>
+          <div class="role-desc">终身学习爱好者</div>
+          <div class="role-check">&#10003;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 完成按钮 -->
+    <button type="submit" class="submit-btn" id="submitBtn" disabled>
+      <span class="btn-text">完成</span>
+    </button>
+  </form>
+</div>
+
+<!-- 状态演示面板 -->
+<div class="demo-panel">
+  <h4>状态演示</h4>
+  <button onclick="showState('default')">默认状态</button>
+  <button onclick="showState('avatar')">头像已上传</button>
+  <button onclick="showState('filled')">表单已填写</button>
+  <button onclick="showState('error')">错误状态</button>
+  <button onclick="showState('loading')">加载中</button>
+  <button onclick="showState('dropdown')">下拉展开</button>
+</div>
+
+<script>
+  var selectedRole = '';
+
+  function handleAvatarChange(input) {
+    var upload = document.getElementById('avatarUpload');
+    var preview = document.getElementById('previewImg');
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        upload.classList.add('has-image');
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+    updateSubmitBtn();
+  }
+
+  document.getElementById('nickInput').addEventListener('input', function() {
+    var count = this.value.length;
+    document.getElementById('nickCount').textContent = count + '/20';
+    var g = document.getElementById('nickGroup');
+    var w = document.getElementById('nickWrap');
+    g.classList.remove('has-error');
+    w.classList.remove('error','success');
+    if (count > 0 && count < 2) {
+      g.classList.add('has-error');
+      w.classList.add('error');
+    } else if (count >= 2) {
+      w.classList.add('success');
+    }
+    updateSubmitBtn();
+  });
+
+  function openDropdown() {
+    document.getElementById('schoolDropdown').classList.add('open');
+  }
+
+  function filterSchools() {
+    var val = document.getElementById('schoolInput').value.toLowerCase();
+    var items = document.querySelectorAll('#schoolDropdown .dropdown-item');
+    var hasVisible = false;
+    items.forEach(function(item) {
+      var match = item.textContent.toLowerCase().indexOf(val) > -1;
+      item.style.display = match ? '' : 'none';
+      if (match) hasVisible = true;
+    });
+    if (!document.getElementById('schoolDropdown').classList.contains('open')) {
+      openDropdown();
+    }
+  }
+
+  function selectSchool(el) {
+    document.getElementById('schoolInput').value = el.textContent;
+    document.getElementById('schoolDropdown').classList.remove('open');
+    document.querySelectorAll('#schoolDropdown .dropdown-item').forEach(function(item) {
+      item.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    updateSubmitBtn();
+  }
+
+  // 点击外部关闭下拉
+  document.addEventListener('click', function(e) {
+    var wrap = document.getElementById('schoolWrap');
+    if (!wrap.contains(e.target)) {
+      document.getElementById('schoolDropdown').classList.remove('open');
+    }
+  });
+
+  function selectRole(el, role) {
+    selectedRole = role;
+    document.querySelectorAll('.role-card').forEach(function(card) {
+      card.classList.remove('selected');
+    });
+    el.classList.add('selected');
+    updateSubmitBtn();
+  }
+
+  function updateSubmitBtn() {
+    var nick = document.getElementById('nickInput').value.trim();
+    var valid = nick.length >= 2 && selectedRole !== '';
+    document.getElementById('submitBtn').disabled = !valid;
+  }
+
+  function showState(state) {
+    var nickGroup = document.getElementById('nickGroup');
+    var nickWrap = document.getElementById('nickWrap');
+    var upload = document.getElementById('avatarUpload');
+    var submitBtn = document.getElementById('submitBtn');
+
+    // reset
+    nickGroup.classList.remove('has-error');
+    nickWrap.classList.remove('error','success');
+    submitBtn.classList.remove('loading');
+    submitBtn.disabled = true;
+    upload.classList.remove('has-image');
+    document.getElementById('schoolDropdown').classList.remove('open');
+    document.querySelectorAll('.role-card').forEach(function(c){c.classList.remove('selected')});
+    selectedRole = '';
+
+    switch(state) {
+      case 'default':
+        break;
+      case 'avatar':
+        upload.classList.add('has-image');
+        document.getElementById('previewImg').src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="120" height="120"%3E%3Crect fill="%23f5c547" width="120" height="120"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" fill="white" font-size="48" font-family="sans-serif"%3EM%3C/text%3E%3C/svg%3E';
+        break;
+      case 'filled':
+        upload.classList.add('has-image');
+        document.getElementById('previewImg').src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="120" height="120"%3E%3Crect fill="%23f5c547" width="120" height="120"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" fill="white" font-size="48" font-family="sans-serif"%3EM%3C/text%3E%3C/svg%3E';
+        document.getElementById('nickInput').value = '小麦同学';
+        document.getElementById('nickCount').textContent = '4/20';
+        nickWrap.classList.add('success');
+        document.getElementById('schoolInput').value = '北京大学';
+        document.querySelectorAll('.role-card')[0].classList.add('selected');
+        selectedRole = 'student';
+        submitBtn.disabled = false;
+        break;
+      case 'error':
+        nickGroup.classList.add('has-error');
+        nickWrap.classList.add('error');
+        document.getElementById('nickInput').value = '麦';
+        document.getElementById('nickCount').textContent = '1/20';
+        break;
+      case 'loading':
+        submitBtn.disabled = false;
+        submitBtn.classList.add('loading');
+        break;
+      case 'dropdown':
+        openDropdown();
+        document.getElementById('schoolInput').focus();
+        break;
+    }
+  }
+</script>
+</body>
+</html>

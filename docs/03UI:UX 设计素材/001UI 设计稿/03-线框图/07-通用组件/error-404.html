@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - 404 页面未找到</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'SF Pro', 'PingFang SC', sans-serif;
+    background: #f5ede1;
+    color: #3b1701;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .error-container {
+    text-align: center;
+    max-width: 520px;
+    padding: 40px;
+  }
+
+  .error-code {
+    font-size: 120px;
+    font-weight: 800;
+    color: #f5c547;
+    opacity: 0.35;
+    line-height: 1;
+    letter-spacing: -4px;
+    margin-bottom: 8px;
+    user-select: none;
+  }
+
+  .error-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .error-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #3b1701;
+    margin-bottom: 12px;
+  }
+
+  .error-desc {
+    font-size: 16px;
+    color: #6b4421;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    border: none;
+    outline: none;
+  }
+
+  .btn-primary {
+    background: #f5c547;
+    color: #3b1701;
+    box-shadow: 0 4px 16px rgba(245, 197, 71, 0.3);
+  }
+
+  .btn-primary:hover {
+    background: #e6b53e;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 197, 71, 0.4);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: #3b1701;
+    border: 2px solid #3b1701;
+  }
+
+  .btn-outline:hover {
+    background: #3b1701;
+    color: #f5ede1;
+    transform: translateY(-2px);
+  }
+</style>
+</head>
+<body>
+  <div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-icon">&#128270;</div>
+    <h1 class="error-title">页面去哪了？</h1>
+    <p class="error-desc">你要找的页面可能已被移动或不存在</p>
+    <div class="btn-group">
+      <a href="#" class="btn btn-primary">返回首页</a>
+      <a href="javascript:history.back()" class="btn btn-outline">返回上页</a>
+    </div>
+  </div>
+</body>
+</html>

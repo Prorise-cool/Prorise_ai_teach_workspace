@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - Toast 提示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'SF Pro', 'PingFang SC', sans-serif;
+    background: #f5ede1;
+    color: #3b1701;
+    min-height: 100vh;
+    padding-top: 40px;
+  }
+
+  /* Toast container */
+  .toast-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1000;
+    width: 420px;
+  }
+
+  /* Toast base */
+  .toast {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.4s ease forwards;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .toast.hiding {
+    animation: slideOut 0.4s ease forwards;
+  }
+
+  /* Staggered entrance */
+  .toast:nth-child(1) { animation-delay: 0s; }
+  .toast:nth-child(2) { animation-delay: 0.15s; opacity: 0; }
+  .toast:nth-child(3) { animation-delay: 0.3s; opacity: 0; }
+  .toast:nth-child(4) { animation-delay: 0.45s; opacity: 0; }
+
+  @keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+
+  /* Left color bar */
+  .toast::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+  }
+
+  .toast-success::before { background: #52c41a; }
+  .toast-error::before { background: #ff4d4f; }
+  .toast-warning::before { background: #ff9500; }
+  .toast-info::before { background: #4a6fa5; }
+
+  /* Icon */
+  .toast-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .toast-success .toast-icon { background: rgba(82, 196, 26, 0.12); color: #52c41a; }
+  .toast-error .toast-icon { background: rgba(255, 77, 79, 0.12); color: #ff4d4f; }
+  .toast-warning .toast-icon { background: rgba(255, 149, 0, 0.12); color: #ff9500; }
+  .toast-info .toast-icon { background: rgba(74, 111, 165, 0.12); color: #4a6fa5; }
+
+  /* Content */
+  .toast-content {
+    flex: 1;
+  }
+
+  .toast-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #3b1701;
+    margin-bottom: 2px;
+  }
+
+  .toast-message {
+    font-size: 14px;
+    color: #6b4421;
+  }
+
+  /* Close button */
+  .toast-close {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #999;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+
+  .toast-close:hover {
+    background: #f5ede1;
+    color: #3b1701;
+  }
+
+  /* Progress bar */
+  .toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    animation: progress 5s linear forwards;
+  }
+
+  .toast-success .toast-progress { background: #52c41a; }
+  .toast-error .toast-progress { background: #ff4d4f; }
+  .toast-warning .toast-progress { background: #ff9500; }
+  .toast-info .toast-progress { background: #4a6fa5; }
+
+  @keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+
+  /* Demo page content */
+  .demo-content {
+    max-width: 600px;
+    margin: 280px auto 0;
+    text-align: center;
+    padding: 40px;
+  }
+
+  .demo-content h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #3b1701;
+    margin-bottom: 12px;
+  }
+
+  .demo-content p {
+    font-size: 16px;
+    color: #6b4421;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .demo-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .demo-btn {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s ease;
+    color: #fff;
+  }
+
+  .demo-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .demo-btn-success { background: #52c41a; box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3); }
+  .demo-btn-error { background: #ff4d4f; box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3); }
+  .demo-btn-warning { background: #ff9500; box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3); }
+  .demo-btn-info { background: #4a6fa5; box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3); }
+
+  .demo-btn-success:hover { background: #49b516; }
+  .demo-btn-error:hover { background: #e8444a; }
+  .demo-btn-warning:hover { background: #e88800; }
+  .demo-btn-info:hover { background: #3d5f8f; }
+</style>
+</head>
+<body>
+
+  <!-- Toast display area -->
+  <div class="toast-container" id="toastContainer">
+    <!-- Success -->
+    <div class="toast toast-success" id="toast-success">
+      <div class="toast-icon">&#10003;</div>
+      <div class="toast-content">
+        <div class="toast-title">成功</div>
+        <div class="toast-message">操作成功</div>
+      </div>
+      <button class="toast-close" onclick="dismissToast('toast-success')">&times;</button>
+      <div class="toast-progress"></div>
+    </div>
+
+    <!-- Error -->
+    <div class="toast toast-error" id="toast-error">
+      <div class="toast-icon">&#10007;</div>
+      <div class="toast-content">
+        <div class="toast-title">错误</div>
+        <div class="toast-message">操作失败，请重试</div>
+      </div>
+      <button class="toast-close" onclick="dismissToast('toast-error')">&times;</button>
+      <div class="toast-progress"></div>
+    </div>
+
+    <!-- Warning -->
+    <div class="toast toast-warning" id="toast-warning">
+      <div class="toast-icon">&#9888;</div>
+      <div class="toast-content">
+        <div class="toast-title">警告</div>
+        <div class="toast-message">请注意检查输入</div>
+      </div>
+      <button class="toast-close" onclick="dismissToast('toast-warning')">&times;</button>
+      <div class="toast-progress"></div>
+    </div>
+
+    <!-- Info -->
+    <div class="toast toast-info" id="toast-info">
+      <div class="toast-icon">&#8505;</div>
+      <div class="toast-content">
+        <div class="toast-title">提示</div>
+        <div class="toast-message">已为你自动保存</div>
+      </div>
+      <button class="toast-close" onclick="dismissToast('toast-info')">&times;</button>
+      <div class="toast-progress"></div>
+    </div>
+  </div>
+
+  <!-- Page content -->
+  <div class="demo-content">
+    <h1>Toast 提示</h1>
+    <p>展示 4 种 Toast 类型：成功、错误、警告、信息。<br>点击下方按钮可重新触发对应 Toast。</p>
+    <div class="demo-buttons">
+      <button class="demo-btn demo-btn-success" onclick="showToast('success')">成功提示</button>
+      <button class="demo-btn demo-btn-error" onclick="showToast('error')">错误提示</button>
+      <button class="demo-btn demo-btn-warning" onclick="showToast('warning')">警告提示</button>
+      <button class="demo-btn demo-btn-info" onclick="showToast('info')">信息提示</button>
+    </div>
+  </div>
+
+  <script>
+    function dismissToast(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.classList.add('hiding');
+        setTimeout(function() {
+          el.style.display = 'none';
+        }, 400);
+      }
+    }
+
+    function showToast(type) {
+      var id = 'toast-' + type;
+      var el = document.getElementById(id);
+      if (el) {
+        el.style.display = 'flex';
+        el.classList.remove('hiding');
+        // Reset animation
+        el.style.animation = 'none';
+        el.offsetHeight; // trigger reflow
+        el.style.animation = '';
+
+        // Reset progress bar
+        var prog = el.querySelector('.toast-progress');
+        if (prog) {
+          prog.style.animation = 'none';
+          prog.offsetHeight;
+          prog.style.animation = '';
+        }
+
+        // Auto dismiss after 5s
+        clearTimeout(el._timer);
+        el._timer = setTimeout(function() {
+          dismissToast(id);
+        }, 5000);
+      }
+    }
+
+    // Auto dismiss all after 5s
+    setTimeout(function() { dismissToast('toast-success'); }, 5000);
+    setTimeout(function() { dismissToast('toast-error'); }, 5500);
+    setTimeout(function() { dismissToast('toast-warning'); }, 6000);
+    setTimeout(function() { dismissToast('toast-info'); }, 6500);
+  </script>
+</body>
+</html>

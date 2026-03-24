@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - 问答 Agent - 视频生成中</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,'SF Pro','PingFang SC','Helvetica Neue',sans-serif;
+    background-color:#f5ede1;
+    color:#3b1701;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  body::before{
+    content:'';position:absolute;
+    top:-100px;left:50%;transform:translateX(-50%);
+    width:800px;height:800px;
+    background:radial-gradient(circle,rgba(245,197,71,.25) 0%,rgba(245,197,71,.05) 50%,transparent 70%);
+    pointer-events:none;z-index:0;
+  }
+
+  .container{
+    position:relative;z-index:1;
+    width:100%;max-width:680px;
+    padding:0 24px;
+    text-align:center;
+  }
+
+  /* Step indicator */
+  .step-indicator{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    margin-bottom:32px;
+    font-size:14px;color:#b8a88a;
+  }
+  .step{
+    display:flex;align-items:center;gap:6px;
+    font-weight:600;
+  }
+  .step.done{color:#52c41a}
+  .step.active{color:#3b1701}
+  .step-dot{
+    width:24px;height:24px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:#fff;
+    background:#e6dcc8;
+  }
+  .step.done .step-dot{background:#52c41a}
+  .step.active .step-dot{background:linear-gradient(135deg,#f5c547,#e6b030)}
+  .step-line{width:32px;height:2px;background:#e6dcc8;border-radius:1px}
+  .step-line.done{background:#52c41a}
+
+  .page-title{
+    font-size:36px;font-weight:800;
+    margin-bottom:12px;
+    color:#3b1701;
+  }
+  .page-subtitle{
+    font-size:16px;color:#6b4421;
+    margin-bottom:40px;
+  }
+
+  /* Progress card */
+  .progress-card{
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-radius:20px;
+    padding:36px 40px;
+    box-shadow:0 8px 32px rgba(59,23,1,.08);
+    margin-bottom:24px;
+    text-align:left;
+  }
+
+  /* Stages */
+  .stages{margin-bottom:24px}
+  .stage{
+    display:flex;align-items:center;gap:12px;
+    padding:10px 0;
+    font-size:15px;
+    color:#b8a88a;
+    transition:color .3s;
+  }
+  .stage.done{color:#52c41a}
+  .stage.active{color:#3b1701;font-weight:600}
+  .stage-icon{
+    width:28px;height:28px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;
+    background:#f5ede1;
+    flex-shrink:0;
+    transition:all .3s;
+  }
+  .stage.done .stage-icon{background:#52c41a;color:#fff}
+  .stage.active .stage-icon{
+    background:linear-gradient(135deg,#f5c547,#e6b030);
+    color:#fff;
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(245,197,71,.4)}
+    50%{box-shadow:0 0 0 8px rgba(245,197,71,0)}
+  }
+  .stage-percent{
+    margin-left:auto;
+    font-size:13px;color:#b8a88a;
+    font-weight:400;
+  }
+  .stage.active .stage-percent{color:#6b4421}
+
+  /* Overall progress bar */
+  .progress-bar-wrap{
+    margin-bottom:16px;
+  }
+  .progress-bar-bg{
+    width:100%;height:8px;
+    background:#e6dcc8;
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .progress-bar-fill{
+    height:100%;
+    background:linear-gradient(90deg,#f5c547,#e6b030);
+    border-radius:4px;
+    width:0%;
+    transition:width 1s ease;
+  }
+  .progress-meta{
+    display:flex;justify-content:space-between;
+    margin-top:8px;
+    font-size:13px;color:#6b4421;
+  }
+
+  /* Manim preview */
+  .manim-preview{
+    margin-top:24px;
+    border:2px solid #e6dcc8;
+    border-radius:14px;
+    overflow:hidden;
+    transition:border-color .3s,opacity .3s;
+    opacity:.4;
+  }
+  .manim-preview.active{
+    border-color:#f5c547;
+    opacity:1;
+  }
+  .manim-screen{
+    width:320px;height:180px;
+    background:#1a1a2e;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+    margin:0 auto;
+  }
+  .manim-placeholder{
+    color:rgba(255,255,255,.4);
+    font-size:14px;
+    text-align:center;
+  }
+  .manim-preview.active .manim-placeholder{color:rgba(255,255,255,.8)}
+  .manim-label{
+    padding:8px 16px;
+    font-size:12px;color:#6b4421;
+    background:rgba(245,237,225,.6);
+    text-align:center;
+  }
+
+  /* Render animation inside manim */
+  .render-anim{
+    display:none;
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+  }
+  .manim-preview.active .render-anim{display:block}
+  .render-circle{
+    width:40px;height:40px;
+    border:3px solid rgba(245,197,71,.3);
+    border-top-color:#f5c547;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Achievement toast */
+  .achievement{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 20px;
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(8px);
+    border-radius:12px;
+    font-size:14px;color:#6b4421;
+    box-shadow:0 4px 16px rgba(59,23,1,.06);
+    margin-bottom:20px;
+    opacity:0;
+    transform:translateY(8px);
+    animation:toastIn .5s ease forwards;
+    animation-delay:3s;
+  }
+  @keyframes toastIn{
+    to{opacity:1;transform:translateY(0)}
+  }
+  .achievement-icon{
+    width:28px;height:28px;
+    background:linear-gradient(135deg,#f5c547,#e6b030);
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:14px;
+  }
+
+  /* Cancel button */
+  .cancel-btn{
+    border:2px solid #e6dcc8;
+    border-radius:10px;
+    background:transparent;
+    padding:10px 32px;
+    font-size:15px;font-weight:600;
+    color:#6b4421;
+    cursor:pointer;font-family:inherit;
+    transition:all .2s;
+  }
+  .cancel-btn:hover{border-color:#f5c547;background:rgba(245,197,71,.06)}
+
+  /* Demo panel */
+  .demo-panel{
+    position:fixed;top:16px;right:16px;z-index:99;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+    border-radius:12px;padding:16px;
+    box-shadow:0 4px 16px rgba(0,0,0,.1);
+    font-size:12px;color:#6b4421;
+  }
+  .demo-panel h4{margin-bottom:10px;font-size:13px;color:#3b1701}
+  .demo-panel button{
+    display:block;width:100%;
+    margin-bottom:6px;padding:7px 12px;
+    border:1px solid #e6dcc8;border-radius:6px;
+    background:#fff;font-size:12px;color:#3b1701;
+    cursor:pointer;font-family:inherit;text-align:left;
+    transition:background .15s;
+  }
+  .demo-panel button:hover{background:#f5ede1}
+  .demo-panel button:last-child{margin-bottom:0}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Step indicator -->
+  <div class="step-indicator">
+    <div class="step done">
+      <div class="step-dot">&#10003;</div>
+      <span>输入题目</span>
+    </div>
+    <div class="step-line done"></div>
+    <div class="step active">
+      <div class="step-dot">2</div>
+      <span>生成视频</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-dot">3</div>
+      <span>观看讲解</span>
+    </div>
+  </div>
+
+  <h1 class="page-title">正在生成讲解视频...</h1>
+  <p class="page-subtitle">AI 正在为你的题目精心准备讲解动画</p>
+
+  <!-- Progress card -->
+  <div class="progress-card">
+    <!-- Stages -->
+    <div class="stages" id="stages">
+      <div class="stage done" id="stage0">
+        <div class="stage-icon">&#10003;</div>
+        <span>理解题目</span>
+        <span class="stage-percent">100%</span>
+      </div>
+      <div class="stage done" id="stage1">
+        <div class="stage-icon">&#10003;</div>
+        <span>生成分镜</span>
+        <span class="stage-percent">100%</span>
+      </div>
+      <div class="stage active" id="stage2">
+        <div class="stage-icon">&#9654;</div>
+        <span>生成 Manim 代码</span>
+        <span class="stage-percent">45%</span>
+      </div>
+      <div class="stage" id="stage3">
+        <div class="stage-icon">4</div>
+        <span>渲染动画</span>
+        <span class="stage-percent">-</span>
+      </div>
+      <div class="stage" id="stage4">
+        <div class="stage-icon">5</div>
+        <span>合成视频</span>
+        <span class="stage-percent">-</span>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill" style="width:45%"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="progressPercent">45%</span>
+        <span id="timeLeft">预计剩余 1 分 20 秒</span>
+      </div>
+    </div>
+
+    <!-- Manim preview -->
+    <div class="manim-preview" id="manimPreview">
+      <div class="manim-screen">
+        <div class="manim-placeholder">Manim 动画渲染预览</div>
+        <div class="render-anim">
+          <div class="render-circle"></div>
+        </div>
+      </div>
+      <div class="manim-label">动画预览窗口 -- 渲染阶段激活</div>
+    </div>
+  </div>
+
+  <!-- Achievement -->
+  <div class="achievement" id="achievementToast">
+    <div class="achievement-icon">&#9733;</div>
+    <span>你已累计使用小麦生成 10 个讲解视频!</span>
+  </div>
+
+  <br>
+  <button class="cancel-btn" id="cancelBtn">取消生成</button>
+</div>
+
+<!-- Demo panel -->
+<div class="demo-panel">
+  <h4>进度演示</h4>
+  <button onclick="setProgress(8, 0)">阶段 1: 理解题目</button>
+  <button onclick="setProgress(22, 1)">阶段 2: 生成分镜</button>
+  <button onclick="setProgress(45, 2)">阶段 3: Manim 代码</button>
+  <button onclick="setProgress(75, 3)">阶段 4: 渲染动画</button>
+  <button onclick="setProgress(95, 4)">阶段 5: 合成视频</button>
+  <button onclick="setProgress(100, 5)">完成</button>
+  <button onclick="runAnimation()">自动播放进度</button>
+</div>
+
+<script>
+  var stageData = [
+    {name:'理解题目', range:[0,10]},
+    {name:'生成分镜', range:[10,30]},
+    {name:'生成 Manim 代码', range:[30,60]},
+    {name:'渲染动画', range:[60,90]},
+    {name:'合成视频', range:[90,100]}
+  ];
+
+  function setProgress(percent, activeIdx) {
+    var fill = document.getElementById('progressFill');
+    fill.style.width = percent + '%';
+    document.getElementById('progressPercent').textContent = percent + '%';
+
+    var remaining = Math.max(0, Math.round((100 - percent) * 0.8));
+    var min = Math.floor(remaining / 60);
+    var sec = remaining % 60;
+    document.getElementById('timeLeft').textContent =
+      percent >= 100 ? '生成完成!' :
+      (min > 0 ? '预计剩余 ' + min + ' 分 ' + sec + ' 秒' : '预计剩余 ' + sec + ' 秒');
+
+    // Update stages
+    for (var i = 0; i < 5; i++) {
+      var el = document.getElementById('stage' + i);
+      el.className = 'stage';
+      var pctEl = el.querySelector('.stage-percent');
+      var iconEl = el.querySelector('.stage-icon');
+
+      if (i < activeIdx) {
+        el.classList.add('done');
+        iconEl.innerHTML = '&#10003;';
+        pctEl.textContent = '100%';
+      } else if (i === activeIdx && activeIdx < 5) {
+        el.classList.add('active');
+        iconEl.innerHTML = '&#9654;';
+        var stageRange = stageData[i].range;
+        var stagePct = Math.round((percent - stageRange[0]) / (stageRange[1] - stageRange[0]) * 100);
+        stagePct = Math.max(0, Math.min(100, stagePct));
+        pctEl.textContent = stagePct + '%';
+      } else {
+        iconEl.textContent = (i + 1);
+        pctEl.textContent = '-';
+      }
+    }
+
+    // Manim preview activation at stage 3 (render)
+    var manimPreview = document.getElementById('manimPreview');
+    if (activeIdx >= 3) {
+      manimPreview.classList.add('active');
+    } else {
+      manimPreview.classList.remove('active');
+    }
+
+    // Title update on complete
+    if (percent >= 100) {
+      document.querySelector('.page-title').textContent = '讲解视频生成完成!';
+      document.querySelector('.page-subtitle').textContent = '点击下方按钮观看你的专属讲解';
+      document.getElementById('cancelBtn').textContent = '查看视频';
+      document.getElementById('cancelBtn').style.borderColor = '#f5c547';
+      document.getElementById('cancelBtn').style.background = 'linear-gradient(135deg,#f5c547,#e6b030)';
+      document.getElementById('cancelBtn').style.color = '#fff';
+    } else {
+      document.querySelector('.page-title').textContent = '正在生成讲解视频...';
+      document.querySelector('.page-subtitle').textContent = 'AI 正在为你的题目精心准备讲解动画';
+      document.getElementById('cancelBtn').textContent = '取消生成';
+      document.getElementById('cancelBtn').style.borderColor = '#e6dcc8';
+      document.getElementById('cancelBtn').style.background = 'transparent';
+      document.getElementById('cancelBtn').style.color = '#6b4421';
+    }
+  }
+
+  var animTimer = null;
+  function runAnimation() {
+    if (animTimer) { clearInterval(animTimer); animTimer = null; }
+    var p = 0;
+    setProgress(0, 0);
+    animTimer = setInterval(function() {
+      p += 1;
+      if (p > 100) { clearInterval(animTimer); animTimer = null; return; }
+      var idx = 0;
+      for (var i = 0; i < 5; i++) {
+        if (p >= stageData[i].range[0]) idx = i;
+      }
+      if (p >= 100) idx = 5;
+      setProgress(p, idx);
+    }, 150);
+  }
+</script>
+</body>
+</html>

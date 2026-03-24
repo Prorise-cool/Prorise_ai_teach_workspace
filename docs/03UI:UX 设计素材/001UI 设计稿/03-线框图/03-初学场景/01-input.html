@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小麦 - 主题输入</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,'SF Pro','PingFang SC','Helvetica Neue',sans-serif;
+    background-color:#f5ede1;
+    color:#3b1701;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* 品牌色氛围光晕 */
+  body::before{
+    content:'';
+    position:absolute;
+    top:-180px;left:50%;
+    transform:translateX(-50%);
+    width:800px;height:800px;
+    background:radial-gradient(circle,rgba(245,197,71,.25) 0%,rgba(245,197,71,.06) 50%,transparent 70%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* 面包屑 */
+  .breadcrumb{
+    position:relative;z-index:1;
+    max-width:1200px;margin:0 auto;
+    padding:24px 40px 0;
+    font-size:14px;color:#6b4421;
+  }
+  .breadcrumb a{
+    color:#6b4421;text-decoration:none;
+    transition:color .2s;
+  }
+  .breadcrumb a:hover{color:#f5c547}
+  .breadcrumb .sep{margin:0 8px;opacity:.5}
+  .breadcrumb .current{color:#3b1701;font-weight:600}
+
+  /* 主容器 */
+  .main{
+    position:relative;z-index:1;
+    max-width:800px;
+    margin:0 auto;
+    padding:80px 40px 60px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:calc(100vh - 60px);
+    justify-content:center;
+  }
+
+  /* 标题 */
+  .title{
+    font-size:48px;font-weight:800;
+    color:#3b1701;
+    margin-bottom:12px;
+    text-align:center;
+    letter-spacing:-1px;
+  }
+  .subtitle{
+    font-size:18px;color:#6b4421;
+    margin-bottom:48px;
+    text-align:center;
+  }
+
+  /* 输入框 */
+  .input-wrap{
+    width:100%;
+    position:relative;
+    margin-bottom:24px;
+  }
+  .input-field{
+    width:100%;
+    height:80px;
+    font-size:18px;
+    font-family:inherit;
+    color:#3b1701;
+    background:rgba(255,255,255,.78);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border:2px solid rgba(59,23,1,.1);
+    border-radius:16px;
+    padding:0 24px;
+    outline:none;
+    transition:border-color .3s,box-shadow .3s;
+  }
+  .input-field::placeholder{color:#6b4421;opacity:.5}
+  .input-field:focus{
+    border-color:#f5c547;
+    box-shadow:0 8px 40px rgba(245,197,71,.25),0 0 0 4px rgba(245,197,71,.1);
+  }
+
+  /* 示例标签 */
+  .tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    margin-bottom:40px;
+  }
+  .tag{
+    display:inline-block;
+    padding:8px 20px;
+    font-size:14px;
+    color:#6b4421;
+    background:rgba(255,255,255,.6);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border:1.5px solid rgba(59,23,1,.1);
+    border-radius:100px;
+    cursor:pointer;
+    transition:all .25s;
+    user-select:none;
+  }
+  .tag:hover{
+    background:#f5c547;
+    color:#3b1701;
+    border-color:#f5c547;
+    transform:translateY(-2px);
+    box-shadow:0 4px 16px rgba(245,197,71,.3);
+  }
+  .tag.active{
+    background:#f5c547;
+    color:#3b1701;
+    border-color:#f5c547;
+  }
+
+  /* 按钮 */
+  .btn-next{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:56px;
+    min-width:200px;
+    padding:0 40px;
+    font-size:18px;
+    font-weight:700;
+    font-family:inherit;
+    color:#fff;
+    background:linear-gradient(135deg,#f5c547,#e6b030);
+    border:none;
+    border-radius:14px;
+    cursor:pointer;
+    transition:all .3s;
+    box-shadow:0 4px 16px rgba(245,197,71,.35);
+  }
+  .btn-next:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 28px rgba(245,197,71,.45);
+  }
+  .btn-next:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+    transform:none;
+    box-shadow:none;
+  }
+  .btn-next .arrow{
+    margin-left:8px;
+    font-size:20px;
+    transition:transform .2s;
+  }
+  .btn-next:not(:disabled):hover .arrow{
+    transform:translateX(4px);
+  }
+</style>
+</head>
+<body>
+
+<nav class="breadcrumb">
+  <a href="#">首页</a>
+  <span class="sep">/</span>
+  <span class="current">初学场景</span>
+</nav>
+
+<main class="main">
+  <h1 class="title">想学什么？</h1>
+  <p class="subtitle">输入主题，我来帮你生成完整课堂</p>
+
+  <div class="input-wrap">
+    <input
+      type="text"
+      class="input-field"
+      id="topicInput"
+      placeholder="例如：递归算法"
+      autocomplete="off"
+    >
+  </div>
+
+  <div class="tags">
+    <span class="tag" data-topic="递归算法">递归算法</span>
+    <span class="tag" data-topic="微积分基础">微积分基础</span>
+    <span class="tag" data-topic="数据结构">数据结构</span>
+    <span class="tag" data-topic="机器学习入门">机器学习入门</span>
+  </div>
+
+  <button class="btn-next" id="btnNext" disabled>
+    下一步<span class="arrow">&#8594;</span>
+  </button>
+</main>
+
+<script>
+  const input = document.getElementById('topicInput');
+  const btn = document.getElementById('btnNext');
+  const tags = document.querySelectorAll('.tag');
+
+  // 输入框变化时切换按钮状态
+  input.addEventListener('input', function() {
+    btn.disabled = this.value.trim() === '';
+    // 清除标签激活状态
+    tags.forEach(t => t.classList.remove('active'));
+  });
+
+  // 点击标签填入输入框
+  tags.forEach(tag => {
+    tag.addEventListener('click', function() {
+      const topic = this.getAttribute('data-topic');
+      input.value = topic;
+      btn.disabled = false;
+      tags.forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      input.focus();
+    });
+  });
+
+  // 下一步跳转
+  btn.addEventListener('click', function() {
+    if (!this.disabled) {
+      window.location.href = '02-style.html';
+    }
+  });
+
+  // 回车跳转
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && this.value.trim() !== '') {
+      window.location.href = '02-style.html';
+    }
+  });
+</script>
+
+</body>
+</html>
