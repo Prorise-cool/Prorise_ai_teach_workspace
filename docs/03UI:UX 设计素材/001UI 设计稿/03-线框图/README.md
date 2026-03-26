@@ -1,163 +1,143 @@
-# 小麦线框图设计指南
+# 小麦线框图目录指南
 
-## 📂 文件夹结构
+## 核心原则
 
-```
+- 线框图按路由模块组织，不按零散功能点组织。
+- 一个主路由对应一个主线框文件。
+- 同一路由内的展开态、空态、局部面板、结果切片，应放回同一个页面文件中表达。
+- 非路由交互，如认证弹窗、资料初始化、Toast、错误页，统一收口到非路由目录。
+- 旧的“同一路由拆分页”稿只保留在归档目录，不再作为主交付结构。
+
+## 当前目录结构
+
+```text
 03-线框图/
-├── README.md                        (本文件)
-├── 线框图设计指导文档.md            (详细设计指南)
-│
-├── 01-落地页/                       (首页/入口选择)
-├── 02-登录注册/                     (登录/注册/个人信息)
-├── 03-初学场景/                     (完整课堂流程)
-│   ├── 01-input.html
-│   ├── 02-style.html
-│   ├── 03-generating.html
-│   ├── 04-classroom.html
-│   ├── 05-quiz.html
-│   └── 06-complete.html
-│
-├── 04-问答Agent/                    (单题视频生成)
+├── README.md
+├── 线框图设计指导文档.md
+├── 01-首页与入口/
+│   ├── 01-home.html
+│   └── assets/
+├── 02-课堂模块/
 │   ├── 01-input.html
 │   ├── 02-generating.html
-│   ├── 03-player.html
-│   └── 04-continue-ask.html
-│
-├── 05-视频播放器/                   (通用视频播放器)
-├── 06-个人中心/                     (用户资料/历史/收藏/设置)
-└── 07-通用组件/                     (Loading/错误页/空状态)
+│   ├── 03-classroom.html
+│   └── assets/
+├── 03-视频模块/
+│   ├── 01-input.html
+│   ├── 02-generating.html
+│   ├── 03-video-result.html
+│   ├── assets/
+│   └── assets-result/
+├── 04-知识问答模块/
+│   └── 01-knowledge.html
+├── 05-课后小测模块/
+│   └── 01-quiz-session.html
+├── 06-学习路径模块/
+│   └── 01-path.html
+├── 07-个人中心模块/
+│   ├── 01-profile.html
+│   ├── 02-history.html
+│   ├── 03-favorites.html
+│   ├── 04-settings.html
+│   └── assets/
+├── 08-非路由交互与通用状态/
+│   ├── 01-auth-dialog.html
+│   ├── 02-task-progress-shell.html
+│   ├── 03-teacher-style-panel.html
+│   ├── 04-profile-setup-dialog.html
+│   ├── loading.html
+│   ├── error-404.html
+│   ├── error-500.html
+│   ├── error-network.html
+│   ├── empty-state.html
+│   ├── confirm-dialog.html
+│   ├── toast.html
+│   ├── assets/
+│   └── assets-auth/
+└── 99-archive/
+    ├── video-continue-ask.html
+    ├── knowledge-sources.html
+    ├── quiz-start.html
+    ├── quiz-result.html
+    ├── quiz-complete.html
+    ├── path-goal.html
+    └── path-generating.html
 ```
 
-## 🚀 快速开始
+## 路由与线框文件映射
 
-### 第 1 步：阅读设计指导文档
+| 路由 | 主线框文件 | 说明 |
+|------|------------|------|
+| `/` | `01-首页与入口/01-home.html` | 首页与双入口 |
+| `/classroom/input` | `02-课堂模块/01-input.html` | 主题输入页，内含老师风格面板展开态 |
+| `/classroom/:id/generating` | `02-课堂模块/02-generating.html` | 课堂生成进度页 |
+| `/classroom/:id` | `02-课堂模块/03-classroom.html` | 课堂主页面 |
+| `/video/input` | `03-视频模块/01-input.html` | 题目输入页，内含文本/图片/OCR/老师风格态 |
+| `/video/:id/generating` | `03-视频模块/02-generating.html` | 视频生成进度页 |
+| `/video/:id` | `03-视频模块/03-video-result.html` | 视频结果页，内含继续追问等局部状态 |
+| `/knowledge` | `04-知识问答模块/01-knowledge.html` | 知识问答主页面 |
+| `/quiz/:sessionId` | `05-课后小测模块/01-quiz-session.html` | 小测验主页面，内含开始/答题/结果/完成态 |
+| `/path` | `06-学习路径模块/01-path.html` | 学习路径主页面，内含目标输入/生成中/结果态 |
+| `/profile` | `07-个人中心模块/01-profile.html` | 个人中心首页 |
+| `/history` | `07-个人中心模块/02-history.html` | 历史记录页 |
+| `/favorites` | `07-个人中心模块/03-favorites.html` | 收藏管理页 |
+| `/settings` | `07-个人中心模块/04-settings.html` | 设置页 |
 
-打开 `线框图设计指导文档.md`，找到你想要生成的页面模块。
+## 非路由说明
 
-### 第 2 步：复制提示词
+- `08-非路由交互与通用状态/01-auth-dialog.html` 是认证弹窗，不代表独立登录路由。
+- `08-非路由交互与通用状态/02-task-progress-shell.html` 是视频/课堂共享等待体验壳层，不代表独立任务路由。
+- `08-非路由交互与通用状态/03-teacher-style-panel.html` 是视频/课堂共享老师风格面板，不代表独立风格路由。
+- `08-非路由交互与通用状态/04-profile-setup-dialog.html` 是资料初始化弹层或引导态，不代表独立主流程页。
+- `loading`、`error-*`、`empty-state`、`confirm-dialog`、`toast` 统一作为跨模块状态资产维护。
 
-每个页面模块都包含：
-- 功能需求（从 PRD 提取）
-- UX 设计建议
-- 关键组件列表
-- 交互流程
-- 状态设计
+## 老师风格选择器说明
 
-使用文档中的"线框图生成提示词模板"来构建你的提示词。
+- 老师风格选择器是输入页内部的会话配置入口，不是独立流程页。
+- 入口位于核心输入框附近，通过头像或胶囊触发器展开。
+- MVP 默认提供 4 种老师风格，但结构必须支持未来扩展。
+- 相关展开态必须画在 `02-课堂模块/01-input.html` 或 `03-视频模块/01-input.html` 内，不应再拆出独立 `style` 页面。
 
-### 第 3 步：生成线框图
+## 归档说明
 
-将提示词复制给大模型（如 Claude、ChatGPT），生成 HTML 线框图。
+- `99-archive/` 仅保留历史探索稿。
+- 这些旧稿不再代表正式模块边界，也不应再作为新增线框的命名参考。
 
-### 第 4 步：保存文件
+## 页面优先级
 
-将生成的 HTML 文件保存到对应的子文件夹中。
+### P0
 
-### 第 5 步：迭代优化
+- `01-首页与入口/01-home.html`
+- `02-课堂模块/01-input.html`
+- `02-课堂模块/02-generating.html`
+- `02-课堂模块/03-classroom.html`
+- `03-视频模块/01-input.html`
+- `03-视频模块/02-generating.html`
+- `03-视频模块/03-video-result.html`
+- `08-非路由交互与通用状态/02-task-progress-shell.html`
+- `08-非路由交互与通用状态/03-teacher-style-panel.html`
+- `08-非路由交互与通用状态/01-auth-dialog.html`
+- `08-非路由交互与通用状态/loading.html`
+- `08-非路由交互与通用状态/error-404.html`
 
-根据实际效果调整提示词，重新生成，直到满意。
+### P1
 
-## 🎨 设计系统速查
+- `05-课后小测模块/01-quiz-session.html`
+- `07-个人中心模块/01-profile.html`
+- `07-个人中心模块/02-history.html`
+- `04-知识问答模块/01-knowledge.html`
+- `08-非路由交互与通用状态/04-profile-setup-dialog.html`
 
-### 色彩系统
+### P2
 
-| 角色 | HEX | 用途 |
-|------|-----|------|
-| 主色 | #f5c547 | 按钮、链接、高亮 |
-| 背景 | #f5ede1 | 页面背景 |
-| 主文字 | #3b1701 | 标题、正文 |
-| 严肃型 | #4a6fa5 | 蓝色系 |
-| 幽默型 | #ff9500 | 橙色系 |
-| 耐心型 | #52c41a | 绿色系 |
-| 高效型 | #722ed1 | 紫色系 |
+- `06-学习路径模块/01-path.html`
+- `07-个人中心模块/03-favorites.html`
+- `07-个人中心模块/04-settings.html`
+- `08-非路由交互与通用状态/empty-state.html`
+- `08-非路由交互与通用状态/toast.html`
 
-### 字体系统
+## 使用建议
 
-- H1: 48px - 页面主标题
-- H2: 36px - 区块标题
-- H3: 24px - 卡片标题
-- Body: 16px - 标准正文
-- Caption: 12px - 说明文字
-
-### 布局原则
-
-- **居中布局**：核心交互区居中，最大宽度 800px
-- **悬浮导航**：右上角药丸形工具栏
-- **留白呼吸感**：模块外边距使用 vh 单位
-- **毛玻璃效果**：backdrop-blur-md/xl
-
-## 📊 页面优先级
-
-### P0 - 核心流程（必须完成）
-
-- [ ] 01-落地页/home-desktop.html
-- [ ] 02-登录注册/login.html
-- [ ] 02-登录注册/register.html
-- [ ] 03-初学场景/01-input.html
-- [ ] 03-初学场景/02-style.html
-- [ ] 03-初学场景/04-classroom.html
-- [ ] 04-问答Agent/01-input.html
-- [ ] 04-问答Agent/03-player.html
-- [ ] 07-通用组件/loading.html
-- [ ] 07-通用组件/error-404.html
-
-### P1 - 重要功能（推荐完成）
-
-- [ ] 03-初学场景/03-generating.html
-- [ ] 03-初学场景/05-quiz.html
-- [ ] 04-问答Agent/02-generating.html
-- [ ] 06-个人中心/01-profile.html
-- [ ] 06-个人中心/02-history.html
-
-### P2 - 优化体验（可选）
-
-- [ ] 03-初学场景/06-complete.html
-- [ ] 04-问答Agent/04-continue-ask.html
-- [ ] 06-个人中心/03-favorites.html
-- [ ] 06-个人中心/04-settings.html
-- [ ] 07-通用组件/empty-state.html
-- [ ] 07-通用组件/toast.html
-
-## 💡 生成技巧
-
-### 提示词优化建议
-
-1. **明确页面路径**：告诉 AI 这是哪个页面
-2. **提供完整上下文**：复制整个页面模块的内容
-3. **强调关键点**：用粗体标注重要需求
-4. **提供参考**：可以附上相似页面的截图或描述
-
-### 常见问题
-
-**Q: 生成的线框图太复杂了？**
-A: 提示词中强调"简洁的视觉表现（黑白灰为主，主色点缀）"
-
-**Q: 风格不符合设计系统？**
-A: 在提示词中明确列出设计系统参数（色彩、字体、布局）
-
-**Q: 交互流程不清楚？**
-A: 在提示词中详细描述用户操作步骤和系统响应
-
-**Q: 缺少关键组件？**
-A: 在提示词中明确列出"必须包含的组件"
-
-## 🔗 相关文档
-
-- **PRD 文档**: `_bmad-output/planning-artifacts/prd.md`
-- **UX 设计规范**: `_bmad-output/planning-artifacts/ux-design-specification.md`
-- **产品简介**: `_bmad-output/planning-artifacts/product-brief-小麦-2026-03-22.md`
-
-## 📞 需要帮助？
-
-如果在生成过程中遇到问题：
-
-1. 重新阅读 `线框图设计指导文档.md` 对应页面
-2. 调整提示词，增加具体要求
-3. 参考已完成页面的风格
-4. 联系 UX 设计师 Sally 讨论
-
----
-
-**祝你设计顺利！** 🎨✨
-
-如果这个指南对你有帮助，别忘了在完成后更新上面的"页面优先级"清单！
+1. 先判断需求落在哪个正式路由，再决定线框文件归属。
+2. 如果只是同一路由里的面板、模态、展开区、空态，不要新建主线框文件。
+3. 如果只是为了说明历史探索或局部状态，请放入 `99-archive/`，不要混入正式模块。

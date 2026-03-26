@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小麦 Task Progress Shell Wireframe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { border-radius: 0 !important; box-shadow: none !important; }
+    .wf { border: 1px solid #000; }
+    .wf-strong { border: 2px solid #000; }
+    .wf-dash { border: 1px dashed #000; }
+  </style>
+</head>
+<body class="bg-white text-black">
+  <main class="mx-auto max-w-6xl p-8">
+    <header class="wf-strong mb-6 p-4">
+      <h1 class="text-xl font-bold">共享任务进度壳层</h1>
+      <p class="mt-2 text-sm">用于 `/video/:id/generating` 与 `/classroom/:id/generating` 的统一等待体验，不代表独立路由。</p>
+    </header>
+
+    <section class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div class="wf p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <div>
+            <p class="text-sm">任务标题</p>
+            <h2 class="text-lg font-semibold">正在生成你的讲解内容</h2>
+          </div>
+          <div class="wf px-4 py-2 text-sm">剩余约 02:40</div>
+        </div>
+
+        <div class="wf mb-6 p-3">
+          <div class="flex items-center justify-between text-sm">
+            <span>总进度</span>
+            <span>62%</span>
+          </div>
+          <div class="wf-dash mt-2 h-4 w-full">
+            <div class="h-full w-3/5 bg-gray-300"></div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="wf p-3">阶段 1：理解输入内容  √</div>
+          <div class="wf-strong p-3">阶段 2：生成脚本与中间结果  进行中</div>
+          <div class="wf p-3">阶段 3：渲染 / 课堂组织  待执行</div>
+          <div class="wf p-3">阶段 4：合成 / 持久化 / 返回结果  待执行</div>
+        </div>
+      </div>
+
+      <aside class="space-y-4">
+        <div class="wf p-4">
+          <h3 class="font-semibold">事件反馈区</h3>
+          <ul class="mt-3 space-y-2 text-sm">
+            <li class="wf p-2">connected：已建立连接</li>
+            <li class="wf p-2">progress：更新阶段与百分比</li>
+            <li class="wf p-2">provider_switch：展示切换提醒</li>
+            <li class="wf p-2">snapshot：断线恢复快照</li>
+            <li class="wf p-2">failed / completed：失败或跳转</li>
+          </ul>
+        </div>
+
+        <div class="wf p-4">
+          <h3 class="font-semibold">动作区</h3>
+          <div class="mt-3 grid gap-2">
+            <button class="wf px-4 py-2 text-left">取消任务</button>
+            <button class="wf px-4 py-2 text-left">重试 / 再试一次</button>
+            <button class="wf px-4 py-2 text-left">查看当前状态</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

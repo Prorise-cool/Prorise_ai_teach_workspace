@@ -1,0 +1,1 @@
+Relevant commands discovered for references/shadcn-vue-landing-page: `npm install`, `npm run dev`, `npm run build`, `npm run preview`. General Darwin utilities available: `git`, `ls`, `cd`, `rg`, `sed`, `find`.
