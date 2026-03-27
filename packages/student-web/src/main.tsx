@@ -1,3 +1,7 @@
+/**
+ * 前端入口文件。
+ * 负责挂载全局样式与 React 根节点，后续正式页面替换时仍复用同一启动边界。
+ */
 import '@/index.css'
 
 import { StrictMode } from 'react'
