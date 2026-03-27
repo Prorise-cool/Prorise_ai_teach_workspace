@@ -40,9 +40,13 @@ describe('home page', () => {
   test('明确提示当前页面只是认证联调验证壳层', () => {
     renderWithProviders(<HomePage />)
 
-    expect(screen.getByText('认证联调验证壳层，非最终视觉页面')).toBeInTheDocument()
     expect(
-      screen.getByText('当前首页仅用于认证联调验证，不是最终线框图对应的正式页面。'),
+      screen.getByText('认证联调验证壳层，Story 1.4 / 1.6 前不视为正式页面'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '当前首页仅用于认证联调验证，不是最终线框图对应的正式页面；相关原型说明会在 Story 1.4 / 1.6 收口时移除。',
+      ),
     ).toBeInTheDocument()
   })
 

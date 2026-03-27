@@ -6,6 +6,10 @@ import { useEffect, useState } from 'react'
 
 import { type AuthTenant, type CaptchaInfo, fetchCaptchaCode, fetchTenantList } from '@/lib/api/auth'
 
+/**
+ * 加载登录 / 注册共用的租户与验证码配置。
+ * 让表单组件专注于字段与提交流程，不重复维护联调前置状态。
+ */
 export function useAuthFormFeatures() {
   const [captcha, setCaptcha] = useState<CaptchaInfo | null>(null)
   const [captchaLoading, setCaptchaLoading] = useState(false)

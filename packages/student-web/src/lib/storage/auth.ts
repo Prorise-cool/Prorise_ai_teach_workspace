@@ -2,6 +2,7 @@
  * 认证存储层。
  * 统一管理 access token、refresh token 以及其附属元数据的本地持久化格式。
  */
+/** 本地持久化的认证会话结构。 */
 export interface AuthSession {
   accessToken: string
   clientId?: string
@@ -18,6 +19,7 @@ const EXPIRE_IN_KEY = 'authExpireIn'
 const REFRESH_EXPIRE_IN_KEY = 'authRefreshExpireIn'
 const SCOPE_KEY = 'authScope'
 
+/** 清理本地认证存储。 */
 export function clearAuthStorage() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
@@ -27,16 +29,19 @@ export function clearAuthStorage() {
   localStorage.removeItem(SCOPE_KEY)
 }
 
+/** 读取 access token。 */
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY) ?? ''
 }
 
+/** 生成受保护请求使用的 Bearer 头。 */
 export function getAuthorizationHeader() {
   const token = getAccessToken()
 
   return token ? `Bearer ${token}` : null
 }
 
+/** 从本地恢复认证会话。 */
 export function loadAuthSession(): AuthSession | null {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
@@ -55,6 +60,7 @@ export function loadAuthSession(): AuthSession | null {
   }
 }
 
+/** 保存认证会话。 */
 export function saveAuthSession(session: AuthSession) {
   localStorage.setItem(ACCESS_TOKEN_KEY, session.accessToken)
   localStorage.setItem(REFRESH_TOKEN_KEY, session.refreshToken)

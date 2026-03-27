@@ -69,4 +69,37 @@ describe('api client', () => {
     expect(localStorage.getItem('refreshToken')).toBeNull()
     expect(handler).toHaveBeenCalledWith('登录状态已过期，请重新登录')
   })
+
+  test('匿名加密 POST 请求会补齐 RuoYi 认证契约头', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ code: 200, data: { ok: true }, msg: '操作成功' }), {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        status: 200,
+      }),
+    )
+
+    await request<{ ok: boolean }>({
+      body: {
+        password: 'Password123',
+        username: 'alice',
+      },
+      encrypted: true,
+      method: 'POST',
+      path: '/auth/login',
+      repeatSubmit: false,
+      requiresAuth: false,
+    })
+
+    const requestArg = fetchSpy.mock.calls[0]?.[0]
+    const headers =
+      requestArg instanceof Request
+        ? requestArg.headers
+        : ((fetchSpy.mock.calls[0]?.[1]?.headers as Headers | undefined) ?? new Headers())
+
+    expect(headers.get('isToken')).toBe('false')
+    expect(headers.get('isEncrypt')).toBe('true')
+    expect(headers.get('repeatSubmit')).toBe('false')
+  })
 })

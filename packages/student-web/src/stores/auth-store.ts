@@ -23,6 +23,7 @@ import {
 } from '@/lib/storage/auth'
 import { registerUnauthorizedHandler } from '@/services/api/client'
 
+/** 认证状态容器暴露给页面层的最小读写接口。 */
 interface AuthState {
   busy: boolean
   initialize: () => Promise<void>
@@ -36,6 +37,7 @@ interface AuthState {
   userInfo: CurrentUserInfo | null
 }
 
+/** 全局认证 store。 */
 export const useAuthStore = create<AuthState>(() => ({
   busy: false,
   initialized: false,
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>(() => ({
     })
 
     try {
+      // rehydrate 成功后立即补齐用户上下文，确保首页与后续受保护页面读取到一致状态。
       const userInfo = await fetchCurrentUserInfo()
       set({
         initialized: true,
@@ -76,6 +79,7 @@ export const useAuthStore = create<AuthState>(() => ({
         userInfo,
       })
     } catch {
+      // 本地 token 已失效时，统一按未授权语义回到未登录态。
       clearSession()
       set({
         initialized: true,
@@ -118,6 +122,7 @@ export const useAuthStore = create<AuthState>(() => ({
       })
       toast.success('登录成功，欢迎回来。')
     } catch (error) {
+      // 登录失败时不保留残留 token，避免旧会话与新请求交叉污染。
       clearSession()
       set({
         busy: false,
@@ -176,6 +181,7 @@ registerUnauthorizedHandler(message => {
   }
 })
 
+/** 清理 store 与本地持久化中的认证态。 */
 function clearSession() {
   clearAuthStorage()
   useAuthStore.setState({

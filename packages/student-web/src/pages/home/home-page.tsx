@@ -46,7 +46,7 @@ export function HomePage() {
             <div className="grid content-start gap-5">
               <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[#ebe1d2] px-3 py-2 text-sm font-medium text-[#6d5b43]">
                 <Sparkles className="h-4 w-4 text-accent" />
-                认证联调验证壳层，非最终视觉页面
+                认证联调验证壳层，Story 1.4 / 1.6 前不视为正式页面
               </div>
               <div className="grid gap-4">
                 <h2 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl">
@@ -55,6 +55,9 @@ export function HomePage() {
                 <p className="max-w-2xl text-base leading-8 text-muted-foreground">
                   当前实现只承担 Story 1.1 的逻辑联调与契约验证，不承担最终登录注册页的视觉交付。
                   这一版重点是打通 RuoYi 登录注册闭环、Token 持久化与用户上下文初始化，为后续正式页面和受保护路由建立基线。
+                </p>
+                <p className="max-w-2xl text-sm leading-7 text-muted-foreground/90">
+                  当前页面中的 Story 说明文案、调试态提示与 Token 片段展示，统一留待 Story 1.4 / Story 1.6 正式页面落地时清理。
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -103,7 +106,7 @@ export function HomePage() {
                 ) : (
                   <div className="grid gap-3 rounded-3xl bg-[#f7fbff] px-4 py-5">
                     <p className="rounded-2xl border border-dashed border-[#df8c28]/40 bg-[#fff7eb] px-3 py-2 text-sm text-[#8a5720]">
-                      当前首页仅用于认证联调验证，不是最终线框图对应的正式页面。
+                      当前首页仅用于认证联调验证，不是最终线框图对应的正式页面；相关原型说明会在 Story 1.4 / 1.6 收口时移除。
                     </p>
                     <p className="text-sm leading-7 text-muted-foreground">
                       当前处于未认证首页态，登录或注册均通过对话框完成，不跳转到独立认证页。

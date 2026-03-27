@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 Auth & Centered Setup Wireframe</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.wireframe-border {
+			border: 1px solid #000;
+		}
+
+		.wireframe-border-thick {
+			border: 2px solid #000;
+		}
+
+		.wireframe-img {
+			background-color: #f3f4f6;
+			border: 1px dashed #000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #6b7280;
+		}
+
+		.view-hidden {
+			display: none !important;
+		}
+
+		/* 登录大容器淡出 */
+		@keyframes fadeOutScale {
+			0% {
+				opacity: 1;
+				transform: scale(1);
+			}
+
+			100% {
+				opacity: 0;
+				transform: scale(0.98);
+				visibility: hidden;
+			}
+		}
+
+		.animate-fade-out {
+			animation: fadeOutScale 0.5s ease-in-out forwards;
+		}
+
+		/* 居中 Setup 容器淡入并上浮 */
+		@keyframes fadeInUp {
+			0% {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			100% {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.animate-fade-in-up {
+			animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			animation-delay: 0.3s;
+			opacity: 0;
+		}
+
+		/* 选项选中态模拟 */
+		.radio-card-active {
+			border: 2px solid #000;
+			background-color: #f3f4f6;
+			font-weight: bold;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 text-black min-h-screen flex items-center justify-center p-4 relative">
+
+	<!-- ==================== 视图 1：登录页 (左右分屏) ==================== -->
+	<main id="login-container"
+		class="w-full max-w-[1100px] min-h-[600px] flex flex-col md:flex-row wireframe-border bg-white absolute transition-all z-10">
+
+		<!-- 左侧：表单区 -->
+		<section class="w-full md:w-[45%] p-8 md:p-12 flex flex-col relative bg-white">
+			<div class="mb-10 flex items-center font-bold text-xl">
+				<div class="w-6 h-6 wireframe-img mr-2">Logo</div>
+				<span>XiaoMai</span>
+			</div>
+
+			<div class="flex-1 flex flex-col justify-center">
+				<h1 class="text-3xl font-bold mb-3">Welcome back!</h1>
+				<p class="text-gray-600 text-sm mb-8">输入手机号，进入虚拟教室。</p>
+
+				<form class="space-y-4" onsubmit="event.preventDefault(); simulateLogin();">
+					<div class="wireframe-border flex items-center h-12 px-3">
+						<span class="text-sm border-r border-black pr-2 mr-2">+86</span>
+						<input type="text" value="138 0000 0000" class="flex-1 outline-none text-sm bg-transparent"
+							readonly>
+					</div>
+					<div class="wireframe-border flex items-center h-12 px-3">
+						<input type="text" value="123456" class="flex-1 outline-none text-sm bg-transparent" readonly>
+					</div>
+					<button id="login-btn" type="submit"
+						class="w-full bg-black text-white font-bold h-12 mt-2 flex justify-center items-center">
+						<span>登录 (Login)</span>
+					</button>
+				</form>
+			</div>
+		</section>
+
+		<!-- 右侧：插画/品牌区 -->
+		<section
+			class="hidden md:flex w-[55%] bg-gray-100 border-l border-black p-12 flex-col items-center justify-center">
+			<div class="w-full max-w-[360px] aspect-square wireframe-img relative mb-8">
+				<p class="font-bold text-lg">Brand Illustration</p>
+			</div>
+			<h2 class="text-2xl font-bold text-center leading-snug">
+				Your Personal AIGC <br>Classroom.
+			</h2>
+		</section>
+	</main>
+
+	<!-- ==================== 视图 2：完善信息页 (居中沉浸式聚焦) ==================== -->
+	<main id="setup-container"
+		class="w-full max-w-[640px] bg-white wireframe-border p-8 md:p-12 view-hidden z-20 shadow-sm relative">
+
+		<!-- 动效包裹层 -->
+		<div id="setup-content">
+			<!-- 顶部功能区 -->
+			<div class="flex justify-between items-center mb-8">
+				<div class="flex items-center font-bold text-lg">
+					<div class="w-5 h-5 wireframe-img mr-2">Logo</div>
+					<span>XiaoMai</span>
+				</div>
+				<button
+					class="text-sm text-gray-500 hover:text-black font-bold underline decoration-1 underline-offset-4"
+					onclick="alert('跳过配置，直接进入首页！')">
+					跳过 (Skip)
+				</button>
+			</div>
+
+			<!-- 标题区 -->
+			<div class="mb-8 text-center">
+				<h1 class="text-2xl font-bold mb-2">定制你的专属体验</h1>
+				<p class="text-gray-600 text-sm">简单补充几个信息，我们将为你优化默认的教学配置。</p>
+			</div>
+
+			<form class="space-y-8" onsubmit="event.preventDefault(); alert('设置完成！即将进入小麦首页...');">
+
+				<!-- 头像与昵称模块 -->
+				<div class="flex flex-col items-center mb-2">
+					<div class="w-20 h-20 rounded-full! wireframe-img cursor-pointer relative mb-4">
+						<span class="text-xs">Avatar</span>
+						<div
+							class="absolute bottom-0 right-0 bg-white wireframe-border w-6 h-6 rounded-full! flex items-center justify-center text-[10px]">
+							＋</div>
+					</div>
+					<input type="text" placeholder="怎么称呼你？(Nickname)"
+						class="w-2/3 wireframe-border h-10 px-3 outline-none text-sm text-center border-t-0 border-l-0 border-r-0 border-b-2 font-bold text-lg focus:border-black">
+				</div>
+
+				<!-- 身份模块 -->
+				<div class="space-y-3">
+					<label class="text-xs font-bold text-gray-500 uppercase flex justify-center">你的当前身份</label>
+					<div class="flex space-x-3 justify-center">
+						<div class="w-28 wireframe-border p-2 text-center text-sm cursor-pointer radio-card-active">高职学生
+						</div>
+						<div class="w-28 wireframe-border p-2 text-center text-sm cursor-pointer text-gray-500">教师</div>
+						<div class="w-28 wireframe-border p-2 text-center text-sm cursor-pointer text-gray-500">自学者
+						</div>
+					</div>
+				</div>
+
+				<!-- 学习偏好（精简版：仅作底层数据打标） -->
+				<div class="space-y-3 pt-2">
+					<label class="text-xs font-bold text-gray-500 uppercase flex justify-center">学习风格偏好
+						(影响默认老师推荐)</label>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="wireframe-border p-3 cursor-pointer text-center text-sm radio-card-active">
+							步骤拆解要细致 🐢
+						</div>
+						<div class="wireframe-border p-3 cursor-pointer text-center text-sm text-gray-600">
+							直击重点与结论 ⚡
+						</div>
+						<div class="wireframe-border p-3 cursor-pointer text-center text-sm text-gray-600">
+							生动有趣的例子 🎭
+						</div>
+						<div class="wireframe-border p-3 cursor-pointer text-center text-sm text-gray-600">
+							逻辑严谨推导清晰 📐
+						</div>
+					</div>
+				</div>
+
+				<!-- 提交按钮 -->
+				<button type="submit"
+					class="w-full bg-black text-white font-bold h-12 mt-8 flex justify-center items-center group transition-transform hover:-translate-y-0.5">
+					<span>进入虚拟教室 (Start)</span>
+					<span class="ml-2 transition-transform group-hover:translate-x-1">→</span>
+				</button>
+			</form>
+		</div>
+	</main>
+
+	<script>
+		function simulateLogin() {
+			const loginBtn = document.getElementById('login-btn');
+			const loginContainer = document.getElementById('login-container');
+			const setupContainer = document.getElementById('setup-container');
+			const setupContent = document.getElementById('setup-content');
+
+			// 1. Loading 态
+			loginBtn.innerHTML = '<span>Verifying... ⏳</span>';
+			loginBtn.classList.add('bg-gray-800');
+
+			setTimeout(() => {
+				// 2. 整个登录分屏淡出缩小
+				loginContainer.classList.add('animate-fade-out');
+
+				// 3. 延迟一点点，显示居中的 Setup 卡片，并带上浮动效
+				setTimeout(() => {
+					setupContainer.classList.remove('view-hidden');
+					setupContent.classList.add('animate-fade-in-up');
+					// 彻底移除旧 DOM 防止遮挡
+					setTimeout(() => loginContainer.remove(), 500);
+				}, 300);
+
+			}, 600);
+		}
+	</script>
+</body>
+
+</html>

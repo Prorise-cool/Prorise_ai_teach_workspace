@@ -44,6 +44,10 @@ interface RegisterFormProps {
   onSwitchMode: () => void
 }
 
+/**
+ * 注册表单组件。
+ * 对齐 Story 1.1 的注册参数、验证码与成功回流规则。
+ */
 export function RegisterForm({
   busy,
   onRegister,
@@ -101,7 +105,10 @@ export function RegisterForm({
       onRegistered()
     } catch (error) {
       toast.error(resolveErrorMessage(error))
-      await handleRefreshCaptcha()
+      // 仅在验证码开关开启时刷新，避免无验证码环境下误请求验证码接口。
+      if (captcha?.captchaEnabled) {
+        await handleRefreshCaptcha()
+      }
     }
   }
 

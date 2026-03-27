@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 课堂输入与探索页线框</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：无圆角、无阴影、黑白灰高对比度 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wireframe-border {
+			border: 2px solid #000;
+		}
+
+		.wireframe-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.wireframe-img {
+			background-color: #f3f4f6;
+			border: 2px dashed #000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #6b7280;
+			text-align: center;
+		}
+
+		/* 模拟网格背景，增加工作台的专业感 */
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image:
+				linear-gradient(to right, #f3f4f6 1px, transparent 1px),
+				linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
+		}
+
+		/* UX 注释标签样式 */
+		.ux-annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 6px;
+			z-index: 50;
+			pointer-events: none;
+			font-weight: bold;
+		}
+
+		/* 隐藏滚动条但保留滚动功能 */
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
+		}
+	</style>
+</head>
+
+<body class="bg-white text-black min-h-screen flex flex-col relative bg-grid overflow-y-auto">
+
+	<!-- ==================== 1. 悬浮全局导航 (Global Nav) ==================== -->
+	<header
+		class="w-[94%] max-w-7xl mx-auto mt-6 wireframe-border bg-white z-50 p-3 flex justify-between items-center sticky top-6">
+		<div class="ux-annotation -top-5 left-0">Global Nav: 固定包含路由、i18n、主题切换</div>
+
+		<!-- 左侧 Logo -->
+		<div class="flex items-center gap-3 font-bold px-2">
+			<div class="w-8 h-8 wireframe-img p-0 text-[10px]">LG</div>
+			<span class="text-lg">XiaoMai</span>
+		</div>
+
+		<!-- 中央：核心路由切换器 (Tabs) -->
+		<nav class="hidden md:flex gap-1 border-2 border-black p-1 bg-gray-50">
+			<div class="bg-black text-white px-5 py-1.5 text-sm font-bold cursor-pointer">
+				📚 虚拟课堂
+			</div>
+			<div class="px-5 py-1.5 text-sm font-bold text-gray-500 cursor-pointer hover:bg-gray-200">
+				❓ 问答 Agent
+			</div>
+			<div class="px-5 py-1.5 text-sm font-bold text-gray-500 cursor-pointer hover:bg-gray-200">
+				📖 知识问答
+			</div>
+		</nav>
+
+		<!-- 右侧：全局操作与个人中心 -->
+		<div class="flex items-center gap-4 px-2">
+			<!-- 强制要求的 i18n 与 亮暗色切换 -->
+			<button class="wireframe-border px-2 py-1 text-xs font-bold hover:bg-gray-100 flex items-center gap-1">
+				EN/中
+			</button>
+			<button class="wireframe-border px-2 py-1 text-xs font-bold hover:bg-gray-100">
+				☼/☾
+			</button>
+
+			<div class="w-px h-6 bg-gray-300"></div>
+
+			<span class="text-sm font-bold cursor-pointer hover:underline">工作台</span>
+			<!-- 个人中心入口 (登录态) -->
+			<div class="w-8 h-8 wireframe-img p-0 text-[10px] cursor-pointer border-solid border-black" title="进入个人中心">
+				Usr</div>
+		</div>
+	</header>
+
+	<!-- ==================== 2. 核心沉浸式输入区 (Hero Section) ==================== -->
+	<section class="w-full max-w-4xl mx-auto flex flex-col items-center justify-center px-4 pt-16 pb-12 relative z-20">
+
+		<!-- IP 形象占位 -->
+		<div class="relative mb-6">
+			<div class="w-20 h-20 wireframe-img rounded-full! border-2">
+				<span class="text-[10px] leading-tight font-bold">Mascot<br>Avatar</span>
+			</div>
+		</div>
+
+		<!-- 欢迎语 -->
+		<div class="text-center mb-10 space-y-3">
+			<p
+				class="text-sm font-bold text-gray-500 uppercase tracking-widest border-b-2 border-black inline-block pb-1">
+				Classroom Builder</p>
+			<h1 class="text-4xl md:text-5xl font-black tracking-tight">输入主题，即刻生成完整课堂</h1>
+		</div>
+
+		<!-- 核心大输入框 (Magic Box) -->
+		<div class="w-full relative">
+			<div class="ux-annotation -top-5 left-0">Magic Input Box (会话配置 + 核心输入)</div>
+
+			<div
+				class="wireframe-border border-[3px] bg-white flex flex-col min-h-[220px] p-1 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[4px] hover:translate-y-[4px] transition-all">
+
+				<!-- 顶部：老师风格选择器入口 -->
+				<div class="flex justify-between items-center p-3 border-b-2 border-dashed border-gray-300 bg-gray-50">
+					<div class="flex items-center gap-3">
+						<span class="text-xs font-bold text-gray-500">主讲老师:</span>
+						<div
+							class="cursor-pointer flex items-center gap-2 px-2 py-1 wireframe-border bg-white hover:bg-gray-100">
+							<div class="w-5 h-5 wireframe-img rounded-full! border p-0 text-[8px]">严</div>
+							<span class="text-xs font-bold">🎓 严谨教授 ▾</span>
+						</div>
+					</div>
+					<span class="text-[10px] text-gray-400 font-bold hidden md:block">支持多 Agent 讨论模式</span>
+				</div>
+
+				<!-- 核心文本区 -->
+				<textarea
+					class="w-full flex-1 resize-none outline-none p-5 text-lg font-medium bg-transparent placeholder-gray-400"
+					placeholder="你想系统地学点什么？例如：&#10;「结合生活案例讲解一下微积分的链式法则」&#10;「什么是三相异步电机及其工作原理？」"></textarea>
+
+				<!-- 底部：工具与发送 -->
+				<div class="flex justify-between items-center p-3 bg-white border-t-2 border-black">
+					<!-- 快捷工具集 -->
+					<div class="flex gap-2">
+						<button
+							class="w-10 h-10 wireframe-border bg-gray-50 flex items-center justify-center hover:bg-gray-200 font-bold"
+							title="上传资料附件">📎</button>
+						<button
+							class="w-10 h-10 wireframe-border bg-gray-50 flex items-center justify-center hover:bg-gray-200 font-bold"
+							title="语音输入">🎤</button>
+						<div class="w-px h-10 bg-gray-300 mx-1"></div>
+						<button
+							class="px-3 py-1 wireframe-border text-xs font-bold flex items-center gap-1 hover:bg-gray-100">
+							🌐 开启联网
+						</button>
+					</div>
+
+					<!-- 生成按钮 -->
+					<button
+						class="wireframe-border bg-black text-white px-8 py-3 font-bold text-lg hover:bg-gray-800 flex items-center gap-2">
+						生成课堂 &rarr;
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- 灵感快捷指令 -->
+		<div class="flex flex-wrap justify-center gap-3 mt-8">
+			<span class="text-xs font-bold text-gray-500 py-1.5 mr-2">试试这些:</span>
+			<button class="wireframe-border px-3 py-1 text-xs font-bold bg-white hover:bg-gray-100">✨ 快速排序算法</button>
+			<button class="wireframe-border px-3 py-1 text-xs font-bold bg-white hover:bg-gray-100">✨ 泰勒展开式推导</button>
+			<button class="wireframe-border px-3 py-1 text-xs font-bold bg-white hover:bg-gray-100">✨ 死锁的产生条件</button>
+		</div>
+	</section>
+
+	<!-- ==================== 3. 社区/用户案例画廊 (Feed Section) ==================== -->
+	<section class="w-full max-w-7xl mx-auto mt-8 px-6 pb-24 relative">
+		<div class="ux-annotation -top-3 left-6">Community Feed: 提供用例灵感，支持"同款生成"</div>
+
+		<!-- 画廊头部与过滤器 -->
+		<div class="flex flex-col md:flex-row justify-between items-end mb-8 border-b-2 border-black pb-4">
+			<div>
+				<h2 class="text-2xl font-black mb-1">探索优质课堂案例</h2>
+				<p class="text-sm font-bold text-gray-500">看看大家都在用小麦学什么</p>
+			</div>
+			<div class="flex gap-4 text-sm font-bold mt-4 md:mt-0">
+				<button class="border-b-[3px] border-black pb-1">推荐精选</button>
+				<button class="text-gray-500 hover:text-black pb-1">理工科</button>
+				<button class="text-gray-500 hover:text-black pb-1">经管文法</button>
+			</div>
+		</div>
+
+		<!-- 瀑布流布局模拟 (3 列) -->
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+
+			<!-- Column 1 -->
+			<div class="flex flex-col gap-6">
+				<!-- 案例卡片 1 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-32 wireframe-img mb-3 text-xs bg-gray-100">
+						[课堂封面预览 / 缩略图]
+						<div
+							class="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100">
+							<span class="bg-white px-3 py-1 text-xs font-bold wireframe-border">▶ 播放</span>
+						</div>
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">C语言指针基础与内存模型深度解析</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								效</div>
+							<span class="text-[10px] font-bold text-gray-500">干练讲师</span>
+						</div>
+						<span class="text-[10px] font-bold">1.2k 看过</span>
+					</div>
+				</div>
+				<!-- 案例卡片 2 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-48 wireframe-img mb-3 text-xs bg-gray-100">
+						[高比例竖图封面]
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">PLC 顺序功能图编程入门实战</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								严</div>
+							<span class="text-[10px] font-bold text-gray-500">严谨教授</span>
+						</div>
+						<span class="text-[10px] font-bold">856 看过</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Column 2 -->
+			<div class="flex flex-col gap-6">
+				<!-- 案例卡片 3 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-40 wireframe-img mb-3 text-xs bg-gray-100">
+						[课堂封面预览 / 缩略图]
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">机械制图：三视图投影规律与空间想象</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								耐</div>
+							<span class="text-[10px] font-bold text-gray-500">温和导师</span>
+						</div>
+						<span class="text-[10px] font-bold">2.3k 看过</span>
+					</div>
+				</div>
+				<!-- 案例卡片 4 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-24 wireframe-img mb-3 text-xs bg-gray-100">
+						[超宽封面]
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">10分钟掌握链式法则</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								效</div>
+							<span class="text-[10px] font-bold text-gray-500">干练讲师</span>
+						</div>
+						<span class="text-[10px] font-bold">3.1k 看过</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Column 3 -->
+			<div class="flex flex-col gap-6">
+				<!-- 案例卡片 5 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-28 wireframe-img mb-3 text-xs bg-gray-100">
+						[课堂封面预览]
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">财务会计：借贷记账法生活化解析</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								幽</div>
+							<span class="text-[10px] font-bold text-gray-500">风趣老师</span>
+						</div>
+						<span class="text-[10px] font-bold">1.8k 看过</span>
+					</div>
+				</div>
+				<!-- 案例卡片 6 -->
+				<div class="wireframe-border bg-white flex flex-col p-4 group cursor-pointer hover:bg-gray-50">
+					<div class="w-full h-44 wireframe-img mb-3 text-xs bg-gray-100">
+						[长图封面]
+					</div>
+					<h3 class="font-bold text-base leading-snug mb-2">新能源汽车电池管理系统 (BMS) 工作机制</h3>
+					<div class="flex justify-between items-center mt-auto pt-2 border-t border-gray-200">
+						<div class="flex items-center gap-2">
+							<div
+								class="w-4 h-4 rounded-full! wireframe-border text-[6px] flex items-center justify-center">
+								严</div>
+							<span class="text-[10px] font-bold text-gray-500">严谨教授</span>
+						</div>
+						<span class="text-[10px] font-bold">920 看过</span>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- 加载更多 -->
+		<div class="flex justify-center mt-10">
+			<button
+				class="wireframe-border bg-white text-black px-6 py-2 font-bold hover:bg-gray-100 flex items-center gap-2">
+				加载更多案例 ↓
+			</button>
+		</div>
+	</section>
+
+</body>
+
+</html>

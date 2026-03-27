@@ -37,7 +37,7 @@ export function AuthDialog({ mode, onModeChange, onOpenChange, open }: AuthDialo
               </p>
               <div className="grid gap-3">
                 <h2 className="max-w-sm text-3xl font-semibold leading-tight md:text-4xl">
-                  当前仅验证认证链路，不代表最终登录页视觉稿。
+                  当前仅验证认证链路，正式认证入口留待 Story 1.4 / 1.6 收口。
                 </h2>
                 <p className="max-w-sm text-sm leading-7 text-white/70 md:text-base">
                   这版对话框只负责注册、登录和认证态回流的逻辑联调；最终登录注册页面会在线框图完成后另行承接。
@@ -69,7 +69,7 @@ export function AuthDialog({ mode, onModeChange, onOpenChange, open }: AuthDialo
               <p className="text-sm leading-7 text-muted-foreground">
                 {mode === 'login'
                   ? '当前只验证登录成功后关闭对话框并回到首页已认证上下文，不在这里定义最终视觉稿。'
-                  : '当前只验证注册成功反馈与切回登录态的逻辑，不默认自动登录。'}
+                  : '当前只验证注册成功反馈与切回登录态的逻辑，不默认自动登录。相关原型说明会在 Story 1.4 / 1.6 收口时移除。'}
               </p>
             </div>
           </div>

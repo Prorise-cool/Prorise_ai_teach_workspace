@@ -32,6 +32,7 @@ interface RequestConfig {
   encrypted?: boolean
   method: 'GET' | 'POST'
   path: string
+  repeatSubmit?: boolean
   requiresAuth?: boolean
 }
 
@@ -56,6 +57,7 @@ export async function request<TData>({
   encrypted = false,
   method,
   path,
+  repeatSubmit,
   requiresAuth = true,
 }: RequestConfig) {
   const headers = new Headers({
@@ -69,11 +71,21 @@ export async function request<TData>({
     if (authorization) {
       headers.set('Authorization', authorization)
     }
+  } else {
+    // 与 RuoYi 前端参考实现保持一致：匿名认证接口显式声明不携带 token。
+    headers.set('isToken', 'false')
   }
 
   let serializedBody: string | undefined
   if (body !== undefined) {
     headers.set('Content-Type', 'application/json')
+    if (repeatSubmit === false) {
+      headers.set('repeatSubmit', 'false')
+    }
+    if (encrypted) {
+      // 即使开发环境临时关闭参数加密，也保留 RuoYi 认证接口使用的语义头。
+      headers.set('isEncrypt', 'true')
+    }
 
     if (encrypted && env.VITE_APP_ENCRYPT === 'Y' && method === 'POST') {
       const aesKey = generateAesKey()

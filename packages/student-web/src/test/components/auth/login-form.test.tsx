@@ -84,4 +84,31 @@ describe('login form', () => {
     })
     expect(onSuccess).toHaveBeenCalledTimes(1)
   })
+
+  test('验证码关闭时，登录失败不额外刷新验证码接口', async () => {
+    mockedFetchTenantList.mockResolvedValue({
+      tenantEnabled: false,
+      voList: [],
+    })
+    mockedFetchCaptchaCode.mockResolvedValue({
+      captchaEnabled: false,
+    })
+
+    const onLogin = vi.fn().mockRejectedValue(new Error('登录失败'))
+    const user = userEvent.setup()
+
+    renderWithProviders(
+      <LoginForm busy={false} onLogin={onLogin} onSuccess={vi.fn()} onSwitchMode={vi.fn()} />,
+    )
+
+    await user.type(await screen.findByLabelText('用户名'), 'alice')
+    await user.type(screen.getByLabelText('密码'), 'Password123')
+    await user.click(screen.getByRole('button', { name: /登录并返回首页/i }))
+
+    await waitFor(() => {
+      expect(onLogin).toHaveBeenCalledTimes(1)
+    })
+    expect(mockedFetchCaptchaCode).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('用户名')).toHaveValue('alice')
+  })
 })

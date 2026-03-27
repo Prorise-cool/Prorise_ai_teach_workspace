@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小麦 - 课堂主页线框</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      font-family: "SFMono-Regular", "Consolas", "PingFang SC", monospace, sans-serif;
+    }
+
+    body {
+      background: #fff;
+      color: #000;
+    }
+
+    .wf {
+      border: 1px solid #000;
+      background: #fff;
+    }
+
+    .wf-strong {
+      border: 2px solid #000;
+      background: #fff;
+    }
+
+    .wf-dash {
+      border: 1px dashed #000;
+      background: #fff;
+    }
+
+    .wireframe-img {
+      border: 2px dashed #000;
+      background:
+        linear-gradient(135deg, #fafafa 25%, transparent 25%) -12px 0/24px 24px,
+        linear-gradient(225deg, #fafafa 25%, transparent 25%) -12px 0/24px 24px,
+        linear-gradient(315deg, #fafafa 25%, transparent 25%) 0 0/24px 24px,
+        linear-gradient(45deg, #fafafa 25%, #fff 25%) 0 0/24px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #666;
+    }
+
+    .section-title {
+      display: inline-block;
+      border: 2px solid #000;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #fff;
+      margin-bottom: 16px;
+    }
+
+    .scene-card {
+      border: 1px solid #000;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #fff;
+    }
+
+    .scene-card.active {
+      border-width: 2px;
+      background: #f5f5f5;
+    }
+
+    .chip {
+      border: 1px solid #000;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .chip.active {
+      border-width: 2px;
+      background: #f3f3f3;
+    }
+
+    .bubble {
+      border: 1px solid #000;
+      padding: 12px 14px;
+      background: #fff;
+    }
+
+    .bubble.strong {
+      border-width: 2px;
+      background: #f8f8f8;
+    }
+
+    .bubble.user {
+      border-style: dashed;
+    }
+
+    .slide-line {
+      height: 10px;
+      background: #d8d8d8;
+      margin-bottom: 10px;
+    }
+
+    .toolbar-button {
+      border: 1px solid #000;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .toolbar-button.active {
+      border-width: 2px;
+      background: #f3f3f3;
+    }
+
+    .note-line {
+      height: 8px;
+      background: #d8d8d8;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white">
+  <main class="mx-auto max-w-[1480px] px-4 py-6 lg:px-8 lg:py-8">
+    <header class="wf-strong p-4 lg:p-5">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p class="text-xs font-bold tracking-[0.18em] text-gray-500">/classroom/:id</p>
+          <h1 class="mt-2 text-2xl font-black lg:text-3xl">课堂主页</h1>
+          <p class="mt-2 text-sm leading-6 text-gray-600">
+            页面骨架收敛到 OpenMAIC 的真实结构：左侧 Scene Sidebar，中间 Header + Canvas + Roundtable，右侧 Chat Area。
+          </p>
+        </div>
+        <div class="grid gap-2 text-sm sm:grid-cols-4">
+          <div class="wf px-3 py-2">课堂 ID：CLS_240318_A12</div>
+          <div class="wf px-3 py-2">当前 Scene：2 / 5</div>
+          <div class="wf px-3 py-2">模式：playback</div>
+          <div class="wf px-3 py-2">结束后进入课后小测页</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="mt-8">
+      <div class="section-title">主状态：用户进入课堂后默认看到的页面</div>
+
+      <div class="grid gap-6 xl:grid-cols-[240px_minmax(0,1fr)_320px]">
+        <aside class="wf-strong p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-black">Scene Sidebar</h2>
+            <span class="chip">可折叠</span>
+          </div>
+          <p class="mt-2 text-sm leading-6 text-gray-600">
+            这里保留 OpenMAIC 的左侧场景目录逻辑，用户可以切换 scene，但不额外塞入“课程概览”类新字段。
+          </p>
+
+          <div class="mt-5 space-y-3">
+            <div class="scene-card">
+              <div class="wireframe-img aspect-video text-[10px]">01 / 提出问题</div>
+              <div class="text-xs font-bold">为什么复合函数求导会多乘一层？</div>
+            </div>
+
+            <div class="scene-card active">
+              <div class="wireframe-img aspect-video text-[10px]">02 / 当前页</div>
+              <div class="text-xs font-bold">从变量链条理解导数传递</div>
+              <div class="wf px-2 py-1 text-[10px] font-bold">讲解中</div>
+            </div>
+
+            <div class="scene-card">
+              <div class="wireframe-img aspect-video text-[10px]">03 / 案例页</div>
+              <div class="text-xs font-bold">生活中的变化率例子</div>
+            </div>
+
+            <div class="scene-card">
+              <div class="wireframe-img aspect-video text-[10px]">04 / 易错提醒</div>
+              <div class="text-xs font-bold">链式法则和乘法法则区分</div>
+            </div>
+
+            <div class="scene-card">
+              <div class="wireframe-img aspect-video text-[10px]">05 / 小结页</div>
+              <div class="text-xs font-bold">本课总结与进入课后小测前的过渡</div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="grid gap-4 grid-rows-[auto_auto_auto]">
+          <section class="wf p-4">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <p class="text-xs font-bold tracking-[0.18em] text-gray-500">HEADER</p>
+                <h2 class="mt-2 text-2xl font-black">第 2 页：从变量链条理解导数传递</h2>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="chip">返回首页</span>
+                <span class="chip">CN / EN</span>
+                <span class="chip">亮 / 暗</span>
+                <span class="chip">设置</span>
+                <span class="chip">导出 PPTX</span>
+                <span class="chip">资源包</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="wf-strong p-4">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap gap-2">
+                <span class="chip active">Canvas Area</span>
+                <span class="chip">自动讲解中</span>
+                <span class="chip">可切换 Scene</span>
+              </div>
+              <div class="wf px-3 py-2 text-xs font-bold">当前标题：从变量链条理解导数传递</div>
+            </div>
+
+            <div class="wireframe-img aspect-[16/9] p-5">
+              <div class="w-full bg-white p-5">
+                <div class="slide-line w-1/3"></div>
+                <div class="slide-line w-2/3"></div>
+                <div class="slide-line w-1/2"></div>
+
+                <div class="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                  <div class="space-y-3">
+                    <div class="slide-line w-full"></div>
+                    <div class="slide-line w-5/6"></div>
+                    <div class="slide-line w-4/6"></div>
+                    <div class="slide-line w-3/6"></div>
+                  </div>
+                  <div class="wf-dash flex min-h-[180px] items-center justify-center bg-gray-50 p-4 text-xs font-bold">
+                    函数链条图 / 公式推导区
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="wf-strong p-4">
+            <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <p class="text-xs font-bold tracking-[0.18em] text-gray-500">ROUNDTABLE</p>
+                <h3 class="mt-2 text-xl font-black">底部讨论区：讲解发言、用户插话、控制条都在这里</h3>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="chip active">讲解模式</span>
+                <span class="chip">用户可随时提问</span>
+                <span class="chip">支持停止讨论</span>
+              </div>
+            </div>
+
+            <div class="grid gap-4 xl:grid-cols-[200px_minmax(0,1fr)]">
+              <aside class="space-y-3">
+                <div class="wf p-3 text-sm font-bold">严谨教授 / 当前主讲</div>
+                <div class="wf p-3 text-sm">学生 Agent A / 补充反例</div>
+                <div class="wf p-3 text-sm">学生 Agent B / 追问边界</div>
+                <div class="wf-dash p-3 text-sm">用户 / 提问入口</div>
+              </aside>
+
+              <div class="space-y-3">
+                <div class="bubble strong">
+                  <div class="mb-2 text-xs font-bold tracking-[0.18em] text-gray-500">严谨教授 · 发言中</div>
+                  先别急着背公式。你可以把 `y = f(g(x))` 理解成一条变化链：`x` 先影响 `g(x)`，`g(x)` 再影响最终的 `y`。
+                </div>
+
+                <div class="bubble">
+                  <div class="mb-2 text-xs font-bold tracking-[0.18em] text-gray-500">学生 Agent A</div>
+                  如果中间这一层变化得更快，最终输出也会被放大，这就是“多乘一层”的直觉来源。
+                </div>
+
+                <div class="wf p-3">
+                  <div class="mb-2 text-xs font-bold tracking-[0.18em] text-gray-500">用户输入框</div>
+                  <div class="wf-dash px-3 py-3 text-sm text-gray-600">输入问题，例如：能不能换一个更生活化的例子？</div>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button class="toolbar-button">语音</button>
+                    <button class="toolbar-button">发送</button>
+                  </div>
+                </div>
+
+                <div class="wf p-3">
+                  <div class="mb-3 text-xs font-bold tracking-[0.18em] text-gray-500">MERGED TOOLBAR</div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="toolbar-button">上一页</button>
+                    <button class="toolbar-button active">暂停 / 继续</button>
+                    <button class="toolbar-button">下一页</button>
+                    <button class="toolbar-button">白板</button>
+                    <button class="toolbar-button">演示模式</button>
+                    <button class="toolbar-button">停止讨论</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="wf-strong p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-black">Chat Area</h2>
+            <span class="chip">可折叠</span>
+          </div>
+          <p class="mt-2 text-sm leading-6 text-gray-600">
+            右侧不再放“课堂概览 / 快捷提问”自定义面板，而是回到现有的讲义笔记和对话记录双标签结构。
+          </p>
+
+          <div class="mt-5 wf p-3">
+            <div class="flex gap-2">
+              <div class="chip active">讲义笔记</div>
+              <div class="chip">对话记录</div>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-4">
+            <section class="wf p-4">
+              <div class="mb-3 text-xs font-bold tracking-[0.18em] text-gray-500">LECTURE NOTES</div>
+              <div class="space-y-3">
+                <div class="wf p-3">
+                  <div class="text-xs font-bold">Scene 02 / 当前页</div>
+                  <div class="mt-3">
+                    <div class="note-line w-full"></div>
+                    <div class="note-line w-5/6"></div>
+                    <div class="note-line w-4/6"></div>
+                  </div>
+                </div>
+                <div class="wf p-3">
+                  <div class="text-xs font-bold">Scene 03 / 下一页笔记占位</div>
+                  <div class="mt-3">
+                    <div class="note-line w-11/12"></div>
+                    <div class="note-line w-3/4"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="wf p-4">
+              <div class="mb-3 text-xs font-bold tracking-[0.18em] text-gray-500">CHAT SESSIONS</div>
+              <div class="space-y-3">
+                <div class="wf p-3 text-sm font-bold">QA Session / 用户正在追问“生活化例子”</div>
+                <div class="wf p-3 text-sm">Discussion Session / 课堂内多 Agent 补充说明</div>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="mt-10">
+      <div class="section-title">补充状态切片：同一路由下的真实状态</div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="wf p-4">
+          <h3 class="text-base font-black">状态 A：用户打开提问框</h3>
+          <p class="mt-2 text-sm text-gray-600">仍在课堂页内，只是 Roundtable 进入输入态，等待发送问题。</p>
+          <div class="mt-4 wf-strong p-3 text-sm">输入框展开，准备追问当前 scene</div>
+        </div>
+
+        <div class="wf p-4">
+          <h3 class="text-base font-black">状态 B：白板展开</h3>
+          <p class="mt-2 text-sm text-gray-600">主舞台上方覆盖白板层，可继续回看白板历史。</p>
+          <div class="mt-4 wf p-3 text-sm">Whiteboard 已展开，当前内容覆盖在 Canvas 上方</div>
+        </div>
+
+        <div class="wf p-4">
+          <h3 class="text-base font-black">状态 C：演示模式</h3>
+          <p class="mt-2 text-sm text-gray-600">隐藏部分控件，课堂进入更聚焦的展示态，仍是同一路由。</p>
+          <div class="mt-4 wf-strong p-3 text-sm">进入 Presentation Mode，界面切换为沉浸展示</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>

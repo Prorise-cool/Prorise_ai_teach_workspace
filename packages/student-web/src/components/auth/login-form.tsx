@@ -33,6 +33,10 @@ interface LoginFormProps {
   onSwitchMode: () => void
 }
 
+/**
+ * 登录表单组件。
+ * 对齐 Story 1.1 的登录参数、验证码与失败回流规则。
+ */
 export function LoginForm({ busy, onLogin, onSuccess, onSwitchMode }: LoginFormProps) {
   const { captcha, captchaLoading, refreshCaptcha, tenantEnabled, tenantLoading, tenants } =
     useAuthFormFeatures()
@@ -82,7 +86,10 @@ export function LoginForm({ busy, onLogin, onSuccess, onSwitchMode }: LoginFormP
       onSuccess()
     } catch (error) {
       toast.error(resolveErrorMessage(error))
-      await handleRefreshCaptcha()
+      // 仅在验证码开关开启时刷新，避免无验证码环境下多打一跳无意义请求。
+      if (captcha?.captchaEnabled) {
+        await handleRefreshCaptcha()
+      }
     }
   }
 
