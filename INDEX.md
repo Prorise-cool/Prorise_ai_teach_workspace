@@ -25,7 +25,7 @@ Prorise_ai_teach_workspace/
 │  ├─ student-web/
 │  ├─ fastapi-backend/
 │  ├─ RuoYi-Vue-Plus-5.X/
-│  └─ ruoyi-plus-soybean-master/
+│  └─ ruoyi-plus-soybean/
 └─ references/
    ├─ INDEX.md
    ├─ OpenMAIC/
@@ -60,7 +60,7 @@ Prorise_ai_teach_workspace/
 - **[student-web/](./packages/student-web/)** - 学生端 React 19 应用
 - **[fastapi-backend/](./packages/fastapi-backend/)** - FastAPI + LangGraph 后端
 - **[RuoYi-Vue-Plus-5.X/](./packages/RuoYi-Vue-Plus-5.X/)** - Java 管理后台后端基座
-- **[ruoyi-plus-soybean-master/](./packages/ruoyi-plus-soybean-master/)** - Vue 管理端前端基座
+- **[ruoyi-plus-soybean/](./packages/ruoyi-plus-soybean/)** - Vue 管理端前端基座与内部共享包工作区
 
 ### references/
 

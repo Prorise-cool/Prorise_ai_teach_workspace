@@ -4,14 +4,19 @@
   "packageManager": "pnpm@10.5.0",
   "scripts": {
     "install:all": "pnpm install",
-    "build:all": "pnpm -r run build",
-    "clean:all": "pnpm -r run clean",
-    "lint:all": "pnpm -r run lint",
-    "test:all": "pnpm -r run test",
+    "build:all": "pnpm -r --if-present run build",
+    "clean:all": "pnpm -r --if-present run clean && pnpm --filter ruoyi-vue-plus run cleanup",
+    "lint:all": "pnpm -r --if-present run lint",
+    "test:all": "pnpm -r --if-present run test",
+    "typecheck:all": "pnpm -r --if-present run typecheck",
     "dev:student-web": "pnpm --filter @xiaomai/student-web dev",
     "build:student-web": "pnpm --filter @xiaomai/student-web build",
     "lint:student-web": "pnpm --filter @xiaomai/student-web lint",
     "test:student-web": "pnpm --filter @xiaomai/student-web test",
-    "typecheck:student-web": "pnpm --filter @xiaomai/student-web typecheck"
+    "typecheck:student-web": "pnpm --filter @xiaomai/student-web typecheck",
+    "dev:admin-web": "pnpm --filter ruoyi-vue-plus dev",
+    "build:admin-web": "pnpm --filter ruoyi-vue-plus build",
+    "lint:admin-web": "pnpm --filter ruoyi-vue-plus lint",
+    "typecheck:admin-web": "pnpm --filter ruoyi-vue-plus typecheck"
   }
 }

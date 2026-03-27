@@ -17,7 +17,7 @@ Prorise_ai_teach_workspace/
 │   ├── student-web/           # React 19 学生端前端
 │   ├── fastapi-backend/       # FastAPI + LangGraph 后端
 │   ├── RuoYi-Vue-Plus-5.X/    # Java 管理后台后端基座
-│   └── ruoyi-plus-soybean-master/  # Vue 管理端前端基座
+│   └── ruoyi-plus-soybean/    # Vue 管理端前端基座
 ├── references/                # 参考项目（默认只读）
 │   ├── OpenMAIC/              # 多智能体互动课堂参考
 │   └── manim-to-video-claw/   # Manim 视频生成流水线参考
@@ -65,11 +65,18 @@ pnpm install:all
 ### 开发
 
 ```bash
-# 开发特定包
-cd packages/fastapi-backend
+# 根目录统一安装所有 Node workspace 依赖
+pnpm install
 
-# 构建所有包
-pnpm build:all
+# 启动学生端
+pnpm dev:student-web
+
+# 启动管理端
+pnpm dev:admin-web
+
+# 独立构建指定应用，便于后续分别部署
+pnpm build:student-web
+pnpm build:admin-web
 ```
 
 ## 赛事信息

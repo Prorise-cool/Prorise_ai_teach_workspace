@@ -26,13 +26,13 @@
 - **[INDEX.md](./RuoYi-Vue-Plus-5.X/INDEX.md)** - Java 管理后台结构索引
 - **[README.md](./RuoYi-Vue-Plus-5.X/README.md)** - Spring Boot 管理后端基座说明
 
-### ruoyi-plus-soybean-master/
+### ruoyi-plus-soybean/
 
-- **[INDEX.md](./ruoyi-plus-soybean-master/INDEX.md)** - Vue 3 管理端结构索引
-- **[README.md](./ruoyi-plus-soybean-master/README.md)** - Soybean 管理前端说明
+- **[README.md](./ruoyi-plus-soybean/README.md)** - Soybean 管理前端说明
+- **[packages/](./ruoyi-plus-soybean/packages/)** - 管理端内部共享包集合（已纳入根 pnpm workspace）
 
 ## Usage Rules
 
 - 新业务代码优先落在 `student-web/` 与 `fastapi-backend/`。
-- 管理后台相关能力通过 `RuoYi-Vue-Plus-5.X/` 与 `ruoyi-plus-soybean-master/` 对接或迁移。
+- 管理后台相关能力通过 `RuoYi-Vue-Plus-5.X/` 与 `ruoyi-plus-soybean/` 对接或迁移。
 - 不把学生端页面直接开发到管理端基座中。

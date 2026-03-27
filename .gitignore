@@ -112,17 +112,17 @@ packages/RuoYi-Vue-Plus-5.X/ruoYi-admin/src/main/resources/application-druid.yml
 packages/RuoYi-Vue-Plus-5.X/ruoYi-admin/src/main/resources/generator/
 
 # ===========================================
-# React / Frontend (ruoyi-plus-soybean-master)
+# React / Frontend (ruoyi-plus-soybean)
 # ===========================================
-packages/ruoyi-plus-soybean-master/node_modules/
-packages/ruoyi-plus-soybean-master/.next/
-packages/ruoyi-plus-soybean-master/out/
-packages/ruoyi-plus-soybean-master/dist/
-packages/ruoyi-plus-soybean-master/build/
-packages/ruoyi-plus-soybean-master/.expo/
-packages/ruoyi-plus-soybean-master/.turbo/
-packages/ruoyi-plus-soybean-master/coverage/
-packages/ruoyi-plus-soybean-master/*.local
+packages/ruoyi-plus-soybean/node_modules/
+packages/ruoyi-plus-soybean/.next/
+packages/ruoyi-plus-soybean/out/
+packages/ruoyi-plus-soybean/dist/
+packages/ruoyi-plus-soybean/build/
+packages/ruoyi-plus-soybean/.expo/
+packages/ruoyi-plus-soybean/.turbo/
+packages/ruoyi-plus-soybean/coverage/
+packages/ruoyi-plus-soybean/*.local
 
 # ===========================================
 # FastAPI Backend (fastapi-backend)
