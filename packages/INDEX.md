@@ -1,0 +1,38 @@
+# Directory Index: packages
+
+> 主代码工作区。实际功能开发、联调与测试优先在这里进行。
+
+## Files
+
+暂无根目录文件。
+
+## Main Development Packages
+
+### student-web/
+
+- **[README.md](./student-web/README.md)** - 学生端 React 19 应用说明
+- **[package.json](./student-web/package.json)** - 学生端脚本与依赖配置
+- **[src/](./student-web/src/)** - 学生端源码，包含 auth、pages、router、stores 与 test
+
+### fastapi-backend/
+
+- **[INDEX.md](./fastapi-backend/INDEX.md)** - FastAPI 后端目录入口
+- **[README.md](./fastapi-backend/README.md)** - AI 教学视频后端说明
+
+## Integration Bases
+
+### RuoYi-Vue-Plus-5.X/
+
+- **[INDEX.md](./RuoYi-Vue-Plus-5.X/INDEX.md)** - Java 管理后台结构索引
+- **[README.md](./RuoYi-Vue-Plus-5.X/README.md)** - Spring Boot 管理后端基座说明
+
+### ruoyi-plus-soybean-master/
+
+- **[INDEX.md](./ruoyi-plus-soybean-master/INDEX.md)** - Vue 3 管理端结构索引
+- **[README.md](./ruoyi-plus-soybean-master/README.md)** - Soybean 管理前端说明
+
+## Usage Rules
+
+- 新业务代码优先落在 `student-web/` 与 `fastapi-backend/`。
+- 管理后台相关能力通过 `RuoYi-Vue-Plus-5.X/` 与 `ruoyi-plus-soybean-master/` 对接或迁移。
+- 不把学生端页面直接开发到管理端基座中。

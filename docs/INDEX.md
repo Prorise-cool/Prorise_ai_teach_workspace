@@ -42,9 +42,9 @@
 
 | 文档 | 文件 | 状态 | 说明 |
 |------|------|------|------|
-| **PRD** | [`prd.md`](../_bmad-output/planning-artifacts/prd.md) | ✅ 完成 | 33 个功能需求、43+ 非功能需求 |
-| **UX 设计规范** | [`ux-design-specification.md`](../_bmad-output/planning-artifacts/ux-design-specification.md) | ✅ 完成 | 视觉规范、交互模式、4 种 Agent 风格 |
-| **架构设计** | [`architecture.md`](../_bmad-output/planning-artifacts/architecture.md) | 🚧 待完善 | 技术架构、目录结构、设计模式 |
+| **PRD** | [`prd/index.md`](../_bmad-output/planning-artifacts/prd/index.md) | ✅ 完成 | 分片后的产品需求主文档入口 |
+| **UX 设计规范** | [`ux-design-specification/index.md`](../_bmad-output/planning-artifacts/ux-design-specification/index.md) | ✅ 完成 | 分片后的 UX 设计规范入口 |
+| **架构设计** | [`architecture/index.md`](../_bmad-output/planning-artifacts/architecture/index.md) | ✅ 完成 | 分片后的架构主文档入口 |
 | **产品简报** | [`product-brief-小麦-2026-03-22.md`](../_bmad-output/planning-artifacts/product-brief-小麦-2026-03-22.md) | ✅ 完成 | MVP 范围与成功指标 |
 
 ---

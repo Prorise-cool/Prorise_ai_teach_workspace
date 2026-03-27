@@ -1,8 +1,5 @@
-# 自动分配审核人员
+# 自动分配作者本人，Reviewer 由 PR 创建者按实际团队成员手动指定。
+# 在明确 GitHub 用户名之前，不启用自动 reviewer，避免工作流因占位账号失败。
 
-addReviewers: true
+addReviewers: false
 addAssignees: author
-reviewers:
-  - reviewer1
-  - reviewer2
-numberOfReviewers: 1
