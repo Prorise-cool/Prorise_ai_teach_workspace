@@ -9,34 +9,43 @@ template: |
 
 categories:
   - title: '破坏性变更'
-    label: 'type: breaking'
+    label: 'breaking-change'
   - title: '新功能'
-    label: 'type: feature'
+    label: 'new-feature'
   - title: 'Bug 修复'
-    label: 'type: bug'
+    label: 'bugfix'
   - title: '维护更新'
-    label: 'type: maintenance'
+    label: 'maintenance'
   - title: '文档更新'
-    label: 'type: docs'
+    label: 'documentation'
+  - title: '性能优化'
+    label: 'performance'
+  - title: '重构'
+    label: 'refactor'
+  - title: 'CI / 工作流'
+    label: 'ci'
   - title: '其他变更'
   - title: '依赖更新'
-    label: 'type: dependencies'
+    label: 'dependencies'
     collapse-after: 5
 
 version-resolver:
   major:
     labels:
-      - 'type: breaking'
+      - 'breaking-change'
   minor:
     labels:
-      - 'type: feature'
+      - 'new-feature'
   patch:
     labels:
-      - 'type: bug'
-      - 'type: maintenance'
-      - 'type: docs'
-      - 'type: dependencies'
-      - 'type: security'
+      - 'bugfix'
+      - 'maintenance'
+      - 'documentation'
+      - 'dependencies'
+      - 'ci'
+      - 'refactor'
+      - 'performance'
+      - 'security'
 
 exclude-labels:
   - 'skip-changelog'

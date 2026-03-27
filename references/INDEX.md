@@ -1,143 +1,54 @@
 # Directory Index: references
 
-> 外部参考项目索引，包含 OpenMAIC、ManimToVideoClaw、腾讯云智能体平台等技术与 API 参考文档
+> 外部参考与照抄来源目录。此目录以只读参考为主，实际业务开发仍在 `packages/` 中完成。
 
----
+## Files
 
-## 文件
+- **[INDEX.md](./INDEX.md)** - 参考项目总索引与复用边界说明
+- **[README.md](./README.md)** - 参考目录说明与使用约束
 
-- **[README.md](./README.md)** - 参考目录说明与快速导航
+## External API Docs
 
----
+### 腾讯云智能体开发平台
 
-## 外部服务 API 文档
+位于开发手册中的产品与 API 参考文档。
 
-### 腾讯云智能体开发平台 (Tencent Cloud ADP)
+- **[产品简介](../docs/01开发人员手册/000-腾讯云产品文档/0001腾讯云智能体平台-产品简介.md)** - 平台能力、产品优势与应用模式
+- **[页面功能服务](../docs/01开发人员手册/000-腾讯云产品文档/0003腾讯云智能体平台-页面功能服务（给用户）.md)** - 标准模式、工作流模式与 Multi-Agent 模式说明
+- **[API 文档网络索引](../docs/01开发人员手册/000-腾讯云产品文档/004腾讯云智能体平台-API 文档网络索引.md)** - 全量 API 能力导航
+- **[应用接口文档](../docs/01开发人员手册/000-腾讯云产品文档/005腾讯云智能体平台-应用接口文档.md)** - 应用评测、运营与原子能力说明
 
-腾讯云企业级 AI 应用开发平台，提供知识库、工作流、Multi-Agent 等核心能力。
+## Subdirectories
 
-**使用方式**: 纯 API 调用，不自建前端组件
+### OpenMAIC/
 
-| 文档 | 路径 | 说明 |
-|------|------|------|
-| **产品简介** | `../docs/01开发人员手册/000-腾讯云产品文档/0001腾讯云智能体平台-产品简介.md` | 平台能力、产品优势、三种应用模式 |
-| **页面功能服务** | `../docs/01开发人员手册/000-腾讯云产品文档/0003腾讯云智能体平台-页面功能服务（给用户）.md` | 标准模式、工作流模式、Multi-Agent 模式使用指南 |
-| **API 文档索引** | `../docs/01开发人员手册/000-腾讯云产品文档/004腾讯云智能体平台-API 文档网络索引.md` | 完整 API 接口列表（问答、工作流、知识库、应用管理等） |
-| **应用接口文档** | `../docs/01开发人员手册/000-腾讯云产品文档/005腾讯云智能体平台-应用接口文档.md` | 应用评测、运营、提示词模板、原子能力等 |
+开源多智能体互动课堂平台，基于 Next.js、React 19 与 LangGraph。
 
-**核心 API 能力**:
-- **对话端接口**: `GetWsToken`、`GetMsgRecord`、`RateMsgRecord`
-- **工作流接口**: `CreateWorkflowRun`、`DescribeWorkflowRun`、`StopWorkflowRun`
-- **知识库接口**: `SaveDoc`、`CreateQA`、`ListQA`、`DescribeStorageCredential`
-- **应用管理接口**: `CreateApp`、`GetAppSecret`、`ListApp`
-
-**小麦集成用途**:
-- 课程知识库问答（标准模式）
-- 课后小测生成（工作流模式）
-- 学习路径规划（Multi-Agent 模式）
-
----
-
-## 子目录
-
-### openmaic/
-
-开源多智能体互动课堂平台， Next.js + LangGraph 架构，支持幻灯片/测验/交互模拟。
-
-**复用价值： 70%**
-- **核心复用**: LangGraph 编排、Agent Registry、动作引擎、UI 组件模式
-- **许可证**: AGPL-3.0（需合规处理）
-
-📖 **详细索引**: [`openmaic/INDEX.md`](./openmaic/INDEX.md)
-
----
+- **[README-zh.md](./OpenMAIC/README-zh.md)** - OpenMAIC 中文项目说明
+- **[README.md](./OpenMAIC/README.md)** - OpenMAIC 英文原始文档
+- **[app/](./OpenMAIC/app/)** - App Router 页面与 API 路由入口
+- **[components/](./OpenMAIC/components/)** - 课堂、对话与协作 UI 组件
+- **[lib/](./OpenMAIC/lib/)** - 编排、生成、音视频与服务端逻辑
+- **[packages/](./OpenMAIC/packages/)** - OpenMAIC 子包与共享模块
 
 ### manim-to-video-claw/
 
-AI 驱动的 Manim 视频生成流水线，包含分镜生成、代码生成、渲染合成完整流程。
+AI 驱动的 Manim 视频生成流水线，覆盖分镜、代码生成、修复、渲染与合成。
 
-**复用价值: 80%**
-- **核心复用**: 分镜生成、Manim 代码生成、自动修复、多 TTS、渲染合成
-- **许可证**: 商业自有（可安全使用）
+- **[INDEX.md](./manim-to-video-claw/INDEX.md)** - 视频生成流水线目录索引
+- **[README.zh-CN.md](./manim-to-video-claw/README.zh-CN.md)** - 中文部署与使用说明
+- **[storyboard/](./manim-to-video-claw/storyboard/)** - 分镜生成服务
+- **[scenext/](./manim-to-video-claw/scenext/)** - Manim 代码生成与自动修复
+- **[manimtovideo/](./manim-to-video-claw/manimtovideo/)** - 渲染、TTS 与视频合成
+- **[scenext-forwarding/](./manim-to-video-claw/scenext-forwarding/)** - 对外 FastAPI 网关
 
-📖 **详细索引**: [`manim-to-video-claw/INDEX.md`](./manim-to-video-claw/INDEX.md)
+## Related Workspaces
 
----
+- **[../packages/RuoYi-Vue-Plus-5.X/INDEX.md](../packages/RuoYi-Vue-Plus-5.X/INDEX.md)** - Java 管理后台与认证基座
+- **[../packages/ruoyi-plus-soybean-master/INDEX.md](../packages/ruoyi-plus-soybean-master/INDEX.md)** - Vue 管理端前端基座
 
-### RuoYi-Vue-Plus-5.X/
+## Reuse Rules
 
-Java Spring Boot 管理后台框架，ToB 后端服务。
-
-**复用价值: 90%**
-- **核心复用**: 用户管理、RBAC 权限、JWT 认证
-- **许可证**: MIT（可安全使用）
-- **使用方式**: 仅 API 对接，不修改源码
-
-📖 **详细索引**: [`RuoYi-Vue-Plus-5.X/INDEX.md`](./RuoYi-Vue-Plus-5.X/INDEX.md)
-
----
-
-### ruoyi-plus-soybean-master/
-
-Vue 3 + Naive UI 管理前端，ToB 管理端界面。
-
-**复用价值: 30%**
-- **核心复用**: 组件模式、样式系统、HTTP 客户端封装
-- **许可证**: MIT（可安全使用）
-- **使用方式**: 仅 API 对接，不修改源码
-
-📖 **详细索引**: [`ruoyi-plus-soybean-master/INDEX.md`](./ruoyi-plus-soybean-master/INDEX.md)
-
----
-
-### shadcn-vue-landing-page/
-
-Vue + Shadcn Landing Page 参考。
-
-**复用价值: 20%**
-- **核心复用**: Landing Page 布局模式、动画效果
-- **许可证**: MIT
-
----
-
-## 复用计划摘要
-
-| 项目 | 复用内容 | 许可证 | 复用方式 |
-|------|----------|--------|--------|
-| **OpenMAIC** | LangGraph 编排、生成流水线、动作引擎、LLM/TTS 抽象 | AGPL-3.0 | 借鉴架构设计，不直接复制代码 |
-| **ManimToVideoClaw** | 分镜生成、Manim 代码生成、渲染合成、多 TTS | 商业自有 | 直接复用代码 |
-| **RuoYi-Vue-Plus-5.X** | 用户管理、RBAC 权限、JWT 认证 | MIT | API 对接，不修改源码 |
-| **Soybean Admin** | 组件模式、样式系统 | MIT | 参考设计模式 |
-| **shadcn-vue-landing-page** | Landing Page 布局 | MIT | 参考布局模式 |
-
----
-
-## AGPL-3.0 合规说明
-
-OpenMAIC 采用 AGPL-3.0 许可证，需注意：
-
-- ⚠️ **不直接复制粘贴代码** - 仅借鉴架构设计和实现思路
-- ✅ 若直接复用代码并网络提供服务，需：
-  - 保留原始版权和许可证声明
-  - 向用户提供源代码获取方式
-  - 本项目的修改内容同样适用 AGPL-3.0
-
----
-
-## 技术栈对照
-
-| 技术 | OpenMAIC | ManimToVideoClaw | RuoYi | 小麦 |
-|------|----------|-------------------|------|------|
-| **前端框架** | Next.js 14 | - | - | React 19 + Vite |
-| **后端框架** | Next.js API Routes | FastAPI | Spring Boot | FastAPI |
-| **状态管理** | Zustand | - | - | Zustand |
-| **AI 编排** | LangGraph | - | - | LangGraph |
-| **动画引擎** | - | Manim | - | Manim |
-| **TTS** | - | 多厂商 | - | 复用 |
-| **UI 组件** | Shadcn/ui | - | Naive UI | Shadcn/ui |
-| **认证** | - | - | Sa-Token | JWT 共享 Redis |
-
----
-
-_Index generated by Documentation Specialist_
-_Last updated: 2026-03-24_
+- OpenMAIC 使用 AGPL-3.0，默认只借鉴架构与实现思路，不直接复制代码。
+- `manim-to-video-claw` 为商业自有项目，可按内部许可边界复用。
+- 任何借鉴或照抄动作，都应在 `docs/01开发人员手册/` 中记录来源与许可证约束。
