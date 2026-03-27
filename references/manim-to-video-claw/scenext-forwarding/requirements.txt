@@ -1,7 +1,0 @@
-supabase
-fastapi
-pydantic
-uvicorn
-httpx
-dotenv
-PyYAML==6.0.2
