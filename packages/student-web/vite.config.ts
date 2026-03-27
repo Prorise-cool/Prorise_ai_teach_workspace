@@ -1,3 +1,7 @@
+/**
+ * Vite 与 Vitest 配置。
+ * 当前显式约束测试只从 `src/test/` 收集，避免测试文件继续散落到业务目录。
+ */
 import { fileURLToPath, URL } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -41,6 +45,7 @@ export default defineConfig({
     port: 4173,
   },
   test: {
+    include: ['src/test/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
