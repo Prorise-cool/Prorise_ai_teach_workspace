@@ -1,3 +1,7 @@
+/*
+ * student-web 全局样式与设计 token。
+ * 当前样式同时服务于 Story 1.1 联调壳层，后续正式视觉稿会在此基础上继续演进。
+ */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
