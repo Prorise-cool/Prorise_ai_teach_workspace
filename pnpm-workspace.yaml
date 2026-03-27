@@ -3,4 +3,4 @@
 
 packages:
   - 'packages/*'
-  - 'packages/ruoyi-plus-soybean-master/packages/*'
+  - 'packages/ruoyi-plus-soybean/packages/*'

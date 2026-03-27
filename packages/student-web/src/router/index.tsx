@@ -12,4 +12,3 @@ export const appRouter = createBrowserRouter([
     path: '/',
   },
 ])
-ß
