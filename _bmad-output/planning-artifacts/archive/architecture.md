@@ -61,7 +61,7 @@ date: '2026-03-25'
 
 ### 1.2.3 [Option] — 候选方案 / 尚未定稿
 列出的备选方案或仍在讨论中的设计选项，不具有约束力。  
-> 示例`[Option] 异步任务队列可选 Celery 或 Dramatiq，待 M1 阶段 PoC 后确定。`
+> 示例`[Decision] 异步任务队列采用 Dramatiq + Redis broker。`
 
 ### 1.2.4 [Rule] — 必须遵守的一致性规则
 全项目范围必须执行的编码、命名或流程约定，违反视为缺陷。  
@@ -108,7 +108,7 @@ date: '2026-03-25'
 # 2. 项目背景与架构目标
 
 ## 2.1 项目背景
-[Context] 小麦是面向中国高职教育场景的 AIGC 原生虚拟教室平台，目标是将传统 10+ 小时的教学内容制作压缩到 5 分钟以内。
+[Context] 小麦是面向中国高职教育场景的 AIGC 原生教学平台，目标是将传统 10+ 小时的教学内容制作压缩到 5 分钟以内。
 
 ## 2.2 需求概览
 
@@ -116,13 +116,19 @@ date: '2026-03-25'
 | 域 | FR 数量 | 核心需求 | 复用来源 |
 |----|---------|----------|----------|
 | **用户管理 (FR-UM)** | 4 | 注册/登录、JWT 共享 Redis 认证、个人资料、权限控制 | RuoYi 90% |
-| **课堂服务 (FR-CS)** | 7 | 主题 → 课堂生成、Agent 风格选择、幻灯片、测验、多 Agent 讨论、SSE 进度、白板 | OpenMAIC 70% |
+| **课堂服务 (FR-CS)** | 7 | 主题 → 课堂生成、Agent 风格选择、幻灯片、多 Agent 讨论、SSE 进度、白板、课后练习触发信号 | OpenMAIC 70% |
 | **视频服务 (FR-VS)** | 9 | 题目理解、分镜、Manim 代码生成/修复/渲染、多 TTS、视频合成、COS 上传、OCR | ManimToVideoClaw 80% |
-| **视频播放器 (FR-VP)** | 4 | 播放、倍速、进度、全屏 | Video.js 封装 |
-| **学习记录 (FR-LR)** | 3 | 历史记录、收藏管理、删除 | 业务表 + CRUD 生成 |
-| **前端 UI (FR-UI)** | 6 | 首页双入口、课堂页、视频生成页、播放器页、个人中心、i18n | 组件复用 + 风格重写 |
+| **视频播放器 (FR-VP)** | 3 | 播放、倍速、进度、全屏 | Video.js 封装 |
+| **会话伴学 (FR-CP)** | 6 | 当前时刻追问、解释白板、上下文继承、问答回写、容错降级 | 自研编排 + 会话产物图 |
+| **Evidence / Retrieval (FR-KQ)** | 6 | 证据检索入口、文档上传解析、引用来源、术语解释、记录回写 | 可插拔 EvidenceProvider + 自研编排 |
+| **学习教练 (FR-LA)** | 6 | checkpoint / quiz、学习路径、知识点推荐、错题本、学习中心聚合 | 可插拔流程/规划 Provider + RuoYi |
+| **任务框架 (FR-TF)** | 3 | 统一任务模型、状态机、错误码 | 自研 |
+| **实时进度 (FR-SE)** | 3 | SSE 推送、断线恢复、状态查询降级 | 自研 |
+| **Provider 编排 (FR-PV)** | 4 | 抽象、Failover、健康缓存、外部能力编排 | 自研 + 可插拔平台实现 |
+| **学习记录 (FR-LR)** | 5 | 历史记录、收藏、删除、学习中心回看、ToB 承接边界 | 业务表 + CRUD 生成 |
+| **前端 UI (FR-UI)** | 8 | 首页、课堂、视频输入/播放、学习中心域（含历史/收藏视图）、个人资料、设置、来源抽屉 / 证据面板、i18n 预留 | 组件复用 + 风格重写 |
 
-**总计：**33 个功能需求
+**总计：**64 个功能需求
 
 ### 2.2.2 非功能需求
 | 类别 | NFR 数量 | 关键项 |
@@ -141,7 +147,7 @@ date: '2026-03-25'
 | 维度 | 评估 | 说明 |
 |------|------|------|
 | **复杂度** | 高 | 双入口、双后端、异步任务、Manim 渲染、多外部服务集成 |
-| **架构类型** | 全栈 Web App | React SPA + FastAPI 功能服务 + RuoYi 管理后端 + 腾讯云 |
+| **架构类型** | 全栈 Web App | React SPA + FastAPI 功能服务 + RuoYi 管理后端 + 可插拔外部 AI Provider |
 | **团队规模** | 1-2 人 | 全栈开发 |
 | **复用比例** | [Metric][Estimate] ~60% | 含 OpenMAIC / ManimToVideoClaw / RuoYi 的能力复用 |
 | **关键约束** | 赛事截止 4/25 | 5 周内必须交付公测版 |
@@ -163,7 +169,8 @@ date: '2026-03-25'
 |-------------|----------|------------|
 | **FastAPI 仅承担功能服务层职责** | FastAPI 不作为长期业务数据主库宿主，聚焦 AI 功能执行、异步任务和流式推送 | [Priority][MVP] |
 | **RuoYi 承担 ToB 业务持久化与 CRUD 管理** | 学习记录、收藏、会话摘要、视频任务元数据等需落在 RuoYi 业务表中 | [Priority][MVP] |
-| **双入口松耦合** | classroom / video 共享 Provider 层，业务逻辑独立 | [Priority][MVP] |
+| **双内容引擎独立** | classroom / video 共享 Provider 层，业务逻辑独立，不合并生成流水线 | [Priority][MVP] |
+| **会话交互语义统一** | Companion 统一消费视频 / 课堂上下文，但不承担生成流水线 | [Priority][MVP] |
 | **Agent 风格 = 数据预设** | 不做多主题系统，差异在 AgentConfig | [Priority][MVP] |
 | **Manim 渲染低成功率** | 需修复链和降级机制 | [Priority][MVP] |
 | **SSE 实时进度** | 长任务实时反馈与断线恢复的基础能力 | [Priority][MVP] |
@@ -206,10 +213,18 @@ date: '2026-03-25'
 | **Agent** | 小麦中的 AI 老师智能体，具有特定人格和教学风格，不是泛化意义上的通用 Agent。 |
 | **AgentConfig** | Agent 的数据配置对象，包含 `personaavatarcolor`、TTS 参数等字段，决定 Agent 的行为与外观差异。 |
 | **Style / 风格** | Agent 的人格类型（严肃 / 幽默 / 耐心 / 高效），属于数据层预设而非 UI 主题。 |
+| **Auth Page / 认证页** | 前端统一认证页面，路由固定为 `/login`，页面内支持登录 / 注册态切换与成功后回跳；不是首页弹框。 |
 | **Persona** | Agent 的 System Prompt 文本，决定语气、用词习惯和教学方式，由后端注入 LLM 调用。 |
-| **Classroom / 课堂** | 入口 1 的完整虚拟教室会话，包含 Agent 编排、幻灯片、测验、多轮对话等完整教学流程。 |
+| **Classroom / 课堂** | 入口 1 的完整主题课堂会话，包含 Agent 编排、幻灯片、讨论、白板与学后触发信号等完整教学流程。 |
 | **Session / 会话** | 一次课堂交互实例，从创建到结束的完整过程，区别于用户登录会话。 |
 | **Video Task / 视频任务** | 入口 2 的单题讲解视频生成任务，从题目输入到视频输出的完整异步处理单元。 |
+| **TimeAnchor / 时刻锚点** | 会话中的当前定位点，可能是 `video_timestamp`、`slide_id`、`whiteboard_step_id`。 |
+| **CompanionTurn / 伴学轮次** | 一次围绕当前锚点发起的问答轮次，包含提问、回答、白板解释与来源。 |
+| **SessionArtifactGraph / 会话产物图** | 内容引擎产出的可检索上下文索引，包含时间轴、分镜、旁白、幻灯片、白板步骤等。 |
+| **Evidence / Retrieval** | 后台证据服务层，负责资料依据、来源引用、术语解释与证据回看，不承担当前时刻解释。 |
+| **Evidence Drawer / 来源抽屉 / 证据面板** | 学生端查看 Evidence / Retrieval 结果的非路由载体，只嵌入结果页、学习中心与 Learning Coach。 |
+| **Learning Coach** | 学后巩固层，负责 checkpoint / quiz / path / 推荐，不进入会话内即时答疑。 |
+| **Knowledge Module / `features/knowledge/`** | 历史工程命名，对应当前产品语义的 Evidence / Retrieval 服务层，不等价于学生端独立 `/knowledge` 页面。 |
 | **Provider** | LLM、TTS 等外部能力服务的抽象实现，遵循统一 Protocol 接口。 |
 | **Failover** | Provider 不可用时自动切换到下一可用 Provider 的机制。 |
 | **Pipeline / 流水线** | 视频生成的多阶段处理链：题目理解 → 分镜生成 → Manim 代码生成 → 渲染 → 音视频合成。 |
@@ -224,6 +239,15 @@ date: '2026-03-25'
 | **ToC** | To Consumer，面向学生/教师的用户端。 |
 | **ToB** | To Business，面向后台运营、配置、审计、记录管理的管理端能力。 |
 
+### 3.1.1 术语映射（冻结）
+| 最终业务术语 | 页面术语 | 技术术语 | 历史旧名 |
+|---|---|---|---|
+| Video Engine | 视频输入 / 等待 / 播放页 | `features/video` | 视频服务 |
+| Classroom Engine | 课堂输入 / 等待 / 结果页 | `features/classroom` | 课堂服务 |
+| Companion | 伴学侧栏 / 白板解释 | `features/companion` | 会话伴学 |
+| Evidence / Retrieval | 来源抽屉 / 证据面板 | `features/knowledge` | Knowledge / 知识问答 |
+| Learning Coach | checkpoint / quiz / path | `features/learning` | 学习辅助 |
+
 ## 3.2 架构原则
 以下原则指导小麦项目的所有架构决策和实现选择。
 
@@ -231,16 +255,17 @@ date: '2026-03-25'
 |---|------|------|
 | 1 | **单一品牌风格** | 所有页面统一使用小麦品牌设计系统（暖黄色主色 `#f5c547`），Agent 差异仅通过 `AgentConfig` 数据预设体现，不存在全局主题切换。 |
 | 2 | **功能服务与业务持久化分层** | FastAPI 负责功能执行与 AI 编排，RuoYi 负责标准业务数据持久化、后台管理、CRUD 与权限体系。 |
-| 3 | **双入口松耦合** | 课堂服务与视频服务共享基础设施与 Provider 抽象层，但业务实现彼此独立。 |
-| 4 | **Provider 可插拔** | LLM/TTS 通过 Protocol 接口抽象，支持运行时切换、Failover 和配置驱动扩展。 |
-| 5 | **长耗时任务可追踪可恢复** | 所有异步任务必须支持 SSE 实时进度、Redis 状态缓存与断线恢复。 |
-| 6 | **Redis 只承担运行时状态，不承担长期业务存储** | Redis 用于 Token 在线态、任务状态、事件缓存和会话临时上下文；长期业务数据必须入 RuoYi/MySQL 或 COS。 |
-| 7 | **安全优先于渲染成功率** | Manim 沙箱安全边界不可为提升成功率而让步。 |
-| 8 | **首版主链路稳定 > 全量弹性** | MVP 优先保证核心链路端到端可用，边缘场景和高级弹性后置。 |
-| 9 | **RuoYi 核心框架稳定，业务模块可扩展** | 不修改 RuoYi 核心认证/权限/基础框架机制，但允许通过新增表和代码生成器承接小麦 ToB 业务模块。 |
-| 10 | **降级而非失败** | 任一外部依赖不可用时必须有降级方案，优先返回低质量可用结果。 |
-| 11 | **Feature-Module 自治** | FastAPI 内部按业务功能分包（classroom/、video/），每个模块自包含路由、服务、Schema 与依赖。 |
-| 12 | **AGPL-3.0 合规** | 参考 OpenMAIC 的架构设计与模式，但所有代码独立编写，不直接复制。 |
+| 3 | **契约先行、双端并行** | 稳定 API 契约、错误码、状态枚举、示例 payload 与 mock 样例先冻结；前后端基于 `adapter/mock` 并行开发，四项门禁仅用于真实接口联调、合并与发布收口。 |
+| 4 | **双内容引擎独立** | Classroom Engine 与 Video Engine 共享基础设施与 Provider 抽象层，但生成链路实现彼此独立，不合并流水线。 |
+| 5 | **Provider 可插拔** | LLM/TTS 通过 Protocol 接口抽象，支持运行时切换、Failover 和配置驱动扩展。 |
+| 6 | **长耗时任务可追踪可恢复** | 所有异步任务必须支持 SSE 实时进度、Redis 状态缓存与断线恢复。 |
+| 7 | **Redis 只承担运行时状态，不承担长期业务存储** | Redis 用于 Token 在线态、任务状态、事件缓存和会话临时上下文；长期业务数据必须入 RuoYi/MySQL 或 COS。 |
+| 8 | **安全优先于渲染成功率** | Manim 沙箱安全边界不可为提升成功率而让步。 |
+| 9 | **首版主链路稳定 > 全量弹性** | MVP 优先保证核心链路端到端可用，边缘场景和高级弹性后置。 |
+| 10 | **RuoYi 核心框架稳定，业务模块可扩展** | 不修改 RuoYi 核心认证/权限/基础框架机制，但允许通过新增表和代码生成器承接小麦 ToB 业务模块。 |
+| 11 | **降级而非失败** | 任一外部依赖不可用时必须有降级方案，优先返回低质量可用结果。 |
+| 12 | **Feature-Module 自治** | FastAPI 内部按业务功能分包（classroom/、video/），每个模块自包含路由、服务、Schema 与依赖。 |
+| 13 | **AGPL-3.0 合规** | 参考 OpenMAIC 的架构设计与模式，但所有代码独立编写，不直接复制。 |
 
 ## 3.3 关键概念澄清：UI 风格 vs Agent 风格
 
@@ -265,13 +290,14 @@ date: '2026-03-25'
 ### 3.3.3 小麦的 4 种 AgentConfig 预设
 | 风格 | persona 要点 | avatar | color | TTS 参数 |
 |------|--------------|--------|-------|----------|
-| 严肃型 | 专业严谨、逻辑清晰 | `/avatars/serious.png` | `#4a6fa5` | 标准语速、正式音色 |
-| 幽默型 | 轻松有趣、举例生动 | `/avatars/humorous.png` | `#ff9500` | 偏快语速、活泼音色 |
-| 耐心型 | 步骤详细、反复解释 | `/avatars/patient.png` | `#52c41a` | 偏慢语速、温和音色 |
-| 高效型 | 直击要点、省时高效 | `/avatars/efficient.png` | `#722ed1` | 快速语速、干练音色 |
+| 严肃型 | 专业严谨、逻辑清晰 | `/avatars/serious.png` | `#4A6FA5` | 标准语速、正式音色 |
+| 幽默型 | 轻松有趣、举例生动 | `/avatars/humorous.png` | `#FF9500` | 偏快语速、活泼音色 |
+| 耐心型 | 步骤详细、反复解释 | `/avatars/patient.png` | `#52C41A` | 偏慢语速、温和音色 |
+| 高效型 | 直击要点、省时高效 | `/avatars/efficient.png` | `#722ED1` | 快速语速、干练音色 |
 
 ### 3.3.4 CSS 变量的实际用途
 [Implementation Note] `--style-color` 仅用于**局部点缀效果**，不是页面级主题切换变量。
+[Implementation Note] 前端中的 Agent 风格选择仅要求在输入框附近提供一个简单下拉框；MVP 不做独立风格页、角色卡片矩阵或页面级视觉切换。
 
 ---
 
@@ -279,14 +305,10 @@ date: '2026-03-25'
 
 ## 4.1 系统定位与双后端分层
 [Decision] 系统采用**“RuoYi 负责业务持久化与管理后台，FastAPI 负责功能执行与 AI 编排”**的双后端分层架构。
+[Rule] Video Engine 与 Classroom Engine 在生成链路上保持独立，不做流水线合并。  
+[Decision] 统一的是会话交互语义层（Companion），不是内容生成引擎。
 
-- **入口 1：课堂服务**
-  - 主题输入
-  - Agent 编排
-  - 幻灯片 / 测验 / 多轮讨论
-  - SSE 推送
-
-- **入口 2：视频服务**
+- **Video Engine**
   - 题目理解
   - 分镜生成
   - Manim 代码生成与修复
@@ -294,23 +316,38 @@ date: '2026-03-25'
   - FFmpeg 合成
   - COS 上传
 
+- **Classroom Engine**
+  - 主题输入
+  - Agent 编排
+  - 幻灯片 / 讨论 / 白板
+  - SSE 推送
+
+- **Companion Layer**
+  - 当前时刻追问
+  - 解释白板
+  - 追问链
+  - 资料补充检索
+
 ## 4.2 系统组成
-系统由五个主要部分组成：
+系统由六个主要部分组成：
 
 1. **React 19 SPA 前端**  
-   面向学生/教师，负责双入口交互、任务创建、进度展示与视频播放。
+   面向学生/教师，负责双入口交互、任务创建、进度展示、会话伴学与结果消费。
 
 2. **FastAPI 功能服务（8090）**  
-   负责课堂生成、视频生成、Provider 调度、SSE、异步任务协调，是功能性微服务。
+   负责课堂生成、视频生成、Companion、Evidence / Retrieval、Learning Coach、Provider 调度、SSE、异步任务协调，是功能性微服务。
 
 3. **Async Worker**  
    负责 Manim 渲染、音视频合成等长耗时/CPU 密集任务。
 
 4. **RuoYi Spring Boot 管理后端（8080）**  
-   负责用户、角色、菜单、审计日志以及小麦业务表的持久化与 CRUD 管理。
+   负责用户、角色、菜单、审计日志以及小麦业务表、会话记录、学习数据的持久化与 CRUD 管理。
 
 5. **Nginx 统一入口**  
    负责静态资源分发、反向代理与统一域名接入。
+
+6. **外部 AI 能力层**  
+   负责 Evidence / Retrieval 的证据检索、Learning Coach 的流程/规划能力，以及部分补充型白板解释生成。
 
 [Rule] FastAPI 不承担长期业务数据主存储职责；长期业务数据统一由 RuoYi 业务表 / MySQL 承担持久化。
 
@@ -429,7 +466,7 @@ date: '2026-03-25'
 │                  ▼                                                 │
 │           ┌──────────────────┐                                     │
 │           │ Async Worker 容器 │                                     │
-│           │ Celery/Dramatiq  │                                     │
+│           │ Dramatiq + Redis │                                     │
 │           │ 渲染/合成/上传    │                                     │
 │           └──────────────────┘                                     │
 └─────────────────────┬────────────────────────────────────────────┘
@@ -476,17 +513,19 @@ flowchart LR
 # 5. 运行机制与关键链路
 
 ## 5.1 运行时核心机制
-[Decision] 视频生成是标准“功能触发 + 异步执行 + 元数据回写”的链路：  
-前端调用 FastAPI 创建任务，FastAPI 负责执行与实时推送，任务元数据与最终结果摘要需回写 RuoYi 业务表，文件产物上传 COS。
+[Decision] 小麦运行时采用“独立内容引擎 + 共享会话语义层 + 长期数据回写”的机制：  
+前端调用 FastAPI 创建视频或课堂任务，FastAPI 负责执行与实时推送，内容引擎在生成结果后产出 `SessionArtifactGraph`，Companion 在消费阶段围绕当前 `TimeAnchor` 提供追问、解释白板与追问链，长期结果统一回写 RuoYi，文件产物上传 COS。
 
 [Metric][Target] 端到端延迟 P95 < 5min  
 [Metric][Target] 渲染成功率（含修复）>= 80%
 
 [Rule] SSE 的恢复依据 Redis 中的运行时状态与事件缓存完成，**不是**依赖数据库回放全部历史过程。
 
-[Decision] 外部 AI 能力（知识库 RAG、工作流、Multi-Agent）通过**抽象层**封装，腾讯云只是实现类之一。
+[Decision] 外部 AI 能力（证据检索、流程编排、路径规划、评测）通过**抽象层**封装，腾讯云只是当前默认实现类之一。
 
 [Decision] 所有异步任务（VideoTask、ClassroomTask）遵循**统一的任务框架**，保证一致性和可维护性。
+[Decision] 所有会话内追问统一建模为 `CompanionTurn`，并且必须绑定 `TimeAnchor`。
+[Decision] Companion 回答优先检索 `SessionArtifactGraph`，必要时再回退到 Evidence / Retrieval 层的检索能力。
 
 **统一内容：**
 - 任务 ID 生成规则
@@ -531,7 +570,7 @@ sequenceDiagram
         alt L1 失败
             W->>L: L3 LLM 修复
             L-->>W: 修复结果
-            alt 三次均失败
+            alt 两次均失败
                 W->>W: 降级为静态方案
             end
         end
@@ -544,10 +583,20 @@ sequenceDiagram
     W->>C: 上传视频
     C-->>W: 返回 URL
     W->>R: progress 95%
+    W->>RY: 回写 SessionArtifactGraph（timeline、segment、narration、formula_steps）
     W->>RY: 回写任务结果元数据(completed, video_url, summary)
     W->>R: completed 100%
     F-->>U: SSE completed {videoUrl}
 ```
+
+### 5.2.1 视频流水线关键参数决策
+| 参数 | 决策值 | 说明 |
+|------|--------|------|
+| 分镜目标时长 | 默认 `120s` | 面向常规单题讲解 |
+| 分镜时长允许区间 | `90-180s` | 超出区间需二次裁剪 |
+| Manim 自动修复上限 | `2 次` | 超限后进入降级或失败 |
+| 队列引擎 | `Dramatiq + Redis broker` | 统一 Worker 调度通道 |
+| 沙箱资源限制 | `1 vCPU`、`2 GiB RAM`、`120s/attempt`、`1 GiB tmp`、禁止外网、进程隔离 | 安全优先于成功率 |
 
 ## 5.3 关键链路二：SSE 断线重连
 ```mermaid
@@ -688,6 +737,16 @@ stateDiagram-v2
     Cancelled --> [*]
 ```
 
+## 5.7 关键链路四：会话伴学（Companion）按时刻追问与白板解释
+```text
+用户在 /video/:id 或 /classroom/:id 发起追问
+→ Companion API 接收（含 session_id + TimeAnchor）
+→ Context Adapter 拉取当前片段上下文
+→ 可选补充 Evidence / Retrieval 检索
+→ 返回 answer_text + whiteboard_actions + source_refs + followups
+→ 异步回写 RuoYi：xm_companion_turn / xm_whiteboard_action_log / 学习信号
+```
+
 ---
 
 # 6. 数据分层与存储策略
@@ -702,14 +761,19 @@ stateDiagram-v2
 | 任务运行状态 | Redis | 异步执行中的阶段、进度、错误 |
 | SSE 事件缓存 | Redis | 断线恢复与补发 |
 | 课堂进行中上下文 | Redis | 临时消息缓冲、阶段状态 |
+| Companion 运行态窗口 | Redis | 当前锚点、短期上下文窗口 |
 | 视频任务元数据 | RuoYi/MySQL | 任务记录、用户归属、结果摘要 |
 | 课堂会话摘要 | RuoYi/MySQL | 历史记录、后台查询、审计 |
+| 会话伴学问答记录 | RuoYi/MySQL | 追问、回答、锚点、来源回写 |
+| 会话产物图索引 | RuoYi/MySQL | 时间轴、分镜、旁白、slide、白板步骤 |
+| 白板动作日志 | RuoYi/MySQL + COS | 动作日志、必要的渲染产物 |
+| 学习信号 | RuoYi/MySQL | 暂停、回放、提问、答题、收藏等行为 |
 | 学习记录 / 收藏 | RuoYi/MySQL | 标准业务表 |
 | 视频文件 / 课件文件 | COS | 大文件对象存储 |
 
 ## 6.3 规则
 - [Rule] Redis 中的数据必须设置 TTL。
-- [Rule] 用户在个人中心可见、管理员后台需查询、需导出审计的数据，必须进入 RuoYi 业务表。
+- [Rule] 用户在学习中心（`/learning`）或个人资料/设置域（`/profile`、`/settings`）可见，且管理员后台需查询、需导出审计的数据，必须进入 RuoYi 业务表。
 - [Rule] FastAPI 不引入独立业务数据库，不承担长期业务存储。
 - [Rule] RuoYi 是小麦 ToB 业务表与管理能力的主宿主。
 
@@ -748,12 +812,21 @@ stateDiagram-v2
 | `xm_task_events:` | SSE 事件缓存 | `xm_task_events:{task_id}` | 1h |
 | `xm_video_runtime:` | 视频任务运行态 | `xm_video_runtime:{task_id}` | 2h |
 | `xm_classroom_runtime:` | 课堂会话运行态 | `xm_classroom_runtime:{session_id}` | 会话结束后 1h |
+| `xm_companion_runtime:` | Companion 运行态窗口 | `xm_companion_runtime:{session_id}` | 30m |
+| `xm_context_window:` | 锚点上下文窗口 | `xm_context_window:{session_id}:{anchor}` | 30m |
 | `xm_provider_health:` | Provider 健康状态 | `xm_provider_health:{provider}` | 60s |
 
 ## 6.6 长期数据持久化规则
 [Rule] 长期业务数据统一由 RuoYi 业务表 / MySQL 承担持久化。  
 [Rule] 文件产物统一进入 COS。  
 [Rule] FastAPI 不承担长期业务数据主存储职责。  
+
+## 6.7 会话产物图（SessionArtifactGraph）持久化策略
+[Decision] Content Engine 在任务完成时，必须向 RuoYi 回写可供 Companion 消费的 `SessionArtifactGraph` 索引。
+
+- Video Engine 至少回写：时间轴、分镜、旁白文本、关键知识点、公式步骤。
+- Classroom Engine 至少回写：slide 结构、讨论步骤、白板步骤、章节摘要、课后练习信号。
+- Companion 只消费这些索引与上下文窗口，不直接反向依赖视频或课堂引擎内部实现。
 
 ---
 
@@ -808,12 +881,16 @@ Q6: 这个逻辑是否是"调用外部服务"？
 | 任务运行时状态 | Redis | 2h | `xm_task:{id}` |
 | SSE 事件缓存 | Redis | 1h | `xm_task_events:{id}` |
 | 会话上下文 | Redis | 会话期间 | `xm_classroom_runtime:{id}` |
+| Companion 运行态窗口 | Redis | 30m | `xm_companion_runtime:{session_id}` |
 | Provider 健康状态 | Redis | 60s | `xm_provider_health:{provider}` |
 | 视频任务元数据 | RuoYi | 永久 | `xm_video_task` |
 | 课堂会话摘要 | RuoYi | 永久 | `xm_classroom_session` |
+| 会话时刻问答记录 | RuoYi | 永久 | `xm_companion_turn` |
+| 会话产物图索引 | RuoYi | 永久 | `xm_session_artifact` |
+| 白板动作日志 | RuoYi/COS | 永久 | `xm_whiteboard_action_log` |
 | 学习记录 | RuoYi | 永久 | `xm_learning_record` |
 | 测验结果 | RuoYi | 永久 | `xm_quiz_result` |
-| 问答日志 | RuoYi | 永久 | `xm_knowledge_chat_log` |
+| 问答日志 | RuoYi | 永久 | `xm_knowledge_chat_log`（历史表名，承载 Evidence / Retrieval 与来源问答历史） |
 
 ## 7.2 RuoYi 集成策略与边界
 
@@ -882,7 +959,7 @@ FastAPI 负责：
 ## 7.4 外部 AI 能力抽象边界
 
 ### 7.4.1 设计目标
-[Decision] 外部 AI 能力（知识库 RAG、工作流、Multi-Agent）通过**抽象层**封装，腾讯云只是实现类之一。
+[Decision] 外部 AI 能力（Evidence / Retrieval、checkpoint / quiz 工作流、学习路径规划）通过**抽象层**封装，腾讯云只是当前默认实现类之一。
 
 **目标：**
 - 未来可替换为其他平台（Dify、Coze、自建 RAG）
@@ -890,11 +967,21 @@ FastAPI 负责：
 - 切换平台只需更换实现类
 
 ### 7.4.2 Provider 实现矩阵
-| Provider 接口 | 腾讯云实现 | 未来可扩展 |
-|--------------|-----------|-----------|
-| `KnowledgeProvider` | `TencentADPKnowledgeProvider` | Dify、Coze、自建 RAG |
-| `WorkflowProvider` | `TencentADPWorkflowProvider` | Dify、LangGraph Server |
-| `MultiAgentProvider` | `TencentADPMultiAgentProvider` | LangGraph、AutoGen |
+| Provider 接口 | 腾讯云默认实现 | 未来可扩展 |
+|--------------|---------------|-----------|
+| `EvidenceProvider` | `TencentADPEvidenceProvider` | Dify、Coze、自建 RAG |
+| `QuizFlowProvider` | `TencentADPQuizWorkflowProvider` | Dify、LangGraph Server |
+| `PathPlanningProvider` | `TencentADPPathMultiAgentProvider` | LangGraph、AutoGen |
+| `EvaluationProvider` | `TencentADPEvaluationProvider` | 自建评测、Langfuse / OpenTelemetry 评估链 |
+
+## 7.5 Companion 与 Evidence / Retrieval / Learning 的边界判定
+
+| 边界 | 约束 | 判定规则 |
+|------|------|----------|
+| Companion ↔ Video / Classroom | Companion 不反向调用内容引擎内部实现 | 仅消费 `SessionArtifactGraph` 与运行态窗口 |
+| Companion ↔ Evidence / Retrieval | Companion 不承担资料库主检索 | 仅在会话上下文不足时调用 `EvidenceProvider` |
+| Companion ↔ Learning Coach | Learning Coach 不进入会话内即时问答 | 只消费课后学习信号、答题结果与长期沉淀数据 |
+| Classroom ↔ Learning Coach | 课堂不直接承载正式 checkpoint / quiz | 课堂只输出知识点、难点、步骤摘要与推荐练习信号，由 Learning Coach 消费 |
 
 ---
 
@@ -904,7 +991,7 @@ FastAPI 负责：
 | 原则 | 说明 |
 |------|------|
 | **核心壁垒 → 自研** | Manim 渲染、数学动画生成是小麦的核心竞争力 |
-| **通用能力 → 调用** | 知识库 RAG、工作流编排等通用 AI 能力可用腾讯云 |
+| **通用能力 → 调用** | 证据检索、流程编排、路径规划、评测等通用 AI 能力通过可插拔 Provider 接入 |
 | **比赛要求 → 必须用** | 至少 2-3 个核心功能要展示腾讯云平台能力 |
 | **数据主权 → 自研** | 用户数据、学习记录必须在 RuoYi，不依赖外部平台 |
 | **前端统一 → 自研** | 100% 自研前端，保持品牌一致性 |
@@ -933,32 +1020,44 @@ FastAPI 负责：
 | Agent 编排 | 🔴 自研 (LangGraph) | 核心能力，已有架构 |
 | Agent 风格 | 🔴 自研 | AgentConfig 数据预设 |
 | 幻灯片生成 | 🔴 自研 | 代码生成逻辑 |
-| 课堂测验生成 | 🟢 腾讯云工作流 | 节省开发成本 |
-| 多 Agent 讨论 | 🟡 可选 | 可用 LangGraph 或腾讯云 |
-| SSE 进度推送 | 🔴 自研 | 核心能力 |
+| 课后练习触发信号生成 | 🟢 `QuizFlowProvider` | 用于输出学后 checkpoint / quiz 的触发与线索，避免把正式 quiz 硬插进课堂主叙事 |
+| 多 Agent 讨论（FR-CS-005） | 🔴 自研编排 + 🟢 可选外部增强 | 保持课堂主链可控，支持后续增强 |
+| SSE 进度推送（FR-CS-006） | 🔴 自研 | 核心能力 |
+| 白板布局基础可读性（FR-CS-007） | 🔴 自研 | 保障课堂结果页可读与降级策略 |
 
-### 8.2.3 课程知识库模块（🟢 腾讯云 API）
+### 8.2.3 会话伴学模块（🟡 自研编排 + 外部能力补充）
 | 子模块 | 实现方式 | 理由 |
 |--------|----------|------|
-| 知识库管理 | 🟢 腾讯云 | 平台核心能力 |
-| 文档上传/解析 | 🟢 腾讯云 | 文档解析能力强 |
-| 知识点问答 | 🟢 腾讯云 | RAG 是平台核心能力 |
-| 术语解释 | 🟢 腾讯云 | 问答库能力 |
-| 引用来源展示 | 🟢 腾讯云 | 平台返回文档片段 |
-| **前端 UI** | 🔴 自研 | 品牌一致性 |
+| Companion API | 🔴 自研 | 统一视频 / 课堂追问入口 |
+| Context Adapter | 🔴 自研 | 屏蔽 Video / Classroom 上下文差异 |
+| Whiteboard Action Schema | 🔴 自研 | 统一解释白板动作协议 |
+| Whiteboard Renderer | 🔴 自研 + 🟢 可选外部增强 | 先保证结构化解释与可回放 |
+| SessionArtifactGraph 检索 | 🔴 自研 | Companion 核心基础设施 |
+| Evidence 补充调用 | 🟢 通过 `EvidenceProvider` 适配 | 仅作为资料依据补充 |
 
-### 8.2.4 学习辅助模块（🟢 腾讯云 + 🔴 自研混合）
+### 8.2.4 Evidence / Retrieval 服务（🟢 Provider 驱动）
 | 子模块 | 实现方式 | 理由 |
 |--------|----------|------|
-| 课后小测生成 | 🟢 腾讯云工作流 | 适合平台能力 |
-| 错题解析 | 🟢 腾讯云 | RAG + 工作流增强 |
-| 学习路径规划 | 🟢 腾讯云 Multi-Agent | 多角色推荐 |
-| 知识点推荐 | 🟢 腾讯云 | 基于知识库关联 |
+| 资料索引管理 | 🟢 `EvidenceProvider` | 平台能力可替换，避免主流程侵入 |
+| 文档上传/解析（FR-KQ-002） | 🟢 `EvidenceProvider` + 🔴 自研任务编排 | 文档解析能力强，需纳入统一任务与错误模型 |
+| 证据检索 | 🟢 `EvidenceProvider` | 负责来源召回、引用与补证据 |
+| 术语解释 | 🟢 `EvidenceProvider` | 作为证据补充能力的一部分 |
+| 引用来源展示 | 🟢 Provider 返回 + 🔴 自研渲染 | 证据可解释，但前端交互由自研控制 |
+| 资料接入入口与解析状态展示 | 🔴 自研 | 品牌一致性与交互可控 |
+
+### 8.2.5 Learning Coach 学习教练模块（🟢 Provider + 🔴 自研混合）
+| 子模块 | 实现方式 | 理由 |
+|--------|----------|------|
+| Checkpoint 生成 | 🟢 `QuizFlowProvider` + 🔴 自研编排 | 会话后轻量检查 |
+| Quiz 生成与判分 | 🟢 `QuizFlowProvider` | 适合流程化能力 |
+| 错题解析 | 🟢 `EvidenceProvider` + `QuizFlowProvider` | 证据与流程联合增强 |
+| 学习路径规划 | 🟢 `PathPlanningProvider` | 多角色规划与推荐 |
+| 知识点推荐 | 🟢 `PathPlanningProvider` + `EvidenceProvider` | 基于证据与学习行为关联 |
 | 错题本 | 🔴 自研 | 数据在 RuoYi |
 | 学习记录 | 🔴 自研 | 数据在 RuoYi |
 | 收藏管理 | 🔴 自研 | 数据在 RuoYi |
 
-### 8.2.5 用户与权限模块（🔴 自研）
+### 8.2.6 用户与权限模块（🔴 自研）
 | 子模块 | 实现方式 | 理由 |
 |--------|----------|------|
 | 用户注册/登录 | 🔴 自研 (RuoYi) | 已有，不动 |
@@ -966,27 +1065,33 @@ FastAPI 负责：
 | RBAC 权限 | 🔴 自研 (RuoYi) | 已有，不动 |
 | 学习数据统计 | 🔴 自研 | 数据在 RuoYi |
 
-### 8.2.6 前端模块（🔴 100% 自研）
+### 8.2.7 前端模块（🔴 100% 自研）
 | 页面 | 实现方式 | 理由 |
 |------|----------|------|
 | 首页双入口 | 🔴 自研 | 品牌展示 |
 | 视频生成页 | 🔴 自研 | 核心交互 |
 | 视频播放页 | 🔴 自研 | 核心体验 |
-| 知识问答页 | 🔴 自研 | 品牌一致性 |
-| 学习中心 | 🔴 自研 | 个人数据展示 |
+| 课堂输入/等待/结果页 | 🔴 自研 | 课堂链路承载 |
+| Companion 伴学侧栏 / 白板 | 🔴 自研 | 共享消费体验核心 |
+| 来源抽屉 / 证据面板（嵌入结果页与学习中心） | 🔴 自研 | 证据能力以非路由形态嵌入，不再新增学生端独立页面 |
+| 学习中心（`/learning`） | 🔴 自研 | 学习结果与学习沉淀聚合入口 |
+| 历史记录视图（`/history`） | 🔴 自研 | 学习中心域视图，承接结果回看 |
+| 收藏视图（`/favorites`） | 🔴 自研 | 学习中心域视图，承接收藏管理 |
+| 个人资料（`/profile`） | 🔴 自研 | 仅承接用户基础资料 |
+| 设置页（`/settings`） | 🔴 自研 | 仅承接平台设置与账号偏好 |
 | 管理后台 | 🔴 自研 (Soybean) | 已有，不动 |
 
 ## 8.3 开发优先级
 | 优先级 | 模块 | 实现方式 | 说明 |
 |--------|------|----------|------|
-| **P0** | 视频生成核心链 | 🔴 自研 | MVP 必须有 |
-| **P0** | 视频播放页 | 🔴 自研 | MVP 必须有 |
-| **P0** | 首页双入口 | 🔴 自研 | MVP 必须有 |
-| **P1** | 课程知识库问答 | 🟢 腾讯云 | 比赛核心展示 |
-| **P1** | 课后小测生成 | 🟢 腾讯云 | 比赛核心展示 |
-| **P2** | 学习路径规划 | 🟢 腾讯云 | 锦上添花 |
-| **P2** | 课堂服务 | 🔴 自研 | 完整体验 |
-| **P3** | 错题本/收藏 | 🔴 自研 | 长期功能 |
+| **P0 / 契约与底座** | 统一任务框架 + 队列调度 | 🔴 自研 | `Dramatiq + Redis broker`、状态机、错误码、SSE |
+| **P0 / 并行主链路** | 视频与课堂后端能力链 | 🔴 自研 | 分镜/渲染/修复、课堂内容、多 Agent 讨论、白板可读性 |
+| **P0 / 并行主链路** | Companion 会话伴学层 | 🔴 自研 | 锚点、追问、白板解释、问答回写 |
+| **P0 / 并行主链路** | RuoYi 业务表与学习数据域 | 🔴 自研 | 学习记录、收藏、错题本、问答回写 |
+| **P1 / 并行扩展** | Evidence / Retrieval + 文档解析 | 🟢 Provider 默认实现 + 🔴 编排 | FR-KQ-002 与来源引用链路闭环 |
+| **P1 / 并行扩展** | Learning Coach 扩展能力 | 🟢 Provider 默认实现 + 🔴 编排 | checkpoint / quiz / path / 推荐闭环 |
+| **P1 / 前端并行实现** | 首页、输入、等待、结果正式页 | 🔴 自研 | 基于 `adapter + mock` 并行实现，真实联调 / 合并前核对四项门禁 |
+| **P2 / 前端并行扩展** | 学习中心域与个人资料/设置正式页 | 🔴 自研 | `/learning`、`/history`、`/favorites`、`/profile`、`/settings`，按稳定契约并行推进 |
 
 ## 8.4 FastAPI 内部模块组织
 **选择：手动搭建 FastAPI + Feature-Module + Protocol-DI 架构**
@@ -1041,7 +1146,19 @@ packages/fastapi-backend/
 │   │   └── tts/
 │   ├── features/
 │   │   ├── classroom/
-│   │   └── video/
+│   │   ├── video/
+│   │   ├── companion/
+│   │   │   ├── routes.py
+│   │   │   ├── service.py
+│   │   │   ├── schemas.py
+│   │   │   ├── context_adapter/
+│   │   │   │   ├── video_adapter.py
+│   │   │   │   └── classroom_adapter.py
+│   │   │   └── whiteboard/
+│   │   │       ├── action_schema.py
+│   │   │       └── renderer.py
+│   │   ├── knowledge/
+│   │   └── learning/
 │   └── shared/
 │       ├── agent_config.py
 │       ├── ruoyi_client.py
@@ -1062,6 +1179,9 @@ flowchart TD
 
     E --> E1[classroom]
     E --> E2[video]
+    E --> E3[companion]
+    E --> E4[knowledge]
+    E --> E5[learning]
 
     C --> C1[http]
     C --> C2[redis_client]
@@ -1077,22 +1197,22 @@ flowchart TD
 # 9. 外部平台集成策略
 
 ## 9.1 腾讯云智能体平台定位
-[Decision] 腾讯云智能体开发平台（Tencent Cloud ADP）作为**外部 AI 能力扩展层**，不作为核心业务主链路的依赖。
+[Decision] 腾讯云智能体开发平台（Tencent Cloud ADP）作为**当前默认的外部 AI 能力实现之一**，不作为核心业务主链路的直接依赖。
 
 **核心原则**：
 - **纯 API 调用**：不自建前端组件，完全使用自研 UI
-- **能力借用**：借用平台的 RAG、工作流、Multi-Agent 能力
+- **能力借用**：借用平台的证据检索、流程编排、路径规划与评测能力
 - **数据独立**：核心业务数据仍由 RuoYi 持久化，不依赖平台存储
 - **可替换性**：通过 Provider 抽象层封装，便于未来迁移
 
 ## 9.2 平台能力与小麦用途映射
-| 腾讯云能力 | 小麦用途 | 集成方式 |
-|-----------|---------|---------|
-| **知识库 RAG** | 课程知识库问答 | 标准 API 调用 |
-| **工作流编排** | 课后小测生成 | 异步 API 调用 + 轮询 |
-| **Multi-Agent** | 学习路径规划 | 标准 API 调用 |
-| **文档解析** | 教材上传解析 | 原子能力 API |
-| **Embedding** | 向量检索 | 原子能力 API |
+| 平台能力族 | 小麦内部能力 | 集成方式 |
+|-----------|-------------|---------|
+| **证据检索 / RAG** | `EvidenceProvider` | 标准 API 调用 |
+| **工作流编排** | `QuizFlowProvider` | 异步 API 调用 + 轮询 |
+| **Multi-Agent / 深度分析** | `PathPlanningProvider` | 标准 API 调用 |
+| **文档解析 / 拆分 / embedding / rerank** | `EvidenceProvider` 的索引与召回子能力 | 原子能力 API |
+| **应用评测 / 运营** | `EvaluationProvider` | 控制台 / API 混合接入 |
 
 ## 9.3 API 集成架构
 ```text
@@ -1105,7 +1225,7 @@ flowchart TD
 │                    FastAPI 功能服务 (8090)                           │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │                 TencentADPAdapter                            │   │
-│  │  ├─ KnowledgeService (知识库问答)                             │   │
+│  │  ├─ EvidenceService (资料证据检索与引用)                     │   │
 │  │  ├─ WorkflowService (工作流调用)                              │   │
 │  │  ├─ MultiAgentService (多智能体)                              │   │
 │  │  └─ DocumentService (文档解析)                                │   │
@@ -1136,7 +1256,7 @@ flowchart TD
 ## 9.6 数据回写策略
 | 数据类型 | 回写时机 | 存储位置 |
 |---------|---------|---------|
-| 问答记录 | 每次对话后 | RuoYi `xm_knowledge_chat_log` |
+| 问答记录 | 每次对话后 | RuoYi `xm_knowledge_chat_log`（历史表名，承载证据检索与来源问答历史） |
 | 小测结果 | 工作流完成后 | RuoYi `xm_quiz_result` |
 | 学习路径 | 用户确认后 | RuoYi `xm_learning_path` |
 
@@ -1145,8 +1265,8 @@ flowchart TD
 ## 9.7 平台能力使用清单
 | 能力类别 | 具体能力 | 小麦用途 | API 接口 |
 |---------|---------|---------|---------|
-| **知识库** | RAG 检索 | 课程知识问答 | `ChatGetMsgRecord` |
-| **工作流** | 可视化编排 | 课后小测生成 | `CreateWorkflowRunDescribeWorkflowRun` |
+| **证据检索 / RAG** | 证据召回 | 资料证据检索与来源引用 | `ChatGetMsgRecord` |
+| **工作流** | 可视化编排 | Learning Coach 的 checkpoint / quiz 生成 | `CreateWorkflowRunDescribeWorkflowRun` |
 | **Multi-Agent** | 多智能体协同 | 学习路径规划 | `Chat` (Multi-Agent 模式) |
 | **文档解析** | 文档转 Markdown | 教材上传解析 | 原子能力 API |
 | **Embedding** | 向量化 | 知识检索 | 原子能力 API |
@@ -1163,7 +1283,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     FE[小麦前端] --> FA[FastAPI]
-    FA --> KP[Knowledge Provider]
+    FA --> KP[Evidence Provider]
     FA --> WP[Workflow Provider]
     FA --> MP[Multi-Agent Provider]
 
@@ -1212,6 +1332,9 @@ flowchart LR
 | SSE | GET | `/api/v1/{module}/tasks/{id}/events` | `/api/v1/video/tasks/123/events` |
 
 [Rule] 学习记录、收藏、会话历史等**标准业务 CRUD** 优先由 RuoYi 管理端 / 业务表承接；FastAPI 不重复建设完整 CRUD 面。
+[Rule] 统一认证采用独立登录页 `/login`；首页与受保护页面只负责跳转到认证页，不弹出认证模态框。
+[Rule] 页面域职责固定：`/learning` 为学习结果聚合入口；`/history`、`/favorites` 为学习中心域视图；`/profile` 仅承接资料；`/settings` 仅承接平台设置与账号偏好。
+[Rule] 高保真视觉稿、关键状态、交互说明、稳定接口契约四项门禁用于真实接口联调、主分支合并与发布收口；在视觉稿与契约稳定时，正式页面可基于 `adapter + mock` 先行实现。
 
 ## 10.2 数据与字段规范
 
@@ -1462,19 +1585,20 @@ yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message
 |------|------|
 | D-01 | 系统采用双后端分层：RuoYi 负责业务持久化与管理后台，FastAPI 负责功能执行与 AI 编排 |
 | D-02 | Redis 只承担运行态，不承担长期业务存储 |
-| D-03 | 双入口松耦合：课堂服务与视频服务共享基础设施与 Provider 抽象层，但业务实现彼此独立 |
+| D-03 | 双内容引擎独立：Classroom Engine 与 Video Engine 共享基础设施与 Provider 抽象层，但生成链路实现彼此独立，不合并流水线 |
 | D-04 | Provider 可插拔，支持运行时切换、Failover 和配置驱动扩展 |
 | D-05 | 所有异步任务必须支持 SSE 实时进度、Redis 状态缓存与断线恢复 |
 | D-06 | 任一外部依赖不可用时必须有降级方案，优先返回低质量可用结果 |
-| D-07 | 腾讯云智能体平台作为外部 AI 能力扩展层，不作为核心业务主链路依赖 |
-| D-08 | 核心壁垒自研，通用能力调用腾讯云 API |
+| D-07 | 腾讯云智能体平台作为当前默认外部 AI 能力实现之一，不作为核心业务主链路依赖 |
+| D-08 | 核心壁垒自研，通用能力通过可插拔 Provider 接入 |
 | D-09 | 所有异步任务遵循统一任务框架 |
 | D-10 | RuoYi 是小麦 ToB 业务表与管理能力的主宿主 |
+| D-11 | 契约先行、mock 先行、前后端并行：稳定 API 契约、错误码、状态枚举、示例 payload 与 mock 样例先冻结；四项门禁只用于真实接口联调、合并与发布收口 |
 
 ## 12.2 专项 ADR 记录
 
 ### ADR-007: 腾讯云智能体平台集成方式
-**决策**: 腾讯云智能体平台作为"后端能力层"，不使用其前端组件
+**决策**: 腾讯云智能体平台作为"后端能力默认实现层"，不使用其前端组件
 
 **理由**:
 - 保持品牌一致性
@@ -1488,27 +1612,29 @@ yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message
 - 所有 UI 100% 自研
 
 ### ADR-008: 功能模块实现方式划分
-**决策**: 核心壁垒自研，通用能力调用腾讯云 API
+**决策**: 核心壁垒自研，通用能力通过 Provider 接口接入，Tencent ADP 为默认实现
 
 **划分标准**:
 - 🔴 自研: Manim 渲染、分镜生成、代码修复、视频合成、Agent 编排
-- 🟢 腾讯云: 知识库 RAG、工作流编排、Multi-Agent、文档解析
+- 🟢 Provider 默认实现（当前 Tencent ADP）: 证据检索、工作流编排、路径规划、文档解析、评测
 - 🔴 自研 (数据): 用户数据、学习记录、测验结果全部在 RuoYi
 
 ---
 
 # 13. 未决事项与后续补充
 
-## 13.1 当前未定项
-[Option] 异步任务队列可选 Celery 或 Dramatiq，待 M1 阶段 PoC 后确定。  
-[Option] 多 Agent 讨论可用 LangGraph 或腾讯云。  
+## 13.1 已收敛决策与剩余未定项
+[Decision] 异步任务队列已定为 `Dramatiq + Redis broker`。
+[Decision] 视频流水线参数已定：分镜目标时长默认 `120s`、允许区间 `90-180s`；Manim 自动修复上限 `2 次`。
+[Decision] Manim 沙箱资源限制已定：`1 vCPU`、`2 GiB RAM`、`120s wall time / attempt`、`1 GiB` 临时磁盘、禁止外网访问、进程隔离。
+[Decision] 契约先行与双端并行已定：API 契约、错误码、状态枚举、示例 payload 与 mock 样例冻结后，前后端即可并行实施；四项门禁用于真实接口联调、主分支合并与发布收口。
+[Decision] 页面域边界已定：`/learning` 聚合，`/history` 与 `/favorites` 属学习中心域，`/profile` 资料，`/settings` 设置。
 [Option] AgentConfig MVP 阶段不入库；如需运营配置再迁移到 RuoYi 表。  
 [Option] 国际化为 Could 优先级，中英双语后置。  
 [Option] WCAG AA 无障碍明确 Deferred。  
 
 ## 13.2 待补充专题
 [Implementation Note] 本文档后续应继续补充但不限于以下内容：
-- 安全模型与沙箱边界
 - 服务间认证方式
 - 监控告警与可观测性
 - 幂等与补偿机制
@@ -1529,9 +1655,15 @@ yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message
 |--------|---------------|---------|
 | **FR-VS: 视频服务** | `packages/fastapi-backend/app/features/video/` | `routes/`, `services/`, `schemas/`, `workers/` |
 | **FR-CS: 课堂服务** | `packages/fastapi-backend/app/features/classroom/` | `routes/`, `services/`, `schemas/`, `agents/` |
+| **FR-CP: 会话伴学** | `packages/fastapi-backend/app/features/companion/` | `routes/`, `service/`, `context_adapter/`, `whiteboard/` |
+| **FR-KQ: Evidence / Retrieval** | `packages/fastapi-backend/app/features/knowledge/` | `routes/`, `services/`, `parsers/`, `adapters/` |
+| **FR-LA: 学习教练** | `packages/fastapi-backend/app/features/learning/` | `checkpoint/`, `quiz/`, `recommendation/`, `wrongbook/`, `path/` |
 | **FR-UM: 用户管理** | `packages/RuoYi-Vue-Plus-5.X/` | RuoYi 业务表 + RBAC |
 | **FR-LR: 学习记录** | `packages/RuoYi-Vue-Plus-5.X/` | 业务表 + CRUD |
 | **FR-UI: 前端 UI** | `packages/student-web/` | React 19 SPA |
+
+[Note] `packages/fastapi-backend/app/features/knowledge/` 为历史工程命名，当前产品语义统一对应 Evidence / Retrieval 服务层；当前版本不提供学生端独立 `/knowledge` 路由。
+[Note] UX 设计资产按页面归档；前端代码仍按 React 页面、组件、服务职责组织。两者分别服务于设计管理与工程实现，不构成冲突。
 
 ## 14.2 完整 Monorepo 项目结构
 
@@ -1611,24 +1743,38 @@ Prorise_ai_teach_workspace/
 │   │   │   │   │   └── workers/            # 课堂异步任务
 │   │   │   │   │       └── classroom_task.py
 │   │   │   │   │
-│   │   │   │   └── video/                  # 视频服务模块
-│   │   │   │       ├── routes.py           # 路由定义
-│   │   │   │       ├── service.py          # 视频生成逻辑
-│   │   │   │       ├── schemas.py          # Pydantic 模型
-│   │   │   │       ├── pipeline/           # 视频流水线
-│   │   │   │       │   ├── stages.py       # 阶段定义
-│   │   │   │       │   ├── understanding.py # 题目理解
-│   │   │   │       │   ├── storyboard.py   # 分镜生成
-│   │   │   │       │   ├── manim_gen.py    # Manim 代码生成
-│   │   │   │       │   ├── manim_fix.py    # Manim 修复链
-│   │   │   │       │   ├── render.py       # 渲染执行
-│   │   │   │       │   └── compose.py      # FFmpeg 合成
-│   │   │   │       ├── sandbox/            # Manim 沙箱
-│   │   │   │       │   ├── executor.py     # 安全执行器
-│   │   │   │       │   ├── resource_limits.py
-│   │   │   │       │   └── security_policy.py
-│   │   │   │       └── workers/            # 视频异步任务
-│   │   │   │           └── video_task.py
+│   │   │   │   ├── video/                  # 视频服务模块
+│   │   │   │   │   ├── routes.py           # 路由定义
+│   │   │   │   │   ├── service.py          # 视频生成逻辑
+│   │   │   │   │   ├── schemas.py          # Pydantic 模型
+│   │   │   │   │   ├── pipeline/           # 视频流水线
+│   │   │   │   │   │   ├── stages.py       # 阶段定义
+│   │   │   │   │   │   ├── understanding.py # 题目理解
+│   │   │   │   │   │   ├── storyboard.py   # 分镜生成
+│   │   │   │   │   │   ├── manim_gen.py    # Manim 代码生成
+│   │   │   │   │   │   ├── manim_fix.py    # Manim 修复链
+│   │   │   │   │   │   ├── render.py       # 渲染执行
+│   │   │   │   │   │   └── compose.py      # FFmpeg 合成
+│   │   │   │   │   ├── sandbox/            # Manim 沙箱
+│   │   │   │   │   │   ├── executor.py     # 安全执行器
+│   │   │   │   │   │   ├── resource_limits.py
+│   │   │   │   │   │   └── security_policy.py
+│   │   │   │   │   └── workers/            # 视频异步任务
+│   │   │   │   │       └── video_task.py
+│   │   │   │   │
+│   │   │   │   ├── companion/              # 共享会话伴学层
+│   │   │   │   │   ├── routes.py
+│   │   │   │   │   ├── service.py
+│   │   │   │   │   ├── schemas.py
+│   │   │   │   │   ├── context_adapter/
+│   │   │   │   │   │   ├── video_adapter.py
+│   │   │   │   │   │   └── classroom_adapter.py
+│   │   │   │   │   └── whiteboard/
+│   │   │   │   │       ├── action_schema.py
+│   │   │   │   │       └── renderer.py
+│   │   │   │   │
+│   │   │   │   ├── knowledge/              # Evidence / Retrieval 资料证据服务
+│   │   │   │   └── learning/               # Learning Coach 学习教练
 │   │   │   │
 │   │   │   └── shared/                     # 共享模块
 │   │   │       ├── agent_config.py         # AgentConfig 预设数据
@@ -1662,9 +1808,13 @@ Prorise_ai_teach_workspace/
 │   │   │   │   ├── VideoGenerator.tsx      # 视频生成页
 │   │   │   │   ├── VideoPlayer.tsx         # 视频播放页
 │   │   │   │   ├── Classroom.tsx           # 课堂页
-│   │   │   │   ├── KnowledgeQA.tsx         # 知识问答页
+│   │   │   │   ├── CompanionPanel.tsx      # 会话伴学侧栏 / 白板
+│   │   │   │   ├── EvidenceDrawer.tsx      # 来源抽屉 / 证据面板（非路由）
 │   │   │   │   ├── LearningCenter.tsx      # 学习中心
-│   │   │   │   └── Profile.tsx             # 个人中心
+│   │   │   │   ├── History.tsx             # 历史记录视图（学习中心域）
+│   │   │   │   ├── Favorites.tsx           # 收藏视图（学习中心域）
+│   │   │   │   ├── Profile.tsx             # 个人资料页
+│   │   │   │   └── Settings.tsx            # 设置页
 │   │   │   │
 │   │   │   ├── components/                 # 组件
 │   │   │   │   ├── ui/                     # Shadcn/ui 组件
@@ -1754,6 +1904,9 @@ Prorise_ai_teach_workspace/
 │           │       ├── domain/              # 实体类
 │           │       │   ├── XmVideoTask.java
 │           │       │   ├── XmClassroomSession.java
+│           │       │   ├── XmCompanionTurn.java
+│           │       │   ├── XmSessionArtifact.java
+│           │       │   ├── XmWhiteboardActionLog.java
 │           │       │   ├── XmLearningRecord.java
 │           │       │   ├── XmLearningFavorite.java
 │           │       │   └── XmQuizResult.java
@@ -1793,11 +1946,11 @@ Prorise_ai_teach_workspace/
 └── README.md
 ```
 
-## 14.3 Epic/功能到文件映射
+## 14.3 能力域/功能到文件映射
 
-| Epic / 功能 | 主要文件/目录 | 说明 |
+| 能力域 / 功能 | 主要文件/目录 | 说明 |
 |------------|--------------|------|
-| **Epic 1: 视频生成** | `packages/fastapi-backend/app/features/video/` | 完整视频流水线 |
+| **功能域：Video Engine 后端** | `packages/fastapi-backend/app/features/video/` | 完整视频流水线 |
 | - FR-VS-001 题目理解 | `pipeline/understanding.py` | LLM 题目解析 |
 | - FR-VS-002 分镜生成 | `pipeline/storyboard.py` | 分镜脚本生成 |
 | - FR-VS-003 Manim 生成 | `pipeline/manim_gen.py` | 代码生成 |
@@ -1806,19 +1959,33 @@ Prorise_ai_teach_workspace/
 | - FR-VS-006 TTS | `providers/tts/` | 多 TTS 级联 |
 | - FR-VS-007 合成 | `pipeline/compose.py` | FFmpeg 合成 |
 | - FR-VS-008 上传 | `shared/cos_client.py` | COS 上传 |
-| **Epic 2: 课堂服务** | `packages/fastapi-backend/app/features/classroom/` | 课堂生成 |
+| **功能域：Classroom Engine 后端** | `packages/fastapi-backend/app/features/classroom/` | 课堂生成 |
 | - FR-CS-001 主题→课堂 | `service.py`, `agents/orchestrator.py` | 课堂生成 |
 | - FR-CS-002 Agent 编排 | `agents/orchestrator.py` | LangGraph 编排 |
 | - FR-CS-003 幻灯片 | `agents/` | 幻灯片生成 |
-| - FR-CS-004 测验 | `agents/`, `shared/tencent_adp.py` | 测验生成 |
-| - FR-CS-005 SSE | `core/sse.py`, `infra/sse_broker.py` | 实时进度 |
-| **Epic 3: 前端 UI** | `packages/student-web/` | React 19 SPA |
+| - FR-CS-004 会话结束信号 | `agents/`, `shared/tencent_adp.py` | 课后 checkpoint / quiz 触发信号生成 |
+| - FR-CS-005 多 Agent 讨论 | `agents/discussion.py`, `agents/orchestrator.py` | 多角色讨论编排 |
+| - FR-CS-006 SSE | `core/sse.py`, `infra/sse_broker.py` | 实时进度 |
+| - FR-CS-007 白板布局 | `viewmodels/whiteboard_layout.py` | 基础可读性与降级规则 |
+| **功能域：Companion 会话伴学后端** | `packages/fastapi-backend/app/features/companion/` | 当前时刻问答、白板解释、上下文适配 |
+| - FR-CP-001~004 锚点与追问 | `companion/service.py`, `companion/context_adapter/` | 当前上下文解释 |
+| - FR-CP-003 白板解释 | `companion/whiteboard/` | 动作协议与渲染 |
+| - FR-CP-005 回写 | `ruoyi-xiaomai/domain/`, `shared/ruoyi_client.py` | 问答与动作日志 |
+| **功能域：Evidence / Retrieval 后端** | `packages/fastapi-backend/app/features/knowledge/` | 证据检索、来源引用与资料接入 |
+| - FR-KQ-002 文档上传与解析 | `knowledge/parsers/`, `knowledge/services/` | 上传、解析、索引 |
+| **功能域：Learning Coach 学习教练后端** | `packages/fastapi-backend/app/features/learning/` | checkpoint / quiz / path / 推荐 |
+| - FR-LA-004 知识点推荐 | `learning/recommendation.py` | 关联推荐 |
+| - FR-LA-005 错题本 | `learning/wrongbook.py`, `ruoyi-xiaomai/domain/` | 错题沉淀与回看 |
+| **功能域：前端 UI** | `packages/student-web/` | React 19 SPA |
 | - FR-UI-001 首页 | `pages/Home.tsx` | 双入口页面 |
 | - FR-UI-002 视频页 | `pages/VideoGenerator.tsx`, `VideoPlayer.tsx` | 视频相关 |
 | - FR-UI-003 课堂页 | `pages/Classroom.tsx` | 课堂页面 |
 | - FR-UI-004 播放器 | `components/video/VideoPlayer.tsx` | Video.js 封装 |
-| - FR-UI-005 个人中心 | `pages/Profile.tsx`, `LearningCenter.tsx` | 用户页面 |
-| **Epic 4: 用户与学习** | `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/` | 业务表 |
+| - FR-UI-005 个人资料与设置 | `pages/Profile.tsx` | 个人资料与平台设置 |
+| - FR-UI-007 学习中心 | `pages/LearningCenter.tsx` | 学习结果聚合页面 |
+| - 学习中心域视图 | `pages/History.tsx`, `pages/Favorites.tsx` | `/history`、`/favorites` |
+| - 设置页 | `pages/Settings.tsx` | `/settings` |
+| **功能域：RuoYi 业务承接（用户与学习数据）** | `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/` | 业务表与 CRUD 承接 |
 | - FR-LR-001 学习记录 | `domain/XmLearningRecord.java` | 学习记录表 |
 | - FR-LR-002 收藏 | `domain/XmLearningFavorite.java` | 收藏表 |
 
@@ -1848,7 +2015,7 @@ flowchart TB
     FA <-->|共享 JWT| RD
     FA -->|业务元数据| RY
     FA -->|视频文件| COS
-    FA -->|知识库/工作流| ADP
+    FA -->|证据检索/工作流| ADP
     
     RY <-->|Token 在线态| RD
     RY -->|业务数据| MY
@@ -1864,6 +2031,8 @@ flowchart TB
 | **前端 ↔ RuoYi** | JWT 认证 | `hooks/useAuth.ts` |
 | **Redis 数据** | TTL 强制 | 所有 Key 设置过期时间 |
 | **长期数据** | 必须入 RuoYi | 业务表持久化 |
+| **Video / Classroom 引擎边界** | 不互相依赖具体实现 | 仅通过 `SessionArtifactGraph` 共享上下文 |
+| **Companion ↔ Evidence / Retrieval** | Companion 不直接承担资料库主检索 | 通过 `EvidenceProvider` 适配调用 |
 
 ---
 
@@ -1914,11 +2083,14 @@ flowchart TB
 |---------|---------|--------|------|
 | **FR-VS 视频服务** (9 项) | ✅ 完整覆盖 | 100% | pipeline/ 模块完整 |
 | **FR-CS 课堂服务** (7 项) | ✅ 完整覆盖 | 100% | agents/ + LangGraph |
+| **FR-CP 会话伴学** (6 项) | ✅ 完整覆盖 | 100% | companion/ + SessionArtifactGraph |
+| **FR-KQ Evidence / Retrieval** (6 项) | ✅ 完整覆盖 | 100% | knowledge/ + EvidenceProvider 抽象 |
+| **FR-LA 学习教练** (6 项) | ✅ 完整覆盖 | 100% | learning/ + RuoYi 数据闭环 |
 | **FR-UM 用户管理** (4 项) | ✅ 完整覆盖 | 100% | RuoYi 承担 |
-| **FR-LR 学习记录** (3 项) | ✅ 完整覆盖 | 100% | RuoYi 业务表 |
+| **FR-LR 学习记录** (5 项) | ✅ 完整覆盖 | 100% | RuoYi 业务表 |
 | **FR-UI 前端 UI** (6 项) | ✅ 完整覆盖 | 100% | React 19 SPA |
 
-**总计**: 33/33 功能需求已覆盖 (100%) ✅
+**结论**：当前架构已按能力域完整覆盖 Video Engine、Classroom Engine、Companion、Evidence / Retrieval、Learning Coach 与长期数据闭环。  
 
 ### 15.2.2 非功能需求覆盖 ✅
 
@@ -1950,7 +2122,7 @@ flowchart TB
 | 维度 | 完整度 | 说明 |
 |------|--------|------|
 | 目录结构 | ✅ 100% | 完整 Monorepo 结构已定义 |
-| 文件映射 | ✅ 100% | Epic → 文件映射已完成 |
+| 文件映射 | ✅ 100% | 能力域/功能 → 文件映射已完成 |
 | 集成边界 | ✅ 100% | FastAPI ↔ RuoYi ↔ 腾讯云边界清晰 |
 | 数据边界 | ✅ 100% | Redis/MySQL/COS 职责明确 |
 
@@ -1975,7 +2147,7 @@ flowchart TB
 
 | 差距 | 优先级 | 建议 |
 |------|--------|------|
-| Manim 沙箱安全策略细节 | P1 | 补充资源限制、网络隔离具体参数 |
+| 联调 / 发布门禁执行自动化 | P1 | 将“视觉稿/关键状态/交互说明/接口契约”四项门禁接入联调与 PR 检查 |
 | 监控告警指标定义 | P2 | 定义 APM 关键指标和告警阈值 |
 | 数据库迁移策略 | P2 | RuoYi 业务表版本管理方案 |
 
@@ -2027,7 +2199,7 @@ flowchart TB
 
 **高** - 基于以下因素：
 - 所有决策互相兼容
-- 需求覆盖完整 (33/33 FR + 43/43 NFR)
+- 需求覆盖完整 (64/64 FR + 43/43 NFR)
 - 实施模式清晰
 - 项目结构具体
 
@@ -2041,7 +2213,7 @@ flowchart TB
 ### 后续增强方向
 
 1. **M2 阶段** - 补充监控告警体系
-2. **M3 阶段** - 完善 Manim 沙箱安全策略
+2. **M3 阶段** - 完成沙箱资源上限与隔离策略的压测验证
 3. **长期迭代** - 引入 CI/CD 自动化
 
 ## 15.7 实施指导
@@ -2055,22 +2227,23 @@ flowchart TB
 
 ### 实施节奏原则
 
-1. **后端能力域先行**：优先交付 FastAPI、RuoYi、统一任务框架、Provider、防腐层、状态恢复与接口测试。
-2. **前端验证壳层不等于正式交付**：`packages/student-web/` 中的临时页面、原型页和联调壳层只用于契约验证，不视为正式页面完成。
-3. **正式页面以后置 Epic 承接**：首页、输入页、等待页、结果页、个人中心等正式前端页面，必须以成品图、关键状态说明和稳定接口契约为前置条件。
-4. **先稳接口，再做视觉**：若接口字段、状态枚举、错误码仍在频繁变动，不允许把对应正式页面排入当前实施波次。
+1. **契约先行、双端并行**：先冻结 API 契约、错误码、状态枚举、示例 payload 与 mock 样例；后端实现真实端点，前端基于 `adapter + mock handler` 并行推进。
+2. **前端正式页面可先于真实接口联调完成**：`packages/student-web/` 中的正式页面允许在视觉稿与契约稳定时基于 mock 完成，不把“等待后端返回”当作开发前置。
+3. **四项门禁只管联调与收口**：首页、输入页、等待页、结果页、学习中心域页面（`/learning`、`/history`、`/favorites`）与个人域页面（`/profile`、`/settings`）在真实接口联调、主分支合并与发布前，必须完成高保真视觉稿、关键状态、交互说明、稳定接口契约核对。
+4. **先稳契约，再切真实接口**：若接口字段、状态枚举、错误码仍在频繁变动，允许前端继续基于 mock 演进，但不得进入真实联调与发布收口。
 
 ### 优先实施顺序
 
 | 优先级 | 模块 | 说明 |
 |--------|------|------|
+| **P0** | API 契约 / mock 样例 / adapter 骨架 | `/api/v1/**`、状态枚举、错误码、示例 payload、mock handler |
 | **P0** | FastAPI 基础架构 | core/、infra/、providers/ |
 | **P0** | 视频生成核心链 | features/video/pipeline/ |
 | **P0** | 课堂生成核心链 | features/classroom/ |
 | **P0** | RuoYi 认证与业务表承接 | shared/ruoyi_client.py、业务表落地 |
 | **P0** | 统一 API / SSE 契约与接口测试 | `/api/v1/**`、状态枚举、错误码、恢复语义 |
-| **P1** | 正式首页与输入壳层 | 需等待首页 / 输入页成品图冻结 |
-| **P1** | 正式等待页与结果页 | 需等待视频 / 课堂成品图冻结 |
-| **P2** | 个人中心、历史记录与学习中心正式页面 | 需等待相关成品图冻结 |
+| **P1** | 正式首页与输入壳层 | 基于 `adapter + mock` 并行实现，联调前核对四项门禁 |
+| **P1** | 正式等待页与结果页 | 基于 `adapter + mock` 并行实现，联调前核对四项门禁 |
+| **P2** | 学习中心域与个人域正式页面 | `LearningCenter/History/Favorites/Profile/Settings` 基于稳定契约并行推进 |
 
 ---
