@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 学习路径规划页 (/path) 线框图</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.wf-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image:
+				linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+				linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+
+		.ux-annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 6px;
+			z-index: 50;
+			pointer-events: none;
+			font-weight: bold;
+		}
+
+		.ux-annotation-blue {
+			background: #2563eb;
+		}
+
+		.view-hidden {
+			display: none !important;
+		}
+
+		/* 路径时间线连接线 */
+		.timeline-line {
+			position: absolute;
+			left: 23px;
+			/* 节点图标的中心位置 */
+			top: 48px;
+			bottom: -16px;
+			width: 2px;
+			background-color: #000;
+			z-index: 0;
+		}
+
+		.timeline-line.dashed {
+			background-color: transparent;
+			border-left: 2px dashed #ccc;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center bg-grid pb-20">
+
+	<!-- ==================== 顶层控制区 (仅用于线框图演示流转) ==================== -->
+	<div class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50 bg-white wf-border p-1">
+		<button onclick="switchView('view-generating')"
+			class="px-4 py-2 text-xs font-bold hover:bg-gray-200 border-r-2 border-black">1. Multi-Agent 规划中</button>
+		<button onclick="switchView('view-path')" class="px-4 py-2 text-xs font-bold hover:bg-gray-200">2.
+			学习路径展示态</button>
+	</div>
+
+	<!-- ==================== 全局导航 (复用) ==================== -->
+	<header class="w-[94%] max-w-5xl mx-auto mt-20 wf-border bg-white z-40 p-3 flex justify-between items-center">
+			<a href="../01-首页与入口/02-home.html" class="flex items-center gap-3 font-bold px-2 text-black">
+				<div
+					class="w-8 h-8 flex items-center justify-center bg-gray-100 border-2 border-dashed border-black text-[10px]">
+					LG</div>
+				<span class="text-lg">XiaoMai</span>
+			</a>
+			<nav class="hidden md:flex gap-1 border-2 border-black p-1 bg-gray-50">
+				<a href="../03-视频输入页/01-input.html"
+					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">🎬 单题讲解</a>
+				<a href="../06-课堂输入页/01-input.html"
+					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">📚 主题课堂</a>
+				<a href="../12-学习中心页/01-learning.html" class="bg-black text-white px-5 py-1.5 text-sm font-bold">📖 学习中心</a>
+			</nav>
+			<div class="flex items-center gap-4 px-2">
+				<a href="../12-学习中心页/01-learning.html"
+					class="text-sm font-bold cursor-pointer hover:underline text-black">&larr; 返回聚合页</a>
+			</div>
+	</header>
+
+	<main class="w-full max-w-5xl mt-6 px-4">
+
+		<!-- ==================== 视图 1：Multi-Agent 规划中 ==================== -->
+		<div id="view-generating"
+			class="w-full bg-white wf-border p-12 flex flex-col items-center justify-center min-h-[500px]">
+			<div class="ux-annotation -top-3 -right-3">调用 PathPlanningProvider (Tencent ADP)</div>
+
+			<div class="text-4xl mb-6 animate-pulse">🧭</div>
+			<h2 class="text-2xl font-black mb-4">正在为你定制专属学习路径...</h2>
+
+			<div class="w-full max-w-md bg-gray-50 wf-border p-4 font-mono text-xs text-gray-600 space-y-3 mt-4">
+				<div class="flex gap-2"><span class="text-black font-bold">[✓]</span> <span>读取最近 3 次 Quiz 错题记录</span>
+				</div>
+				<div class="flex gap-2"><span class="text-black font-bold">[✓]</span> <span>分析知识薄弱点：链式法则、偏导数概念</span>
+				</div>
+				<div class="flex gap-2"><span class="text-blue-600 font-bold">[>]</span>
+					<span>多智能体协同规划中：正在匹配最佳视频与课堂资源...</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- ==================== 视图 2：路径展示与执行态 ==================== -->
+		<div id="view-path" class="w-full flex flex-col gap-6 view-hidden">
+
+			<!-- Header：路径元数据 -->
+			<div class="bg-white wf-border p-6 relative">
+				<div class="ux-annotation -top-3 -left-1 ux-annotation-blue">Path Header: 目标与周期</div>
+				<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+					<div>
+						<div class="flex items-center gap-2 mb-2">
+							<span
+								class="text-[10px] font-bold bg-black text-white px-2 py-0.5 uppercase tracking-widest">Target
+								Path</span>
+							<span class="text-xs font-bold text-gray-500">周期：预计 3 天</span>
+						</div>
+						<h1 class="text-3xl font-black tracking-tight mb-2">微积分求导进阶攻坚</h1>
+						<p class="text-sm text-gray-600 max-w-2xl leading-relaxed">
+							基于你最近在“隐函数”和“链式法则”小测中的错题，系统为你编排了这条由浅入深的攻坚路径。包含 2 个视频、1 堂课与最终评测。</p>
+					</div>
+
+					<!-- 总体进度 -->
+					<div class="wf-border p-4 bg-gray-50 min-w-[200px]">
+						<div class="flex justify-between text-xs font-bold mb-2">
+							<span>总进度</span>
+							<span>25% (1/4 节点)</span>
+						</div>
+						<div class="w-full h-3 wf-border bg-white">
+							<div class="h-full bg-black w-[25%]"></div>
+						</div>
+						<button
+							class="w-full mt-4 wf-border bg-white text-xs font-bold py-2 hover:bg-gray-200 transition-colors">
+							⚙️ 重新生成/调整目标
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 路径节点时间线 (Timeline) -->
+			<div class="bg-white wf-border p-8 relative">
+				<div class="ux-annotation -top-3 -left-1 ux-annotation-blue">Path Timeline: 跨引擎任务编排</div>
+
+				<div class="flex flex-col gap-0 relative">
+
+					<!-- 节点 1：已完成 (Video) -->
+					<div class="relative flex gap-6 pb-8">
+						<div class="timeline-line"></div>
+						<div
+							class="w-12 h-12 shrink-0 rounded-full! wf-border bg-black text-white flex items-center justify-center z-10 text-xl">
+							✓</div>
+						<div class="flex-1 wf-border bg-gray-50 p-5 opacity-70">
+							<div class="flex justify-between items-start mb-2">
+								<div class="flex items-center gap-2">
+									<span class="text-[10px] font-bold border border-black px-1.5 py-0.5">视频复习</span>
+									<h3 class="text-lg font-bold line-through">概念纠偏：复合函数求导核心原理</h3>
+								</div>
+								<span class="text-xs font-bold text-gray-500">昨天完成</span>
+							</div>
+							<p class="text-sm text-gray-600">已观看视频并完成对应的随手练。错题关联知识点已掌握。</p>
+								<a href="../14-历史记录页/01-history.html"
+									class="mt-3 text-xs font-bold underline hover:text-gray-500 block">回看视频记录 &rarr;</a>
+						</div>
+					</div>
+
+					<!-- 节点 2：当前进行中 (Classroom) -->
+					<div class="relative flex gap-6 pb-8">
+						<div class="timeline-line dashed"></div>
+						<div
+							class="w-12 h-12 shrink-0 rounded-full! wf-border bg-[#f5c547] flex items-center justify-center z-10 text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+							📍</div>
+						<div
+							class="flex-1 wf-border bg-white border-[3px] p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+							<!-- 装饰角标 -->
+							<div
+								class="absolute -right-6 top-4 bg-black text-white text-[10px] font-bold py-1 px-8 rotate-45 uppercase">
+								Current</div>
+
+							<div class="flex justify-between items-start mb-2">
+								<div class="flex items-center gap-2">
+									<span
+										class="text-[10px] font-bold border border-black bg-black text-white px-1.5 py-0.5">系统主题课</span>
+									<h3 class="text-lg font-black">隐函数求导法与对数求导法</h3>
+								</div>
+							</div>
+							<p class="text-sm text-gray-700 mb-6 leading-relaxed">系统已为你自动生成了本堂课程，包含 5 页幻灯片推导与师生 Agent
+								讨论。重点解决多变量混杂时的求导策略。</p>
+
+								<a href="../08-课堂结果页/01-classroom.html"
+									class="wf-border bg-black text-white px-6 py-2.5 text-sm font-bold hover:bg-gray-800 transition-colors flex items-center gap-2">
+									进入课堂学习 &rarr;
+								</a>
+						</div>
+					</div>
+
+					<!-- 节点 3：未解锁 (Quiz) -->
+					<div class="relative flex gap-6 pb-8">
+						<div class="timeline-line dashed"></div>
+						<div
+							class="w-12 h-12 shrink-0 rounded-full! wf-border-dashed bg-gray-50 text-gray-400 flex items-center justify-center z-10 text-sm">
+							🔒</div>
+						<div class="flex-1 wf-border-dashed bg-gray-50 p-5 opacity-50">
+							<div class="flex items-center gap-2 mb-2">
+								<span
+									class="text-[10px] font-bold border border-gray-400 px-1.5 py-0.5 text-gray-500">正式测验</span>
+								<h3 class="text-lg font-bold text-gray-500">阶段大闯关：综合求导法则运用</h3>
+							</div>
+							<p class="text-sm text-gray-500">包含 5 道题的正式 Quiz。完成上方的课堂学习后解锁。</p>
+						</div>
+					</div>
+
+					<!-- 节点 4：未解锁 (Video) -->
+					<div class="relative flex gap-6">
+						<div
+							class="w-12 h-12 shrink-0 rounded-full! wf-border-dashed bg-gray-50 text-gray-400 flex items-center justify-center z-10 text-sm">
+							🔒</div>
+						<div class="flex-1 wf-border-dashed bg-gray-50 p-5 opacity-50">
+							<div class="flex items-center gap-2 mb-2">
+								<span
+									class="text-[10px] font-bold border border-gray-400 px-1.5 py-0.5 text-gray-500">实战视频</span>
+								<h3 class="text-lg font-bold text-gray-500">历年考研真题：多元求导极值证明</h3>
+							</div>
+							<p class="text-sm text-gray-500">作为最终挑战，系统将生成一道复杂题目的 Manim 动画讲解。</p>
+						</div>
+					</div>
+
+				</div>
+			</div>
+
+		</div>
+	</main>
+
+	<!-- 简单的状态切换脚本 -->
+	<script>
+		function switchView(viewId) {
+			document.getElementById('view-generating').classList.add('view-hidden');
+			document.getElementById('view-path').classList.add('view-hidden');
+			document.getElementById(viewId).classList.remove('view-hidden');
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+	</script>
+</body>
+
+</html>

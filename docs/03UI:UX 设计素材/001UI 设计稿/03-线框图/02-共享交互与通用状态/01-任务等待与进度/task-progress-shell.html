@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 课堂生成进度与翻牌线框</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.wireframe-border {
+			border: 2px solßid #000;
+		}
+
+		.wireframe-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.wireframe-img {
+			background-color: #f3f4f6;
+			border: 2px dashed #000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #6b7280;
+			text-align: center;
+		}
+
+		/* 网格背景，增加技术感 */
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image:
+				linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+				linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+
+		/* 隐藏视图类 */
+		.view-hidden {
+			display: none !important;
+		}
+
+		/* UX 注释标签样式 */
+		.ux-annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 6px;
+			z-index: 50;
+			pointer-events: none;
+			font-weight: bold;
+		}
+
+		/* ================= 保留并优化的 Loading 文本动效 ================= */
+		.loader-wrapper {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.5rem;
+			font-weight: 900;
+			user-select: none;
+			color: #000;
+			letter-spacing: 0.05em;
+			overflow: hidden;
+			font-family: 'Arial Black', sans-serif;
+			text-transform: uppercase;
+		}
+
+		.loader {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			background-color: transparent;
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image:
+				radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.95) 0%, transparent 48%),
+				radial-gradient(circle at 45% 45%, rgba(80, 80, 80, 0.7) 0%, transparent 42%),
+				radial-gradient(circle at 55% 55%, rgba(180, 180, 180, 0.75) 0%, transparent 42%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate, opacity-animation 4.2s infinite;
+		}
+
+		.loader-letter {
+			position: relative;
+			display: inline-block;
+			opacity: 0.16;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
+		}
+
+		/* 字母延迟动画 */
+		.loader-letter:nth-child(1) {
+			animation-delay: 0.1s;
+		}
+
+		.loader-letter:nth-child(2) {
+			animation-delay: 0.22s;
+		}
+
+		.loader-letter:nth-child(3) {
+			animation-delay: 0.34s;
+		}
+
+		.loader-letter:nth-child(4) {
+			animation-delay: 0.46s;
+		}
+
+		.loader-letter:nth-child(5) {
+			animation-delay: 0.58s;
+		}
+
+		.loader-letter:nth-child(6) {
+			animation-delay: 0.70s;
+		}
+
+		.loader-letter:nth-child(7) {
+			animation-delay: 0.82s;
+		}
+
+		.loader-letter:nth-child(8) {
+			animation-delay: 0.94s;
+		}
+
+		.loader-letter:nth-child(9) {
+			animation-delay: 1.06s;
+		}
+
+		.loader-letter:nth-child(10) {
+			animation-delay: 1.18s;
+		}
+
+		/* ================= 进度条动效 ================= */
+		.progress-track {
+			height: 12px;
+			border: 2px solid #000;
+			background: #fff;
+			width: 100%;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.progress-fill {
+			height: 100%;
+			width: 65%;
+			/* 模拟进度 */
+			background: repeating-linear-gradient(45deg, #000, #000 10px, #fff 10px, #fff 20px);
+			background-size: 28px 100%;
+			animation: progress-pan 1s linear infinite;
+		}
+
+		/* ================= 翻牌动效 ================= */
+		.flip-card {
+			perspective: 1000px;
+			height: 240px;
+			cursor: default;
+		}
+
+		.flip-inner {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			transform-style: preserve-3d;
+			transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+			/* 带有弹性的翻转 */
+		}
+
+		.flip-card.revealed .flip-inner {
+			transform: rotateY(180deg);
+		}
+
+		.flip-face {
+			position: absolute;
+			inset: 0;
+			backface-visibility: hidden;
+			-webkit-backface-visibility: hidden;
+			border: 2px solid #000;
+			background: #fff;
+			display: flex;
+			flex-direction: column;
+			padding: 1rem;
+		}
+
+		.flip-face.front {
+			background: repeating-linear-gradient(45deg, #f3f4f6 0, #f3f4f6 2px, #fff 2px, #fff 8px);
+			align-items: center;
+			justify-content: center;
+		}
+
+		.flip-face.back {
+			transform: rotateY(180deg);
+			background: #fff;
+		}
+
+		/* ================= 动画 Keyframes ================= */
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-58%);
+			}
+
+			100% {
+				transform: translate(58%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.1;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.16;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.05) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.42;
+			}
+
+			100% {
+				opacity: 0.12;
+				filter: blur(3px);
+			}
+		}
+
+		@keyframes progress-pan {
+			0% {
+				background-position: 0 0;
+			}
+
+			100% {
+				background-position: 28px 0;
+			}
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0;
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 8px;
+			height: 14px;
+			background-color: #000;
+			animation: blink 1s step-end infinite;
+			vertical-align: middle;
+			margin-left: 4px;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 bg-grid font-sans">
+
+	<!-- 顶层控制区：仅用于演示时切换状态，实际开发中请移除 -->
+	<div class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50">
+		<button onclick="switchState('generating')"
+			class="wireframe-border bg-white px-4 py-1 text-xs font-bold hover:bg-gray-200">看状态一: 进度加载</button>
+		<button onclick="switchState('reveal')"
+			class="wireframe-border bg-white px-4 py-1 text-xs font-bold hover:bg-gray-200">看状态二: 自动翻牌</button>
+	</div>
+
+	<!-- 核心居中面板：极简粗野主义风格 -->
+	<main
+		class="w-full max-w-3xl bg-white wireframe-border border-[3px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col min-h-[500px]">
+
+		<!-- 左上角：终止生成操作 -->
+		<button
+			class="absolute top-4 left-4 text-xs font-bold text-gray-500 hover:text-black hover:underline flex items-center gap-1 z-20"
+			onclick="alert('已终止任务，返回工作台')">
+			<span>&larr;</span> 终止并返回
+		</button>
+
+		<!-- ==================== 状态 1：进度生成中 ==================== -->
+		<div id="state-generating" class="flex-1 flex flex-col items-center justify-center p-8 mt-6">
+			<div class="ux-annotation -top-3 -right-3">State 1: Generation Progress</div>
+
+			<!-- 炫酷的文字 Loading -->
+			<div class="mb-10 scale-75 md:scale-100">
+				<div class="loader-wrapper" aria-label="Generating">
+					<span class="loader-letter">G</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">R</span>
+					<span class="loader-letter">A</span>
+					<span class="loader-letter">T</span>
+					<span class="loader-letter">I</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">G</span>
+					<div class="loader"></div>
+				</div>
+			</div>
+
+			<!-- 代码终端风格的进度日志 -->
+			<div class="w-full max-w-lg mb-8">
+				<div class="flex justify-between text-xs font-bold mb-2">
+					<span class="uppercase tracking-widest text-gray-500">System Log</span>
+					<span>65%</span>
+				</div>
+				<!-- 进度条 -->
+				<div class="progress-track mb-4">
+					<div class="progress-fill"></div>
+				</div>
+
+				<!-- 极简终端日志区 -->
+				<div
+					class="bg-gray-50 wireframe-border p-4 font-mono text-xs text-gray-600 space-y-2 h-32 overflow-hidden relative">
+					<div class="flex items-start gap-2 text-gray-400">
+						<span>[✓]</span>
+						<span>任务初始化完成 (Task Queued)</span>
+					</div>
+					<div class="flex items-start gap-2 text-gray-400">
+						<span>[✓]</span>
+						<span>正在解析知识点，构建课程大纲...</span>
+					</div>
+					<div class="flex items-start gap-2 text-black font-bold">
+						<span>[>]</span>
+						<span>正在分配 Agent 角色与生成分镜脚本<span class="cursor-blink"></span></span>
+					</div>
+					<!-- 渐变遮罩，让旧日志看起来像向上滚动消失 -->
+					<div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-gray-50 to-transparent"></div>
+				</div>
+			</div>
+
+			<p class="text-xs text-gray-400 font-bold text-center max-w-sm">
+				预计还需要 2 分 30 秒。<br>AI 正在全力以赴，请不要关闭此页面。
+			</p>
+		</div>
+
+		<!-- ==================== 状态 2：Agent 翻牌确认 ==================== -->
+		<div id="state-reveal" class="flex-1 flex flex-col p-8 mt-6 view-hidden">
+			<div class="ux-annotation -top-3 -right-3">State 2: Auto Reveal & Confirm</div>
+
+			<div class="text-center mb-8">
+				<h2 class="text-3xl font-black mb-2 uppercase tracking-tight">课堂角色分配完毕</h2>
+				<p class="text-sm font-bold text-gray-500">系统已根据您的输入，自动匹配了最佳教学阵容</p>
+			</div>
+
+			<!-- 翻牌卡片网格 -->
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 w-full max-w-3xl mx-auto">
+
+				<!-- Card 1: 教师 -->
+				<div class="flip-card" id="card-1">
+					<div class="flip-inner">
+						<div class="flip-face front">
+							<span class="text-4xl font-black text-gray-300 mb-2">?</span>
+							<span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Teacher</span>
+						</div>
+						<div class="flip-face back">
+							<div class="flex justify-between items-start mb-4">
+								<span
+									class="text-[10px] font-bold border border-black px-2 py-0.5 uppercase">主讲老师</span>
+								<div
+									class="w-8 h-8 wireframe-border rounded-full! flex items-center justify-center text-[10px] font-bold">
+									严</div>
+							</div>
+							<h3 class="text-xl font-black mb-1">严谨教授</h3>
+							<p class="text-xs text-gray-500 leading-relaxed flex-1">负责拆解核心概念，把控整体课堂结构与知识准确度。</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Card 2: 学生代理 -->
+				<div class="flip-card" id="card-2">
+					<div class="flip-inner">
+						<div class="flip-face front">
+							<span class="text-4xl font-black text-gray-300 mb-2">?</span>
+							<span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Student</span>
+						</div>
+						<div class="flip-face back">
+							<div class="flex justify-between items-start mb-4">
+								<span
+									class="text-[10px] font-bold border border-black px-2 py-0.5 uppercase">追问代理</span>
+								<div
+									class="w-8 h-8 wireframe-border rounded-full! flex items-center justify-center text-[10px] font-bold bg-gray-100">
+									AI</div>
+							</div>
+							<h3 class="text-xl font-black mb-1">好奇学生</h3>
+							<p class="text-xs text-gray-500 leading-relaxed flex-1">基于初学者视角，在关键难点处替你向主讲老师提问。</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Card 3: 助教 -->
+				<div class="flip-card" id="card-3">
+					<div class="flip-inner">
+						<div class="flip-face front">
+							<span class="text-4xl font-black text-gray-300 mb-2">?</span>
+							<span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Assistant</span>
+						</div>
+						<div class="flip-face back">
+							<div class="flex justify-between items-start mb-4">
+								<span
+									class="text-[10px] font-bold border border-black px-2 py-0.5 uppercase">课程助教</span>
+								<div
+									class="w-8 h-8 wireframe-border rounded-full! flex items-center justify-center text-[10px] font-bold">
+									小</div>
+							</div>
+							<h3 class="text-xl font-black mb-1">总结专员</h3>
+							<p class="text-xs text-gray-500 leading-relaxed flex-1">负责将黑板上的公式转化为通俗易懂的口诀和图表。</p>
+						</div>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- 继续按钮 (初始隐藏，翻牌结束后显示) -->
+			<div class="flex justify-center h-12">
+				<button id="btn-enter-class"
+					class="wireframe-border bg-black text-white px-8 py-3 font-bold text-sm hover:bg-gray-800 transition-opacity duration-500 opacity-0 pointer-events-none flex items-center gap-2">
+					确认并进入课堂 &rarr;
+				</button>
+			</div>
+		</div>
+
+	</main>
+
+	<!-- 交互脚本 -->
+	<script>
+		let revealTimers = [];
+
+		function clearRevealTimers() {
+			revealTimers.forEach(timer => clearTimeout(timer));
+			revealTimers = [];
+		}
+
+		// 自动翻牌逻辑
+		function playAutoReveal() {
+			clearRevealTimers();
+			const cards = [document.getElementById('card-1'), document.getElementById('card-2'), document.getElementById('card-3')];
+			const btnEnter = document.getElementById('btn-enter-class');
+
+			// 重置状态
+			cards.forEach(card => card.classList.remove('revealed'));
+			btnEnter.classList.add('opacity-0', 'pointer-events-none');
+
+			// 依次翻开卡片，模拟后台匹配的仪式感
+			cards.forEach((card, index) => {
+				const timer = setTimeout(() => {
+					card.classList.add('revealed');
+				}, 600 + (index * 600)); // 每隔 600ms 翻开一张
+				revealTimers.push(timer);
+			});
+
+			// 翻牌完成后，显示“进入课堂”按钮
+			const btnTimer = setTimeout(() => {
+				btnEnter.classList.remove('opacity-0', 'pointer-events-none');
+			}, 600 + (cards.length * 600) + 200);
+			revealTimers.push(btnTimer);
+		}
+
+		// 状态切换控制 (仅供线框图演示)
+		function switchState(state) {
+			document.getElementById('state-generating').classList.add('view-hidden');
+			document.getElementById('state-reveal').classList.add('view-hidden');
+
+			document.getElementById('state-' + state).classList.remove('view-hidden');
+
+			if (state === 'reveal') {
+				playAutoReveal();
+			} else {
+				clearRevealTimers();
+			}
+		}
+
+		// 绑定底部确认按钮
+		document.getElementById('btn-enter-class').addEventListener('click', () => {
+			alert("即将跳转到 /classroom/:id 页面 (03-classroom.html)");
+		});
+	</script>
+</body>
+
+</html>

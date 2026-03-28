@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 空状态</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.wf-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center bg-grid p-4">
+
+	<div class="w-full max-w-2xl bg-white wf-border p-16 flex flex-col items-center justify-center text-center">
+		<!-- 占位插画区 -->
+		<div class="w-32 h-32 wf-border-dashed bg-gray-50 flex items-center justify-center mb-6">
+			<span class="text-4xl grayscale opacity-50">📂</span>
+		</div>
+
+		<h2 class="text-2xl font-black mb-2">这里空空如也</h2>
+		<p class="text-sm text-gray-500 mb-8 max-w-sm leading-relaxed">您还没有产生任何学习记录。现在就去生成您的第一个单题讲解视频或主题课堂吧！</p>
+
+		<div class="flex gap-4">
+			<button class="wf-border bg-black text-white px-6 py-3 text-sm font-bold hover:bg-gray-800">生成视频</button>
+			<button class="wf-border bg-white px-6 py-3 text-sm font-bold hover:bg-gray-100">返回首页</button>
+		</div>
+	</div>
+
+</body>
+
+</html>

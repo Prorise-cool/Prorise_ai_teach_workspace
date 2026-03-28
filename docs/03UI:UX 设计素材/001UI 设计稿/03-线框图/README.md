@@ -1,143 +1,150 @@
 # 小麦线框图目录指南
 
-## 核心原则
+> **版本**：v3.3  
+> **更新日期**：2026-03-28  
+> **架构口径**：`Video Engine` + `Classroom Engine` + `Companion` + `Retrieval / Evidence Service` + `Learning Coach`
 
-- 线框图按路由模块组织，不按零散功能点组织。
-- 一个主路由对应一个主线框文件。
-- 同一路由内的展开态、空态、局部面板、结果切片，应放回同一个页面文件中表达。
-- 非路由交互，如认证弹窗、资料初始化、Toast、错误页，统一收口到非路由目录。
-- 旧的“同一路由拆分页”稿只保留在归档目录，不再作为主交付结构。
+## 1. 核心边界
 
-## 当前目录结构
+- `Video Engine` 与 `Classroom Engine` 是两个独立内容引擎，只共享任务语义，不融合生成链路。
+- `Companion` 是会话内嵌能力，服务“当前这一步 / 这一秒”的解释与追问，不是独立主路由。
+- 学生端不再保留独立 `Knowledge` 页面；资料证据能力只作为视频结果页、课堂结果页与学习中心中的来源抽屉 / 证据面板出现。
+- `Learning Coach` 是会话后学习闭环，承接 `checkpoint / quiz / path / recommendation / wrongbook`。
+- 课堂主叙事保持沉浸，不把正式 quiz 硬插进讲解流程。
+
+## 2. 目录结构
+
+`04-成品图/01-正式路由页面/` 必须与下列页面目录结构保持同构。
 
 ```text
 03-线框图/
-├── README.md
-├── 线框图设计指导文档.md
-├── 01-首页与入口/
-│   ├── 01-home.html
-│   └── assets/
-├── 02-课堂模块/
-│   ├── 01-input.html
-│   ├── 02-generating.html
-│   ├── 03-classroom.html
-│   └── assets/
-├── 03-视频模块/
-│   ├── 01-input.html
-│   ├── 02-generating.html
-│   ├── 03-video-result.html
-│   ├── assets/
-│   └── assets-result/
-├── 04-知识问答模块/
-│   └── 01-knowledge.html
-├── 05-课后小测模块/
-│   └── 01-quiz-session.html
-├── 06-学习路径模块/
-│   └── 01-path.html
-├── 07-个人中心模块/
-│   ├── 01-profile.html
-│   ├── 02-history.html
-│   ├── 03-favorites.html
-│   ├── 04-settings.html
-│   └── assets/
-├── 08-非路由交互与通用状态/
-│   ├── 01-auth-dialog.html
-│   ├── 02-task-progress-shell.html
-│   ├── 03-teacher-style-panel.html
-│   ├── 04-profile-setup-dialog.html
-│   ├── loading.html
-│   ├── error-404.html
-│   ├── error-500.html
-│   ├── error-network.html
-│   ├── empty-state.html
-│   ├── confirm-dialog.html
-│   ├── toast.html
-│   ├── assets/
-│   └── assets-auth/
-└── 99-archive/
-    ├── video-continue-ask.html
-    ├── knowledge-sources.html
-    ├── quiz-start.html
-    ├── quiz-result.html
-    ├── quiz-complete.html
-    ├── path-goal.html
-    └── path-generating.html
+├─ 01-正式路由页面
+│  ├─ 01-首页与入口
+│  │  ├─ assets
+│  │  ├─ 01-landingPage.html
+│  │  └─ 02-home.html
+│  ├─ 02-认证页
+│  │  ├─ 01-login.html
+│  │  └─ 02-profile-setup-dialog.html
+│  ├─ 03-视频输入页
+│  │  ├─ assets
+│  │  ├─ 01-input.html
+│  ├─ 04-视频等待页
+│  │  └─ 01-generating.html
+│  ├─ 05-视频结果页
+│  │  ├─ assets-result
+│  │  └─ 01-video-result.html
+│  ├─ 06-课堂输入页
+│  │  ├─ assets
+│  │  ├─ 01-input.html
+│  ├─ 07-课堂等待页
+│  │  └─ 01-generating.html
+│  ├─ 08-课堂结果页
+│  │  └─ 01-classroom.html
+│  ├─ 10-Checkpoint 与 Quiz 页
+│  │  └─ 01-quiz-session.html
+│  ├─ 11-学习路径页
+│  │  └─ 01-path.html
+│  ├─ 12-学习中心页
+│  │  └─ 01-learning.html
+│  ├─ 13-个人资料页
+│  │  ├─ assets
+│  │  └─ 01-profile.html
+│  ├─ 14-历史记录页
+│  │  └─ 01-history.html
+│  ├─ 15-收藏页
+│  │  └─ 01-favorites.html
+│  └─ 16-设置页
+│     └─ 01-settings.html
+├─ 02-共享交互与通用状态
+│  ├─ 01-任务等待与进度
+│  │  └─ task-progress-shell.html
+│  └─ 02-通用反馈状态
+│     ├─ assets
+│     ├─ confirm-dialog.html
+│     ├─ empty-state.html
+│     ├─ error-404.html
+│     ├─ error-500.html
+│     ├─ error-network.html
+│     ├─ loading.html
+│     └─ toast.html
+├─ README.md
+└─ 线框图设计指导文档.md
 ```
 
-## 路由与线框文件映射
+## 3. 路由映射
 
-| 路由 | 主线框文件 | 说明 |
-|------|------------|------|
-| `/` | `01-首页与入口/01-home.html` | 首页与双入口 |
-| `/classroom/input` | `02-课堂模块/01-input.html` | 主题输入页，内含老师风格面板展开态 |
-| `/classroom/:id/generating` | `02-课堂模块/02-generating.html` | 课堂生成进度页 |
-| `/classroom/:id` | `02-课堂模块/03-classroom.html` | 课堂主页面 |
-| `/video/input` | `03-视频模块/01-input.html` | 题目输入页，内含文本/图片/OCR/老师风格态 |
-| `/video/:id/generating` | `03-视频模块/02-generating.html` | 视频生成进度页 |
-| `/video/:id` | `03-视频模块/03-video-result.html` | 视频结果页，内含继续追问等局部状态 |
-| `/knowledge` | `04-知识问答模块/01-knowledge.html` | 知识问答主页面 |
-| `/quiz/:sessionId` | `05-课后小测模块/01-quiz-session.html` | 小测验主页面，内含开始/答题/结果/完成态 |
-| `/path` | `06-学习路径模块/01-path.html` | 学习路径主页面，内含目标输入/生成中/结果态 |
-| `/profile` | `07-个人中心模块/01-profile.html` | 个人中心首页 |
-| `/history` | `07-个人中心模块/02-history.html` | 历史记录页 |
-| `/favorites` | `07-个人中心模块/03-favorites.html` | 收藏管理页 |
-| `/settings` | `07-个人中心模块/04-settings.html` | 设置页 |
+| 路由 | 主线框文件 | 角色 |
+|---|---|---|
+| `/` | `01-正式路由页面/01-首页与入口/02-home.html` | 首页双入口 |
+| `/login` | `01-正式路由页面/02-认证页/01-login.html` | 统一认证页 |
+| `/video/input` | `01-正式路由页面/03-视频输入页/01-input.html` | 视频输入 |
+| `/video/:id/generating` | `01-正式路由页面/04-视频等待页/01-generating.html` | 视频等待 |
+| `/video/:id` | `01-正式路由页面/05-视频结果页/01-video-result.html` | 视频结果页，内含 Companion 与来源抽屉状态 |
+| `/classroom/input` | `01-正式路由页面/06-课堂输入页/01-input.html` | 课堂输入 |
+| `/classroom/:id/generating` | `01-正式路由页面/07-课堂等待页/01-generating.html` | 课堂等待 |
+| `/classroom/:id` | `01-正式路由页面/08-课堂结果页/01-classroom.html` | 课堂结果页，内含 Companion 与来源抽屉状态 |
+| `/checkpoint/:sessionId` | `01-正式路由页面/10-Checkpoint 与 Quiz 页/01-quiz-session.html` | 轻量 checkpoint 状态 |
+| `/quiz/:sessionId` | `01-正式路由页面/10-Checkpoint 与 Quiz 页/01-quiz-session.html` | 课后 quiz |
+| `/path` | `01-正式路由页面/11-学习路径页/01-path.html` | 学习路径 |
+| `/learning` | `01-正式路由页面/12-学习中心页/01-learning.html` | 学习中心聚合页，内含证据回看面板 |
+| `/profile` | `01-正式路由页面/13-个人资料页/01-profile.html` | 个人资料 |
+| `/history` | `01-正式路由页面/14-历史记录页/01-history.html` | 历史视图 |
+| `/favorites` | `01-正式路由页面/15-收藏页/01-favorites.html` | 收藏视图 |
+| `/settings` | `01-正式路由页面/16-设置页/01-settings.html` | 平台设置 |
 
-## 非路由说明
-
-- `08-非路由交互与通用状态/01-auth-dialog.html` 是认证弹窗，不代表独立登录路由。
-- `08-非路由交互与通用状态/02-task-progress-shell.html` 是视频/课堂共享等待体验壳层，不代表独立任务路由。
-- `08-非路由交互与通用状态/03-teacher-style-panel.html` 是视频/课堂共享老师风格面板，不代表独立风格路由。
-- `08-非路由交互与通用状态/04-profile-setup-dialog.html` 是资料初始化弹层或引导态，不代表独立主流程页。
-- `loading`、`error-*`、`empty-state`、`confirm-dialog`、`toast` 统一作为跨模块状态资产维护。
-
-## 老师风格选择器说明
-
-- 老师风格选择器是输入页内部的会话配置入口，不是独立流程页。
-- 入口位于核心输入框附近，通过头像或胶囊触发器展开。
-- MVP 默认提供 4 种老师风格，但结构必须支持未来扩展。
-- 相关展开态必须画在 `02-课堂模块/01-input.html` 或 `03-视频模块/01-input.html` 内，不应再拆出独立 `style` 页面。
-
-## 归档说明
-
-- `99-archive/` 仅保留历史探索稿。
-- 这些旧稿不再代表正式模块边界，也不应再作为新增线框的命名参考。
-
-## 页面优先级
+## 4. P0 / P1 页面清单
 
 ### P0
 
-- `01-首页与入口/01-home.html`
-- `02-课堂模块/01-input.html`
-- `02-课堂模块/02-generating.html`
-- `02-课堂模块/03-classroom.html`
-- `03-视频模块/01-input.html`
-- `03-视频模块/02-generating.html`
-- `03-视频模块/03-video-result.html`
-- `08-非路由交互与通用状态/02-task-progress-shell.html`
-- `08-非路由交互与通用状态/03-teacher-style-panel.html`
-- `08-非路由交互与通用状态/01-auth-dialog.html`
-- `08-非路由交互与通用状态/loading.html`
-- `08-非路由交互与通用状态/error-404.html`
+- `01-正式路由页面/02-认证页/01-login.html`
+- `01-正式路由页面/01-首页与入口/02-home.html`
+- `01-正式路由页面/03-视频输入页/01-input.html`
+- `01-正式路由页面/04-视频等待页/01-generating.html`
+- `01-正式路由页面/05-视频结果页/01-video-result.html`
+- `01-正式路由页面/06-课堂输入页/01-input.html`
+- `01-正式路由页面/07-课堂等待页/01-generating.html`
+- `01-正式路由页面/08-课堂结果页/01-classroom.html`
+- `01-正式路由页面/12-学习中心页/01-learning.html`
+- `02-共享交互与通用状态/01-任务等待与进度/task-progress-shell.html`
+- `02-共享交互与通用状态/02-通用反馈状态/loading.html`
+- `02-共享交互与通用状态/02-通用反馈状态/error-network.html`
 
-### P1
+### P1 / P2
 
-- `05-课后小测模块/01-quiz-session.html`
-- `07-个人中心模块/01-profile.html`
-- `07-个人中心模块/02-history.html`
-- `04-知识问答模块/01-knowledge.html`
-- `08-非路由交互与通用状态/04-profile-setup-dialog.html`
+- `01-正式路由页面/10-Checkpoint 与 Quiz 页/01-quiz-session.html`
+- `01-正式路由页面/11-学习路径页/01-path.html`
+- `01-正式路由页面/13-个人资料页/01-profile.html`
+- `01-正式路由页面/14-历史记录页/01-history.html`
+- `01-正式路由页面/15-收藏页/01-favorites.html`
+- `01-正式路由页面/16-设置页/01-settings.html`
+- `01-正式路由页面/02-认证页/02-profile-setup-dialog.html`
 
-### P2
+## 5. Companion / Retrieval(Evidence) / Learning Coach 规则
 
-- `06-学习路径模块/01-path.html`
-- `07-个人中心模块/03-favorites.html`
-- `07-个人中心模块/04-settings.html`
-- `08-非路由交互与通用状态/empty-state.html`
-- `08-非路由交互与通用状态/toast.html`
+### Companion
 
-## 使用建议
+- 使用场景：解释“当前视频这一秒”或“当前课堂这一步”。
+- 展示位置：内嵌在 `/video/:id` 与 `/classroom/:id`，并直接画进各自主线框文件。
+- 必备区域：上下文锚点、问答流、白板解释、追问建议。
 
-1. 先判断需求落在哪个正式路由，再决定线框文件归属。
-2. 如果只是同一路由里的面板、模态、展开区、空态，不要新建主线框文件。
-3. 如果只是为了说明历史探索或局部状态，请放入 `99-archive/`，不要混入正式模块。
+### Retrieval / Evidence Service（非路由证据面板）
+
+- 使用场景：承载“证据从哪里来、来源是否可信、解析状态如何”的查看与深挖动作。
+- 展示位置：嵌入在 `/video/:id`、`/classroom/:id`、`/learning` 的来源抽屉 / 证据面板中。
+- 数据来源：会话产物索引、教材/讲义导入、术语库、上传文档与外部检索库。
+- 不负责：学生端会话中的主问答入口；当前秒点/步骤解释仍由 `Companion` 负责。
+
+### Learning Coach
+
+- 使用场景：回答“我接下来该怎么练、哪里没掌握、下一步该学什么”。
+- 结果承接：`checkpoint / quiz / path / wrongbook / recommendation`。
+- 进入方式：会话结束后触发或从学习中心进入，不打断主叙事。
+
+## 6. 强制约束
+
+- `01-正式路由页面/` 一律按页面目录归档，不按能力模块或伪组件拆目录。
+- 同一页面的加载态、展开态、内嵌 Companion 态、来源抽屉态，都直接放进该页面自己的主线框文件里，不再额外拆单独 html。
+- 只有等待壳层、toast、confirm、error、loading 这类共享反馈与通用状态，才允许留在共享目录。
+- 课堂主叙事里只允许轻量 `checkpoint` 提示，正式 quiz 必须流转到 `/quiz/:sessionId`。
+- 路由命名、目录归属、状态拆分冲突时，以本文件和 `线框图设计指导文档.md` 的新架构版本为准。

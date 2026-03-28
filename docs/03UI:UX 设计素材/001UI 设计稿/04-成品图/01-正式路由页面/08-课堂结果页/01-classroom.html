@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>课堂结果页 | 小麦</title>
+  <style>
+    body{margin:0;font-family:'PingFang SC',SF-Pro,sans-serif;background:#020617;color:#f8fafc}
+    .page{min-height:100vh;padding:2.5rem;background:linear-gradient(140deg,#030712,#111827)}
+    .panel{background:#0f172a;border-radius:1.4rem;padding:1.6rem;box-shadow:0 28px 60px rgba(15,23,42,.7)}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+    h1{margin:0;font-size:2rem}
+    .badge{padding:.4rem 1rem;border-radius:999px;background:#4396ff;color:#0f172a;font-weight:600;font-size:.8rem}
+    .grid{display:grid;gap:1rem;margin-top:1.5rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    p{margin-bottom:1rem;line-height:1.6;color:#d1d5f5}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="panel">
+      <header>
+        <div>
+          <div style="font-size:.9rem;color:#9ca3af">Classroom + Companion</div>
+          <h1>课堂结果页 · 白板 + Companion 统一呈现</h1>
+        </div>
+        <span class="badge">无独立 Companion 页</span>
+      </header>
+      <p>幻灯片区与右侧 Companion 面板在同一屏，白板解释、Agent 讨论与追问建议全部嵌入课堂页，不再依赖单独 Companion 页面。文档与证据摘要在下部统一呈现，提醒用户这属 Retrieval / Evidence 语义。</p>
+      <div class="grid">
+        <div class="panel" style="background:#0c1220">
+          <h2>幻灯片/白板</h2>
+          <p>主内容区展示课堂幻灯片、SSE 命中点、白板推导，确保阅读轨迹完整。</p>
+        </div>
+        <div class="panel" style="background:#111827">
+          <h2>Companion 伴学</h2>
+          <p>当前步骤的问题、AI 讲解、关联知识点和可追问建议直接在右侧呈现，播放与讲解不中断。</p>
+        </div>
+        <div class="panel" style="background:#0b1220">
+          <h2>证据与追溯</h2>
+          <p>底部展示 Retrieval Provider 返回的资料片段、解析状态与来源，强调“证据面板”而非主问答路径。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

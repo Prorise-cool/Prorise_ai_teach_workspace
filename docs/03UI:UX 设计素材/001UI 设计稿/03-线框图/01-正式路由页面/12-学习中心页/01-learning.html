@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 学习中心聚合页 (重构版) 线框图</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.wf-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image:
+				linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+				linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+
+		.ux-annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 6px;
+			z-index: 50;
+			pointer-events: none;
+			font-weight: bold;
+		}
+
+		.ux-annotation-blue {
+			background: #2563eb;
+		}
+
+		/* 卡片悬停效果 */
+		.hover-card:hover {
+			transform: translate(-2px, -2px);
+			box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1) !important;
+			transition: all 0.2s ease;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 text-black min-h-screen bg-grid pb-20">
+
+	<!-- ==================== 全局导航 ==================== -->
+	<header
+		class="w-[94%] max-w-6xl mx-auto mt-6 wf-border bg-white p-3 flex justify-between items-center sticky top-6 z-40">
+			<a href="../01-首页与入口/02-home.html" class="flex items-center gap-3 font-bold px-2 text-black">
+				<div
+					class="w-8 h-8 flex items-center justify-center bg-gray-100 border-2 border-dashed border-black text-[10px]">
+					LG</div>
+				<span class="text-lg">XiaoMai</span>
+			</a>
+			<nav class="hidden md:flex gap-1 border-2 border-black p-1 bg-gray-50">
+				<a href="../03-视频输入页/01-input.html"
+					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">🎬 单题讲解</a>
+				<a href="../06-课堂输入页/01-input.html"
+					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">📚 主题课堂</a>
+				<a href="01-learning.html" class="bg-black text-white px-5 py-1.5 text-sm font-bold">📖 学习中心</a>
+			</nav>
+			<div class="flex items-center gap-4 px-2">
+				<button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">EN/中</button>
+				<button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">☼/☾</button>
+				<a href="../13-个人资料页/01-profile.html"
+					class="w-8 h-8 flex items-center justify-center wf-border cursor-pointer hover:bg-gray-100 text-[10px] text-black"
+					title="进入个人设置">Usr</a>
+		</div>
+	</header>
+
+	<!-- ==================== 主内容区 (Dashboard 布局) ==================== -->
+	<main class="w-[94%] max-w-6xl mx-auto mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
+
+		<div class="ux-annotation -top-3 -left-1">/learning：仪表盘布局，结构化聚合</div>
+
+		<!-- 左侧主列 (占据 8 列)：聚焦“继续学习”与“历史资源” -->
+		<div class="lg:col-span-8 flex flex-col gap-6">
+
+			<!-- 模块 1：欢迎与核心指标 -->
+			<section
+				class="bg-white wf-border p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+				<div>
+					<h1 class="text-3xl font-black mb-1">早上好，同学！</h1>
+					<p class="text-sm font-bold text-gray-500">今天也要攻克新的知识点。</p>
+				</div>
+				<div class="flex gap-4">
+					<div class="wf-border-dashed p-3 text-center min-w-[80px]">
+						<div class="text-2xl font-black mb-1">12</div>
+						<div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">生成结果</div>
+					</div>
+					<div class="wf-border-dashed p-3 text-center min-w-[80px]">
+						<div class="text-2xl font-black mb-1">4<span class="text-sm">天</span></div>
+						<div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">连续学习</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- 模块 2：当前聚焦 (继续学习) -->
+				<a href="../08-课堂结果页/01-classroom.html"
+					class="bg-white wf-border p-6 hover-card cursor-pointer border-[3px] block text-black">
+				<div class="flex justify-between items-center mb-4">
+					<div class="flex items-center gap-2">
+						<span class="w-3 h-3 bg-[#f5c547] wf-border inline-block"></span>
+						<h2 class="text-sm font-bold uppercase tracking-widest">继续上次学习</h2>
+					</div>
+					<span class="text-xs font-bold text-gray-400">昨天 22:30</span>
+				</div>
+				<div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+					<div
+						class="w-full sm:w-40 aspect-video bg-gray-100 wf-border-dashed flex items-center justify-center text-xs text-gray-500">
+						[课堂封面]
+					</div>
+					<div class="flex-1">
+						<div class="flex items-center gap-2 mb-2">
+							<span class="text-[10px] font-bold border border-black px-1">主题课堂</span>
+							<h3 class="text-xl font-black">复合函数链式法则应用</h3>
+						</div>
+						<p class="text-sm text-gray-600 mb-4 line-clamp-2">上次停留在 Scene 03，距离完成本次课堂还有 2 页幻灯片及课后测验。</p>
+							<span
+								class="wf-border bg-black text-white px-6 py-2 text-sm font-bold hover:bg-gray-800 transition-colors inline-block">
+								继续课堂 &rarr;
+							</span>
+						</div>
+					</div>
+				</a>
+
+			<!-- 模块 3：资源库快捷入口 (App Grid 模式) -->
+			<section>
+				<h2 class="text-lg font-black mb-4 flex items-center gap-2">📚 学习资源库</h2>
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+					<!-- 历史视图入口 -->
+						<a href="../14-历史记录页/01-history.html"
+							class="bg-white wf-border p-4 hover-card cursor-pointer flex flex-col justify-between h-32 text-black">
+							<span class="text-2xl">🕒</span>
+							<div>
+								<h3 class="font-bold text-sm">生成历史</h3>
+								<p class="text-[10px] text-gray-500 mt-1">跳转 /history</p>
+							</div>
+						</a>
+
+					<!-- 收藏夹入口 -->
+						<a href="../15-收藏页/01-favorites.html"
+							class="bg-white wf-border p-4 hover-card cursor-pointer flex flex-col justify-between h-32 text-black">
+							<span class="text-2xl">⭐</span>
+							<div>
+								<h3 class="font-bold text-sm">我的收藏</h3>
+								<p class="text-[10px] text-gray-500 mt-1">跳转 /favorites</p>
+							</div>
+						</a>
+
+					<!-- 错题本入口 -->
+						<a href="../10-Checkpoint 与 Quiz 页/01-quiz-session.html"
+							class="bg-white wf-border p-4 hover-card cursor-pointer flex flex-col justify-between h-32 bg-red-50/30 text-black">
+							<span class="text-2xl">📓</span>
+							<div>
+								<h3 class="font-bold text-sm">错题本</h3>
+								<p class="text-[10px] text-gray-500 mt-1">12 题待复习</p>
+							</div>
+						</a>
+
+					<!-- 证据回看入口 (架构强制要求) -->
+					<div
+						class="bg-white wf-border p-4 hover-card cursor-pointer flex flex-col justify-between h-32 relative">
+						<div class="ux-annotation -top-2 -right-2 ux-annotation-blue scale-75">直接呼出抽屉</div>
+						<span class="text-2xl">📎</span>
+						<div>
+							<h3 class="font-bold text-sm">证据来源回看</h3>
+							<p class="text-[10px] text-gray-500 mt-1">非独立路由面板</p>
+						</div>
+					</div>
+
+				</div>
+			</section>
+
+			<!-- 模块 4：最近动态列表 (简化展示) -->
+			<section class="bg-white wf-border p-6">
+				<div class="flex justify-between items-center mb-6">
+					<h2 class="text-lg font-black">最近活动记录</h2>
+						<a href="../14-历史记录页/01-history.html" class="text-xs font-bold underline hover:text-gray-500">查看完整历史</a>
+				</div>
+				<div class="space-y-4">
+					<div class="flex items-center justify-between pb-4 border-b border-dashed border-gray-300">
+						<div class="flex items-center gap-4">
+							<span
+								class="w-8 h-8 flex items-center justify-center bg-gray-100 wf-border text-sm">🎬</span>
+							<div>
+								<h4 class="font-bold text-sm">单题讲解：洛必达法则几何意义</h4>
+								<p class="text-xs text-gray-500 mt-1">今天 09:15 · 生成成功</p>
+							</div>
+						</div>
+							<a href="../05-视频结果页/01-video-result.html"
+								class="wf-border px-3 py-1 text-xs font-bold hover:bg-gray-100 text-black">回看</a>
+					</div>
+					<div class="flex items-center justify-between pb-4 border-b border-dashed border-gray-300">
+						<div class="flex items-center gap-4">
+							<span
+								class="w-8 h-8 flex items-center justify-center bg-gray-100 wf-border text-sm">💬</span>
+							<div>
+								<h4 class="font-bold text-sm">伴学提问：傅里叶变换的物理意义</h4>
+								<p class="text-xs text-gray-500 mt-1">昨天 14:20 · 包含白板解答</p>
+							</div>
+						</div>
+							<a href="../05-视频结果页/01-video-result.html"
+								class="wf-border px-3 py-1 text-xs font-bold hover:bg-gray-100 text-black">回看</a>
+					</div>
+				</div>
+			</section>
+
+		</div>
+
+		<!-- 右侧副列 (占据 4 列)：Learning Coach 专属区 -->
+		<div class="lg:col-span-4 flex flex-col gap-6">
+
+			<div class="ux-annotation -top-3 -right-1 ux-annotation-blue">Learning Coach 聚合侧栏</div>
+
+			<!-- 模块 5：学习路径卡片 -->
+				<a href="../11-学习路径页/01-path.html"
+					class="bg-black text-white wf-border p-6 hover-card cursor-pointer relative overflow-hidden block">
+				<div class="absolute -right-4 -top-4 text-6xl opacity-20">🧭</div>
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-sm font-bold uppercase tracking-widest">当前学习路径</h2>
+					<span class="text-xs font-bold bg-white text-black px-2 py-0.5">跳转 /path</span>
+				</div>
+				<h3 class="text-xl font-black mb-2">微积分求导进阶攻坚</h3>
+				<div class="flex justify-between text-xs font-bold mb-2 text-gray-300 mt-6">
+					<span>总进度</span>
+					<span>25% (1/4 节点)</span>
+				</div>
+				<div class="w-full h-2 wf-border bg-gray-800 border-gray-600">
+					<div class="h-full bg-white w-[25%]"></div>
+				</div>
+				</a>
+
+			<!-- 模块 6：小测健康度 (Quiz Stats) -->
+			<section class="bg-white wf-border p-6">
+				<h2 class="text-sm font-bold uppercase tracking-widest text-gray-500 border-b-2 border-black pb-2 mb-4">
+					测验健康度</h2>
+				<div class="flex items-center gap-4 mb-4">
+					<div
+						class="w-16 h-16 rounded-full! wf-border border-4 border-black flex items-center justify-center">
+						<span class="text-xl font-black">86</span>
+					</div>
+					<div>
+						<p class="text-sm font-bold mb-1">近期平均分</p>
+						<p class="text-xs text-green-600 font-bold">↑ 较上周提升 12%</p>
+					</div>
+				</div>
+				<p class="text-xs text-gray-600 leading-relaxed mb-4">在「隐函数求导」模块失分较多，建议重点复习。</p>
+					<a href="../10-Checkpoint 与 Quiz 页/01-quiz-session.html"
+						class="w-full wf-border-dashed bg-gray-50 text-xs font-bold py-2 hover:bg-gray-100 block text-center text-black">
+						进入错题本发起针对性练习
+					</a>
+			</section>
+
+			<!-- 模块 7：AI 智能推荐 (Recommendation) -->
+			<section class="bg-[#f5c547]/10 wf-border p-6 border-[#f5c547]">
+				<h2 class="text-sm font-bold uppercase tracking-widest text-gray-600 mb-4 flex items-center gap-2">
+					✨ 小麦推荐
+				</h2>
+				<div class="space-y-4">
+						<a href="../03-视频输入页/01-input.html" class="bg-white wf-border p-3 cursor-pointer hover:bg-gray-50 block text-black">
+							<span class="text-[10px] font-bold bg-[#f5c547] px-1 mb-1 inline-block">基于错题推荐</span>
+							<h3 class="text-sm font-bold line-clamp-2">生成单题讲解：隐函数求导的几何推导过程</h3>
+						</a>
+						<a href="../06-课堂输入页/01-input.html" class="bg-white wf-border p-3 cursor-pointer hover:bg-gray-50 block text-black">
+							<span class="text-[10px] font-bold bg-black text-white px-1 mb-1 inline-block">基于收藏推荐</span>
+							<h3 class="text-sm font-bold line-clamp-2">延伸课堂：从偏导数到全微分</h3>
+						</a>
+				</div>
+			</section>
+
+		</div>
+
+	</main>
+
+</body>
+
+</html>

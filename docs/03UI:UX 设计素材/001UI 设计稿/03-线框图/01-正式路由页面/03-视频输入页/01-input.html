@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 视频输入与案例探索页线框</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.wf-border {
+			border: 1px solid #374151;
+		}
+
+		.wf-border-b {
+			border-bottom: 1px solid #e5e7eb;
+		}
+
+		.wf-border-r {
+			border-right: 1px solid #e5e7eb;
+		}
+
+		.wf-border-dashed {
+			border: 1px dashed #9ca3af;
+		}
+
+		.wf-round {
+			border-radius: 9999px !important;
+		}
+
+		.ux-note {
+			border: 1px dashed #3b82f6 !important;
+			color: #2563eb;
+			background-color: rgba(59, 130, 246, 0.05);
+			font-size: 0.7rem;
+			position: relative;
+			margin-bottom: 1rem;
+		}
+
+		.ux-note::before {
+			content: 'UI/UX Note';
+			position: absolute;
+			top: -9px;
+			left: -1px;
+			background: #3b82f6;
+			color: white;
+			padding: 0 4px;
+			font-size: 0.6rem;
+			font-weight: bold;
+		}
+
+		.wf-glow-simulate {
+			border: 1px solid #000;
+			outline: 4px solid #f3f4f6;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 h-screen overflow-hidden flex font-sans">
+
+	<aside class="w-[260px] flex-shrink-0 flex flex-col wf-border-r bg-white z-20">
+		<div class="px-4 py-4 space-y-4 wf-border-b">
+			<a href="../01-首页与入口/02-home.html"
+				class="flex items-center justify-between hover:bg-gray-50 p-1 text-black">
+				<div class="flex items-center">
+					<div class="w-6 h-6 wf-border flex items-center justify-center text-[8px] mr-2">Logo</div>
+					<span class="font-bold">小麦 XiaoMai</span>
+				</div>
+				<span class="text-xs text-gray-500">主页</span>
+			</a>
+			<div class="wf-border flex items-center px-2 py-1.5 bg-gray-50 text-sm text-gray-400">
+				<span class="mr-2">🔍</span>
+				<input type="text" placeholder="搜索历史解题视频..." class="bg-transparent outline-none w-full">
+			</div>
+		</div>
+		<nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+			<div class="text-[10px] font-bold text-gray-400 uppercase mb-2 px-2">Workspaces</div>
+			<a href="01-input.html"
+				class="flex items-center px-2 py-2 bg-gray-100 font-bold border-l-2 border-black text-black">
+				<span class="mr-3 text-sm">🎬</span>单题讲解工作台
+			</a>
+			<a href="../06-课堂输入页/01-input.html"
+				class="flex items-center px-2 py-2 text-gray-600 hover:bg-gray-50 border-l-2 border-transparent">
+				<span class="mr-3 text-sm">📚</span>系统课堂生成
+			</a>
+			<a href="../12-学习中心页/01-learning.html"
+				class="flex items-center px-2 py-2 text-gray-600 hover:bg-gray-50 border-l-2 border-transparent">
+				<span class="mr-3 text-sm">📖</span>学习中心
+			</a>
+			<a href="../13-个人资料页/01-profile.html"
+				class="flex items-center px-2 py-2 text-gray-600 hover:bg-gray-50 border-l-2 border-transparent">
+				<span class="mr-3 text-sm">👤</span>个人资料
+			</a>
+		</nav>
+	</aside>
+
+	<main class="flex-1 flex flex-col h-screen overflow-y-auto relative bg-white">
+		<header
+			class="h-14 flex items-center justify-between px-6 sticky top-0 bg-white/80 backdrop-blur-md z-10 wf-border-b">
+			<div class="flex items-center space-x-2 text-sm text-gray-500">
+				<span>小麦工作台</span> / <span class="text-black font-bold">单题讲解</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<a href="../01-首页与入口/02-home.html"
+					class="text-sm text-gray-600 hover:text-black wf-border px-3 py-1">返回首页</a>
+				<a href="../05-视频结果页/01-video-result.html"
+					class="text-sm text-gray-600 hover:text-black wf-border px-3 py-1">查看示例结果</a>
+			</div>
+		</header>
+
+		<div class="w-full max-w-[840px] mx-auto px-6 py-8 flex-1 flex flex-col">
+			<div class="text-center mb-8">
+				<h1 class="text-3xl font-bold mb-2">上传题目，生成动画讲解</h1>
+				<p class="text-sm text-gray-500">支持文字描述、题图上传与 OCR 补充，进入 5 分钟视频生成链路。</p>
+			</div>
+
+			<div class="ux-note p-3">
+				<p class="font-bold mb-1">设计理念：Problem-to-Video Flow</p>
+				<p>视频输入页只负责“发起任务”。生成过程、结果播放、伴学追问和证据回看会继续流转到等待页与结果页，不在本页堆叠。</p>
+			</div>
+
+			<div class="relative mb-12">
+				<div class="wf-glow-simulate bg-white flex flex-col min-h-[220px] relative transition-all p-2">
+					<div
+						class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:gap-3 px-2 py-2 wf-border-b border-dashed mb-2">
+						<div class="justify-self-start w-full max-w-[220px]">
+							<div class="wf-border wf-round flex items-center gap-2.5 px-2.5 py-1.5 bg-white">
+								<div
+									class="w-8 h-8 wf-round wf-border bg-gray-100 text-[8px] flex justify-center items-center">
+									题图
+								</div>
+								<div class="flex-1 min-w-0 leading-none">
+									<div class="text-[10px] text-gray-500 mb-1">输入方式</div>
+									<div class="text-[13px] font-bold text-gray-900">文字 / 图片 / OCR</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="text-[10px] text-gray-400 text-center px-2 whitespace-nowrap">单题任务创建</div>
+
+						<div class="justify-self-end">
+							<div class="flex items-center justify-end space-x-2 px-2 py-1 w-fit max-w-full">
+								<span class="text-sm text-gray-500 whitespace-nowrap">讲解老师:</span>
+								<div class="flex -space-x-1">
+									<div
+										class="w-6 h-6 rounded-full! wf-border bg-white text-[8px] flex justify-center items-center relative z-10">
+										严</div>
+								</div>
+								<span class="text-sm font-bold whitespace-nowrap">严谨教授 ▾</span>
+							</div>
+						</div>
+					</div>
+
+					<textarea class="w-full flex-1 resize-none outline-none p-3 text-base leading-relaxed bg-transparent"
+						placeholder="输入题目或粘贴文字，例如：&#10;「已知 y = sin(x²)，求 y'」&#10;「上传这道受力分析题，生成逐步动画讲解」"></textarea>
+
+					<div class="flex justify-between items-end p-2 mt-2">
+						<div class="flex space-x-1 items-center">
+							<button class="w-8 h-8 flex items-center justify-center wf-border hover:bg-gray-50 wf-round"
+								title="上传题目截图">📎</button>
+							<button class="w-8 h-8 flex items-center justify-center wf-border hover:bg-gray-50 wf-round"
+								title="OCR 识题">🖼️</button>
+							<button class="w-8 h-8 flex items-center justify-center wf-border hover:bg-gray-50 wf-round"
+								title="联网补充资料">🌐</button>
+							<button
+								class="flex items-center text-xs wf-border px-3 py-1.5 hover:bg-gray-50 wf-round bg-green-50 border-green-200">
+								<span class="mr-1">🔊</span> 试听旁白
+							</button>
+						</div>
+
+						<div class="flex items-center space-x-3">
+							<button class="text-gray-400 hover:text-black">🎤</button>
+							<a href="../04-视频等待页/01-generating.html"
+								class="bg-black text-white px-5 py-2 text-sm font-bold flex items-center">
+								开始生成视频 ↑
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mb-4 pb-2 wf-border-b">
+				<h2 class="text-lg font-bold">探索热门单题讲解</h2>
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+				<div class="space-y-4">
+					<a href="../05-视频结果页/01-video-result.html"
+						class="wf-border bg-white flex flex-col p-3 text-black hover:bg-gray-50">
+						<div class="w-full h-28 bg-gray-100 mb-2 flex items-center justify-center text-xs text-gray-400">
+							[导数动画首帧]</div>
+						<div class="font-bold text-sm">链式法则的齿轮传动类比</div>
+						<div class="text-[10px] text-gray-500 mt-1">严谨教授 · 1.8k 播放</div>
+					</a>
+					<a href="../05-视频结果页/01-video-result.html"
+						class="wf-border bg-white flex flex-col p-3 text-black hover:bg-gray-50">
+						<div class="w-full h-40 bg-gray-100 mb-2 flex items-center justify-center text-xs text-gray-400">
+							[高比例竖图封面]</div>
+						<div class="font-bold text-sm">隐函数求导的几何推导</div>
+						<div class="text-[10px] text-gray-500 mt-1">温和导师 · 850 赞</div>
+					</a>
+				</div>
+				<div class="space-y-4">
+					<a href="../05-视频结果页/01-video-result.html"
+						class="wf-border bg-white flex flex-col p-3 text-black hover:bg-gray-50">
+						<div class="w-full aspect-square bg-gray-100 mb-2 flex items-center justify-center text-xs text-gray-400">
+							[3D 坐标系动画截图]</div>
+						<div class="font-bold text-sm">拉格朗日乘数法直观理解</div>
+						<div class="text-[10px] text-gray-500 mt-1">干练讲师 · 2.3k 播放</div>
+					</a>
+				</div>
+				<div class="space-y-4">
+					<a href="../05-视频结果页/01-video-result.html"
+						class="wf-border bg-white flex flex-col p-3 text-black hover:bg-gray-50">
+						<div class="w-full aspect-video bg-gray-100 mb-2 flex items-center justify-center text-xs text-gray-400">
+							[受力分析动图封面]</div>
+						<div class="font-bold text-sm">滑块木板相对滑动临界状态解析</div>
+						<div class="text-[10px] text-gray-500 mt-1">风趣老师 · 450 播放</div>
+					</a>
+				</div>
+			</div>
+
+			<div class="flex justify-center mt-10">
+				<a href="../14-历史记录页/01-history.html"
+					class="wf-border bg-white text-black px-6 py-2 font-bold hover:bg-gray-100 flex items-center gap-2">
+					查看更多历史讲解 ↓
+				</a>
+			</div>
+		</div>
+	</main>
+</body>
+
+</html>
