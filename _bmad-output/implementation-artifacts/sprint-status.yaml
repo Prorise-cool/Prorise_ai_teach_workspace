@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-29 23:14:00 +0800
+last_updated: 2026-03-29 23:54:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -134,7 +134,7 @@ development_status:
   10-2-ruoyi-小麦业务模块与权限承接规则: review
   10-3-fastapi-与-ruoyi-防腐层客户端: review
   10-4-视频与课堂任务元数据长期承接: ready-for-dev
-  10-5-companion-与-evidence-问答长期承接: ready-for-dev
+  10-5-companion-与-evidence-问答长期承接: review
   10-6-learning-coach-结果错题与路径长期承接: ready-for-dev
   10-7-学习记录收藏与聚合查询承接: ready-for-dev
   10-8-后台查询导出与审计边界: ready-for-dev
