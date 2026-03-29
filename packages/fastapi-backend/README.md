@@ -40,6 +40,7 @@ packages/fastapi-backend/
 cd /path/to/Prorise_ai_teach_workspace
 pnpm setup:fastapi-backend
 cp packages/fastapi-backend/.env.example packages/fastapi-backend/.env
+# pnpm dev:fastapi-backend 会读取 packages/fastapi-backend/.env
 pnpm dev:fastapi-backend
 ```
 
@@ -75,4 +76,5 @@ pnpm test:fastapi-backend
 - 该骨架用于保证后续 Epic 有稳定目录与启动方式。
 - 当前不在这里实现认证逻辑，认证仍由 `RuoYi` 承接。
 - 当前只落位统一任务框架、Provider 协议、防腐层客户端与功能域目录。
+- `task_framework` 当前只保留中性占位类型；正式状态枚举、错误码字典与事件契约留待 `Story 2.1 / 2.2` 冻结。
 - 后续业务模块应按架构文档继续落在 `app/features/*` 下。

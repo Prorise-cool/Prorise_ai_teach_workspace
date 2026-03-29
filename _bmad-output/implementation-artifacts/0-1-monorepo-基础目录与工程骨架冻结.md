@@ -119,8 +119,10 @@ GPT-5 Codex
 
 - 已补齐根目录启动说明、Node / pnpm 版本要求与三端启动顺序。
 - 已将 `packages/fastapi-backend/` 从纯说明目录提升为对齐架构文档的框架骨架，包含 `core / infra / providers / features / shared / task_framework`。
+- 已将 `task_framework` 中会提前冻结后续 Story 的状态枚举与错误码降回中性占位，避免 `Story 0.1` 越界承接 `2.1 / 2.2` 契约职责。
 - 已新增 `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/README.md`，冻结小麦业务模块预留目录边界。
 - 已新增 Epic 0 最小启动说明文档，并补充三端职责与 smoke checklist。
+- 已让 `pnpm dev:fastapi-backend` 通过 package 内 `.env` 驱动 `host / port / reload`，消除脚本与文档口径不一致问题。
 - FastAPI 在本机 `8090` 端口验证时遇到端口占用，因此改用 `8091` 完成真实请求验证；骨架启动与路由响应正常。
 
 ### File List
@@ -147,3 +149,4 @@ GPT-5 Codex
 ### Change Log
 
 - 2026-03-29：补齐 FastAPI 架构骨架、根级启动说明、RuoYi 业务模块占位与 Epic 0 最小启动文档；状态更新为 `review`。
+- 2026-03-29：收敛 `task_framework` 占位语义，避免提前冻结后续任务契约；同时让 FastAPI 开发脚本真正读取 package 内 `.env` 配置。

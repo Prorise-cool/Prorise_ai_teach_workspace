@@ -5,6 +5,7 @@
 - **[README.md](./README.md)** - FastAPI + LangGraph AI 教学视频后端说明
 - **[pyproject.toml](./pyproject.toml)** - FastAPI 最小依赖与 pytest 配置
 - **[.env.example](./.env.example)** - FastAPI 本地环境变量示例
+- **[run_dev.py](./run_dev.py)** - 读取 package 内 `.env` 的本地启动入口
 
 ## Subdirectories
 
