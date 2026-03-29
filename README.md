@@ -11,8 +11,10 @@ Prorise_ai_teach_workspace/
 ├── INDEX.md                   # 仓库全局索引
 ├── _bmad/                     # BMAD 开发流程系统
 ├── _bmad-output/              # 唯一事实来源
+├── contracts/                 # 契约资产目录
 ├── docs/                      # 开发手册与协作文档
 │   └── 01开发人员手册/        # 开发总结文档落点
+├── mocks/                     # Mock 资产目录
 ├── packages/                  # 主代码工作区
 │   ├── student-web/           # React 19 学生端前端
 │   ├── fastapi-backend/       # FastAPI + LangGraph 后端
@@ -32,6 +34,8 @@ Prorise_ai_teach_workspace/
 - 事实来源：[`_bmad-output/INDEX.md`](./_bmad-output/INDEX.md)
 - 开发手册入口：[`docs/01开发人员手册/0000-AI快速导航索引.md`](./docs/01开发人员手册/0000-AI快速导航索引.md)
 - 主代码工作区：[`packages/INDEX.md`](./packages/INDEX.md)
+- 契约资产：[`contracts/README.md`](./contracts/README.md)
+- Mock 资产：[`mocks/README.md`](./mocks/README.md)
 - 参考项目索引：[`references/INDEX.md`](./references/INDEX.md)
 
 ## 技术栈
@@ -94,6 +98,8 @@ mvn -pl ruoyi-admin -am spring-boot:run -Dspring-boot.run.profiles=dev
 - `packages/fastapi-backend/`：AI 功能服务框架骨架。当前提供 `core / infra / providers / features / shared` 分层、`FastAPI` 入口、健康检查、骨架路由与最小测试。
 - `packages/RuoYi-Vue-Plus-5.X/`：认证、RBAC 与长期业务数据宿主。
 - `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/`：小麦业务模块预留目录，当前只冻结边界，不承载正式业务实现。
+- `contracts/`：正式 schema、状态枚举、错误码与示例 payload 的唯一落点。
+- `mocks/`：与契约版本对齐的 Mock 资产目录。
 - `references/`：只读参考来源，不作为业务代码落点。
 
 ### 启动顺序建议
