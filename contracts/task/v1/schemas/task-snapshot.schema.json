@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/task/v1/schemas/task-snapshot.schema.json",
+  "title": "Task Snapshot Template",
+  "type": "object",
+  "description": "Story 0.2 提供的模板 schema，正式字段由后续 Story 冻结。",
+  "required": [
+    "taskId",
+    "taskType",
+    "status",
+    "timestamp"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string"
+    },
+    "taskType": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "errorCode": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": true
+}
