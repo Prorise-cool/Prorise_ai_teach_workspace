@@ -176,17 +176,8 @@ references/manim-to-video-claw/*.egg-info/
 *.swo
 *~
 
-# ===========================================
-# Project Specific (not tracked)
-# ===========================================
-# BMAD planning outputs
-_bmad-output/
-
 # Claude Code workflow config
 .ccw/
-
-# Documentation (maintained separately)
-docs/
 
 # Reference projects (external examples)
 references/

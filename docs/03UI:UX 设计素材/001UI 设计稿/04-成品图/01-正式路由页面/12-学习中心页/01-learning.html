@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>学习中心 | 小麦</title>
+  <style>
+    body{margin:0;font-family:'PingFang SC',SF-Pro,sans-serif;background:#050714;color:#f8fafc}
+    .page{min-height:100vh;padding:2.5rem;background:linear-gradient(120deg,#020617,#0f172a)}
+    .panel{background:#0c1324;border-radius:1.4rem;padding:1.6rem;box-shadow:0 28px 60px rgba(2,6,23,.7)}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+    h1{margin:0;font-size:2rem}
+    .badge{padding:.4rem 1rem;border-radius:999px;background:#34d399;color:#0f172a;font-weight:600;font-size:.8rem}
+    .grid{display:grid;gap:1rem;margin-top:1.5rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    p{margin-bottom:1rem;line-height:1.6;color:#d2d6e5}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="panel">
+      <header>
+        <div>
+          <div style="font-size:.9rem;color:#9ca3af">Learning Coach · 合并 Companion / Evidence 状态</div>
+          <h1>学习中心 · 结果回看与后续路线</h1>
+        </div>
+        <span class="badge">汇总 Companion + Retrieval 状态</span>
+      </header>
+      <p>本页不再只是一个“学习辅助”板块，它同时承载来自 Companion 的历史问答/解释流与 Retrieval 的证据追踪，方便学生在回看课堂/视频结果时立即触发 checkpoint、quiz 与 path 操作。</p>
+      <div class="grid">
+        <div class="panel">
+          <h2>历史问答与白板记录</h2>
+          <p>显示 Companion 产生的问答片段，点击即可回到视频/课堂对应时间线，保障上下文连贯。</p>
+        </div>
+        <div class="panel">
+          <h2>证据 & 引用</h2>
+          <p>列出 Retrieval Provider 提供的引用片段与解析状态，支持继续提问或追溯来源证据。</p>
+        </div>
+        <div class="panel">
+          <h2>Learning Coach 入口</h2>
+          <p>提供 `checkpoint / quiz / path` 按钮，直接流转到独立 quiz 路径，并将结果回写 RuoYi 学习记录。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

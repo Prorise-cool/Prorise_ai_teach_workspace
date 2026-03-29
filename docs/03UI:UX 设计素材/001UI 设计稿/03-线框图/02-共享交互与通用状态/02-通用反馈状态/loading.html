@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 全局 Loading</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+
+		/* 粗野主义方块翻转动画 */
+		.brutal-spinner {
+			width: 40px;
+			height: 40px;
+			background-color: #000;
+			animation: rotatePlane 1.2s infinite ease-in-out;
+		}
+
+		@keyframes rotatePlane {
+			0% {
+				transform: perspective(120px) rotateX(0deg) rotateY(0deg);
+			}
+
+			50% {
+				transform: perspective(120px) rotateX(-180deg) rotateY(0deg);
+				background-color: #fff;
+				border: 2px solid #000;
+			}
+
+			100% {
+				transform: perspective(120px) rotateX(-180deg) rotateY(-180deg);
+			}
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen bg-grid p-4 relative">
+
+	<!-- 背景层 (模拟加载中的底层页面) -->
+	<div class="absolute inset-0 p-8 opacity-20 pointer-events-none">
+		<div class="w-full max-w-4xl mx-auto h-12 wf-border bg-white mb-6"></div>
+		<div class="w-full max-w-4xl mx-auto grid grid-cols-3 gap-4">
+			<div class="h-32 wf-border bg-white"></div>
+			<div class="h-32 wf-border bg-white"></div>
+			<div class="h-32 wf-border bg-white"></div>
+		</div>
+	</div>
+
+	<!-- 遮罩层与 Loading 动画 -->
+	<div class="fixed inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+		<div class="brutal-spinner mb-6"></div>
+		<div class="text-sm font-bold tracking-widest uppercase">Loading Data...</div>
+	</div>
+
+</body>
+
+</html>

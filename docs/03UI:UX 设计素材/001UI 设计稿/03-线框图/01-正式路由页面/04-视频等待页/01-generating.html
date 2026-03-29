@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 视频生成进度等待页线框</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.wireframe-border {
+			border: 2px solid #000;
+		}
+
+		/* 网格背景，增加技术感 */
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image:
+				linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+				linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+
+		/* UX 注释标签样式 */
+		.ux-annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 6px;
+			z-index: 50;
+			pointer-events: none;
+			font-weight: bold;
+		}
+
+		/* ================= 完全复用的 Loading 文本动效 ================= */
+		.loader-wrapper {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.5rem;
+			font-weight: 900;
+			user-select: none;
+			color: #000;
+			letter-spacing: 0.05em;
+			overflow: hidden;
+			font-family: 'Arial Black', sans-serif;
+			text-transform: uppercase;
+		}
+
+		.loader {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			background-color: transparent;
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image:
+				radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.95) 0%, transparent 48%),
+				radial-gradient(circle at 45% 45%, rgba(80, 80, 80, 0.7) 0%, transparent 42%),
+				radial-gradient(circle at 55% 55%, rgba(180, 180, 180, 0.75) 0%, transparent 42%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate, opacity-animation 4.2s infinite;
+		}
+
+		.loader-letter {
+			position: relative;
+			display: inline-block;
+			opacity: 0.16;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
+		}
+
+		/* 字母延迟动画 */
+		.loader-letter:nth-child(1) {
+			animation-delay: 0.1s;
+		}
+
+		.loader-letter:nth-child(2) {
+			animation-delay: 0.22s;
+		}
+
+		.loader-letter:nth-child(3) {
+			animation-delay: 0.34s;
+		}
+
+		.loader-letter:nth-child(4) {
+			animation-delay: 0.46s;
+		}
+
+		.loader-letter:nth-child(5) {
+			animation-delay: 0.58s;
+		}
+
+		.loader-letter:nth-child(6) {
+			animation-delay: 0.70s;
+		}
+
+		.loader-letter:nth-child(7) {
+			animation-delay: 0.82s;
+		}
+
+		.loader-letter:nth-child(8) {
+			animation-delay: 0.94s;
+		}
+
+		.loader-letter:nth-child(9) {
+			animation-delay: 1.06s;
+		}
+
+		.loader-letter:nth-child(10) {
+			animation-delay: 1.18s;
+		}
+
+		/* ================= 完全复用的进度条动效 ================= */
+		.progress-track {
+			height: 12px;
+			border: 2px solid #000;
+			background: #fff;
+			width: 100%;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.progress-fill {
+			height: 100%;
+			width: 50%;
+			/* 模拟进度 */
+			background: repeating-linear-gradient(45deg, #000, #000 10px, #fff 10px, #fff 20px);
+			background-size: 28px 100%;
+			animation: progress-pan 1s linear infinite;
+			transition: width 0.5s ease-in-out;
+		}
+
+		/* ================= 动画 Keyframes ================= */
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-58%);
+			}
+
+			100% {
+				transform: translate(58%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.1;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.16;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.05) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.42;
+			}
+
+			100% {
+				opacity: 0.12;
+				filter: blur(3px);
+			}
+		}
+
+		@keyframes progress-pan {
+			0% {
+				background-position: 0 0;
+			}
+
+			100% {
+				background-position: 28px 0;
+			}
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0;
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 8px;
+			height: 14px;
+			background-color: #000;
+			animation: blink 1s step-end infinite;
+			vertical-align: middle;
+			margin-left: 4px;
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 bg-grid font-sans">
+
+	<!-- 顶层控制区：模拟后端推送不同的状态 (仅供线框图演示，无需翻牌) -->
+	<div class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50">
+		<button onclick="simulateSSE('normal')"
+			class="wireframe-border bg-white px-4 py-1 text-xs font-bold hover:bg-gray-200">模拟: 正常渲染中 (50%)</button>
+		<button onclick="simulateSSE('fix')"
+			class="wireframe-border bg-white px-4 py-1 text-xs font-bold hover:bg-gray-200">模拟: 触发降级修复 (60%)</button>
+		<button onclick="simulateSSE('tts')"
+			class="wireframe-border bg-white px-4 py-1 text-xs font-bold hover:bg-gray-200">模拟: 合成与上传 (90%)</button>
+	</div>
+
+	<!-- 核心居中面板：极简粗野主义风格 (完全复用课堂等待页 DOM) -->
+	<main
+		class="w-full max-w-3xl bg-white wireframe-border border-[3px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col min-h-[500px]">
+
+		<!-- 左上角：终止生成操作 (完全复用) -->
+		<a href="../03-视频输入页/01-input.html"
+			class="absolute top-4 left-4 text-xs font-bold text-gray-500 hover:text-black hover:underline flex items-center gap-1 z-20">
+			<span>&larr;</span> 终止并返回
+		</a>
+
+		<!-- ==================== 统一进度等待状态 ==================== -->
+		<div id="state-generating" class="flex-1 flex flex-col items-center justify-center p-8 mt-6">
+			<div class="ux-annotation -top-3 -right-3">Video Pipeline SSE Progress</div>
+
+			<!-- 炫酷的文字 Loading (完全复用) -->
+			<div class="mb-10 scale-75 md:scale-100">
+				<div class="loader-wrapper" aria-label="Generating">
+					<span class="loader-letter">G</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">R</span>
+					<span class="loader-letter">A</span>
+					<span class="loader-letter">T</span>
+					<span class="loader-letter">I</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">G</span>
+					<div class="loader"></div>
+				</div>
+			</div>
+
+			<!-- 代码终端风格的进度日志 (DOM 完全复用，仅内容替换为架构文档中定义的视频阶段) -->
+			<div class="w-full max-w-lg mb-8">
+				<div class="flex justify-between text-xs font-bold mb-2">
+					<span class="uppercase tracking-widest text-gray-500">Video Engine Log</span>
+					<span id="progress-text">50%</span>
+				</div>
+				<!-- 进度条 -->
+				<div class="progress-track mb-4">
+					<div class="progress-fill" id="progress-bar"></div>
+				</div>
+
+				<!-- 极简终端日志区 -->
+				<div class="bg-gray-50 wireframe-border p-4 font-mono text-xs text-gray-600 space-y-2 h-32 overflow-hidden relative"
+					id="log-container">
+					<!-- 常规阶段内容 -->
+					<div class="log-normal">
+						<div class="flex items-start gap-2 text-gray-400">
+							<span>[✓]</span>
+							<span>题目语义解析完成 (Understanding)</span>
+						</div>
+						<div class="flex items-start gap-2 text-gray-400">
+							<span>[✓]</span>
+							<span>分镜脚本与 Manim 代码生成完毕 (Code Gen)</span>
+						</div>
+						<div class="flex items-start gap-2 text-black font-bold">
+							<span>[>]</span>
+							<span>沙箱环境运行中：正在渲染 Manim 动画帧<span class="cursor-blink"></span></span>
+						</div>
+					</div>
+
+					<!-- 修复阶段内容 (默认隐藏，展示后端 L1/L3 修复真实反馈) -->
+					<div class="log-fix hidden">
+						<div class="flex items-start gap-2 text-gray-400">
+							<span>[✓]</span>
+							<span>分镜脚本与 Manim 代码生成完毕 (Code Gen)</span>
+						</div>
+						<div class="flex items-start gap-2 text-red-500 font-bold">
+							<span>[!]</span>
+							<span>沙箱渲染异常，触发自动修复链 (Auto-Fix Attempt 1/2)</span>
+						</div>
+						<div class="flex items-start gap-2 text-black font-bold">
+							<span>[>]</span>
+							<span>正在重新编译代码并渲染...<span class="cursor-blink"></span></span>
+						</div>
+					</div>
+
+					<!-- TTS/合成阶段内容 (默认隐藏) -->
+					<div class="log-tts hidden">
+						<div class="flex items-start gap-2 text-gray-400">
+							<span>[✓]</span>
+							<span>沙箱渲染 Manim 动画帧成功 (Render Completed)</span>
+						</div>
+						<div class="flex items-start gap-2 text-gray-400">
+							<span>[✓]</span>
+							<span>TTS 语音轨道合成完毕 (Audio Gen)</span>
+						</div>
+						<div class="flex items-start gap-2 text-black font-bold">
+							<span>[>]</span>
+							<span>正在通过 FFmpeg 合成最终视频并上传 COS...<span class="cursor-blink"></span></span>
+						</div>
+					</div>
+
+					<!-- 渐变遮罩 -->
+					<div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-gray-50 to-transparent"></div>
+				</div>
+			</div>
+
+			<p class="text-xs text-gray-400 font-bold text-center max-w-sm" id="eta-text">
+				由于动画渲染需要沙箱环境计算<br>预计还需要 2 分 30 秒，您可以先离开页面，后台会自动完成。
+			</p>
+			<a href="../05-视频结果页/01-video-result.html"
+				class="mt-6 text-xs font-bold underline text-gray-500 hover:text-black">查看完成后的结果页 &rarr;</a>
+		</div>
+	</main>
+
+	<!-- 交互脚本：仅用于演示不同 SSE 日志状态 -->
+	<script>
+		function simulateSSE(stage) {
+			const progressBar = document.getElementById('progress-bar');
+			const progressText = document.getElementById('progress-text');
+			const etaText = document.getElementById('eta-text');
+
+			// 隐藏所有日志
+			document.querySelector('.log-normal').classList.add('hidden');
+			document.querySelector('.log-fix').classList.add('hidden');
+			document.querySelector('.log-tts').classList.add('hidden');
+
+			// 根据阶段展示不同的真实后端日志和进度
+			if (stage === 'normal') {
+				progressBar.style.width = '50%';
+				progressText.innerText = '50%';
+				document.querySelector('.log-normal').classList.remove('hidden');
+				etaText.innerHTML = '由于动画渲染需要沙箱环境计算<br>预计还需要 2 分 30 秒，您可以先离开页面，后台会自动完成。';
+			}
+			else if (stage === 'fix') {
+				progressBar.style.width = '60%';
+				progressText.innerText = '60%';
+				document.querySelector('.log-fix').classList.remove('hidden');
+				etaText.innerHTML = '系统正在尝试自动修复动画代码 (1/2)<br>为了保证视频质量，请多花一点点耐心。';
+			}
+			else if (stage === 'tts') {
+				progressBar.style.width = '90%';
+				progressText.innerText = '90%';
+				document.querySelector('.log-tts').classList.remove('hidden');
+				etaText.innerHTML = '视频合成中，马上就好！<br>即将跳转到视频播放器...';
+			}
+		}
+	</script>
+</body>
+
+</html>

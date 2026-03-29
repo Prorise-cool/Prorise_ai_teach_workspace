@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 Home Wireframe</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		/* 强制线框图风格：移除平滑过渡、圆角和彩色，保留纯粹的结构 */
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wireframe-border {
+			border: 2px solid #000;
+		}
+
+		.wireframe-border-dashed {
+			border: 2px dashed #000;
+		}
+
+		.wireframe-img {
+			background-color: #f3f4f6;
+			border: 2px dashed #000;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			color: #6b7280;
+			text-align: center;
+			padding: 1rem;
+		}
+
+		/* 底部波浪线框样式 */
+		.wave-container {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			height: 32vh;
+			min-height: 230px;
+			z-index: 10;
+			overflow: hidden;
+			/* 标明这是可点击区域 */
+			cursor: pointer;
+		}
+
+		.wave-svg {
+			position: absolute;
+			bottom: 0;
+			width: 100%;
+			height: 100%;
+			display: block;
+		}
+
+		.wave-path {
+			/* 保持线框灰底和黑边 */
+			fill: #f3f4f6;
+			stroke: #000;
+			stroke-width: 2px;
+		}
+
+		/* 外部包裹环：营造被包围/嵌套的质感 */
+		.workspace-btn-wrapper {
+			position: absolute;
+			top: 35%;
+			/* 根据新波谷的深度调整 */
+			left: 50%;
+			transform: translateX(-50%);
+			width: 116px;
+			height: 116px;
+			background-color: #fff;
+			/* 外部留白 */
+			border: 2px solid #000;
+			border-radius: 9999px !important;
+			/* 必须加 important 覆盖全局的 0 */
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 20;
+		}
+
+		/* 工作台圆形按钮 - 内部实体 */
+		.workspace-btn {
+			position: relative;
+			width: 82px;
+			height: 82px;
+			background-color: #fff;
+			border: 2px solid #000;
+			border-radius: 9999px !important;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: bold;
+			cursor: pointer;
+			transition: background-color 0.2s;
+		}
+
+		.workspace-btn-wrapper:hover .workspace-btn {
+			background-color: #e5e7eb;
+		}
+
+		/* 播放三角图标 */
+		.workspace-btn::before {
+			content: "";
+			width: 0;
+			height: 0;
+			margin-left: 6px;
+			border-top: 14px solid transparent;
+			border-bottom: 14px solid transparent;
+			border-left: 22px solid #000;
+		}
+
+		.wave-caption {
+			position: absolute;
+			top: calc(35% + 58px);
+			/* 与外环的垂直居中对齐 */
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: 0.32em;
+			text-transform: uppercase;
+			z-index: 20;
+			transform: translateY(-50%);
+		}
+
+		.wave-caption-left {
+			left: calc(50% - 150px);
+			transform: translate(-100%, -50%);
+		}
+
+		.wave-caption-right {
+			left: calc(50% + 150px);
+			transform: translate(0, -50%);
+		}
+
+		/* 注释标签样式 */
+		.annotation {
+			position: absolute;
+			background: #000;
+			color: #fff;
+			font-size: 12px;
+			padding: 4px 8px;
+			z-index: 50;
+			pointer-events: none;
+		}
+	</style>
+</head>
+
+<body class="bg-white text-black min-h-screen relative overflow-hidden flex flex-col">
+
+	<!-- ==================== 悬浮导航栏 ==================== -->
+	<header
+		class="w-[90%] max-w-7xl mx-auto mt-6 wireframe-border bg-white z-50 p-3 flex justify-between items-center relative">
+		<div class="annotation -top-6 left-0 bg-gray-500">Floating Nav (悬浮导航)</div>
+
+		<!-- Logo -->
+			<a href="01-landingPage.html" class="flex items-center gap-2 font-bold text-xl">
+				<div class="w-8 h-8 wireframe-img p-0">LG</div>
+				<span>XiaoMai</span>
+			</a>
+
+		<!-- 导航中间项 (可选) -->
+		<div class="hidden md:flex gap-6 font-bold text-sm">
+				<a href="02-home.html" class="border-b-2 border-black">首 页</a>
+				<a href="01-landingPage.html" class="text-gray-500 hover:text-black">发 现</a>
+			</div>
+
+		<!-- 右侧操作区：必须包含 i18n, Theme, 登录入口 -->
+		<div class="flex items-center gap-4">
+			<!-- i18n 切换 -->
+			<button class="wireframe-border px-2 py-1 text-xs font-bold hover:bg-gray-100 flex items-center gap-1">
+				<span>EN/中</span>
+			</button>
+
+			<!-- 亮暗色切换 -->
+			<button class="wireframe-border px-2 py-1 text-xs font-bold hover:bg-gray-100">
+				<span>☼/☾</span>
+			</button>
+
+			<!-- 登录入口 -->
+				<a href="../02-认证页/01-login.html"
+					class="wireframe-border bg-black text-white px-4 py-1.5 text-sm font-bold hover:bg-gray-800">
+					登 录 (Login)
+				</a>
+		</div>
+	</header>
+
+	<!-- ==================== 核心主体区 ==================== -->
+	<!-- 使用 Grid 将页面分为左、中、右三块，参照 Dribbble 结构 -->
+	<main class="flex-1 w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 px-6 pt-12 relative z-20">
+
+		<!-- 左侧：入口 1 - 课堂场景 -->
+		<div class="flex flex-col justify-center items-start z-20 pb-40">
+			<div class="annotation -top-6 left-0">Entry 1: 课堂学习</div>
+			<h1 class="text-6xl lg:text-7xl font-black leading-none uppercase tracking-tighter mb-4">
+				SYSTEM<br>CLASS
+			</h1>
+			<p class="text-sm font-bold mb-6 border-l-4 border-black pl-3 max-w-xs">
+				我想学 (I want to learn)<br>
+				<span class="font-normal text-gray-600">输入主题，获取完整虚拟课堂体验。</span>
+			</p>
+				<!-- 左侧主行动按钮 -->
+					<a href="../06-课堂输入页/01-input.html"
+						class="wireframe-border border-[3px] px-8 py-3 font-bold text-lg hover:bg-gray-100 flex items-center gap-2">
+						开始系统学习 &rarr;
+					</a>
+					<a href="../02-认证页/01-login.html"
+						class="mt-3 text-xs font-bold text-gray-500 underline underline-offset-4 hover:text-black">
+						按真实架构，未登录会先进入登录页
+					</a>
+			</div>
+
+		<!-- 中间：核心 IP 吉祥物占位 -->
+		<!-- 注意 Z-index 设置，需覆盖在波浪之上 -->
+		<div class="relative flex justify-center items-end z-30 pb-10">
+			<div class="annotation top-10 left-1/2 transform -translate-x-1/2">3D Mascot / IP 角色</div>
+			<!-- IP 占位框：底部留白让其看起来“坐”在波浪上 -->
+			<div class="w-full max-w-[320px] aspect-[3/4] wireframe-img bg-transparent border-4 relative">
+				<span class="text-2xl font-bold">Mascot<br>Placeholder</span>
+				<span class="text-xs mt-2">(Q版毛绒感 IP，<br>视线引导向两侧入口)</span>
+			</div>
+		</div>
+
+		<!-- 右侧：入口 2 - 问答 Agent -->
+		<div class="flex flex-col justify-center items-start md:items-end text-left md:text-right z-20 pb-40">
+			<div class="annotation -top-6 right-0">Entry 2: 问答 Agent</div>
+			<h2 class="text-4xl lg:text-5xl font-black uppercase mb-4">
+				QUICK<br>AGENT
+			</h2>
+			<p
+				class="text-sm font-bold mb-6 border-l-4 md:border-l-0 md:border-r-4 border-black pl-3 md:pl-0 md:pr-3 max-w-xs">
+				我有问题 (I have a question)<br>
+				<span class="font-normal text-gray-600">上传题目，5分钟生成 Manim 动画讲解。</span>
+			</p>
+				<!-- 右侧主行动按钮 -->
+					<a href="../03-视频输入页/01-input.html"
+						class="wireframe-border bg-black text-white border-[3px] border-black px-8 py-3 font-bold text-lg hover:bg-gray-800 flex items-center gap-2">
+						单题讲解解析 &rarr;
+					</a>
+					<a href="../02-认证页/01-login.html"
+						class="mt-3 text-xs font-bold text-gray-500 underline underline-offset-4 hover:text-black">
+						按真实架构，未登录会先进入登录页
+					</a>
+			</div>
+
+	</main>
+
+	<!-- ==================== 底部：不对称波浪与工作台入口 ==================== -->
+	<a href="../12-学习中心页/01-learning.html" class="wave-container block" aria-label="进入学习中心与工作台">
+		<div class="annotation top-4 right-10">Bottom Wave: 点击进入工作台</div>
+
+		<!-- 替换为你调试好的 SVG 波浪路径 -->
+		<svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+			<path class="wave-path"
+				d="M-3.67,-18.24 C138.54,98.20 347.35,98.20 503.10,-12.32 L500.00,150.00 L0.00,150.00 Z"></path>
+		</svg>
+
+		<!-- 外部包裹环 + 居中播放按钮 -->
+		<div class="workspace-btn-wrapper">
+			<div class="workspace-btn"></div>
+		</div>
+
+		<!-- 波浪左右两侧的点缀文字 -->
+		<div class="wave-caption wave-caption-left">
+			HISTORY LOGS
+		</div>
+		<div class="wave-caption wave-caption-right">
+			WORKSPACE
+		</div>
+	</a>
+
+</body>
+
+</html>

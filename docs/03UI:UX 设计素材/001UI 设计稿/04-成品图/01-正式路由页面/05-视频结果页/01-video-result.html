@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>视频结果页 | 小麦</title>
+  <style>
+    body{margin:0;font-family:'PingFang SC',SF-Pro,sans-serif;background:#0f172a;color:#f8fafc}
+    .page{min-height:100vh;padding:2.5rem;background:linear-gradient(135deg,#020617,#111827)}
+    .panel{background:#111827;border-radius:1.25rem;padding:1.75rem;box-shadow:0 30px 65px rgba(15,23,42,.65)}
+    header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+    h1{margin:0;font-size:2rem}
+    h2{margin-top:0;font-size:1.25rem;color:#cbd5f5}
+    .badge{padding:.4rem .95rem;border-radius:999px;background:#fcd34d;color:#1e1b4b;font-weight:600;font-size:.8rem}
+    .grid{display:grid;gap:1rem;margin-top:1.5rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    p{margin-bottom:1rem;line-height:1.6;color:#e5e7eb}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="panel">
+      <header>
+        <div>
+          <div style="font-size:.9rem;color:#9ca3af">Video + Companion</div>
+          <h1>播放页 · 当前秒问答与证据面板</h1>
+        </div>
+        <span class="badge">整合 Companion / Evidence</span>
+      </header>
+      <p>右侧伴学区域与视频播放共存，直接承接当前时间点的提问、白板推导与来源摘要，完全不跳转。页底同步呈现 Retrieval / Evidence Service 的引用片段与解析状态，强调“证据来源”语义。</p>
+      <div class="grid">
+        <div class="panel" style="background:#0f172a">
+          <h2>主播放区</h2>
+          <p>保持沉浸式播放器，控制条、倍速、收藏与分享入口完备，视觉聚焦在视频上。</p>
+        </div>
+        <div class="panel" style="background:#0b1220">
+          <h2>Companion 面板</h2>
+          <p>固定显示“上下文标签 + QA 流 + 白板解释”，配合视频进度自动刷新内容，讲解不出页面。</p>
+        </div>
+        <div class="panel" style="background:#111827">
+          <h2>证据摘要</h2>
+          <p>列出 Retrieval Provider 提供的片段、章节、置信度与引用链接，表明该区域属于 Evidence Service。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
