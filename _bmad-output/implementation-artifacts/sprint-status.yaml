@@ -1,0 +1,141 @@
+# generated: 2026-03-28 21:10:41 +0800
+# last_updated: 2026-03-29 14:58:53 +0800
+# project: Prorise_ai_teach_workspace
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-03-28 21:10:41 +0800
+last_updated: 2026-03-29 14:58:53 +0800
+project: Prorise_ai_teach_workspace
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-0: in-progress
+  0-1-monorepo-基础目录与工程骨架冻结: review
+  0-2-契约资产目录命名规则与版本规则冻结: backlog
+  0-3-前端-adaptermock-handler-与环境切换基线: backlog
+  0-4-后端-schemaopenapi示例-payload-输出基线: backlog
+  0-5-request-id-task-id-日志追踪骨架: backlog
+  0-6-story-交付门禁与并行开发-dor-dod-冻结: backlog
+  epic-0-retrospective: optional
+  epic-1: backlog
+  1-1-统一认证契约会话-payload-与-mock-基线: backlog
+  1-2-独立认证页中的注册登录与回跳: backlog
+  1-3-登出401-处理与受保护访问一致性: backlog
+  1-4-首页双入口理解与非阻塞推荐提示: backlog
+  1-5-输入壳层中的老师风格最小选择配置: backlog
+  1-6-角色边界与入口级权限可见性: backlog
+  epic-1-retrospective: optional
+  epic-2: backlog
+  2-1-统一任务状态枚举错误码与结果-schema-冻结: backlog
+  2-2-task-基类taskcontext-与调度骨架: backlog
+  2-3-dramatiq-redis-broker-基础接入: backlog
+  2-4-redis-运行态-keyttl-与事件缓存落地: backlog
+  2-5-sse-事件类型payload-与-broker-契约冻结: backlog
+  2-6-sse-断线恢复与-status-查询降级: backlog
+  2-7-provider-protocol工厂与优先级注册骨架: backlog
+  2-8-provider-健康检查failover-与缓存策略: backlog
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-视频任务创建契约与-mock-task-基线: backlog
+  3-2-视频输入页壳层与多模态输入交互: backlog
+  3-3-图片-ocr-前置预处理接口: backlog
+  3-4-视频任务创建接口与初始化运行态: backlog
+  3-5-创建后跳转等待页与任务上下文承接: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-视频流水线阶段进度区间与结果契约冻结: backlog
+  4-2-题目理解与分镜生成服务: backlog
+  4-3-manim-代码生成与自动修复链: backlog
+  4-4-manim-沙箱执行与资源限制: backlog
+  4-5-tts-合成与-provider-failover-落地: backlog
+  4-6-ffmpeg-合成cos-上传与完成结果回写: backlog
+  4-7-视频等待页前端状态机恢复与降级: backlog
+  4-8-视频结果页播放器与结果操作: backlog
+  4-9-视频侧-sessionartifactgraph-回写: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-课堂任务契约结果-schema-与-mock-session-基线: backlog
+  5-2-主题输入与课堂任务创建: backlog
+  5-3-课堂等待页与统一进度复用: backlog
+  5-4-课堂生成服务与多-agent-讨论结果: backlog
+  5-5-白板布局与基础可读性规则: backlog
+  5-6-课堂结果页中的幻灯片讨论与白板浏览: backlog
+  5-7-会话结束信号与课后触发出口: backlog
+  5-8-课堂侧-sessionartifactgraph-回写: backlog
+  epic-5-retrospective: optional
+  epic-6: backlog
+  6-1-timeanchorturn-schema-与-mock-companion-turns-基线: backlog
+  6-2-视频-课堂共享-companion-侧栏壳层: backlog
+  6-3-视频与课堂的-context-adapter: backlog
+  6-4-当前时刻提问与回答服务: backlog
+  6-5-连续追问与上下文窗口管理: backlog
+  6-6-白板动作协议与结构化降级: backlog
+  6-7-问答回写与视频-课堂双页复用闭环: backlog
+  epic-6-retrospective: optional
+  epic-7: backlog
+  7-1-evidence-契约来源抽屉-schema-与-mock-数据基线: backlog
+  7-2-来源抽屉-证据面板前端: backlog
+  7-3-evidenceprovider-适配层与外部能力编排: backlog
+  7-4-文档上传解析状态与范围切换: backlog
+  7-5-引用来源展示与术语解释: backlog
+  7-6-证据问答回写与学习中心回看: backlog
+  epic-7-retrospective: optional
+  epic-8: backlog
+  8-1-学后入口契约与-checkpoint-quiz-path-schema-冻结: backlog
+  8-2-会话后入口与-learning-coach-路由承接: backlog
+  8-3-轻量-checkpoint-生成与反馈: backlog
+  8-4-正式-quiz-生成判题与解析: backlog
+  8-5-错题本与知识推荐: backlog
+  8-6-学习路径规划保存与调整: backlog
+  8-7-learning-coach-长期数据回写: backlog
+  epic-8-retrospective: optional
+  epic-9: backlog
+  9-1-学习中心聚合契约分页结构与-mock-数据集: backlog
+  9-2-学习中心结果回看与入口整合: backlog
+  9-3-历史记录与收藏管理: backlog
+  9-4-个人资料与设置管理: backlog
+  9-5-i18n-架构预留与关键静态文案资源化: backlog
+  epic-9-retrospective: optional
+  epic-10: backlog
+  10-1-长期业务数据边界业务表清单与字段基线冻结: backlog
+  10-2-ruoyi-小麦业务模块与权限承接规则: backlog
+  10-3-fastapi-与-ruoyi-防腐层客户端: backlog
+  10-4-视频与课堂任务元数据长期承接: backlog
+  10-5-companion-与-evidence-问答长期承接: backlog
+  10-6-learning-coach-结果错题与路径长期承接: backlog
+  10-7-学习记录收藏与聚合查询承接: backlog
+  10-8-后台查询导出与审计边界: backlog
+  epic-10-retrospective: optional
