@@ -1,6 +1,6 @@
 # Story 1.1: 统一认证契约、会话 payload 与 mock 基线
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -128,3 +128,4 @@ GPT-5 Codex
 ## Change Log
 
 - 2026-03-28：完成 Story 1.1 契约冻结，实现认证领域类型、mock / real adapter、mock handlers、契约文档与单元测试，并将状态推进到 `review`。
+- 2026-03-29：补齐 GitHub Flow 收口；确认 `master` 已包含 Story 1.1 实现产物，关闭 Issue `#1`，并将 Story 状态同步为 `done`。
