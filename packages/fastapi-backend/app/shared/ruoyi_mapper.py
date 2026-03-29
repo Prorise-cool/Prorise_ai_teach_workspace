@@ -1,0 +1,94 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Mapping
+
+RUOYI_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _parse_datetime(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return value
+
+    try:
+        return datetime.strptime(value, RUOYI_DATETIME_FORMAT)
+    except ValueError:
+        normalized_value = value.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized_value)
+        except ValueError:
+            return value
+
+
+def _format_datetime(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.strftime(RUOYI_DATETIME_FORMAT)
+    return value
+
+
+@dataclass(slots=True)
+class RuoYiMapper:
+    field_aliases: Mapping[str, str] = field(default_factory=dict)
+    status_fields: Mapping[str, Mapping[Any, str]] = field(default_factory=dict)
+    datetime_fields: set[str] = field(default_factory=set)
+
+    def from_ruoyi(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        reverse_aliases = {ruoyi_field: canonical_field for canonical_field, ruoyi_field in self.field_aliases.items()}
+        normalized: dict[str, Any] = {}
+
+        for key, value in payload.items():
+            canonical_key = reverse_aliases.get(key, key)
+            normalized[canonical_key] = self._normalize_value(canonical_key, value, inbound=True)
+
+        return normalized
+
+    def to_ruoyi(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        serialized: dict[str, Any] = {}
+
+        for key, value in payload.items():
+            ruoyi_key = self.field_aliases.get(key, key)
+            serialized[ruoyi_key] = self._normalize_value(key, value, inbound=False)
+
+        return serialized
+
+    def _normalize_value(self, canonical_key: str, value: Any, *, inbound: bool) -> Any:
+        if canonical_key in self.datetime_fields:
+            return _parse_datetime(value) if inbound else _format_datetime(value)
+
+        if canonical_key in self.status_fields:
+            return self._normalize_status(canonical_key, value, inbound=inbound)
+
+        return value
+
+    def _normalize_status(self, canonical_key: str, value: Any, *, inbound: bool) -> Any:
+        aliases = self.status_fields.get(canonical_key, {})
+        if inbound:
+            if value in aliases:
+                return aliases[value]
+
+            string_value = str(value)
+            if string_value in aliases:
+                return aliases[string_value]
+
+            if string_value.isdigit():
+                numeric_value = int(string_value)
+                if numeric_value in aliases:
+                    return aliases[numeric_value]
+
+            return value
+
+        reverse_aliases: dict[str, Any] = {}
+        for raw_value, canonical_value in aliases.items():
+            reverse_aliases.setdefault(canonical_value, raw_value)
+            reverse_aliases.setdefault(str(canonical_value), raw_value)
+        if value in reverse_aliases:
+            return reverse_aliases[value]
+
+        string_value = str(value)
+        if string_value in reverse_aliases:
+            return reverse_aliases[string_value]
+
+        return value

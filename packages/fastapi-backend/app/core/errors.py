@@ -35,6 +35,36 @@ class AppError(Exception):
         super().__init__(message)
 
 
+class IntegrationError(AppError):
+    def __init__(
+        self,
+        *,
+        service: str,
+        resource: str,
+        operation: str,
+        code: str,
+        message: str,
+        status_code: int = 502,
+        retryable: bool = False,
+        task_id: str | None = None,
+        details: dict[str, object] | None = None
+    ) -> None:
+        merged_details = {
+            "service": service,
+            "resource": resource,
+            "operation": operation,
+            **(details or {})
+        }
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=status_code,
+            retryable=retryable,
+            task_id=task_id,
+            details=merged_details
+        )
+
+
 def _resolve_trace_details(request: Request, details: dict[str, object] | None = None) -> tuple[str | None, dict[str, object]]:
     resolved_details = dict(details or {})
     request_id = getattr(request.state, "request_id", None) or get_request_id()
