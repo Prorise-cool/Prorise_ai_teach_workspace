@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CommonResponseEnvelope",
+  "type": "object",
+  "required": ["code", "msg", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "integer",
+      "description": "统一业务状态码，Epic 0 基线阶段与 HTTP 成功状态保持一致。"
+    },
+    "msg": {
+      "type": "string",
+      "description": "对调用方可见的稳定说明文本。"
+    },
+    "data": {
+      "type": "object",
+      "description": "成功响应实体，必须由显式 schema 定义具体字段。"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ErrorResponseEnvelope",
+  "type": "object",
+  "required": ["code", "msg", "data"],
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "integer",
+      "description": "统一业务状态码，建议与 HTTP 状态语义对齐。"
+    },
+    "msg": {
+      "type": "string",
+      "description": "稳定错误说明，前端不得依赖自由文本猜测语义。"
+    },
+    "data": {
+      "type": "object",
+      "required": ["error_code", "retryable", "details"],
+      "additionalProperties": false,
+      "properties": {
+        "error_code": {
+          "type": "string",
+          "description": "稳定错误码，需与错误码字典同步发布。"
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "是否允许调用方自动或手动重试。"
+        },
+        "details": {
+          "type": "object",
+          "description": "机器可读的上下文字段。",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Story 0.4: 后端 schema、OpenAPI、示例 payload 输出基线
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,21 +18,21 @@ so that 前端可以从机器可读资产而非自然语言猜测接口结构。
 
 ## Tasks / Subtasks
 
-- [ ] 建立 FastAPI schema 输出骨架（AC: 1, 3）
-  - [ ] 明确公共响应模型、分页响应模型、错误响应模型的统一位置。
-  - [ ] 约束新接口必须以 schema / model 方式定义，而不是仅返回自由字典。
-  - [ ] 为后续自动导出 OpenAPI 留出入口。
-- [ ] 冻结示例 payload 规则（AC: 1, 2）
-  - [ ] 每类接口至少提供成功、失败和边界示例。
-  - [ ] 任务类接口额外提供状态快照或事件示例。
-  - [ ] 分页类接口提供 `rows`、`total` 示例。
-- [ ] 对齐统一 API 规范（AC: 1, 2, 3）
-  - [ ] 响应格式对齐 `{code, msg, data}` / `{code, msg, rows, total}`。
-  - [ ] 明确日期格式、状态码、错误码与命名风格。
-  - [ ] 避免后续业务 Story 再定义互相冲突的包装结构。
-- [ ] 建立最小验证机制（AC: 1, 2, 3）
-  - [ ] 为 schema 序列化、示例 payload 完整性与 OpenAPI 导出增加测试或校验脚本。
-  - [ ] 验证错误示例不会缺席。
+- [x] 建立 FastAPI schema 输出骨架（AC: 1, 3）
+  - [x] 明确公共响应模型、分页响应模型、错误响应模型的统一位置。
+  - [x] 约束新接口必须以 schema / model 方式定义，而不是仅返回自由字典。
+  - [x] 为后续自动导出 OpenAPI 留出入口。
+- [x] 冻结示例 payload 规则（AC: 1, 2）
+  - [x] 每类接口至少提供成功、失败和边界示例。
+  - [x] 任务类接口额外提供状态快照或事件示例。
+  - [x] 分页类接口提供 `rows`、`total` 示例。
+- [x] 对齐统一 API 规范（AC: 1, 2, 3）
+  - [x] 响应格式对齐 `{code, msg, data}` / `{code, msg, rows, total}`。
+  - [x] 明确日期格式、状态码、错误码与命名风格。
+  - [x] 避免后续业务 Story 再定义互相冲突的包装结构。
+- [x] 建立最小验证机制（AC: 1, 2, 3）
+  - [x] 为 schema 序列化、示例 payload 完整性与 OpenAPI 导出增加测试或校验脚本。
+  - [x] 验证错误示例不会缺席。
 
 ## Dev Notes
 
@@ -105,12 +105,44 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `/Volumes/DataDisk/Projects/ProriseProjects/Prorise_ai_teach_workspace/packages/fastapi-backend/.venv/bin/pytest`
+- `python3 -m json.tool contracts/_shared/common-response.schema.json`
+- `python3 -m json.tool contracts/_shared/error-response.schema.json`
 
 ### Completion Notes List
 
-- 已为 Epic 0 的后端契约输出 Story 补齐 schema、OpenAPI、示例 payload 与统一响应约束。
+- 已新增 `app/schemas/` 共享 schema 目录，并落地统一成功响应、分页响应、错误响应与任务快照模型。
+- 已新增 `api/v1/contracts/task-snapshot` 与 `api/v1/contracts/tasks` 两个最小契约输出路由，OpenAPI 中可直接看到成功、失败、分页与任务状态示例。
+- 已将 health、root 与各 feature bootstrap 路由统一到 `{code, msg, data}` 包装，错误处理统一到 `{code, msg, data.error_code}`。
+- 已新增 `contracts/_shared/common-response.schema.json` 与 `contracts/_shared/error-response.schema.json` 共享资产。
+- 已补充 `0006-openapi-与-schema-输出规范.md`，并为 OpenAPI 与共享 schema 资产增加测试校验。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-4-后端-schema-openapi-与示例-payload-输出基线.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `contracts/_shared/common-response.schema.json`
+- `contracts/_shared/error-response.schema.json`
+- `docs/01开发人员手册/004-开发规范/0006-openapi-与-schema-输出规范.md`
+- `packages/fastapi-backend/app/api/router.py`
+- `packages/fastapi-backend/app/api/routes/contracts.py`
+- `packages/fastapi-backend/app/api/routes/health.py`
+- `packages/fastapi-backend/app/core/errors.py`
+- `packages/fastapi-backend/app/features/classroom/routes.py`
+- `packages/fastapi-backend/app/features/common.py`
+- `packages/fastapi-backend/app/features/companion/routes.py`
+- `packages/fastapi-backend/app/features/knowledge/routes.py`
+- `packages/fastapi-backend/app/features/learning/routes.py`
+- `packages/fastapi-backend/app/features/video/routes.py`
+- `packages/fastapi-backend/app/main.py`
+- `packages/fastapi-backend/app/schemas/__init__.py`
+- `packages/fastapi-backend/app/schemas/common.py`
+- `packages/fastapi-backend/app/schemas/examples.py`
+- `packages/fastapi-backend/app/schemas/pagination.py`
+- `packages/fastapi-backend/tests/test_bootstrap_routes.py`
+- `packages/fastapi-backend/tests/test_health.py`
+- `packages/fastapi-backend/tests/test_openapi_contracts.py`
+
+### Change Log
+
+- 2026-03-29：补齐统一响应 schema、OpenAPI examples、共享 schema 资产与测试基线，状态更新为 `review`。
