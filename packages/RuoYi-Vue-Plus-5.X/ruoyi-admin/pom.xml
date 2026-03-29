@@ -72,6 +72,11 @@
 
         <dependency>
             <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-xiaomai</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.dromara</groupId>
             <artifactId>ruoyi-job</artifactId>
         </dependency>
 
