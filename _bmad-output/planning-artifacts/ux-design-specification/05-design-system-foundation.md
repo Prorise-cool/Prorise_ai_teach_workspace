@@ -96,10 +96,10 @@
 | 库 | 用途 | 优先级 |
 |----|------|:------:|
 | Zustand | 状态管理 | P0 |
-| Framer Motion | 动画增强 | P1 |
+| Motion | 动画增强 | P1 |
 | KaTeX / Temml | 数学公式渲染 | P0 |
 | Shiki | 代码高亮 | P1 |
-| ky / alova | HTTP 客户端 | P0 |
+| Fetch-based thin client | HTTP 客户端 | P0 |
 | react-router-dom | 路由 | P0 |
 | react-i18next | 国际化 | P2 |
 | Video.js | 视频播放器 | P0 |
