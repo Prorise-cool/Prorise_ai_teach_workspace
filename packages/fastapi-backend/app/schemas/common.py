@@ -38,6 +38,8 @@ class RootBootstrapResponseEnvelope(BaseModel):
 class ErrorPayload(BaseModel):
     error_code: str
     retryable: bool = False
+    request_id: str | None = None
+    task_id: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -79,6 +81,8 @@ def build_error_envelope(
     msg: str,
     error_code: str,
     retryable: bool,
+    request_id: str | None = None,
+    task_id: str | None = None,
     details: dict[str, object] | None = None
 ) -> dict[str, object]:
     return {
@@ -87,7 +91,8 @@ def build_error_envelope(
         "data": {
             "error_code": error_code,
             "retryable": retryable,
+            "request_id": request_id,
+            "task_id": task_id,
             "details": details or {}
         }
     }
-

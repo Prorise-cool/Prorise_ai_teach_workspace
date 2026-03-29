@@ -21,6 +21,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
 
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["error_code"] == "TASK_PROVIDER_TIMEOUT"
+    assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["request_id"] == "req_20260329_conflict"
+    assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["task_id"] == "video_20260329161500_ab12cd34"
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["total"] == 2
 
 
@@ -35,3 +37,5 @@ def test_shared_contract_schema_assets_exist_and_match_response_shape() -> None:
     assert common_schema["properties"]["data"]["type"] == "object"
     assert error_schema["required"] == ["code", "msg", "data"]
     assert error_schema["properties"]["data"]["properties"]["error_code"]["type"] == "string"
+    assert error_schema["properties"]["data"]["properties"]["request_id"]["type"] == ["string", "null"]
+    assert error_schema["properties"]["data"]["properties"]["task_id"]["type"] == ["string", "null"]
