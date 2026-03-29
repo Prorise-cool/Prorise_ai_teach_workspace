@@ -1,6 +1,6 @@
 # Story 0.3: 前端 adapter、mock handler 与环境切换基线
 
-Status: done
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

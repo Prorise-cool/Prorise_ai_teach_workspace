@@ -1,6 +1,6 @@
 # Story 0.5: request_id / task_id / 日志追踪骨架
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,21 +18,21 @@ so that 后续出现跨服务错误时可以进行最小可行排障。
 
 ## Tasks / Subtasks
 
-- [ ] 建立 `request_id` 生成与透传机制（AC: 1）
-  - [ ] 定义中间件或等效入口，为每个请求生成或继承 `request_id`。
-  - [ ] 约束日志、错误响应和调试头部使用同一字段名。
-  - [ ] 明确外部传入 `request_id` 的信任与覆盖规则。
-- [ ] 建立 `task_id` 规则与日志贯穿机制（AC: 2）
-  - [ ] 对齐统一任务 ID 生成规则。
-  - [ ] 让任务创建、调度、执行、SSE 推送与失败日志都带上 `task_id`。
-  - [ ] 明确无任务场景不得强行注入伪造 `task_id`。
-- [ ] 冻结统一日志格式与上下文字段（AC: 1, 2, 3）
-  - [ ] 日志格式对齐 `yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message`。
-  - [ ] 明确最小字段集：时间、级别、logger、request_id、task_id、错误码。
-  - [ ] 避免日志字段命名漂移。
-- [ ] 增加追踪验证（AC: 1, 2, 3）
-  - [ ] 覆盖普通请求、有任务请求、任务失败请求和 SSE 事件日志。
-  - [ ] 验证日志链路中 `request_id` / `task_id` 不丢失。
+- [x] 建立 `request_id` 生成与透传机制（AC: 1）
+  - [x] 定义中间件或等效入口，为每个请求生成或继承 `request_id`。
+  - [x] 约束日志、错误响应和调试头部使用同一字段名。
+  - [x] 明确外部传入 `request_id` 的信任与覆盖规则。
+- [x] 建立 `task_id` 规则与日志贯穿机制（AC: 2）
+  - [x] 对齐统一任务 ID 生成规则。
+  - [x] 让任务创建、调度、执行、SSE 推送与失败日志都带上 `task_id`。
+  - [x] 明确无任务场景不得强行注入伪造 `task_id`。
+- [x] 冻结统一日志格式与上下文字段（AC: 1, 2, 3）
+  - [x] 日志格式对齐 `yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message`。
+  - [x] 明确最小字段集：时间、级别、logger、request_id、task_id、错误码。
+  - [x] 避免日志字段命名漂移。
+- [x] 增加追踪验证（AC: 1, 2, 3）
+  - [x] 覆盖普通请求、有任务请求、任务失败请求和 SSE 事件日志。
+  - [x] 验证日志链路中 `request_id` / `task_id` 不丢失。
 
 ## Dev Notes
 
@@ -73,7 +73,7 @@ so that 后续出现跨服务错误时可以进行最小可行排障。
 - `packages/fastapi-backend/app/shared/task_framework/base.py`
 - `packages/fastapi-backend/tests/unit/test_request_context.py`
 - `packages/fastapi-backend/tests/unit/test_task_trace.py`
-- `docs/01开发人员手册/004-开发规范/0006-request-id-与-task-id-追踪规范.md`
+- `docs/01开发人员手册/004-开发规范/0007-request-id-与-task-id-追踪规范.md`
 
 ### Project Structure Notes
 
@@ -105,12 +105,42 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `/Volumes/DataDisk/Projects/ProriseProjects/Prorise_ai_teach_workspace/packages/fastapi-backend/.venv/bin/pytest tests`
 
 ### Completion Notes List
 
-- 已为 Epic 0 的追踪骨架 Story 补齐 request_id、task_id、统一日志字段与校验要求。
+- 已新增 `RequestContextMiddleware`，为每个 HTTP 请求生成或继承 `X-Request-ID`，并在响应头回写统一 `request_id`。
+- 已将日志上下文统一到 `app/core/logging.py`，输出格式对齐 `yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message`，并追加 `request_id`、`task_id`、`error_code`。
+- 已为 `AppError`、未处理异常、任务创建、任务调度、SSE publish / replay 接入统一追踪字段。
+- 已恢复并增强 `TaskScheduler`，新增 `create_task_context()` 与任务成功 / 失败链路的 SSE 事件输出。
+- 已新增 `tests/unit/test_request_context.py` 与 `tests/unit/test_task_trace.py`，覆盖请求链路、任务链路、失败链路与追踪字段不丢失。
+- 已扩展错误响应 schema 与 OpenAPI 示例，使 `request_id`、`task_id` 可作为机器可读调试字段暴露。
+- 已新增 `0007-request-id-与-task-id-追踪规范.md`，冻结请求头、日志格式、字段命名与验证要求。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-5-request-id-task-id-与日志追踪骨架.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `contracts/_shared/error-response.schema.json`
+- `docs/01开发人员手册/004-开发规范/0007-request-id-与-task-id-追踪规范.md`
+- `packages/fastapi-backend/app/core/errors.py`
+- `packages/fastapi-backend/app/core/logging.py`
+- `packages/fastapi-backend/app/core/middleware/__init__.py`
+- `packages/fastapi-backend/app/core/middleware/request_context.py`
+- `packages/fastapi-backend/app/core/security.py`
+- `packages/fastapi-backend/app/core/sse.py`
+- `packages/fastapi-backend/app/infra/sse_broker.py`
+- `packages/fastapi-backend/app/main.py`
+- `packages/fastapi-backend/app/schemas/common.py`
+- `packages/fastapi-backend/app/schemas/examples.py`
+- `packages/fastapi-backend/app/shared/task_framework/__init__.py`
+- `packages/fastapi-backend/app/shared/task_framework/base.py`
+- `packages/fastapi-backend/app/shared/task_framework/context.py`
+- `packages/fastapi-backend/app/shared/task_framework/scheduler.py`
+- `packages/fastapi-backend/tests/test_openapi_contracts.py`
+- `packages/fastapi-backend/tests/unit/test_request_context.py`
+- `packages/fastapi-backend/tests/unit/test_task_trace.py`
+
+### Change Log
+
+- 2026-03-29：补齐 request_id middleware、task_id 调度链路、统一日志上下文、SSE / 错误追踪与单元测试，状态更新为 `review`。

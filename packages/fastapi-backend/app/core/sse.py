@@ -1,7 +1,6 @@
-from datetime import UTC, datetime
-
 from pydantic import BaseModel, Field
 
+from app.core.logging import format_trace_timestamp
 
 class TaskProgressEvent(BaseModel):
     event: str
@@ -10,7 +9,8 @@ class TaskProgressEvent(BaseModel):
     status: str
     progress: int = Field(ge=0, le=100)
     message: str
-    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    request_id: str | None = None
+    timestamp: str = Field(default_factory=format_trace_timestamp)
     error_code: str | None = None
 
 

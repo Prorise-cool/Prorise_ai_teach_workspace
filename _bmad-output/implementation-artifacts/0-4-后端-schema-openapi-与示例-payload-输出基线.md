@@ -1,6 +1,6 @@
 # Story 0.4: 后端 schema、OpenAPI、示例 payload 输出基线
 
-Status: done
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
