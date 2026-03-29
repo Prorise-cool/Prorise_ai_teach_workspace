@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 
 import {
   getMockTaskDetailEnvelope,
+  getMockTaskEventSequence,
   getMockTaskListEnvelope,
   getMockTaskSnapshotEnvelope,
   normalizeMockTaskError
@@ -31,7 +32,7 @@ function toHttpErrorResponse(error: unknown) {
 }
 
 export const taskHandlers = [
-  http.get('*/tasks', ({ request }) => {
+  http.get('*/api/v1/tasks', ({ request }) => {
     try {
       const scenario = readScenario(request) ?? 'default';
 
@@ -40,7 +41,7 @@ export const taskHandlers = [
       return toHttpErrorResponse(error);
     }
   }),
-  http.get('*/tasks/:taskId', ({ params, request }) => {
+  http.get('*/api/v1/tasks/:taskId', ({ params, request }) => {
     try {
       const scenario = readScenario(request) ?? undefined;
       const taskId = String(params.taskId);
@@ -50,13 +51,31 @@ export const taskHandlers = [
       return toHttpErrorResponse(error);
     }
   }),
-  http.get('*/tasks/:taskId/snapshot', ({ params, request }) => {
+  http.get('*/api/v1/tasks/:taskId/snapshot', ({ params, request }) => {
     try {
       const scenario = readScenario(request) ?? undefined;
       const taskId = String(params.taskId);
 
       return HttpResponse.json(getMockTaskSnapshotEnvelope(taskId, scenario), {
         status: 200
+      });
+    } catch (error) {
+      return toHttpErrorResponse(error);
+    }
+  }),
+  http.get('*/api/v1/tasks/:taskId/events', ({ params, request }) => {
+    try {
+      const scenario = readScenario(request) ?? undefined;
+      const taskId = String(params.taskId);
+      const body = getMockTaskEventSequence(taskId, scenario)
+        .map(event => `event: ${event.event}\ndata: ${JSON.stringify(event)}\n\n`)
+        .join('');
+
+      return new HttpResponse(body, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream'
+        }
       });
     } catch (error) {
       return toHttpErrorResponse(error);

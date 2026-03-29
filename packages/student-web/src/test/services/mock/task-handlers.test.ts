@@ -18,7 +18,7 @@ afterAll(() => {
 
 describe('task mock handlers', () => {
   it('returns an empty task list scenario', async () => {
-    const response = await fetch('http://localhost/tasks?scenario=empty');
+    const response = await fetch('http://localhost/api/v1/tasks?scenario=empty');
     const payload = (await response.json()) as {
       code: number;
       total: number;
@@ -32,7 +32,7 @@ describe('task mock handlers', () => {
   });
 
   it('returns failed snapshot payloads for task state machines', async () => {
-    const response = await fetch('http://localhost/tasks/task_mock_failed/snapshot');
+    const response = await fetch('http://localhost/api/v1/tasks/task_mock_failed/snapshot');
     const payload = (await response.json()) as {
       code: number;
       data: {
@@ -49,7 +49,7 @@ describe('task mock handlers', () => {
   });
 
   it('returns a forbidden envelope when the scenario requires access denial', async () => {
-    const response = await fetch('http://localhost/tasks?scenario=forbidden');
+    const response = await fetch('http://localhost/api/v1/tasks?scenario=forbidden');
     const payload = (await response.json()) as {
       code: number;
       msg: string;
@@ -60,5 +60,15 @@ describe('task mock handlers', () => {
     expect(payload.code).toBe(403);
     expect(payload.msg).toBe('当前账号暂无任务访问权限');
     expect(payload.data).toBeNull();
+  });
+
+  it('returns text/event-stream payloads for task event mocks', async () => {
+    const response = await fetch('http://localhost/api/v1/tasks/task_mock_completed/events');
+    const rawBody = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/event-stream');
+    expect(rawBody).toContain('event: completed');
+    expect(rawBody).toContain('"taskId":"task_mock_completed"');
   });
 });

@@ -65,11 +65,11 @@ describe('task adapter', () => {
     await adapter.getTask('task_mock_completed');
 
     expect(request.mock.calls[0]?.[0]).toMatchObject({
-      url: '/tasks',
+      url: '/api/v1/tasks',
       method: 'get'
     });
     expect(request.mock.calls[1]?.[0]).toMatchObject({
-      url: '/tasks/task_mock_completed',
+      url: '/api/v1/tasks/task_mock_completed',
       method: 'get'
     });
   });

@@ -171,7 +171,7 @@ export function createRealTaskAdapter({
   return {
     async listTasks(options) {
       const envelope = await requestRowsEnvelope<TaskSummary>(client, {
-        url: appendScenario('/tasks', options?.scenario),
+        url: appendScenario('/api/v1/tasks', options?.scenario),
         method: 'get',
         signal: options?.signal
       });
@@ -180,7 +180,7 @@ export function createRealTaskAdapter({
     },
     async getTask(taskId, options) {
       const envelope = await requestDataEnvelope<TaskDetail>(client, {
-        url: appendScenario(`/tasks/${taskId}`, options?.scenario),
+        url: appendScenario(`/api/v1/tasks/${taskId}`, options?.scenario),
         method: 'get',
         signal: options?.signal
       });
@@ -189,7 +189,7 @@ export function createRealTaskAdapter({
     },
     async getTaskSnapshot(taskId, options) {
       const envelope = await requestDataEnvelope<TaskSnapshot>(client, {
-        url: appendScenario(`/tasks/${taskId}/snapshot`, options?.scenario),
+        url: appendScenario(`/api/v1/tasks/${taskId}/snapshot`, options?.scenario),
         method: 'get',
         signal: options?.signal
       });

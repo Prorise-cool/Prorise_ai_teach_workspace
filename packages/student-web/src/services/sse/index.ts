@@ -63,7 +63,7 @@ export function createRealTaskEventStream(): TaskEventStream {
   return {
     async *streamTaskEvents(taskId, options) {
       const response = await fetch(
-        `${import.meta.env.VITE_FASTAPI_BASE_URL}/tasks/${taskId}/events`,
+        `${import.meta.env.VITE_FASTAPI_BASE_URL}/api/v1/tasks/${taskId}/events`,
         {
           headers: {
             Accept: 'text/event-stream, application/json'
