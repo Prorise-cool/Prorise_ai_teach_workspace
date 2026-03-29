@@ -18,12 +18,15 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     payload = response.json()
     snapshot_route = payload["paths"]["/api/v1/contracts/task-snapshot"]["get"]
     list_route = payload["paths"]["/api/v1/contracts/tasks"]["get"]
+    learning_preview_route = payload["paths"]["/api/v1/learning/persistence-preview"]["post"]
 
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["error_code"] == "TASK_PROVIDER_TIMEOUT"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["request_id"] == "req_20260329_conflict"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["task_id"] == "video_20260329161500_ab12cd34"
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["total"] == 2
+    assert learning_preview_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
+    assert learning_preview_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
 
 
 def test_shared_contract_schema_assets_exist_and_match_response_shape() -> None:
