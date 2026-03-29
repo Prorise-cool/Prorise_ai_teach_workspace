@@ -12,7 +12,7 @@
 
 - **[README.md](./student-web/README.md)** - 学生端 React 19 应用说明
 - **[package.json](./student-web/package.json)** - 学生端脚本与依赖配置
-- **[src/](./student-web/src/)** - 学生端源码，包含 auth、pages、router、stores 与 test
+- **[src/](./student-web/src/)** - 学生端源码骨架，包含 app、features、services、stores、styles 与 test
 
 ### fastapi-backend/
 

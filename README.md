@@ -48,9 +48,11 @@ Prorise_ai_teach_workspace/
 
 ### 前置要求
 
-- Node.js 18+
-- pnpm 9.0+
+- Node.js 20.19+
+- pnpm 10.5+
 - Python 3.11+
+- JDK 17
+- Maven 3.9+
 
 ### 安装
 
@@ -58,18 +60,18 @@ Prorise_ai_teach_workspace/
 # 安装根依赖
 pnpm install
 
-# 安装所有 workspace 依赖
-pnpm install:all
+# 创建 FastAPI 本地虚拟环境并安装最小依赖
+pnpm setup:fastapi-backend
 ```
 
 ### 开发
 
 ```bash
-# 根目录统一安装所有 Node workspace 依赖
-pnpm install
-
 # 启动学生端
 pnpm dev:student-web
+
+# 启动 FastAPI 框架骨架
+pnpm dev:fastapi-backend
 
 # 启动管理端
 pnpm dev:admin-web
@@ -78,6 +80,29 @@ pnpm dev:admin-web
 pnpm build:student-web
 pnpm build:admin-web
 ```
+
+### RuoYi 参考后端
+
+```bash
+cd packages/RuoYi-Vue-Plus-5.X
+mvn -pl ruoyi-admin -am spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+### 最小启动边界
+
+- `packages/student-web/`：学生端前台。当前要求是工程骨架、测试链和环境变量基线可运行，不代表业务页面已交付。
+- `packages/fastapi-backend/`：AI 功能服务框架骨架。当前提供 `core / infra / providers / features / shared` 分层、`FastAPI` 入口、健康检查、骨架路由与最小测试。
+- `packages/RuoYi-Vue-Plus-5.X/`：认证、RBAC 与长期业务数据宿主。
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/`：小麦业务模块预留目录，当前只冻结边界，不承载正式业务实现。
+- `references/`：只读参考来源，不作为业务代码落点。
+
+### 启动顺序建议
+
+1. 启动 `MySQL`、`Redis` 与一个 `RuoYi` 实例。
+2. 启动 `FastAPI` 框架骨架，确认 `http://localhost:8090/health` 返回 `ok`。
+3. 启动 `student-web`，确认前端能读取 `.env` 并完成模板加载。
+
+更多细节见 [`docs/01开发人员手册/005-环境搭建/0005-Epic0-最小启动说明.md`](./docs/01开发人员手册/005-环境搭建/0005-Epic0-最小启动说明.md)。
 
 ## 赛事信息
 
