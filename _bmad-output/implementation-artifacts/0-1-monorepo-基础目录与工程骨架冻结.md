@@ -1,6 +1,6 @@
 # Story 0.1: Monorepo 基础目录与工程骨架冻结
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

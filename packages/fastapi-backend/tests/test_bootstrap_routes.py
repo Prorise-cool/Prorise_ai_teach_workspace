@@ -19,5 +19,4 @@ def test_feature_bootstrap_routes_are_available() -> None:
         response = client.get(path)
 
         assert response.status_code == 200
-        assert response.json()["code"] == 200
-        assert response.json()["data"]["status"] == "scaffolded"
+        assert response.json()["status"] == "scaffolded"

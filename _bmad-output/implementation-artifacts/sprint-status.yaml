@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-03-29 17:49:00 +0800
+# last_updated: 2026-03-29 14:58:53 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,38 +35,38 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-29 17:49:00 +0800
+last_updated: 2026-03-29 18:53:25 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
 story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
-  epic-0: in-progress
+  epic-0: done
   0-1-monorepo-基础目录与工程骨架冻结: done
   0-2-契约资产目录命名规则与版本规则冻结: done
   0-3-前端-adaptermock-handler-与环境切换基线: done
   0-4-后端-schemaopenapi示例-payload-输出基线: done
-  0-5-request-id-task-id-日志追踪骨架: review
-  0-6-story-交付门禁与并行开发-dor-dod-冻结: review
+  0-5-request-id-task-id-日志追踪骨架: done
+  0-6-story-交付门禁与并行开发-dor-dod-冻结: done
   epic-0-retrospective: optional
-  epic-1: backlog
-  1-1-统一认证契约会话-payload-与-mock-基线: backlog
-  1-2-独立认证页中的注册登录与回跳: backlog
-  1-3-登出401-处理与受保护访问一致性: backlog
-  1-4-首页双入口理解与非阻塞推荐提示: backlog
-  1-5-输入壳层中的老师风格最小选择配置: backlog
-  1-6-角色边界与入口级权限可见性: backlog
+  epic-1: in-progress
+  1-1-统一认证契约会话-payload-与-mock-基线: review
+  1-2-独立认证页中的注册登录与回跳: ready-for-dev
+  1-3-登出401-处理与受保护访问一致性: ready-for-dev
+  1-4-首页双入口理解与非阻塞推荐提示: ready-for-dev
+  1-5-输入壳层中的老师风格最小选择配置: ready-for-dev
+  1-6-角色边界与入口级权限可见性: ready-for-dev
   epic-1-retrospective: optional
-  epic-2: backlog
-  2-1-统一任务状态枚举错误码与结果-schema-冻结: backlog
-  2-2-task-基类taskcontext-与调度骨架: backlog
-  2-3-dramatiq-redis-broker-基础接入: backlog
-  2-4-redis-运行态-keyttl-与事件缓存落地: backlog
-  2-5-sse-事件类型payload-与-broker-契约冻结: backlog
-  2-6-sse-断线恢复与-status-查询降级: backlog
-  2-7-provider-protocol工厂与优先级注册骨架: backlog
-  2-8-provider-健康检查failover-与缓存策略: backlog
+  epic-2: in-progress
+  2-1-统一任务状态枚举错误码与结果-schema-冻结: ready-for-dev
+  2-2-task-基类taskcontext-与调度骨架: ready-for-dev
+  2-3-dramatiq-redis-broker-基础接入: ready-for-dev
+  2-4-redis-运行态-keyttl-与事件缓存落地: ready-for-dev
+  2-5-sse-事件类型payload-与-broker-契约冻结: ready-for-dev
+  2-6-sse-断线恢复与-status-查询降级: ready-for-dev
+  2-7-provider-protocol工厂与优先级注册骨架: ready-for-dev
+  2-8-provider-健康检查failover-与缓存策略: ready-for-dev
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-视频任务创建契约与-mock-task-基线: backlog
@@ -129,13 +129,13 @@ development_status:
   9-4-个人资料与设置管理: backlog
   9-5-i18n-架构预留与关键静态文案资源化: backlog
   epic-9-retrospective: optional
-  epic-10: backlog
-  10-1-长期业务数据边界业务表清单与字段基线冻结: backlog
-  10-2-ruoyi-小麦业务模块与权限承接规则: backlog
-  10-3-fastapi-与-ruoyi-防腐层客户端: backlog
-  10-4-视频与课堂任务元数据长期承接: backlog
-  10-5-companion-与-evidence-问答长期承接: backlog
-  10-6-learning-coach-结果错题与路径长期承接: backlog
-  10-7-学习记录收藏与聚合查询承接: backlog
-  10-8-后台查询导出与审计边界: backlog
+  epic-10: in-progress
+  10-1-长期业务数据边界业务表清单与字段基线冻结: ready-for-dev
+  10-2-ruoyi-小麦业务模块与权限承接规则: ready-for-dev
+  10-3-fastapi-与-ruoyi-防腐层客户端: ready-for-dev
+  10-4-视频与课堂任务元数据长期承接: ready-for-dev
+  10-5-companion-与-evidence-问答长期承接: ready-for-dev
+  10-6-learning-coach-结果错题与路径长期承接: ready-for-dev
+  10-7-学习记录收藏与聚合查询承接: ready-for-dev
+  10-8-后台查询导出与审计边界: ready-for-dev
   epic-10-retrospective: optional

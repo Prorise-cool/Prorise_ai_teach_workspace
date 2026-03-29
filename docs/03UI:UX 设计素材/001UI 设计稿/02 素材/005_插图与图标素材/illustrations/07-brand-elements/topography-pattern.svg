@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="304" height="304" viewBox="0 0 304 304">
+  <defs>
+    <pattern id="topo" x="0" y="0" width="76" height="76" patternUnits="userSpaceOnUse">
+      <path d="M38 0c0 21-17 38-38 38M0 38c21 0 38 17 38 38M38 76c0-21 17-38 38-38M76 38c-21 0-38-17-38-38" fill="none" stroke="#f5c547" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="304" height="304" fill="url(#topo)"/>
+</svg>

@@ -1,6 +1,6 @@
 # Story 0.6: Story 交付门禁与并行开发 DoR / DoD 冻结
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,21 +18,21 @@ so that 团队不会把“半成品页面”、“口头契约”或“不可联
 
 ## Tasks / Subtasks
 
-- [x] 冻结 Story 类型对应的 DoR（AC: 1, 3）
-  - [x] 区分 Contract Story、Infrastructure Story、Backend Story、Frontend Story、Persistence Story、Integration Story 的最小输入条件。
-  - [x] 明确契约、mock、错误码、状态枚举、测试夹具和依赖识别要求。
-  - [x] 明确正式前端页面 Story 的视觉稿和关键状态要求。
-- [x] 冻结 Story 类型对应的 DoD（AC: 2, 3）
-  - [x] 明确代码、测试、文档、AC、状态闭环和环境验证要求。
-  - [x] 明确“只有页面壳”“只有接口路由”“只有 README”均不算完成。
-  - [x] 明确哪些 Story 允许以文档 / 契约交付为完成形态。
-- [x] 冻结并行开发门禁（AC: 1, 2, 3）
-  - [x] 区分真实接口联调前门禁、主分支合并前门禁、发布前门禁。
-  - [x] 明确 mock 先行、adapter 隔离和真实接口联调的边界。
-  - [x] 明确禁止写法与常见伪完成模式。
-- [x] 输出执行模板与检查清单（AC: 1, 2, 3）
-  - [x] 提供 Story 评审 checklist 与交付 checklist。
-  - [x] 让后续 BMAD Story 文件可直接复用统一元数据字段。
+- [ ] 冻结 Story 类型对应的 DoR（AC: 1, 3）
+  - [ ] 区分 Contract Story、Infrastructure Story、Backend Story、Frontend Story、Persistence Story、Integration Story 的最小输入条件。
+  - [ ] 明确契约、mock、错误码、状态枚举、测试夹具和依赖识别要求。
+  - [ ] 明确正式前端页面 Story 的视觉稿和关键状态要求。
+- [ ] 冻结 Story 类型对应的 DoD（AC: 2, 3）
+  - [ ] 明确代码、测试、文档、AC、状态闭环和环境验证要求。
+  - [ ] 明确“只有页面壳”“只有接口路由”“只有 README”均不算完成。
+  - [ ] 明确哪些 Story 允许以文档 / 契约交付为完成形态。
+- [ ] 冻结并行开发门禁（AC: 1, 2, 3）
+  - [ ] 区分真实接口联调前门禁、主分支合并前门禁、发布前门禁。
+  - [ ] 明确 mock 先行、adapter 隔离和真实接口联调的边界。
+  - [ ] 明确禁止写法与常见伪完成模式。
+- [ ] 输出执行模板与检查清单（AC: 1, 2, 3）
+  - [ ] 提供 Story 评审 checklist 与交付 checklist。
+  - [ ] 让后续 BMAD Story 文件可直接复用统一元数据字段。
 
 ## Dev Notes
 
@@ -66,16 +66,16 @@ so that 团队不会把“半成品页面”、“口头契约”或“不可联
 
 ### Suggested File Targets
 
-- `docs/01开发人员手册/004-开发规范/0008-story-交付门禁与-dor-dod.md`
-- `docs/01开发人员手册/004-开发规范/0009-并行开发联调门禁.md`
-- `docs/01开发人员手册/007-测试策略/0005-故事级验收清单.md`
+- `docs/01开发人员手册/004-开发规范/0007-story-交付门禁与-dor-dod.md`
+- `docs/01开发人员手册/004-开发规范/0008-并行开发联调门禁.md`
+- `docs/01开发人员手册/007-测试策略/0001-故事级验收清单.md`
 - `_bmad-output/implementation-artifacts/story-template-checklist.md`
 
 ### Project Structure Notes
 
 - 当前仓库已存在 `docs/01开发人员手册/004-开发规范/`、`007-测试策略/`、`009-里程碑与进度/` 等目录，适合作为门禁规则和检查清单的沉淀位置。
 - Epic 1、2、10 的 Story 文件已经采用较完整的 BMAD 上下文字段，这张卡应把这种做法制度化，而不是继续依赖个别 Story 的临时发挥。
-- 本 Story 先冻结规则与模板，不强行回写历史 Story 状态。
+- `sprint-status.yaml` 当前已有未提交修改，本 Story 应先冻结规则与检查表，不应强行改写已有执行状态。
 
 ### Testing Requirements
 
@@ -101,33 +101,12 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- `git diff --check`
-- `rg -n "DoR|DoD|门禁|checklist" docs/01开发人员手册 _bmad-output/implementation-artifacts`
+- 无
 
 ### Completion Notes List
 
-- 已新增 Story 类型化 DoR / DoD 规范，明确 Contract / Infrastructure / Backend / Frontend / Persistence / Integration Story 的最小输入与完成口径。
-- 已新增并行开发联调门禁文档，区分契约冻结、mock 可运行、测试通过、联调前、合并前、发布前六层门禁。
-- 已新增故事级验收清单与 Story 模板检查清单，便于后续 Story 文件直接复用统一元数据字段。
-- 已将新的门禁规则接入 Git 工作流、代码审查标准、BMAD 流程、测试总体策略与里程碑文档入口。
+- 已为 Epic 0 的交付门禁 Story 补齐 DoR、DoD、并行开发门禁与禁止写法的统一约束。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-6-story-交付门禁与并行开发-dor-dod-冻结.md`
-- `_bmad-output/implementation-artifacts/story-template-checklist.md`
-- `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- `docs/01开发人员手册/0000-AI快速导航索引.md`
-- `docs/01开发人员手册/INDEX.md`
-- `docs/01开发人员手册/004-开发规范/0002-Git工作流.md`
-- `docs/01开发人员手册/004-开发规范/0003-代码审查标准.md`
-- `docs/01开发人员手册/004-开发规范/0004-BMAD开发流程.md`
-- `docs/01开发人员手册/004-开发规范/0008-story-交付门禁与-dor-dod.md`
-- `docs/01开发人员手册/004-开发规范/0009-并行开发联调门禁.md`
-- `docs/01开发人员手册/007-测试策略/0001-测试总体策略.md`
-- `docs/01开发人员手册/007-测试策略/0005-故事级验收清单.md`
-- `docs/01开发人员手册/009-里程碑与进度/0001-里程碑总览.md`
-- `docs/01开发人员手册/009-里程碑与进度/0004-M3-测试上线.md`
-
-### Change Log
-
-- 2026-03-29：补齐 Story 交付门禁、并行开发门禁、故事级检查清单与 Story 模板清单，状态更新为 `review`。

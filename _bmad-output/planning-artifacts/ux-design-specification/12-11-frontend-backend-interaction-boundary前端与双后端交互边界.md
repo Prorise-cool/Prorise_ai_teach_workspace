@@ -64,27 +64,31 @@
 
 ```typescript
 // HTTP 客户端配置
-const apiClient = ky.create({
-  prefixUrl: API_BASE_URL,
-  hooks: {
-    beforeRequest: [
-      (request) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          request.headers.set('Authorization', `Bearer ${token}`);
-        }
-      },
-    ],
-    afterResponse: [
-      (response) => {
-        if (response.status === 401) {
-          // Token 过期，跳转登录
-          window.location.href = '/login';
-        }
-      },
-    ],
-  },
+const apiClient = createApiClient({
+  baseURL: API_BASE_URL
 });
+
+async function authorizedRequest(input: RequestInfo, init?: RequestInit) {
+  const token = localStorage.getItem('token');
+  const headers = new Headers(init?.headers);
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const response = await apiClient.request({
+    url: typeof input === 'string' ? input : input.toString(),
+    method: (init?.method?.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete') ?? 'get',
+    headers,
+    data: init?.body
+  });
+
+  if (response.status === 401) {
+    window.location.href = '/login';
+  }
+
+  return response;
+}
 ```
 
 ### 11.4 SSE 连接管理
