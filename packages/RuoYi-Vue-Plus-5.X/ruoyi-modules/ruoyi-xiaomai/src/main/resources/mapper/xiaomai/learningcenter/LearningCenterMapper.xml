@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.xiaomai.learningcenter.mapper.LearningCenterMapper">
+
+    <sql id="aggregate_union_raw">
+        SELECT
+            CONCAT('xm_video_task:', vt.task_id) AS record_id,
+            CAST(vt.user_id AS CHAR) AS user_id,
+            'video' AS result_type,
+            vt.task_type AS source_type,
+            'xm_video_task' AS source_table,
+            vt.task_id AS source_result_id,
+            vt.source_session_id AS source_session_id,
+            vt.task_state AS status,
+            vt.summary AS display_title,
+            COALESCE(vt.error_summary, vt.summary) AS summary,
+            COALESCE(vt.detail_ref, vt.replay_hint, vt.result_ref, vt.source_artifact_ref) AS detail_ref,
+            COALESCE(vt.complete_time, vt.fail_time, vt.update_time, vt.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            COALESCE(rec.deleted_flag, '0') AS deleted_flag
+        FROM xm_video_task vt
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(vt.user_id AS CHAR)
+            AND rec.source_table = 'xm_video_task'
+            AND rec.source_result_id = vt.task_id
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(vt.user_id AS CHAR)
+            AND fav.source_table = 'xm_video_task'
+            AND fav.source_result_id = vt.task_id
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_classroom_session:', cs.task_id) AS record_id,
+            CAST(cs.user_id AS CHAR) AS user_id,
+            'classroom' AS result_type,
+            cs.task_type AS source_type,
+            'xm_classroom_session' AS source_table,
+            cs.task_id AS source_result_id,
+            cs.source_session_id AS source_session_id,
+            cs.task_state AS status,
+            cs.summary AS display_title,
+            COALESCE(cs.error_summary, cs.summary) AS summary,
+            COALESCE(cs.detail_ref, cs.replay_hint, cs.result_ref, cs.source_artifact_ref) AS detail_ref,
+            COALESCE(cs.complete_time, cs.fail_time, cs.update_time, cs.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            COALESCE(rec.deleted_flag, '0') AS deleted_flag
+        FROM xm_classroom_session cs
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(cs.user_id AS CHAR)
+            AND rec.source_table = 'xm_classroom_session'
+            AND rec.source_result_id = cs.task_id
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(cs.user_id AS CHAR)
+            AND fav.source_table = 'xm_classroom_session'
+            AND fav.source_result_id = cs.task_id
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_companion_turn:', ct.turn_id) AS record_id,
+            CAST(ct.user_id AS CHAR) AS user_id,
+            'companion' AS result_type,
+            ct.context_type AS source_type,
+            'xm_companion_turn' AS source_table,
+            ct.turn_id AS source_result_id,
+            ct.session_id AS source_session_id,
+            ct.persistence_status AS status,
+            LEFT(ct.question_text, 255) AS display_title,
+            LEFT(ct.answer_summary, 1000) AS summary,
+            COALESCE(ct.anchor_ref, ct.session_id) AS detail_ref,
+            ct.turn_time AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            COALESCE(rec.deleted_flag, '0') AS deleted_flag
+        FROM xm_companion_turn ct
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(ct.user_id AS CHAR)
+            AND rec.source_table = 'xm_companion_turn'
+            AND rec.source_result_id = ct.turn_id
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(ct.user_id AS CHAR)
+            AND fav.source_table = 'xm_companion_turn'
+            AND fav.source_result_id = ct.turn_id
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_knowledge_chat_log:', kg.chat_log_id) AS record_id,
+            CAST(kg.user_id AS CHAR) AS user_id,
+            'evidence' AS result_type,
+            kg.context_type AS source_type,
+            'xm_knowledge_chat_log' AS source_table,
+            kg.chat_log_id AS source_result_id,
+            kg.session_id AS source_session_id,
+            kg.persistence_status AS status,
+            LEFT(kg.question_text, 255) AS display_title,
+            LEFT(kg.answer_summary, 1000) AS summary,
+            COALESCE(kg.anchor_ref, kg.session_id) AS detail_ref,
+            kg.chat_time AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            COALESCE(rec.deleted_flag, '0') AS deleted_flag
+        FROM xm_knowledge_chat_log kg
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(kg.user_id AS CHAR)
+            AND rec.source_table = 'xm_knowledge_chat_log'
+            AND rec.source_result_id = kg.chat_log_id
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(kg.user_id AS CHAR)
+            AND fav.source_table = 'xm_knowledge_chat_log'
+            AND fav.source_result_id = kg.chat_log_id
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_record:', CAST(lr.record_id AS CHAR)) AS record_id,
+            CAST(lr.user_id AS CHAR) AS user_id,
+            lr.result_type AS result_type,
+            lr.source_type AS source_type,
+            'xm_learning_record' AS source_table,
+            COALESCE(lr.source_result_id, CAST(lr.record_id AS CHAR)) AS source_result_id,
+            lr.source_session_id AS source_session_id,
+            lr.status AS status,
+            COALESCE(
+                lr.display_title,
+                CASE lr.result_type
+                    WHEN 'checkpoint' THEN '学习起点 / checkpoint'
+                    WHEN 'quiz' THEN '测验结果'
+                    WHEN 'wrongbook' THEN '错题本'
+                    WHEN 'recommendation' THEN '知识推荐'
+                    WHEN 'path' THEN '学习路径'
+                    ELSE CONCAT('学习记录 / ', lr.result_type)
+                END
+            ) AS display_title,
+            lr.analysis_summary AS summary,
+            lr.detail_ref AS detail_ref,
+            COALESCE(lr.source_time, lr.update_time, lr.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            COALESCE(lr.deleted_flag, '0') AS deleted_flag
+        FROM xm_learning_record lr
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(lr.user_id AS CHAR)
+            AND fav.source_table = 'xm_learning_record'
+            AND fav.source_result_id = COALESCE(lr.source_result_id, CAST(lr.record_id AS CHAR))
+            AND fav.active_flag = '1'
+        WHERE lr.source_table = 'xm_learning_record'
+    </sql>
+
+    <sql id="aggregate_where">
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND agg.user_id = #{query.userId}
+            </if>
+            <if test="query != null and query.resultType != null and query.resultType != ''">
+                AND agg.result_type = #{query.resultType}
+            </if>
+            <if test="query != null and query.status != null and query.status != ''">
+                AND agg.status = #{query.status}
+            </if>
+            <if test="query != null and query.keyword != null and query.keyword != ''">
+                AND (
+                    agg.display_title LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR agg.summary LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+            <if test="query != null and query.beginSourceTime != null">
+                AND agg.source_time <![CDATA[>=]]> #{query.beginSourceTime}
+            </if>
+            <if test="query != null and query.endSourceTime != null">
+                AND agg.source_time <![CDATA[<=]]> #{query.endSourceTime}
+            </if>
+            AND agg.deleted_flag = '0'
+            <if test="query != null and query.favoriteOnly != null and query.favoriteOnly">
+                AND agg.favorite = TRUE
+            </if>
+        </where>
+    </sql>
+
+    <select id="countAggregateRecords" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM (
+            <include refid="aggregate_union_raw"/>
+        ) agg
+        <include refid="aggregate_where"/>
+    </select>
+
+    <select id="selectAggregateRecords" resultType="org.dromara.xiaomai.learningcenter.domain.vo.LearningCenterRecordVo">
+        SELECT
+            agg.record_id AS recordId,
+            agg.user_id AS userId,
+            agg.result_type AS resultType,
+            agg.source_type AS sourceType,
+            agg.source_table AS sourceTable,
+            agg.source_result_id AS sourceResultId,
+            agg.source_session_id AS sourceSessionId,
+            agg.display_title AS displayTitle,
+            agg.summary AS summary,
+            agg.status AS status,
+            agg.detail_ref AS detailRef,
+            agg.source_time AS sourceTime,
+            agg.favorite AS favorite,
+            agg.favorite_time AS favoriteTime
+        FROM (
+            <include refid="aggregate_union_raw"/>
+        ) agg
+        <include refid="aggregate_where"/>
+        ORDER BY agg.source_time DESC, agg.record_id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectSourceRecord" resultType="org.dromara.xiaomai.learningcenter.domain.vo.LearningCenterRecordVo">
+        SELECT
+            agg.record_id AS recordId,
+            agg.user_id AS userId,
+            agg.result_type AS resultType,
+            agg.source_type AS sourceType,
+            agg.source_table AS sourceTable,
+            agg.source_result_id AS sourceResultId,
+            agg.source_session_id AS sourceSessionId,
+            agg.display_title AS displayTitle,
+            agg.summary AS summary,
+            agg.status AS status,
+            agg.detail_ref AS detailRef,
+            agg.source_time AS sourceTime,
+            agg.favorite AS favorite,
+            agg.favorite_time AS favoriteTime
+        FROM (
+            <include refid="aggregate_union_raw"/>
+        ) agg
+        WHERE agg.user_id = #{userId}
+          AND agg.source_table = #{sourceTable}
+          AND agg.source_result_id = #{sourceResultId}
+        LIMIT 1
+    </select>
+
+    <insert id="upsertDeletedRecord">
+        INSERT INTO xm_learning_record (
+            user_id,
+            result_type,
+            display_title,
+            source_type,
+            source_table,
+            source_session_id,
+            source_result_id,
+            source_time,
+            status,
+            analysis_summary,
+            detail_ref,
+            deleted_flag,
+            create_time,
+            update_time
+        ) VALUES (
+            #{record.userId},
+            #{record.resultType},
+            #{record.displayTitle},
+            #{record.sourceType},
+            #{record.sourceTable},
+            #{record.sourceSessionId},
+            #{record.sourceResultId},
+            #{record.sourceTime},
+            #{record.status},
+            #{record.summary},
+            #{record.detailRef},
+            '1',
+            NOW(),
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            display_title = VALUES(display_title),
+            source_type = VALUES(source_type),
+            source_session_id = VALUES(source_session_id),
+            source_time = VALUES(source_time),
+            status = VALUES(status),
+            analysis_summary = VALUES(analysis_summary),
+            detail_ref = VALUES(detail_ref),
+            deleted_flag = '1',
+            update_time = NOW()
+    </insert>
+
+    <insert id="upsertFavorite">
+        INSERT INTO xm_learning_favorite (
+            user_id,
+            result_type,
+            source_table,
+            source_result_id,
+            source_session_id,
+            detail_ref,
+            active_flag,
+            favorite_time,
+            create_time,
+            update_time
+        ) VALUES (
+            #{record.userId},
+            #{record.resultType},
+            #{record.sourceTable},
+            #{record.sourceResultId},
+            #{record.sourceSessionId},
+            #{record.detailRef},
+            '1',
+            NOW(),
+            NOW(),
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            result_type = VALUES(result_type),
+            source_session_id = VALUES(source_session_id),
+            detail_ref = VALUES(detail_ref),
+            active_flag = '1',
+            cancel_time = NULL,
+            favorite_time = NOW(),
+            update_time = NOW()
+    </insert>
+
+    <update id="deactivateFavorite">
+        UPDATE xm_learning_favorite
+        SET active_flag = '0',
+            cancel_time = NOW(),
+            update_time = NOW()
+        WHERE user_id = #{userId}
+          AND source_table = #{sourceTable}
+          AND source_result_id = #{sourceResultId}
+    </update>
+</mapper>

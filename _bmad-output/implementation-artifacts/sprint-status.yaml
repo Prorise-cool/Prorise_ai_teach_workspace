@@ -36,10 +36,14 @@
 
 generated: 2026-03-28 21:10:41 +0800
 <<<<<<< HEAD
+<<<<<<< HEAD
 last_updated: 2026-03-30 00:05:00 +0800
 =======
 last_updated: 2026-03-29 23:54:00 +0800
 >>>>>>> d1d610a (feat: 完成 Story 10.5 问答长期承接)
+=======
+last_updated: 2026-03-30 00:36:36 +0800
+>>>>>>> 4dd893a (feat: 完成 Story 10.7 学习记录收藏聚合查询)
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -140,6 +144,6 @@ development_status:
   10-4-视频与课堂任务元数据长期承接: review
   10-5-companion-与-evidence-问答长期承接: review
   10-6-learning-coach-结果错题与路径长期承接: review
-  10-7-学习记录收藏与聚合查询承接: ready-for-dev
+  10-7-学习记录收藏与聚合查询承接: review
   10-8-后台查询导出与审计边界: ready-for-dev
   epic-10-retrospective: optional
