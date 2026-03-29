@@ -1,0 +1,193 @@
+/**
+ * 小麦主题变量桥接层。
+ * 这里把设计令牌落成 CSS Variables，供 Tailwind v4 与组件直接消费。
+ */
+
+:root,
+:root[data-theme='light'] {
+  --xm-color-brand-50: #fffaf0;
+  --xm-color-brand-100: #fff4db;
+  --xm-color-brand-200: #fde8b0;
+  --xm-color-brand-300: #f9d97a;
+  --xm-color-brand-400: #f5c547;
+  --xm-color-brand-500: #e6b841;
+  --xm-color-brand-600: #ca982f;
+  --xm-color-brand-700: #9d6d18;
+  --xm-color-brand-800: #6f4707;
+  --xm-color-brand-900: #4a2b03;
+
+  --xm-color-primary: #f5c547;
+  --xm-color-primary-foreground: #3d2b00;
+  --xm-color-secondary: #f5ede1;
+  --xm-color-secondary-foreground: #3b1701;
+  --xm-color-accent: #f4ead0;
+  --xm-color-accent-foreground: #3b1701;
+  --xm-color-background: #f5ede1;
+  --xm-color-background-elevated: #fff8ed;
+  --xm-color-surface: #ffffff;
+  --xm-color-surface-glass: rgba(255, 255, 255, 0.82);
+  --xm-color-text-primary: #3b1701;
+  --xm-color-text-secondary: #6b4421;
+  --xm-color-text-muted: #8d6d4f;
+  --xm-color-border: #e6dcc8;
+  --xm-color-border-strong: rgba(59, 23, 1, 0.12);
+  --xm-color-ring: rgba(245, 197, 71, 0.44);
+  --xm-color-success: #52c41a;
+  --xm-color-warning: #faad14;
+  --xm-color-error: #ff4d4f;
+  --xm-color-info: #4a6fa5;
+
+  --xm-color-agent-serious: #4a6fa5;
+  --xm-color-agent-humorous: #ff9500;
+  --xm-color-agent-patient: #52c41a;
+  --xm-color-agent-efficient: #722ed1;
+
+  --xm-color-agent-serious-soft: rgba(74, 111, 165, 0.12);
+  --xm-color-agent-humorous-soft: rgba(255, 149, 0, 0.12);
+  --xm-color-agent-patient-soft: rgba(82, 196, 26, 0.12);
+  --xm-color-agent-efficient-soft: rgba(114, 46, 209, 0.12);
+
+  --xm-color-agent-serious-border: rgba(74, 111, 165, 0.24);
+  --xm-color-agent-humorous-border: rgba(255, 149, 0, 0.24);
+  --xm-color-agent-patient-border: rgba(82, 196, 26, 0.24);
+  --xm-color-agent-efficient-border: rgba(114, 46, 209, 0.24);
+
+  --xm-color-agent-accent: var(--xm-color-primary);
+  --xm-color-agent-accent-soft: rgba(245, 197, 71, 0.12);
+  --xm-color-agent-accent-border: rgba(245, 197, 71, 0.24);
+
+  --xm-color-task-pending: #8d6d4f;
+  --xm-color-task-processing: #f5c547;
+  --xm-color-task-completed: #52c41a;
+  --xm-color-task-failed: #ff4d4f;
+  --xm-color-task-cancelled: #8f8b86;
+
+  --xm-font-family-sans:
+    "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
+    "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --xm-font-family-mono:
+    "SF Mono", "Monaco", "JetBrains Mono", "Fira Code", monospace;
+  --xm-font-family-numeric:
+    "SF Pro Display", "SF Pro Text", "Inter", "PingFang SC", "Noto Sans SC",
+    sans-serif;
+
+  --xm-font-size-h1: 48px;
+  --xm-font-size-h2: 36px;
+  --xm-font-size-h3: 24px;
+  --xm-font-size-body-large: 18px;
+  --xm-font-size-body: 16px;
+  --xm-font-size-body-small: 14px;
+  --xm-font-size-caption: 12px;
+
+  --xm-font-weight-regular: 400;
+  --xm-font-weight-medium: 500;
+  --xm-font-weight-semibold: 600;
+  --xm-font-weight-bold: 700;
+
+  --xm-line-height-tight: 1.2;
+  --xm-line-height-compact: 1.3;
+  --xm-line-height-normal: 1.5;
+  --xm-line-height-relaxed: 1.6;
+
+  --xm-spacing-0: 0px;
+  --xm-spacing-1: 4px;
+  --xm-spacing-2: 8px;
+  --xm-spacing-3: 12px;
+  --xm-spacing-4: 16px;
+  --xm-spacing-5: 20px;
+  --xm-spacing-6: 24px;
+  --xm-spacing-8: 32px;
+  --xm-spacing-10: 40px;
+  --xm-spacing-12: 48px;
+  --xm-spacing-16: 64px;
+  --xm-spacing-20: 80px;
+
+  --xm-radius-sm: 4px;
+  --xm-radius-md: 8px;
+  --xm-radius-lg: 16px;
+  --xm-radius-xl: 24px;
+  --xm-radius-full: 9999px;
+
+  --xm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --xm-shadow-md: 0 4px 12px rgba(23, 12, 5, 0.08);
+  --xm-shadow-lg: 0 8px 24px rgba(23, 12, 5, 0.12);
+  --xm-shadow-xl: 0 20px 25px -5px rgba(245, 197, 71, 0.22);
+  --xm-shadow-card:
+    0 0 0 1px rgba(230, 220, 200, 0.72),
+    0 12px 32px rgba(59, 23, 1, 0.08);
+  --xm-shadow-nav: 0 8px 20px rgba(59, 23, 1, 0.08);
+  --xm-shadow-dialog: 0 24px 60px rgba(59, 23, 1, 0.16);
+
+  --xm-blur-nav: 12px;
+  --xm-blur-surface: 24px;
+  --xm-blur-glow: 56px;
+
+  --xm-duration-fast: 150ms;
+  --xm-duration-base: 300ms;
+  --xm-duration-slow: 500ms;
+  --xm-duration-pulse: 3.6s;
+  --xm-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --xm-easing-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --xm-easing-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+:root[data-theme='dark'] {
+  --xm-color-primary: #e6b841;
+  --xm-color-primary-foreground: #2a1f00;
+  --xm-color-secondary: #2a2420;
+  --xm-color-secondary-foreground: #f5ede1;
+  --xm-color-accent: #352f2a;
+  --xm-color-accent-foreground: #f5ede1;
+  --xm-color-background: #1a1614;
+  --xm-color-background-elevated: #241d1a;
+  --xm-color-surface: #2a2420;
+  --xm-color-surface-glass: rgba(42, 36, 32, 0.86);
+  --xm-color-text-primary: #f5ede1;
+  --xm-color-text-secondary: #c4b8a8;
+  --xm-color-text-muted: #9d8f80;
+  --xm-color-border: #3d3630;
+  --xm-color-border-strong: rgba(245, 237, 225, 0.12);
+  --xm-color-ring: rgba(230, 184, 65, 0.44);
+  --xm-color-success: #73d13d;
+  --xm-color-warning: #ffc53d;
+  --xm-color-error: #ff7875;
+  --xm-color-info: #78a8e3;
+
+  --xm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --xm-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.32);
+  --xm-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --xm-shadow-xl: 0 20px 25px -5px rgba(230, 184, 65, 0.24);
+  --xm-shadow-card:
+    0 0 0 1px rgba(245, 237, 225, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.32);
+  --xm-shadow-nav: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --xm-shadow-dialog: 0 28px 64px rgba(0, 0, 0, 0.42);
+}
+
+:root[data-agent-style='serious'],
+.agent-accent-serious {
+  --xm-color-agent-accent: var(--xm-color-agent-serious);
+  --xm-color-agent-accent-soft: var(--xm-color-agent-serious-soft);
+  --xm-color-agent-accent-border: var(--xm-color-agent-serious-border);
+}
+
+:root[data-agent-style='humorous'],
+.agent-accent-humorous {
+  --xm-color-agent-accent: var(--xm-color-agent-humorous);
+  --xm-color-agent-accent-soft: var(--xm-color-agent-humorous-soft);
+  --xm-color-agent-accent-border: var(--xm-color-agent-humorous-border);
+}
+
+:root[data-agent-style='patient'],
+.agent-accent-patient {
+  --xm-color-agent-accent: var(--xm-color-agent-patient);
+  --xm-color-agent-accent-soft: var(--xm-color-agent-patient-soft);
+  --xm-color-agent-accent-border: var(--xm-color-agent-patient-border);
+}
+
+:root[data-agent-style='efficient'],
+.agent-accent-efficient {
+  --xm-color-agent-accent: var(--xm-color-agent-efficient);
+  --xm-color-agent-accent-soft: var(--xm-color-agent-efficient-soft);
+  --xm-color-agent-accent-border: var(--xm-color-agent-efficient-border);
+}
