@@ -15,3 +15,16 @@ export {
   mapRuoyiUserInfo,
   resolveAuthAdapter
 } from './auth-adapter';
+export type {
+  TaskAdapter
+} from './task-adapter';
+export {
+  TaskAdapterError,
+  createMockTaskAdapter,
+  createRealTaskAdapter,
+  resolveTaskAdapter
+} from './task-adapter';
+export {
+  pickAdapterImplementation,
+  resolveRuntimeMode
+} from './base-adapter';
