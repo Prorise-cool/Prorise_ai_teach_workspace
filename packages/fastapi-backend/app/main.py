@@ -4,12 +4,15 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.lifespan import create_lifespan
+from app.core.logging import configure_logging
+from app.core.middleware.request_context import RequestContextMiddleware
 from app.schemas.common import RootBootstrapPayload, RootBootstrapResponseEnvelope, build_success_envelope
 from app.schemas.examples import ROOT_BOOTSTRAP_EXAMPLE
 
 
 def create_app() -> FastAPI:
     """创建对齐架构分层的 FastAPI 应用实例。"""
+    configure_logging()
     settings = get_settings()
     application = FastAPI(
         title=settings.app_name,
@@ -27,6 +30,7 @@ def create_app() -> FastAPI:
             {"name": "learning", "description": "学习教练功能域骨架。"}
         ]
     )
+    application.add_middleware(RequestContextMiddleware)
     application.include_router(api_router)
     register_exception_handlers(application)
 

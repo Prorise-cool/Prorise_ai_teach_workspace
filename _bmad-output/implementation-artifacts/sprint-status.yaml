@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-03-29 16:08:00 +0800
+# last_updated: 2026-03-29 17:25:21 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-29 17:05:00 +0800
+last_updated: 2026-03-29 17:25:21 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -43,11 +43,11 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
   epic-0: in-progress
-  0-1-monorepo-基础目录与工程骨架冻结: review
-  0-2-契约资产目录命名规则与版本规则冻结: review
-  0-3-前端-adaptermock-handler-与环境切换基线: review
-  0-4-后端-schemaopenapi示例-payload-输出基线: review
-  0-5-request-id-task-id-日志追踪骨架: backlog
+  0-1-monorepo-基础目录与工程骨架冻结: done
+  0-2-契约资产目录命名规则与版本规则冻结: done
+  0-3-前端-adaptermock-handler-与环境切换基线: done
+  0-4-后端-schemaopenapi示例-payload-输出基线: done
+  0-5-request-id-task-id-日志追踪骨架: review
   0-6-story-交付门禁与并行开发-dor-dod-冻结: backlog
   epic-0-retrospective: optional
   epic-1: backlog

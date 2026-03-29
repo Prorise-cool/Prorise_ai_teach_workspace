@@ -26,6 +26,14 @@
           "type": "boolean",
           "description": "是否允许调用方自动或手动重试。"
         },
+        "request_id": {
+          "type": ["string", "null"],
+          "description": "请求链路追踪 ID。"
+        },
+        "task_id": {
+          "type": ["string", "null"],
+          "description": "长任务链路追踪 ID。"
+        },
         "details": {
           "type": "object",
           "description": "机器可读的上下文字段。",
