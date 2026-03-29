@@ -13,8 +13,8 @@ Prorise_ai_teach_workspace/
 ├── _bmad-output/              # 唯一事实来源
 ├── contracts/                 # 契约资产目录
 ├── docs/                      # 开发手册与协作文档
-├── mocks/                     # Mock 资产目录
 │   └── 01开发人员手册/        # 开发总结文档落点
+├── mocks/                     # Mock 资产目录
 ├── packages/                  # 主代码工作区
 │   ├── student-web/           # React 19 学生端前端
 │   ├── fastapi-backend/       # FastAPI + LangGraph 后端
