@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-30 13:26:00 +0800
+last_updated: 2026-03-30 18:16:30 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -58,15 +58,15 @@ development_status:
   1-5-输入壳层中的老师风格最小选择配置: ready-for-dev
   1-6-角色边界与入口级权限可见性: ready-for-dev
   epic-1-retrospective: optional
-  epic-2: in-progress
-  2-1-统一任务状态枚举错误码与结果-schema-冻结: review
-  2-2-task-基类taskcontext-与调度骨架: ready-for-dev
-  2-3-dramatiq-redis-broker-基础接入: ready-for-dev
-  2-4-redis-运行态-keyttl-与事件缓存落地: ready-for-dev
-  2-5-sse-事件类型payload-与-broker-契约冻结: ready-for-dev
-  2-6-sse-断线恢复与-status-查询降级: ready-for-dev
-  2-7-provider-protocol工厂与优先级注册骨架: ready-for-dev
-  2-8-provider-健康检查failover-与缓存策略: ready-for-dev
+  epic-2: done
+  2-1-统一任务状态枚举错误码与结果-schema-冻结: done
+  2-2-task-基类taskcontext-与调度骨架: done
+  2-3-dramatiq-redis-broker-基础接入: done
+  2-4-redis-运行态-keyttl-与事件缓存落地: done
+  2-5-sse-事件类型payload-与-broker-契约冻结: done
+  2-6-sse-断线恢复与-status-查询降级: done
+  2-7-provider-protocol工厂与优先级注册骨架: done
+  2-8-provider-健康检查failover-与缓存策略: done
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-视频任务创建契约与-mock-task-基线: backlog

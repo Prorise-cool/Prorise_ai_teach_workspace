@@ -1,6 +1,6 @@
 # Story 2.5: SSE 事件类型、payload 与 broker 契约冻结
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

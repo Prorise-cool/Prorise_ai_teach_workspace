@@ -1,6 +1,6 @@
 # Story 2.3: Dramatiq + Redis broker 基础接入
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

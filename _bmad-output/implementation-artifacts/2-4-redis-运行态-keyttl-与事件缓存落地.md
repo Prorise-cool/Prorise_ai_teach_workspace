@@ -1,6 +1,6 @@
 # Story 2.4: Redis 运行态 Key、TTL 与事件缓存落地
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
