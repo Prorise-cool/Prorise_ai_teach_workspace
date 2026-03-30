@@ -57,6 +57,8 @@ type RealTaskAdapterOptions = {
   client?: ApiClient;
 };
 
+const TASK_OPERATION_UNSUPPORTED_CODE = 'TASK_OPERATION_UNSUPPORTED';
+
 export interface TaskAdapter {
   listTasks(options?: TaskQueryOptions): Promise<TaskListResult>;
   getTask(taskId: string, options?: TaskQueryOptions): Promise<TaskDetail>;
@@ -102,6 +104,16 @@ function createTaskError(status: number, code: string, message: string) {
   return new TaskAdapterError(status, code, message);
 }
 
+function createUnsupportedTaskOperationError(operation: 'list' | 'detail') {
+  const label = operation === 'list' ? '列表' : '详情';
+
+  return createTaskError(
+    501,
+    TASK_OPERATION_UNSUPPORTED_CODE,
+    `FastAPI 当前仅提供任务恢复端点，任务${label}接口尚未实现`
+  );
+}
+
 function mapTaskApiClientError(error: unknown): TaskAdapterError {
   if (isApiClientError(error)) {
     const payload = error.data as
@@ -139,19 +151,6 @@ function mapTaskApiClientError(error: unknown): TaskAdapterError {
   return createTaskError(500, '500', error instanceof Error ? error.message : '未知任务适配错误');
 }
 
-async function requestRowsEnvelope<T>(
-  client: ApiClient,
-  config: ApiRequestConfig
-) {
-  try {
-    const response = await client.request<TaskRowsEnvelope<T>>(config);
-
-    return response.data;
-  } catch (error) {
-    throw mapTaskApiClientError(error);
-  }
-}
-
 async function requestDataEnvelope<T>(
   client: ApiClient,
   config: ApiRequestConfig
@@ -169,23 +168,11 @@ export function createRealTaskAdapter({
   client = fastapiClient
 }: RealTaskAdapterOptions = {}): TaskAdapter {
   return {
-    async listTasks(options) {
-      const envelope = await requestRowsEnvelope<TaskSummary>(client, {
-        url: appendScenario('/api/v1/tasks', options?.scenario),
-        method: 'get',
-        signal: options?.signal
-      });
-
-      return mapTaskRowsEnvelope(envelope);
+    listTasks() {
+      return Promise.reject(createUnsupportedTaskOperationError('list'));
     },
-    async getTask(taskId, options) {
-      const envelope = await requestDataEnvelope<TaskDetail>(client, {
-        url: appendScenario(`/api/v1/tasks/${taskId}`, options?.scenario),
-        method: 'get',
-        signal: options?.signal
-      });
-
-      return mapTaskDetail(mapTaskDataEnvelope(envelope));
+    getTask() {
+      return Promise.reject(createUnsupportedTaskOperationError('detail'));
     },
     async getTaskSnapshot(taskId, options) {
       const envelope = await requestDataEnvelope<TaskSnapshot>(client, {
