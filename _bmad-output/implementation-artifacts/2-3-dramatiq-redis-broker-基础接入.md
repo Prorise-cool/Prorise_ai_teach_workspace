@@ -1,6 +1,6 @@
 # Story 2.3: Dramatiq + Redis broker 基础接入
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,18 +18,18 @@ so that 视频、课堂与文档解析任务都能在一致的异步执行环境
 
 ## Tasks / Subtasks
 
-- [ ] 建立 Dramatiq + Redis broker 基础配置（AC: 1, 2）
-  - [ ] 在 FastAPI 配置层补齐 broker 连接、序列化与环境变量约定。
-  - [ ] 区分 Web 进程与 Worker 进程的启动方式。
-- [ ] 打通 demo task 的 dispatch / consume 链路（AC: 1, 3）
-  - [ ] 让 `TaskScheduler` 能把 demo task 投递到队列。
-  - [ ] 在 Worker 中执行 demo task，并回写最小运行态。
-- [ ] 处理队列层状态与失败收敛（AC: 2, 3）
-  - [ ] 明确已投递、已消费、失败、重启恢复时的状态推进规则。
-  - [ ] 保证失败任务不会卡在模糊的“处理中”。
-- [ ] 增加本地运行说明与测试（AC: 1, 2, 3）
-  - [ ] 提供 Worker 启动脚本或 README。
-  - [ ] 为 broker 初始化、消息消费与失败收敛增加测试。
+- [x] 建立 Dramatiq + Redis broker 基础配置（AC: 1, 2）
+  - [x] 在 FastAPI 配置层补齐 broker 连接、序列化与环境变量约定。
+  - [x] 区分 Web 进程与 Worker 进程的启动方式。
+- [x] 打通 demo task 的 dispatch / consume 链路（AC: 1, 3）
+  - [x] 让 `TaskScheduler` 能把 demo task 投递到队列。
+  - [x] 在 Worker 中执行 demo task，并回写最小运行态。
+- [x] 处理队列层状态与失败收敛（AC: 2, 3）
+  - [x] 明确已投递、已消费、失败、重启恢复时的状态推进规则。
+  - [x] 保证失败任务不会卡在模糊的“处理中”。
+- [x] 增加本地运行说明与测试（AC: 1, 2, 3）
+  - [x] 提供 Worker 启动脚本或 README。
+  - [x] 为 broker 初始化、消息消费与失败收敛增加测试。
 
 ## Dev Notes
 
@@ -101,12 +101,28 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pnpm setup:fastapi-backend`
+- `.venv/bin/python -m pytest tests/integration/test_dramatiq_broker.py`
+- `.venv/bin/python -m pytest tests/unit/test_task_trace.py tests/test_health.py tests/test_bootstrap_routes.py`
+- `.venv/bin/python -m pytest tests/unit/task_framework/test_base_task.py tests/unit/task_framework/test_scheduler.py`
+- `.venv/bin/python -m pytest tests/unit/test_task_contracts.py`
 
 ### Completion Notes List
 
-- 已把队列底座接入 Story 拆成配置、消费链路、失败收敛和本地运行四个执行面。
+- 已补齐 Dramatiq broker 配置、Web / Worker 分离入口与 `dev:fastapi-worker` 启动脚本。
+- 已让 `TaskScheduler` 支持把注册任务投递到队列，并在 Worker 中复用统一任务框架完成消费与状态推进。
+- 已为 demo task、失败收敛与多任务类型共存补齐 Dramatiq 集成测试，并保持 2.2 / 2.5 相关单测回归通过。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/2-3-dramatiq-redis-broker-基础接入.md`
+- `package.json`
+- `packages/fastapi-backend/pyproject.toml`
+- `packages/fastapi-backend/app/core/config.py`
+- `packages/fastapi-backend/app/core/lifespan.py`
+- `packages/fastapi-backend/app/infra/redis_client.py`
+- `packages/fastapi-backend/app/shared/task_framework/publisher.py`
+- `packages/fastapi-backend/app/shared/task_framework/scheduler.py`
+- `packages/fastapi-backend/app/worker.py`
+- `packages/fastapi-backend/scripts/start-worker.sh`
+- `packages/fastapi-backend/tests/integration/test_dramatiq_broker.py`
