@@ -59,7 +59,7 @@ development_status:
   1-6-角色边界与入口级权限可见性: ready-for-dev
   epic-1-retrospective: optional
   epic-2: in-progress
-  2-1-统一任务状态枚举错误码与结果-schema-冻结: ready-for-dev
+  2-1-统一任务状态枚举错误码与结果-schema-冻结: review
   2-2-task-基类taskcontext-与调度骨架: ready-for-dev
   2-3-dramatiq-redis-broker-基础接入: ready-for-dev
   2-4-redis-运行态-keyttl-与事件缓存落地: ready-for-dev

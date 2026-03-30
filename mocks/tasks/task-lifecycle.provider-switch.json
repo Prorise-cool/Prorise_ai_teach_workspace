@@ -1,0 +1,18 @@
+{
+  "event": "provider_switch",
+  "taskId": "video_20260330130500_qr78st90",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 58,
+  "message": "主 Provider 不可用，已切换备用 Provider",
+  "timestamp": "2026-03-30T13:05:31Z",
+  "requestId": "req_task_provider_switch_001",
+  "errorCode": "TASK_PROVIDER_UNAVAILABLE",
+  "context": {
+    "providerSwitch": {
+      "from": "volcengine-tts",
+      "to": "azure-tts",
+      "reason": "primary provider unavailable"
+    }
+  }
+}

@@ -22,6 +22,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     learning_persist_route = payload["paths"]["/api/v1/learning/persistence"]["post"]
 
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
+    assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["taskId"] == "video_20260329161500_ab12cd34"
+    assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["requestId"] == "req_20260329_processing"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["error_code"] == "TASK_PROVIDER_TIMEOUT"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["request_id"] == "req_20260329_conflict"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["task_id"] == "video_20260329161500_ab12cd34"
@@ -30,6 +32,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     assert learning_preview_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
     assert learning_persist_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
     assert learning_persist_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
+    assert list_route["responses"]["200"]["content"]["application/json"]["example"]["requestId"] == "req_20260329_list"
+    assert list_route["responses"]["200"]["content"]["application/json"]["example"]["rows"][0]["timestamp"] == "2026-03-29T16:15:00Z"
 
 
 def test_shared_contract_schema_assets_exist_and_match_response_shape() -> None:

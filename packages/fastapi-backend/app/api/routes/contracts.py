@@ -60,8 +60,9 @@ async def get_task_snapshot_contract() -> dict[str, object]:
         status="processing",
         progress=45,
         message="正在生成分镜与脚本",
+        timestamp="2026-03-29T16:15:00Z",
+        request_id="req_20260329_processing",
         error_code=None,
-        updated_at="2026-03-29T16:15:00Z"
     )
     return build_success_envelope(payload)
 
@@ -94,19 +95,28 @@ async def get_task_snapshot_contract() -> dict[str, object]:
 async def get_task_list_contract() -> dict[str, object]:
     rows = [
         TaskListItemPayload(
+            id="video_20260329161500_ab12cd34",
+            title="任务 video_20260329161500_ab12cd34",
             task_id="video_20260329161500_ab12cd34",
             task_type="video",
             status="processing",
             progress=45,
-            updated_at="2026-03-29T16:15:00Z"
+            message="正在生成分镜与脚本",
+            timestamp="2026-03-29T16:15:00Z",
+            request_id="req_20260329_processing",
+            error_code=None
         ),
         TaskListItemPayload(
+            id="classroom_20260329162000_ef56gh78",
+            title="任务 classroom_20260329162000_ef56gh78",
             task_id="classroom_20260329162000_ef56gh78",
             task_type="classroom",
             status="completed",
             progress=100,
-            updated_at="2026-03-29T16:20:00Z"
+            message="课堂任务执行完成",
+            timestamp="2026-03-29T16:20:00Z",
+            request_id="req_20260329_completed",
+            error_code=None
         )
     ]
-    return build_page_envelope(rows, total=2)
-
+    return build_page_envelope(rows, total=2, request_id="req_20260329_list")

@@ -1,35 +1,32 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from app.schemas.common import TaskStatusValue
-
-
-class TaskListItemPayload(BaseModel):
-    task_id: str
-    task_type: str
-    status: TaskStatusValue
-    progress: int = Field(ge=0, le=100)
-    updated_at: str = Field(
-        description="UTC ISO 8601 时间，例如 2026-03-29T16:15:00Z"
-    )
+from app.shared.task_framework.contracts import CamelCaseModel, TaskContractPayload
 
 
-class TaskListResponseEnvelope(BaseModel):
+class TaskListItemPayload(TaskContractPayload):
+    id: str | None = None
+    title: str | None = None
+
+
+class TaskListResponseEnvelope(CamelCaseModel):
     code: int = Field(default=200)
     msg: str = Field(default="查询成功")
     rows: list[TaskListItemPayload]
     total: int = Field(ge=0)
+    request_id: str | None = None
 
 
 def build_page_envelope(
     rows: list[TaskListItemPayload],
     *,
     total: int,
+    request_id: str | None = None,
     msg: str = "查询成功"
 ) -> dict[str, object]:
     return {
         "code": 200,
         "msg": msg,
-        "rows": [row.model_dump(mode="json") for row in rows],
-        "total": total
+        "rows": [row.model_dump(mode="json", by_alias=True) for row in rows],
+        "total": total,
+        "requestId": request_id
     }
-

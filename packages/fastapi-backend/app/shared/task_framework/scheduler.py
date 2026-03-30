@@ -6,7 +6,7 @@ from app.core.sse import TaskProgressEvent
 from app.infra.sse_broker import InMemorySseBroker
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
-from app.shared.task_framework.status import TaskStatus
+from app.shared.task_framework.status import TaskErrorCode, TaskStatus
 
 logger = get_logger("app.task.scheduler")
 
@@ -70,13 +70,21 @@ class TaskScheduler:
                 context=task.context,
                 event=self._event_name_for_status(result.status),
                 status=result.status,
-                progress=100 if result.status == TaskStatus.COMPLETED else 0,
+                progress=(
+                    result.progress
+                    if result.progress is not None
+                    else 100 if result.status == TaskStatus.COMPLETED else 0
+                ),
                 message=result.message,
                 error_code=result.error_code
             )
             return result
         except Exception as exc:
-            error_code = getattr(exc, "error_code", None) or getattr(exc, "code", None) or "TASK_UNHANDLED_EXCEPTION"
+            error_code = (
+                getattr(exc, "error_code", None)
+                or getattr(exc, "code", None)
+                or TaskErrorCode.UNHANDLED_EXCEPTION
+            )
             error_tokens = bind_trace_context(error_code=error_code)
             try:
                 logger.exception("Task dispatch failed task_type=%s", task.context.task_type)
@@ -94,6 +102,7 @@ class TaskScheduler:
             return TaskResult(
                 status=TaskStatus.FAILED,
                 message="任务执行失败",
+                progress=0,
                 error_code=error_code
             )
         finally:
@@ -101,7 +110,9 @@ class TaskScheduler:
 
     def _log_task_result(self, context: TaskContext, result: TaskResult) -> None:
         if result.status == TaskStatus.FAILED:
-            error_tokens = bind_trace_context(error_code=result.error_code or "TASK_UNHANDLED_EXCEPTION")
+            error_tokens = bind_trace_context(
+                error_code=result.error_code or TaskErrorCode.UNHANDLED_EXCEPTION
+            )
             try:
                 logger.error(
                     "Task dispatch finished task_type=%s status=%s",
@@ -126,7 +137,7 @@ class TaskScheduler:
         status: TaskStatus,
         progress: int,
         message: str,
-        error_code: str | None = None
+        error_code: TaskErrorCode | str | None = None
     ) -> None:
         if self.broker is None:
             return
@@ -136,7 +147,7 @@ class TaskScheduler:
                 event=event,
                 task_id=context.task_id,
                 task_type=context.task_type,
-                status=status.value,
+                status=status,
                 progress=progress,
                 message=message,
                 request_id=context.request_id,
