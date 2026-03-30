@@ -1,6 +1,6 @@
 # Story 10.5: Companion 与 Evidence 问答长期承接
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

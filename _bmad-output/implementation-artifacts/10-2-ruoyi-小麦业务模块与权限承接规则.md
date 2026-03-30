@@ -1,6 +1,6 @@
 # Story 10.2: RuoYi 小麦业务模块与权限承接规则
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

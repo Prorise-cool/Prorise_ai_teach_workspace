@@ -1,6 +1,6 @@
 # Story 10.6: Learning Coach 结果、错题与路径长期承接
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

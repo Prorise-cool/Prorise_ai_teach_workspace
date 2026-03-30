@@ -1,6 +1,6 @@
 # Story 10.3: FastAPI 与 RuoYi 防腐层客户端
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
