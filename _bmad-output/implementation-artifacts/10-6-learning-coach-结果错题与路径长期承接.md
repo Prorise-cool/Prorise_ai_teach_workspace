@@ -1,6 +1,6 @@
 # Story 10.6: Learning Coach 结果、错题与路径长期承接
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,22 +18,22 @@ so that 学后巩固结果能够持续沉淀而不是一次性消费。
 
 ## Tasks / Subtasks
 
-- [ ] 定义 Learning Coach 结果实体与字段基线（AC: 1, 2, 3）
-  - [ ] 明确 `xm_quiz_result`、`xm_learning_path` 的最小字段集以及 wrongbook / recommendation 的挂接字段。
-  - [ ] 为 checkpoint、quiz、wrongbook、recommendation、path 设计统一的结果类型与来源字段。
-  - [ ] 定义得分、解析摘要、来源会话、状态、版本号 / 更新时间等公共字段。
-- [ ] 建立结果写回与更新策略（AC: 1, 2, 3）
-  - [ ] 将 checkpoint、quiz、path、recommendation 的完成节点映射到长期回写动作。
-  - [ ] 约束错题本与推荐结果进入学习中心域，不混入个人资料域。
-  - [ ] 为学习路径调整定义版本保留或最后更新时间更新策略。
-- [ ] 补齐回看与聚合查询所需字段（AC: 1, 2）
-  - [ ] 确保学习中心可以按类型打开 checkpoint、quiz、错题解析、路径与推荐详情。
-  - [ ] 为后续 `/learning` 聚合留出类型区分、来源跳转与摘要展示字段。
-  - [ ] 避免把 Learning Coach 各类结果简单压平到无法区分的通用历史记录。
-- [ ] 增加持久化与版本测试（AC: 1, 2, 3）
-  - [ ] 覆盖 checkpoint / quiz 完成后的结果写回。
-  - [ ] 覆盖错题本生成、推荐结果生成和学习路径保存 / 更新。
-  - [ ] 覆盖学习路径版本或更新时间可追溯，不因覆盖写入丢失关键历史信息。
+- [x] 定义 Learning Coach 结果实体与字段基线（AC: 1, 2, 3）
+  - [x] 明确 `xm_quiz_result`、`xm_learning_path` 的最小字段集以及 wrongbook / recommendation 的挂接字段。
+  - [x] 为 checkpoint、quiz、wrongbook、recommendation、path 设计统一的结果类型与来源字段。
+  - [x] 定义得分、解析摘要、来源会话、状态、版本号 / 更新时间等公共字段。
+- [x] 建立结果写回与更新策略（AC: 1, 2, 3）
+  - [x] 将 checkpoint、quiz、path、recommendation 的完成节点映射到长期回写动作。
+  - [x] 约束错题本与推荐结果进入学习中心域，不混入个人资料域。
+  - [x] 为学习路径调整定义版本保留或最后更新时间更新策略。
+- [x] 补齐回看与聚合查询所需字段（AC: 1, 2）
+  - [x] 确保学习中心可以按类型打开 checkpoint、quiz、错题解析、路径与推荐详情。
+  - [x] 为后续 `/learning` 聚合留出类型区分、来源跳转与摘要展示字段。
+  - [x] 避免把 Learning Coach 各类结果简单压平到无法区分的通用历史记录。
+- [x] 增加持久化与版本测试（AC: 1, 2, 3）
+  - [x] 覆盖 checkpoint / quiz 完成后的结果写回。
+  - [x] 覆盖错题本生成、推荐结果生成和学习路径保存 / 更新。
+  - [x] 覆盖学习路径版本或更新时间可追溯，不因覆盖写入丢失关键历史信息。
 
 ## Dev Notes
 
@@ -95,8 +95,35 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- 已补齐 Learning Coach 结果、错题与学习路径长期承接所需的类型、版本与回看要求。
+- 已落地 FastAPI `learning` 长期结果预览接口，覆盖 `checkpoint / quiz / wrongbook / recommendation / path` 五类结果的归一化与表目录映射。
+- 已补齐 RuoYi 小麦模块的学习结果服务、控制器、VO/BO、enum、mapper 骨架、SQL 结构与本地测试。
+- 已新增学习结果持久化与 OpenAPI 断言测试，并验证通过。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/10-6-learning-coach-结果错题与路径长期承接.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `packages/fastapi-backend/app/features/learning/__init__.py`
+- `packages/fastapi-backend/app/features/learning/routes.py`
+- `packages/fastapi-backend/app/features/learning/schemas.py`
+- `packages/fastapi-backend/app/features/learning/service.py`
+- `packages/fastapi-backend/tests/integration/test_learning_result_persistence.py`
+- `packages/fastapi-backend/tests/test_openapi_contracts.py`
+- `packages/fastapi-backend/tests/unit/test_learning_result_service.py`
+- `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_learning_result.sql`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/controller/admin/LearningResultController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/domain/bo/LearningResultBo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/domain/vo/LearningResultVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/enums/LearningResultStatus.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/enums/LearningResultType.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/enums/LearningSourceType.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/mapper/LearningResultMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/service/ILearningResultService.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/service/impl/LearningResultServiceImpl.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/learning/README.md`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/learning/LearningResultMapper.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/learning/service/LearningResultServiceImplTest.java`
+
+## Change Log
+
+- 2026-03-29：完成 Story 10.6 的后端长期承接实现，补齐 FastAPI 学习结果预览、RuoYi 学习结果骨架、SQL 结构与测试覆盖。

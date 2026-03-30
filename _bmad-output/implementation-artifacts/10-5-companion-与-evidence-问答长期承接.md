@@ -1,6 +1,6 @@
 # Story 10.5: Companion 与 Evidence 问答长期承接
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,22 +18,22 @@ so that 学习中心能够回看问答过程，后台也能进行审计与分析
 
 ## Tasks / Subtasks
 
-- [ ] 定义问答主记录与关联记录结构（AC: 1, 2, 3）
-  - [ ] 明确 `xm_companion_turn`、`xm_whiteboard_action_log`、`xm_knowledge_chat_log` 的主键、关联键、会话类型、锚点 / 范围、来源摘要与状态字段。
-  - [ ] 对白板动作、来源引用和结构化范围信息设计独立关联字段或子表，不把复杂数据压成不可恢复的自由文本。
-  - [ ] 约束 Evidence 侧沿用 `xm_knowledge_chat_log` 这一历史表名时的字段语义说明，避免语义漂移。
-- [ ] 建立 Companion / Evidence 回写映射（AC: 1, 2）
-  - [ ] 将 Companion 的当前时刻追问、连续追问、白板动作与来源引用映射到统一长期结构。
-  - [ ] 将 Evidence 的检索范围、引用来源、问答摘要与状态映射到长期结构。
-  - [ ] 保持学习中心与后台查询消费的字段语义一致。
-- [ ] 补齐降级状态与回看恢复规则（AC: 2, 3）
-  - [ ] 定义完整成功、部分成功、白板降级、引用缺失、整体失败等状态语义。
-  - [ ] 保证回看页可以直接从长期记录恢复问题、回答摘要、锚点和来源，而不是重新发起问答。
-  - [ ] 对需要落入 COS 的白板渲染产物，只保存对象引用和必要元数据。
-- [ ] 增加持久化与恢复测试（AC: 1, 2, 3）
-  - [ ] 覆盖 Companion 问答、Evidence 问答、带白板动作和带来源引用的回写场景。
-  - [ ] 覆盖部分失败、引用缺失和白板降级的状态记录。
-  - [ ] 覆盖学习中心或后台从长期记录回看主要内容的场景。
+- [x] 定义问答主记录与关联记录结构（AC: 1, 2, 3）
+  - [x] 明确 `xm_companion_turn`、`xm_whiteboard_action_log`、`xm_knowledge_chat_log` 的主键、关联键、会话类型、锚点 / 范围、来源摘要与状态字段。
+  - [x] 对白板动作、来源引用和结构化范围信息设计独立关联字段或子表，不把复杂数据压成不可恢复的自由文本。
+  - [x] 约束 Evidence 侧沿用 `xm_knowledge_chat_log` 这一历史表名时的字段语义说明，避免语义漂移。
+- [x] 建立 Companion / Evidence 回写映射（AC: 1, 2）
+  - [x] 将 Companion 的当前时刻追问、连续追问、白板动作与来源引用映射到统一长期结构。
+  - [x] 将 Evidence 的检索范围、引用来源、问答摘要与状态映射到长期结构。
+  - [x] 保持学习中心与后台查询消费的字段语义一致。
+- [x] 补齐降级状态与回看恢复规则（AC: 2, 3）
+  - [x] 定义完整成功、部分成功、白板降级、引用缺失、整体失败等状态语义。
+  - [x] 保证回看页可以直接从长期记录恢复问题、回答摘要、锚点和来源，而不是重新发起问答。
+  - [x] 对需要落入 COS 的白板渲染产物，只保存对象引用和必要元数据。
+- [x] 增加持久化与恢复测试（AC: 1, 2, 3）
+  - [x] 覆盖 Companion 问答、Evidence 问答、带白板动作和带来源引用的回写场景。
+  - [x] 覆盖部分失败、引用缺失和白板降级的状态记录。
+  - [x] 覆盖学习中心或后台从长期记录回看主要内容的场景。
 
 ## Dev Notes
 
@@ -96,8 +96,32 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- 已补齐 Companion 与 Evidence 长期问答记录的字段、降级状态与恢复约束。
+- 已新增 `xm_companion_turn`、`xm_whiteboard_action_log`、`xm_knowledge_chat_log` 的 SQL 表结构，并保留 `xm_knowledge_chat_log` 的历史表名语义。
+- 已补齐 Companion / Evidence 的内存级长期回写模型，显式保存 `user_id`、锚点、来源引用、白板动作日志与 `partial_failure` 等状态。
+- 已新增 FastAPI unit / integration tests，并通过 `python -m pytest` 全量回归与 `mvn -pl ruoyi-modules/ruoyi-xiaomai -am -DskipTests compile` 编译校验。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/10-5-companion-与-evidence-问答长期承接.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `packages/fastapi-backend/app/features/companion/long_term_records.py`
+- `packages/fastapi-backend/app/features/companion/routes.py`
+- `packages/fastapi-backend/app/features/companion/service.py`
+- `packages/fastapi-backend/app/features/knowledge/routes.py`
+- `packages/fastapi-backend/app/features/knowledge/service.py`
+- `packages/fastapi-backend/tests/unit/test_companion_evidence_persistence.py`
+- `packages/fastapi-backend/tests/integration/test_companion_evidence_api_persistence.py`
+- `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_companion_evidence_log.sql`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/companion/domain/XmCompanionTurn.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/companion/domain/XmWhiteboardActionLog.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/companion/mapper/XmCompanionTurnMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/companion/mapper/XmWhiteboardActionLogMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/knowledge/domain/XmKnowledgeChatLog.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/knowledge/mapper/XmKnowledgeChatLogMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/companion/XmCompanionTurnMapper.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/companion/XmWhiteboardActionLogMapper.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/knowledge/XmKnowledgeChatLogMapper.xml`
+
+## Change Log
+
+- 2026-03-29：完成 Story 10.5 的 Companion / Evidence 长期问答承接，实现结构化白板动作日志、Evidence 历史表语义和 FastAPI 回看测试闭环。
