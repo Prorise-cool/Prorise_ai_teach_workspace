@@ -105,12 +105,14 @@ GPT-5 Codex
 
 - `/Volumes/DataDisk/Projects/ProriseProjects/worktrees/prorise-story-2-4/packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/providers/test_factory.py packages/fastapi-backend/tests/unit/providers/test_failover.py packages/fastapi-backend/tests/unit/test_task_contracts.py packages/fastapi-backend/tests/unit/task_framework/test_runtime_store.py`
 - `/Volumes/DataDisk/Projects/ProriseProjects/worktrees/prorise-story-2-4/packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/providers/test_factory.py packages/fastapi-backend/tests/unit/providers/test_failover.py packages/fastapi-backend/tests/unit/task_framework/test_runtime_store.py packages/fastapi-backend/tests/unit/test_task_contracts.py packages/fastapi-backend/tests/test_health.py packages/fastapi-backend/tests/test_bootstrap_routes.py`
+- `packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/providers/test_failover.py`
 
 ### Completion Notes List
 
 - 已新增 `ProviderHealthStore` 与 `ProviderFailoverService`，把健康缓存、失败分类和主备切换从业务层抽离到 provider 基础设施层。
 - 已在 `ProviderFactory` 暴露 `generate_with_failover` / `synthesize_with_failover` 统一入口，业务侧无需再手写主备切换循环。
 - 已补齐 `provider_switch` 契约文档、健康缓存 mock 与 failover 单测，覆盖主链命中、缓存跳过、TTL 过期恢复与全链失败收敛。
+- 已收紧 failover 对非可切备异常的处理，参数错误、配置错误与鉴权失败不再误写健康缓存或继续切到备 Provider。
 
 ### File List
 

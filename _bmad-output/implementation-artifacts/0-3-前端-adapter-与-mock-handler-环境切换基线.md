@@ -18,22 +18,22 @@ so that 正式页面可以在真实后端缺席时仍然按契约推进到可验
 
 ## Tasks / Subtasks
 
-- [ ] 冻结 adapter 接口分层（AC: 1）
-  - [ ] 约束页面只调用 `services/*` 或 `services/api/adapters/*`，不直接散落 `fetch/axios` 调用。
-  - [ ] 明确 real adapter、mock adapter 与领域类型之间的边界。
-  - [ ] 约束分页、详情、任务状态和 SSE 消费使用同一套领域对象。
-- [ ] 冻结 mock handler 与 fixture 组织方式（AC: 2, 3）
-  - [ ] 统一 `fixtures/`、`handlers/`、`index.ts` 的职责。
-  - [ ] 为列表、详情、任务状态、SSE 事件、401 / 403、空结果提供标准样例。
-  - [ ] 定义“状态流 mock”规则，避免只返回 happy path。
-- [ ] 建立环境切换规则（AC: 1, 2）
-  - [ ] 统一 mock / real 模式切换变量与初始化入口。
-  - [ ] 明确 Storybook、Vitest、本地 dev 的 mock 接入方式。
-  - [ ] 确保切换模式不要求改页面组件代码。
-- [ ] 增加前端消费测试（AC: 1, 2, 3）
-  - [ ] adapter 测试覆盖 real / mock 映射一致性。
-  - [ ] handler / fixture 测试覆盖成功、失败、权限失败、处理中等状态。
-  - [ ] smoke 测试覆盖默认启动时的数据层初始化。
+- [x] 冻结 adapter 接口分层（AC: 1）
+  - [x] 约束页面只调用 `services/*` 或 `services/api/adapters/*`，不直接散落 `fetch/axios` 调用。
+  - [x] 明确 real adapter、mock adapter 与领域类型之间的边界。
+  - [x] 约束分页、详情、任务状态和 SSE 消费使用同一套领域对象。
+- [x] 冻结 mock handler 与 fixture 组织方式（AC: 2, 3）
+  - [x] 统一 `fixtures/`、`handlers/`、`index.ts` 的职责。
+  - [x] 为列表、详情、任务状态、SSE 事件、401 / 403、空结果提供标准样例。
+  - [x] 定义“状态流 mock”规则，避免只返回 happy path。
+- [x] 建立环境切换规则（AC: 1, 2）
+  - [x] 统一 mock / real 模式切换变量与初始化入口。
+  - [x] 明确 Storybook、Vitest、本地 dev 的 mock 接入方式。
+  - [x] 确保切换模式不要求改页面组件代码。
+- [x] 增加前端消费测试（AC: 1, 2, 3）
+  - [x] adapter 测试覆盖 real / mock 映射一致性。
+  - [x] handler / fixture 测试覆盖成功、失败、权限失败、处理中等状态。
+  - [x] smoke 测试覆盖默认启动时的数据层初始化。
 
 ## Dev Notes
 
@@ -109,7 +109,7 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pnpm --filter @xiaomai/student-web test`
 
 ### Completion Notes List
 
@@ -118,3 +118,25 @@ GPT-5 Codex
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-3-前端-adapter-与-mock-handler-环境切换基线.md`
+- `packages/student-web/src/services/api/client.ts`
+- `packages/student-web/src/services/api/adapters/index.ts`
+- `packages/student-web/src/services/api/adapters/base-adapter.ts`
+- `packages/student-web/src/services/api/adapters/auth-adapter.ts`
+- `packages/student-web/src/services/api/adapters/task-adapter.ts`
+- `packages/student-web/src/services/mock/index.ts`
+- `packages/student-web/src/services/mock/browser.ts`
+- `packages/student-web/src/services/mock/handlers/auth.ts`
+- `packages/student-web/src/services/mock/handlers/task.ts`
+- `packages/student-web/src/services/mock/fixtures/auth.ts`
+- `packages/student-web/src/services/mock/fixtures/task.ts`
+- `packages/student-web/src/services/sse/index.ts`
+- `packages/student-web/src/types/env.d.ts`
+- `packages/student-web/src/test/setup.ts`
+- `packages/student-web/src/test/services/api/adapters/base-adapter.test.ts`
+- `packages/student-web/src/test/services/api/adapters/auth-adapter.test.ts`
+- `packages/student-web/src/test/services/api/adapters/task-adapter.test.ts`
+- `packages/student-web/src/test/services/mock/auth-handlers.test.ts`
+- `packages/student-web/src/test/services/mock/task-handlers.test.ts`
+- `packages/student-web/src/test/services/mock/fixtures/auth.test.ts`
+- `packages/student-web/src/test/services/mock/fixtures/task-contract-assets.test.ts`
+- `packages/student-web/src/test/services/sse/task-event-stream.test.ts`

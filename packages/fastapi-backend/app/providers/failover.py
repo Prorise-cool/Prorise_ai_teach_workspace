@@ -4,13 +4,16 @@ import asyncio
 from dataclasses import dataclass, field
 from inspect import isawaitable
 from types import MappingProxyType
-from typing import Any, Awaitable, Callable, Generic, Mapping, Sequence, TypeVar
+from typing import Any, Awaitable, Callable, Mapping, Sequence, TypeVar
 
 from app.core.sse import TaskProgressEvent
 from app.providers.health import ProviderHealthStore
 from app.providers.protocols import (
     LLMProvider,
+    ProviderConfigurationError,
     ProviderError,
+    ProviderNotFoundError,
+    ProviderProtocolError,
     ProviderResult,
     TTSProvider,
 )
@@ -24,6 +27,14 @@ RETRYABLE_ERROR_CODES = {
     TaskErrorCode.PROVIDER_TIMEOUT,
     TaskErrorCode.PROVIDER_UNAVAILABLE,
 }
+AUTHENTICATION_ERROR_MARKERS = (
+    "unauthorized",
+    "forbidden",
+    "authentication failed",
+    "invalid api key",
+    "invalid_api_key",
+    "access denied",
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -31,6 +42,14 @@ class ProviderAttemptFailure:
     provider_id: str
     error_code: TaskErrorCode
     reason: str
+
+
+@dataclass(slots=True, frozen=True)
+class ProviderErrorClassification:
+    error_code: TaskErrorCode
+    reason: str
+    retryable: bool
+    mark_unhealthy: bool
 
 
 @dataclass(slots=True, frozen=True)
@@ -83,6 +102,16 @@ class ProviderAllFailedError(ProviderError):
         return TaskErrorCode.PROVIDER_ALL_FAILED
 
 
+class ProviderTerminalError(ProviderError):
+    def __init__(self, message: str, *, error_code: TaskErrorCode) -> None:
+        super().__init__(message)
+        self._error_code = error_code
+
+    @property
+    def error_code(self) -> TaskErrorCode:
+        return self._error_code
+
+
 class ProviderFailoverService:
     def __init__(self, health_store: ProviderHealthStore) -> None:
         self._health_store = health_store
@@ -131,25 +160,26 @@ class ProviderFailoverService:
                 error_code = TaskErrorCode(
                     cached.error_code or TaskErrorCode.PROVIDER_UNAVAILABLE
                 )
-                reason = cached.reason or "cached-unhealthy"
-                failures.append(
-                    ProviderAttemptFailure(
-                        provider_id=provider.provider_id,
-                        error_code=error_code,
-                        reason=reason,
+                if error_code in RETRYABLE_ERROR_CODES:
+                    reason = cached.reason or "cached-unhealthy"
+                    failures.append(
+                        ProviderAttemptFailure(
+                            provider_id=provider.provider_id,
+                            error_code=error_code,
+                            reason=reason,
+                        )
                     )
-                )
 
-                if index < len(provider_chain) - 1:
-                    switch = ProviderSwitch(
-                        from_provider=provider.provider_id,
-                        to_provider=provider_chain[index + 1].provider_id,
-                        reason=reason,
-                        error_code=error_code,
-                        metadata={"source": "health-cache"},
-                    )
-                    await self._emit_switch(emit_switch, switch)
-                continue
+                    if index < len(provider_chain) - 1:
+                        switch = ProviderSwitch(
+                            from_provider=provider.provider_id,
+                            to_provider=provider_chain[index + 1].provider_id,
+                            reason=reason,
+                            error_code=error_code,
+                            metadata={"source": "health-cache"},
+                        )
+                        await self._emit_switch(emit_switch, switch)
+                    continue
 
             attempts = max(provider.config.retry_attempts + 1, 1)
             for attempt_index in range(attempts):
@@ -159,32 +189,37 @@ class ProviderFailoverService:
                         timeout=provider.config.timeout_seconds,
                     )
                 except Exception as exc:  # pragma: no cover - covered by tests through classify
-                    error_code, reason = classify_provider_error(exc)
-                    self._health_store.mark_failure(
-                        provider.provider_id,
-                        reason=reason,
-                        error_code=error_code,
-                        source="provider-call",
-                    )
-                    retryable = error_code in RETRYABLE_ERROR_CODES
+                    classification = classify_provider_error(exc)
+                    if classification.mark_unhealthy:
+                        self._health_store.mark_failure(
+                            provider.provider_id,
+                            reason=classification.reason,
+                            error_code=classification.error_code,
+                            source="provider-call",
+                        )
                     failures.append(
                         ProviderAttemptFailure(
                             provider_id=provider.provider_id,
-                            error_code=error_code,
-                            reason=reason,
+                            error_code=classification.error_code,
+                            reason=classification.reason,
                         )
                     )
-                    if retryable and attempt_index < attempts - 1:
+                    if classification.retryable and attempt_index < attempts - 1:
                         continue
-                    if retryable and index < len(provider_chain) - 1:
+                    if classification.retryable and index < len(provider_chain) - 1:
                         switch = ProviderSwitch(
                             from_provider=provider.provider_id,
                             to_provider=provider_chain[index + 1].provider_id,
-                            reason=reason,
-                            error_code=error_code,
+                            reason=classification.reason,
+                            error_code=classification.error_code,
                             metadata={"attempt": attempt_index + 1},
                         )
                         await self._emit_switch(emit_switch, switch)
+                    if not classification.retryable:
+                        raise ProviderTerminalError(
+                            classification.reason,
+                            error_code=classification.error_code,
+                        ) from exc
                     break
                 else:
                     self._health_store.mark_success(
@@ -207,17 +242,64 @@ class ProviderFailoverService:
             await maybe_result
 
 
-def classify_provider_error(exc: Exception) -> tuple[TaskErrorCode, str]:
+def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
     message = str(exc).strip() or exc.__class__.__name__
     lowered = message.lower()
     if isinstance(exc, TimeoutError):
-        return TaskErrorCode.PROVIDER_TIMEOUT, message
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_TIMEOUT,
+            reason=message,
+            retryable=True,
+            mark_unhealthy=True,
+        )
     if isinstance(exc, ConnectionError):
-        return TaskErrorCode.PROVIDER_UNAVAILABLE, message
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+            reason=message,
+            retryable=True,
+            mark_unhealthy=True,
+        )
     if "rate limit" in lowered or "429" in lowered:
-        return TaskErrorCode.PROVIDER_UNAVAILABLE, message
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+            reason=message,
+            retryable=True,
+            mark_unhealthy=True,
+        )
     if isinstance(exc, ProviderAllFailedError):
-        return TaskErrorCode.PROVIDER_ALL_FAILED, message
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_ALL_FAILED,
+            reason=message,
+            retryable=False,
+            mark_unhealthy=False,
+        )
+    if isinstance(
+        exc,
+        (
+            ProviderConfigurationError,
+            ProviderNotFoundError,
+            ProviderProtocolError,
+            ValueError,
+        ),
+    ) or any(marker in lowered for marker in AUTHENTICATION_ERROR_MARKERS):
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.INVALID_INPUT,
+            reason=message,
+            retryable=False,
+            mark_unhealthy=False,
+        )
     if isinstance(exc, ProviderError):
-        return TaskErrorCode.PROVIDER_UNAVAILABLE, message
-    return TaskErrorCode.PROVIDER_UNAVAILABLE, message
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode(
+                getattr(exc, "error_code", TaskErrorCode.UNHANDLED_EXCEPTION)
+            ),
+            reason=message,
+            retryable=False,
+            mark_unhealthy=False,
+        )
+    return ProviderErrorClassification(
+        error_code=TaskErrorCode.UNHANDLED_EXCEPTION,
+        reason=message,
+        retryable=False,
+        mark_unhealthy=False,
+    )

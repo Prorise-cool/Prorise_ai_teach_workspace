@@ -23,7 +23,10 @@ public interface AuditCenterMapper extends BaseMapperPlus<XmLearningRecord, Audi
         @Param("pageSize") long pageSize
     );
 
-    List<AuditRecordVo> selectAuditList(@Param("query") AuditRecordBo query);
+    List<AuditRecordVo> selectAuditList(
+        @Param("query") AuditRecordBo query,
+        @Param("limit") long limit
+    );
 
     AuditRecordVo selectAuditDetail(
         @Param("userId") String userId,

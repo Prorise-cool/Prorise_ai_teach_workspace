@@ -33,6 +33,21 @@ so that 登录链路、受保护路由和首页入口可以并行开发而不互
   - [x] 为 adapter、payload mapping、mock handler 增加单元测试。
   - [x] 为未登录、已登录、权限不足三类状态准备测试夹具。
 
+### Story Metadata
+
+- Story ID: `1.1`
+- Story Type: `Contract Story`
+- Epic: `Epic 1`
+- Depends On: `Epic 0`，重点依赖 `0.2` 契约资产规范、`0.3` adapter / mock 基线、`0.4` 统一响应输出
+- Blocks: `1.2`、`1.3`、`1.4`、`1.5`、`1.6`
+- Contract Asset Path: `contracts/auth/`
+- Mock Asset Path: `mocks/auth/`
+- API / Event / Schema Impact: 冻结登录 / 注册 / 登出 / 当前用户 payload、`401/403` 语义、`returnTo` 参数格式与 adapter 映射规则
+- Persistence Impact: 无新增长期持久化；复用 RuoYi 在线态与认证 Redis 语义
+- Frontend States Covered: 未登录、登录成功、注册成功、权限不足、会话失效、回跳恢复
+- Error States Covered: `401`、`403`、凭证错误、表单校验失败、回跳参数非法
+- Acceptance Test Notes: 必须覆盖 adapter mapping、mock handler、`401/403` 分流与会话样例一致性
+
 ## Dev Notes
 
 ### Business Context

@@ -35,6 +35,21 @@ so that 学后巩固结果能够持续沉淀而不是一次性消费。
   - [x] 覆盖错题本生成、推荐结果生成和学习路径保存 / 更新。
   - [x] 覆盖学习路径版本或更新时间可追溯，不因覆盖写入丢失关键历史信息。
 
+### Story Metadata
+
+- Story ID: `10.6`
+- Story Type: `Persistence Story`
+- Epic: `Epic 10`
+- Depends On: `10.1`、`10.2`、`10.3`
+- Blocks: `8.7`、`9.1`、`9.2`、`10.7`、`10.8`
+- Contract Asset Path: `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_learning_result.sql`
+- Mock Asset Path: `N/A`
+- API / Event / Schema Impact: 冻结 `checkpoint / quiz / wrongbook / recommendation / path` 的结果类型、来源字段、详情定位与版本 / 更新时间语义
+- Persistence Impact: `xm_quiz_result`、`xm_learning_path` 及相关结果字段承接 Learning Coach 长期结果
+- Frontend States Covered: checkpoint 完成、quiz 完成、错题生成、推荐生成、路径保存 / 更新、学习中心重开
+- Error States Covered: 结果类型混淆、路径历史不可追溯、推荐 / 错题被误归类为普通历史、详情定位字段缺失
+- Acceptance Test Notes: 必须覆盖五类结果持久化、路径版本追溯与学习中心按类型区分消费
+
 ## Dev Notes
 
 ### Business Context
