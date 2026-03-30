@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/tasks/task-progress-event.schema.json",
+  "title": "TaskProgressEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event",
+    "taskId",
+    "taskType",
+    "status",
+    "progress",
+    "message",
+    "timestamp",
+    "requestId",
+    "errorCode"
+  ],
+  "properties": {
+    "event": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "progress",
+        "provider_switch",
+        "heartbeat",
+        "completed",
+        "failed",
+        "snapshot"
+      ]
+    },
+    "taskId": {
+      "type": "string"
+    },
+    "taskType": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "processing", "completed", "failed", "cancelled"]
+    },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "message": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requestId": {
+      "type": ["string", "null"]
+    },
+    "errorCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "TASK_INVALID_INPUT",
+        "TASK_PROVIDER_UNAVAILABLE",
+        "TASK_PROVIDER_TIMEOUT",
+        "TASK_PROVIDER_ALL_FAILED",
+        "TASK_CANCELLED",
+        "TASK_UNHANDLED_EXCEPTION",
+        null
+      ]
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

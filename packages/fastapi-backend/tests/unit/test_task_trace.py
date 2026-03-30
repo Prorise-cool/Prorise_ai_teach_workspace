@@ -69,7 +69,10 @@ def test_task_scheduler_keeps_request_id_and_task_id_through_success_logs_and_ss
     assert [event.event for event in events] == ["progress", "completed"]
     assert all(event.task_id == context.task_id for event in events)
     assert all(event.request_id == context.request_id for event in events)
-    assert all(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", event.timestamp) for event in events)
+    assert all(
+        re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", event.timestamp)
+        for event in events
+    )
 
     trace_records = [
         record

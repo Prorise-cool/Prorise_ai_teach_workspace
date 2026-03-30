@@ -1,0 +1,10 @@
+{
+  "taskId": "video_20260330130500_ij90kl12",
+  "taskType": "video",
+  "status": "cancelled",
+  "progress": 0,
+  "message": "任务已取消",
+  "timestamp": "2026-03-30T13:05:18Z",
+  "requestId": "req_task_cancelled_001",
+  "errorCode": "TASK_CANCELLED"
+}

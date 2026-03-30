@@ -10,7 +10,7 @@ from app.shared.task_framework.status import TaskErrorCode, TaskStatus
 class TaskResult:
     status: TaskStatus
     message: str
-    # Story 0.1 只保留错误码扩展位，正式字典由 Story 2.1 冻结。
+    progress: int | None = None
     error_code: TaskErrorCode | None = None
 
 

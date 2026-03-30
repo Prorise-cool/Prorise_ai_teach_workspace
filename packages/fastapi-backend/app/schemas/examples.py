@@ -43,13 +43,14 @@ TASK_SNAPSHOT_SUCCESS_EXAMPLE = {
     "code": 200,
     "msg": "查询成功",
     "data": {
-        "task_id": "video_20260329161500_ab12cd34",
-        "task_type": "video",
+        "taskId": "video_20260329161500_ab12cd34",
+        "taskType": "video",
         "status": "processing",
         "progress": 45,
         "message": "正在生成分镜与脚本",
-        "error_code": None,
-        "updated_at": ISO_8601_EXAMPLE
+        "timestamp": ISO_8601_EXAMPLE,
+        "requestId": "req_20260329_processing",
+        "errorCode": None
     }
 }
 
@@ -58,21 +59,32 @@ TASK_LIST_SUCCESS_EXAMPLE = {
     "msg": "查询成功",
     "rows": [
         {
-            "task_id": "video_20260329161500_ab12cd34",
-            "task_type": "video",
+            "id": "video_20260329161500_ab12cd34",
+            "title": "任务 video_20260329161500_ab12cd34",
+            "taskId": "video_20260329161500_ab12cd34",
+            "taskType": "video",
             "status": "processing",
             "progress": 45,
-            "updated_at": ISO_8601_EXAMPLE
+            "message": "正在生成分镜与脚本",
+            "timestamp": ISO_8601_EXAMPLE,
+            "requestId": "req_20260329_processing",
+            "errorCode": None
         },
         {
-            "task_id": "classroom_20260329162000_ef56gh78",
-            "task_type": "classroom",
+            "id": "classroom_20260329162000_ef56gh78",
+            "title": "任务 classroom_20260329162000_ef56gh78",
+            "taskId": "classroom_20260329162000_ef56gh78",
+            "taskType": "classroom",
             "status": "completed",
             "progress": 100,
-            "updated_at": "2026-03-29T16:20:00Z"
+            "message": "课堂任务执行完成",
+            "timestamp": "2026-03-29T16:20:00Z",
+            "requestId": "req_20260329_completed",
+            "errorCode": None
         }
     ],
-    "total": 2
+    "total": 2,
+    "requestId": "req_20260329_list"
 }
 
 

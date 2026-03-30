@@ -76,7 +76,7 @@ def get_logger(name: str) -> logging.Logger:
 
 def format_trace_timestamp(value: datetime | None = None) -> str:
     current = value or datetime.now(UTC)
-    return current.strftime(LOG_DATE_FORMAT)
+    return current.isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def generate_request_id() -> str:
