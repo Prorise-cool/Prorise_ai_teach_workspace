@@ -121,7 +121,7 @@ public class XmModuleBoundaryServiceImpl implements IXmModuleBoundaryService {
         buildResource(
             "coach-result",
             "Learning Coach 结果",
-            "xm_quiz_result,xm_learning_path",
+            "xm_learning_record,xm_quiz_result,xm_learning_wrongbook,xm_learning_recommendation,xm_learning_path",
             XmPermissionConstants.LEARNING_COACH_PREFIX,
             "learningCoach",
             "xiaomai/learning-coach/index",
@@ -130,7 +130,7 @@ public class XmModuleBoundaryServiceImpl implements IXmModuleBoundaryService {
             "list,query,export",
             Boolean.TRUE,
             Boolean.TRUE,
-            "错题、推荐和路径结果统一挂在 quiz/path 宿主，不新增平行 wrongbook 表。"
+            "checkpoint、quiz、错题、推荐和路径按长期宿主表查询，后台与审计统一走手写聚合查询。"
         ),
         buildResource(
             "audit-center",

@@ -92,13 +92,13 @@ public class ClassroomSessionServiceImpl implements IClassroomSessionService {
         lqw.eq(StringUtils.isNotBlank(bo.getTaskState()), ClassroomSession::getTaskState, bo.getTaskState());
         lqw.like(StringUtils.isNotBlank(bo.getSummary()), ClassroomSession::getSummary, bo.getSummary());
         lqw.like(StringUtils.isNotBlank(bo.getErrorSummary()), ClassroomSession::getErrorSummary, bo.getErrorSummary());
-        lqw.like(StringUtils.isNotBlank(bo.getSourceSessionId()), ClassroomSession::getSourceSessionId, bo.getSourceSessionId());
+        lqw.eq(StringUtils.isNotBlank(bo.getSourceSessionId()), ClassroomSession::getSourceSessionId, bo.getSourceSessionId());
         lqw.like(StringUtils.isNotBlank(bo.getSourceArtifactRef()), ClassroomSession::getSourceArtifactRef, bo.getSourceArtifactRef());
         lqw.like(StringUtils.isNotBlank(bo.getReplayHint()), ClassroomSession::getReplayHint, bo.getReplayHint());
-        lqw.between(params.get("beginCreateTime") != null && params.get("endCreateTime") != null,
-            ClassroomSession::getCreateTime, params.get("beginCreateTime"), params.get("endCreateTime"));
-        lqw.between(params.get("beginUpdateTime") != null && params.get("endUpdateTime") != null,
-            ClassroomSession::getUpdateTime, params.get("beginUpdateTime"), params.get("endUpdateTime"));
+        lqw.ge(params.get("beginCreateTime") != null, ClassroomSession::getCreateTime, params.get("beginCreateTime"));
+        lqw.le(params.get("endCreateTime") != null, ClassroomSession::getCreateTime, params.get("endCreateTime"));
+        lqw.ge(params.get("beginUpdateTime") != null, ClassroomSession::getUpdateTime, params.get("beginUpdateTime"));
+        lqw.le(params.get("endUpdateTime") != null, ClassroomSession::getUpdateTime, params.get("endUpdateTime"));
         lqw.orderByDesc(ClassroomSession::getUpdateTime, ClassroomSession::getId);
         return lqw;
     }

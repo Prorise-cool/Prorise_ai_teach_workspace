@@ -17,3 +17,10 @@ async def learning_persistence_preview(
     request: LearningPersistenceRequest
 ) -> LearningPersistenceResponse:
     return await service.prepare_persistence_preview(request)
+
+
+@router.post("/persistence", response_model=LearningPersistenceResponse)
+async def learning_persistence(
+    request: LearningPersistenceRequest
+) -> LearningPersistenceResponse:
+    return await service.persist_results(request)

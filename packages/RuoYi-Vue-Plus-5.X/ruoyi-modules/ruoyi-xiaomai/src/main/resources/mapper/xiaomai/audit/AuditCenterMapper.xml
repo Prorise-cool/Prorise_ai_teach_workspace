@@ -159,6 +159,127 @@
             AND fav.source_result_id = COALESCE(lr.source_result_id, CAST(lr.record_id AS CHAR))
             AND fav.active_flag = '1'
         WHERE lr.source_table = 'xm_learning_record'
+          AND lr.result_type = 'checkpoint'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_quiz_result:', CAST(qr.quiz_result_id AS CHAR)) AS record_id,
+            CAST(qr.user_id AS CHAR) AS user_id,
+            'quiz' AS result_type,
+            qr.source_type AS source_type,
+            'xm_quiz_result' AS source_table,
+            COALESCE(qr.source_result_id, CAST(qr.quiz_result_id AS CHAR)) AS source_result_id,
+            qr.source_session_id AS source_session_id,
+            qr.status AS status,
+            '测验结果' AS display_title,
+            qr.analysis_summary AS summary,
+            qr.detail_ref AS detail_ref,
+            COALESCE(qr.source_time, qr.update_time, qr.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            CASE WHEN rec.deleted_flag = '1' THEN TRUE ELSE FALSE END AS deleted,
+            CASE WHEN rec.deleted_flag = '1' THEN COALESCE(rec.update_time, rec.create_time) END AS deleted_time
+        FROM xm_quiz_result qr
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(qr.user_id AS CHAR)
+            AND rec.source_table = 'xm_quiz_result'
+            AND rec.source_result_id = COALESCE(qr.source_result_id, CAST(qr.quiz_result_id AS CHAR))
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(qr.user_id AS CHAR)
+            AND fav.source_table = 'xm_quiz_result'
+            AND fav.source_result_id = COALESCE(qr.source_result_id, CAST(qr.quiz_result_id AS CHAR))
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_wrongbook:', CAST(wb.wrongbook_id AS CHAR)) AS record_id,
+            CAST(wb.user_id AS CHAR) AS user_id,
+            'wrongbook' AS result_type,
+            wb.source_type AS source_type,
+            'xm_learning_wrongbook' AS source_table,
+            COALESCE(wb.source_result_id, CAST(wb.wrongbook_id AS CHAR)) AS source_result_id,
+            wb.source_session_id AS source_session_id,
+            wb.status AS status,
+            '错题本' AS display_title,
+            wb.analysis_summary AS summary,
+            wb.detail_ref AS detail_ref,
+            COALESCE(wb.source_time, wb.update_time, wb.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            CASE WHEN rec.deleted_flag = '1' THEN TRUE ELSE FALSE END AS deleted,
+            CASE WHEN rec.deleted_flag = '1' THEN COALESCE(rec.update_time, rec.create_time) END AS deleted_time
+        FROM xm_learning_wrongbook wb
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(wb.user_id AS CHAR)
+            AND rec.source_table = 'xm_learning_wrongbook'
+            AND rec.source_result_id = COALESCE(wb.source_result_id, CAST(wb.wrongbook_id AS CHAR))
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(wb.user_id AS CHAR)
+            AND fav.source_table = 'xm_learning_wrongbook'
+            AND fav.source_result_id = COALESCE(wb.source_result_id, CAST(wb.wrongbook_id AS CHAR))
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_recommendation:', CAST(lr2.recommendation_id AS CHAR)) AS record_id,
+            CAST(lr2.user_id AS CHAR) AS user_id,
+            'recommendation' AS result_type,
+            lr2.source_type AS source_type,
+            'xm_learning_recommendation' AS source_table,
+            COALESCE(lr2.source_result_id, CAST(lr2.recommendation_id AS CHAR)) AS source_result_id,
+            lr2.source_session_id AS source_session_id,
+            lr2.status AS status,
+            '知识推荐' AS display_title,
+            lr2.recommendation_reason AS summary,
+            lr2.detail_ref AS detail_ref,
+            COALESCE(lr2.source_time, lr2.update_time, lr2.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            CASE WHEN rec.deleted_flag = '1' THEN TRUE ELSE FALSE END AS deleted,
+            CASE WHEN rec.deleted_flag = '1' THEN COALESCE(rec.update_time, rec.create_time) END AS deleted_time
+        FROM xm_learning_recommendation lr2
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(lr2.user_id AS CHAR)
+            AND rec.source_table = 'xm_learning_recommendation'
+            AND rec.source_result_id = COALESCE(lr2.source_result_id, CAST(lr2.recommendation_id AS CHAR))
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(lr2.user_id AS CHAR)
+            AND fav.source_table = 'xm_learning_recommendation'
+            AND fav.source_result_id = COALESCE(lr2.source_result_id, CAST(lr2.recommendation_id AS CHAR))
+            AND fav.active_flag = '1'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_path:', CAST(lp.path_id AS CHAR)) AS record_id,
+            CAST(lp.user_id AS CHAR) AS user_id,
+            'path' AS result_type,
+            lp.source_type AS source_type,
+            'xm_learning_path' AS source_table,
+            COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR)) AS source_result_id,
+            lp.source_session_id AS source_session_id,
+            lp.status AS status,
+            '学习路径' AS display_title,
+            lp.path_summary AS summary,
+            lp.detail_ref AS detail_ref,
+            COALESCE(lp.source_time, lp.update_time, lp.create_time) AS source_time,
+            CASE WHEN fav.active_flag = '1' THEN TRUE ELSE FALSE END AS favorite,
+            fav.favorite_time AS favorite_time,
+            CASE WHEN rec.deleted_flag = '1' THEN TRUE ELSE FALSE END AS deleted,
+            CASE WHEN rec.deleted_flag = '1' THEN COALESCE(rec.update_time, rec.create_time) END AS deleted_time
+        FROM xm_learning_path lp
+        LEFT JOIN xm_learning_record rec
+            ON rec.user_id = CAST(lp.user_id AS CHAR)
+            AND rec.source_table = 'xm_learning_path'
+            AND rec.source_result_id = COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR))
+        LEFT JOIN xm_learning_favorite fav
+            ON fav.user_id = CAST(lp.user_id AS CHAR)
+            AND fav.source_table = 'xm_learning_path'
+            AND fav.source_result_id = COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR))
+            AND fav.active_flag = '1'
     </sql>
 
     <sql id="audit_where">

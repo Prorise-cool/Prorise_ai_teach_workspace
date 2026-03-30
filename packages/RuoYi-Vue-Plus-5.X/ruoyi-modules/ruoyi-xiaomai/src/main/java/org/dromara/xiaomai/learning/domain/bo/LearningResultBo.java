@@ -13,9 +13,12 @@ import org.dromara.common.mybatis.core.domain.BaseEntity;
 @EqualsAndHashCode(callSuper = true)
 public class LearningResultBo extends BaseEntity {
 
+    private String userId;
     private String resultType;
     private String sourceType;
     private String tableName;
-    private String statusRule;
-    private String versionRule;
+    private String status;
+    private String keyword;
+    private java.util.Date beginSourceTime;
+    private java.util.Date endSourceTime;
 }

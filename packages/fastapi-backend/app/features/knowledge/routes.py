@@ -14,12 +14,12 @@ async def knowledge_bootstrap() -> dict[str, str]:
 
 @router.post("/chat-logs", response_model=KnowledgeChatSnapshot)
 async def create_knowledge_chat_log(payload: KnowledgeChatCreateRequest) -> KnowledgeChatSnapshot:
-    return service.persist_chat_log(payload)
+    return await service.persist_chat_log(payload)
 
 
 @router.get("/chat-logs/{chat_log_id}", response_model=KnowledgeChatSnapshot)
 async def get_knowledge_chat_log(chat_log_id: str) -> KnowledgeChatSnapshot:
-    snapshot = service.get_chat_log(chat_log_id)
+    snapshot = await service.get_chat_log(chat_log_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Knowledge chat log not found")
     return snapshot

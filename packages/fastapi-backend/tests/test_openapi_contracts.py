@@ -19,6 +19,7 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     snapshot_route = payload["paths"]["/api/v1/contracts/task-snapshot"]["get"]
     list_route = payload["paths"]["/api/v1/contracts/tasks"]["get"]
     learning_preview_route = payload["paths"]["/api/v1/learning/persistence-preview"]["post"]
+    learning_persist_route = payload["paths"]["/api/v1/learning/persistence"]["post"]
 
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["error_code"] == "TASK_PROVIDER_TIMEOUT"
@@ -27,6 +28,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["total"] == 2
     assert learning_preview_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
     assert learning_preview_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
+    assert learning_persist_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
+    assert learning_persist_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
 
 
 def test_shared_contract_schema_assets_exist_and_match_response_shape() -> None:

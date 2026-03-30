@@ -45,6 +45,8 @@ def test_permission_sql_covers_epic10_resources() -> None:
         "video:task:list",
         "classroom:session:list",
         "learning:record:export",
+        "learning:record:remove",
+        "learning:favorite:add",
         "learning:favorite:remove",
         "companion:turn:query",
         "evidence:chat:export",

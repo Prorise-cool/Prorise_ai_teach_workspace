@@ -21,7 +21,7 @@ public class XmCompanionTurn extends BaseEntity {
 
     private String tenantId;
 
-    private Long userId;
+    private String userId;
 
     private String sessionId;
 

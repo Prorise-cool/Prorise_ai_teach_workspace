@@ -54,6 +54,15 @@ class LearningResultInput(BaseModel):
     occurred_at: datetime | None = None
     updated_at: datetime | None = None
     score: int | None = Field(default=None, ge=0, le=100)
+    question_total: int | None = Field(default=None, ge=0)
+    correct_total: int | None = Field(default=None, ge=0)
+    question_text: str | None = None
+    wrong_answer_text: str | None = None
+    reference_answer_text: str | None = None
+    target_type: str | None = None
+    target_ref_id: str | None = None
+    path_title: str | None = None
+    step_count: int | None = Field(default=None, ge=0)
     analysis_summary: str | None = None
     status: LearningResultStatus = LearningResultStatus.COMPLETED
     detail_ref: str | None = None
@@ -80,6 +89,15 @@ class LearningPersistenceItem(BaseModel):
     occurred_at: datetime
     updated_at: datetime
     score: int | None = None
+    question_total: int | None = None
+    correct_total: int | None = None
+    question_text: str | None = None
+    wrong_answer_text: str | None = None
+    reference_answer_text: str | None = None
+    target_type: str | None = None
+    target_ref_id: str | None = None
+    path_title: str | None = None
+    step_count: int | None = None
     analysis_summary: str | None = None
     status: LearningResultStatus
     detail_ref: str | None = None

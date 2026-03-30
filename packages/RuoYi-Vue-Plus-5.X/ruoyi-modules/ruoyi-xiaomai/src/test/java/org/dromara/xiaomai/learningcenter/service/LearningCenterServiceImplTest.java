@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
  *
  * @author Codex
  */
+@Tag("dev")
 @Tag("local")
 public class LearningCenterServiceImplTest {
 

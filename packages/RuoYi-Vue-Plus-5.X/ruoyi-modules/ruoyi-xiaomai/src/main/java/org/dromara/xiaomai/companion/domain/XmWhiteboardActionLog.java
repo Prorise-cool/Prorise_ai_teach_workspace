@@ -23,7 +23,7 @@ public class XmWhiteboardActionLog extends BaseEntity {
 
     private String turnId;
 
-    private Long userId;
+    private String userId;
 
     private String sessionId;
 

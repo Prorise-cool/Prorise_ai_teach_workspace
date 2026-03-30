@@ -87,42 +87,12 @@ class TaskMetadataSnapshot(BaseModel):
         return _format_ruoyi_datetime(value)
 
     def to_ruoyi_payload(self) -> dict[str, Any]:
-        mapper = RuoYiMapper(
-            field_aliases={
-                "task_id": "task_id",
-                "user_id": "user_id",
-                "task_type": "task_type",
-                "status": "task_state",
-                "summary": "summary",
-                "result_ref": "result_ref",
-                "detail_ref": "detail_ref",
-                "error_summary": "error_summary",
-                "source_session_id": "source_session_id",
-                "source_artifact_ref": "source_artifact_ref",
-                "replay_hint": "replay_hint",
-                "created_at": "create_time",
-                "started_at": "start_time",
-                "completed_at": "complete_time",
-                "failed_at": "fail_time",
-                "updated_at": "update_time"
-            },
-            status_fields={
-                "status": {status.value: status.value for status in TaskStatus}
-            },
-            datetime_fields={
-                "created_at",
-                "started_at",
-                "completed_at",
-                "failed_at",
-                "updated_at"
-            }
-        )
         payload = self.model_dump(mode="python")
         for field_name in ("created_at", "started_at", "completed_at", "failed_at", "updated_at"):
             value = payload.get(field_name)
             if isinstance(value, datetime) and value.tzinfo is not None:
                 payload[field_name] = value.astimezone(UTC).replace(tzinfo=None)
-        return mapper.to_ruoyi(payload)
+        return TASK_METADATA_RUOYI_MAPPER.to_ruoyi(payload)
 
 
 class TaskMetadataPreviewResponse(BaseModel):
@@ -142,6 +112,37 @@ TASK_TABLE_BY_TYPE: dict[str, str] = {
 }
 
 
+TASK_METADATA_RUOYI_MAPPER = RuoYiMapper(
+    field_aliases={
+        "task_id": "taskId",
+        "user_id": "userId",
+        "task_type": "taskType",
+        "status": "taskState",
+        "summary": "summary",
+        "result_ref": "resultRef",
+        "detail_ref": "detailRef",
+        "error_summary": "errorSummary",
+        "source_session_id": "sourceSessionId",
+        "source_artifact_ref": "sourceArtifactRef",
+        "replay_hint": "replayHint",
+        "created_at": "createTime",
+        "started_at": "startTime",
+        "completed_at": "completeTime",
+        "failed_at": "failTime",
+        "updated_at": "updateTime"
+    },
+    status_fields={"status": {status.value: status.value for status in TaskStatus}},
+    datetime_fields={"created_at", "started_at", "completed_at", "failed_at", "updated_at"}
+)
+
+
+def snapshot_from_ruoyi_row(row: dict[str, Any]) -> TaskMetadataSnapshot:
+    normalized = TASK_METADATA_RUOYI_MAPPER.from_ruoyi(row)
+    normalized.pop("id", None)
+    normalized["table_name"] = TASK_TABLE_BY_TYPE[normalized["task_type"]]
+    return TaskMetadataSnapshot.model_validate(normalized)
+
+
 class TaskMetadataRepository:
     def __init__(self) -> None:
         self._lock = RLock()
@@ -151,7 +152,7 @@ class TaskMetadataRepository:
         with self._lock:
             self._records.clear()
 
-    def save_task(self, request: TaskMetadataCreateRequest, *, default_task_type: TaskType) -> TaskMetadataSnapshot:
+    def build_snapshot(self, request: TaskMetadataCreateRequest, *, default_task_type: TaskType) -> TaskMetadataSnapshot:
         now = datetime.now(UTC)
         with self._lock:
             existing = self._records.get(request.task_id)
@@ -169,7 +170,7 @@ class TaskMetadataRepository:
             if request.status == TaskStatus.FAILED and failed_at is None:
                 failed_at = updated_at
 
-            snapshot = TaskMetadataSnapshot(
+            return TaskMetadataSnapshot(
                 task_id=request.task_id,
                 user_id=request.user_id,
                 task_type=task_type,
@@ -188,8 +189,15 @@ class TaskMetadataRepository:
                 failed_at=failed_at,
                 updated_at=updated_at
             )
+
+    def upsert_snapshot(self, snapshot: TaskMetadataSnapshot) -> TaskMetadataSnapshot:
+        with self._lock:
             self._records[snapshot.task_id] = snapshot
             return snapshot
+
+    def save_task(self, request: TaskMetadataCreateRequest, *, default_task_type: TaskType) -> TaskMetadataSnapshot:
+        snapshot = self.build_snapshot(request, default_task_type=default_task_type)
+        return self.upsert_snapshot(snapshot)
 
     def get_task(self, task_id: str) -> TaskMetadataSnapshot | None:
         with self._lock:
@@ -216,10 +224,7 @@ class TaskMetadataRepository:
         if user_id is not None:
             rows = [item for item in rows if item.user_id == user_id]
         if source_session_id is not None:
-            rows = [
-                item for item in rows
-                if item.source_session_id == source_session_id or item.task_id == source_session_id
-            ]
+            rows = [item for item in rows if item.source_session_id == source_session_id]
         if updated_from is not None:
             rows = [item for item in rows if item.updated_at >= updated_from]
         if updated_to is not None:
@@ -227,11 +232,8 @@ class TaskMetadataRepository:
 
         return sorted(rows, key=lambda item: (item.updated_at, item.task_id), reverse=True)
 
-    def replay_session(self, session_id: str) -> TaskMetadataPageResponse:
-        rows = [
-            item for item in self.list_tasks(source_session_id=session_id)
-            if item.source_session_id == session_id or item.task_id == session_id
-        ]
+    def replay_session(self, session_id: str, *, task_type: str | None = None) -> TaskMetadataPageResponse:
+        rows = self.list_tasks(task_type=task_type, source_session_id=session_id)
         return TaskMetadataPageResponse(rows=rows, total=len(rows))
 
     def page_tasks(

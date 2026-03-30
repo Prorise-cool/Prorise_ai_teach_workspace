@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `xm_companion_turn`
 (
     `turn_id`              varchar(64)  NOT NULL COMMENT 'Companion turn 主键',
     `tenant_id`            varchar(20)  DEFAULT '000000' COMMENT '租户编号',
-    `user_id`              bigint       NOT NULL COMMENT '用户ID',
+    `user_id`              varchar(64)  NOT NULL COMMENT '用户ID',
     `session_id`           varchar(64)  NOT NULL COMMENT '会话ID',
     `context_type`         varchar(32)  NOT NULL COMMENT '上下文类型(video/classroom/learning/document/mixed)',
     `anchor_kind`          varchar(64)  NOT NULL COMMENT '锚点类型',
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `xm_whiteboard_action_log`
     `action_id`            varchar(64)  NOT NULL COMMENT '白板动作主键',
     `tenant_id`            varchar(20)  DEFAULT '000000' COMMENT '租户编号',
     `turn_id`              varchar(64)  NOT NULL COMMENT '所属 turn ID',
-    `user_id`              bigint       NOT NULL COMMENT '用户ID',
+    `user_id`              varchar(64)  NOT NULL COMMENT '用户ID',
     `session_id`           varchar(64)  NOT NULL COMMENT '会话ID',
     `action_type`          varchar(64)  NOT NULL COMMENT '动作类型',
     `action_payload_json`  longtext     DEFAULT NULL COMMENT '动作载荷(JSON)',
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `xm_knowledge_chat_log`
 (
     `chat_log_id`          varchar(64)  NOT NULL COMMENT 'Evidence 历史问答主键',
     `tenant_id`            varchar(20)  DEFAULT '000000' COMMENT '租户编号',
-    `user_id`              bigint       NOT NULL COMMENT '用户ID',
+    `user_id`              varchar(64)  NOT NULL COMMENT '用户ID',
     `session_id`           varchar(64)  NOT NULL COMMENT '会话ID',
     `context_type`         varchar(32)  NOT NULL COMMENT '上下文类型',
     `anchor_kind`          varchar(64)  NOT NULL COMMENT '范围锚点类型',
@@ -100,3 +100,12 @@ CREATE TABLE IF NOT EXISTS `xm_knowledge_chat_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COMMENT ='Evidence / Retrieval 历史问答记录（沿用历史表名 xm_knowledge_chat_log）';
+
+ALTER TABLE xm_companion_turn
+    MODIFY COLUMN user_id varchar(64) NOT NULL COMMENT '用户ID';
+
+ALTER TABLE xm_whiteboard_action_log
+    MODIFY COLUMN user_id varchar(64) NOT NULL COMMENT '用户ID';
+
+ALTER TABLE xm_knowledge_chat_log
+    MODIFY COLUMN user_id varchar(64) NOT NULL COMMENT '用户ID';

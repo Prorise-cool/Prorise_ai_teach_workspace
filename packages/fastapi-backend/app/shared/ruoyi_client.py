@@ -15,6 +15,7 @@ from app.shared.ruoyi_mapper import RuoYiMapper
 T = TypeVar("T")
 
 logger = get_logger("app.shared.ruoyi_client")
+_SAFE_RETRY_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
 @dataclass(slots=True)
@@ -171,7 +172,8 @@ class RuoYiClient:
         operation: str,
         json_body: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
-        mapper: RuoYiMapper | None = None
+        mapper: RuoYiMapper | None = None,
+        retry_enabled: bool | None = None
     ) -> RuoYiSingleResponse[Any]:
         return await self.request_single(
             "POST",
@@ -180,7 +182,30 @@ class RuoYiClient:
             operation=operation,
             json_body=json_body,
             headers=headers,
-            mapper=mapper
+            mapper=mapper,
+            retry_enabled=retry_enabled
+        )
+
+    async def put_single(
+        self,
+        path: str,
+        *,
+        resource: str,
+        operation: str,
+        json_body: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+        mapper: RuoYiMapper | None = None,
+        retry_enabled: bool | None = None
+    ) -> RuoYiSingleResponse[Any]:
+        return await self.request_single(
+            "PUT",
+            path,
+            resource=resource,
+            operation=operation,
+            json_body=json_body,
+            headers=headers,
+            mapper=mapper,
+            retry_enabled=retry_enabled
         )
 
     async def get_page(
@@ -213,7 +238,8 @@ class RuoYiClient:
         params: Mapping[str, Any] | None = None,
         json_body: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
-        mapper: RuoYiMapper | None = None
+        mapper: RuoYiMapper | None = None,
+        retry_enabled: bool | None = None
     ) -> RuoYiSingleResponse[Any]:
         payload = await self._request_json(
             method,
@@ -222,7 +248,8 @@ class RuoYiClient:
             operation=operation,
             params=params,
             json_body=json_body,
-            headers=headers
+            headers=headers,
+            retry_enabled=retry_enabled
         )
 
         if "data" not in payload:
@@ -255,7 +282,8 @@ class RuoYiClient:
         params: Mapping[str, Any] | None = None,
         json_body: Mapping[str, Any] | None = None,
         headers: Mapping[str, str] | None = None,
-        mapper: RuoYiMapper | None = None
+        mapper: RuoYiMapper | None = None,
+        retry_enabled: bool | None = None
     ) -> RuoYiPageResponse[Any]:
         payload = await self._request_json(
             method,
@@ -264,7 +292,8 @@ class RuoYiClient:
             operation=operation,
             params=params,
             json_body=json_body,
-            headers=headers
+            headers=headers,
+            retry_enabled=retry_enabled
         )
 
         if "rows" not in payload or "total" not in payload:
@@ -316,12 +345,14 @@ class RuoYiClient:
         operation: str,
         params: Mapping[str, Any] | None = None,
         json_body: Mapping[str, Any] | None = None,
-        headers: Mapping[str, str] | None = None
+        headers: Mapping[str, str] | None = None,
+        retry_enabled: bool | None = None
     ) -> dict[str, Any]:
         request_headers = _format_headers(headers)
         request_id = get_request_id()
         task_id = get_task_id()
-        attempts = self.retry_attempts + 1
+        resolved_retry_enabled = self._is_retry_enabled(method, retry_enabled)
+        attempts = self.retry_attempts + 1 if resolved_retry_enabled else 1
 
         for attempt_index in range(1, attempts + 1):
             try:
@@ -352,7 +383,7 @@ class RuoYiClient:
                     code="RUOYI_TIMEOUT",
                     message="RuoYi 请求超时",
                     status_code=504,
-                    retryable=True,
+                    retryable=resolved_retry_enabled,
                     details=_build_retry_details(
                         service="ruoyi",
                         resource=resource,
@@ -384,7 +415,7 @@ class RuoYiClient:
                     code="RUOYI_NETWORK_ERROR",
                     message="RuoYi 网络异常",
                     status_code=503,
-                    retryable=True,
+                    retryable=resolved_retry_enabled,
                     details=_build_retry_details(
                         service="ruoyi",
                         resource=resource,
@@ -402,7 +433,7 @@ class RuoYiClient:
             effective_status = response.status_code if response.status_code >= 400 else (payload_code or 200)
 
             if effective_status != 200:
-                if self._should_retry_status(effective_status) and attempt_index < attempts:
+                if resolved_retry_enabled and self._should_retry_status(effective_status) and attempt_index < attempts:
                     logger.warning(
                         "RuoYi request retry resource=%s operation=%s endpoint=%s attempt=%s/%s status=%s upstream_code=%s",
                         resource,
@@ -575,6 +606,8 @@ class RuoYiClient:
 
     @staticmethod
     def _map_error_status(status_code: int) -> tuple[str, int, bool]:
+        if status_code == 400:
+            return "RUOYI_BAD_REQUEST", 400, False
         if status_code == 401:
             return "RUOYI_UNAUTHORIZED", 401, False
         if status_code == 403:
@@ -583,10 +616,22 @@ class RuoYiClient:
             return "RUOYI_NOT_FOUND", 404, False
         if status_code == 409:
             return "RUOYI_CONFLICT", 409, False
+        if status_code == 422:
+            return "RUOYI_UNPROCESSABLE_ENTITY", 422, False
+        if status_code == 429:
+            return "RUOYI_RATE_LIMITED", 429, True
+        if 400 <= status_code < 500:
+            return "RUOYI_UPSTREAM_REJECTED", status_code, False
         if status_code >= 500:
             return "RUOYI_UPSTREAM_ERROR", 502, True
         return "RUOYI_UPSTREAM_ERROR", 502, True
 
     @staticmethod
     def _should_retry_status(status_code: int) -> bool:
-        return status_code >= 500
+        return status_code == 429 or status_code >= 500
+
+    @staticmethod
+    def _is_retry_enabled(method: str, retry_enabled: bool | None) -> bool:
+        if retry_enabled is not None:
+            return retry_enabled
+        return method.upper() in _SAFE_RETRY_METHODS

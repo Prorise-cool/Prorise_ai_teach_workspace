@@ -20,7 +20,11 @@ INSERT INTO sys_menu VALUES
 INSERT INTO sys_menu VALUES
     ('21003', '模块规划导出', '21001', '2', '#', '', '', '1', '0', 'F', '0', '0', 'xiaomai:module:export', '#', 103, 1, sysdate(), 1, sysdate(), '');
 
-INSERT INTO sys_role_menu VALUES ('2', '21000');
-INSERT INTO sys_role_menu VALUES ('2', '21001');
-INSERT INTO sys_role_menu VALUES ('2', '21002');
-INSERT INTO sys_role_menu VALUES ('2', '21003');
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT role_id, 21000 FROM sys_role WHERE role_key = 'superadmin';
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT role_id, 21001 FROM sys_role WHERE role_key = 'superadmin';
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT role_id, 21002 FROM sys_role WHERE role_key = 'superadmin';
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT role_id, 21003 FROM sys_role WHERE role_key = 'superadmin';

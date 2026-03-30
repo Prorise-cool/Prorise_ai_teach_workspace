@@ -142,20 +142,24 @@ def test_ruoyi_client_unwraps_page_response_and_applies_mapper() -> None:
 
 
 @pytest.mark.parametrize(
-    ("status_code", "json_payload", "expected_error_code", "expected_retryable"),
+    ("status_code", "json_payload", "expected_error_code", "expected_retryable", "expected_response_status"),
     [
-        (401, {"code": 401, "msg": "未授权"}, "RUOYI_UNAUTHORIZED", False),
-        (403, {"code": 403, "msg": "无权限"}, "RUOYI_FORBIDDEN", False),
-        (404, {"code": 404, "msg": "未找到"}, "RUOYI_NOT_FOUND", False),
-        (409, {"code": 409, "msg": "冲突"}, "RUOYI_CONFLICT", False),
-        (500, {"code": 500, "msg": "服务异常"}, "RUOYI_UPSTREAM_ERROR", True)
+        (400, {"code": 400, "msg": "请求参数错误"}, "RUOYI_BAD_REQUEST", False, 400),
+        (401, {"code": 401, "msg": "未授权"}, "RUOYI_UNAUTHORIZED", False, 401),
+        (403, {"code": 403, "msg": "无权限"}, "RUOYI_FORBIDDEN", False, 403),
+        (404, {"code": 404, "msg": "未找到"}, "RUOYI_NOT_FOUND", False, 404),
+        (409, {"code": 409, "msg": "冲突"}, "RUOYI_CONFLICT", False, 409),
+        (422, {"code": 422, "msg": "字段校验失败"}, "RUOYI_UNPROCESSABLE_ENTITY", False, 422),
+        (429, {"code": 429, "msg": "请求过于频繁"}, "RUOYI_RATE_LIMITED", True, 429),
+        (500, {"code": 500, "msg": "服务异常"}, "RUOYI_UPSTREAM_ERROR", True, 502)
     ]
 )
 def test_ruoyi_client_maps_http_and_payload_errors(
     status_code: int,
     json_payload: dict[str, object],
     expected_error_code: str,
-    expected_retryable: bool
+    expected_retryable: bool,
+    expected_response_status: int
 ) -> None:
     def handler(_: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code, json=json_payload)
@@ -173,6 +177,7 @@ def test_ruoyi_client_maps_http_and_payload_errors(
 
     error = exc_info.value
     assert error.code == expected_error_code
+    assert error.status_code == expected_response_status
     assert error.retryable is expected_retryable
     assert error.details["resource"] == "video-task"
     assert error.details["operation"] == "query"
@@ -266,6 +271,65 @@ def test_ruoyi_client_retries_timeout_then_succeeds(caplog) -> None:
     assert retry_records
     assert retry_records[-1].request_id == "req_test_ruoyi"
     assert retry_records[-1].task_id == "task_test_ruoyi"
+
+
+def test_ruoyi_client_does_not_retry_post_timeout_by_default() -> None:
+    attempts = {"count": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["count"] += 1
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = _build_client(handler, retry_attempts=2)
+
+    with pytest.raises(IntegrationError) as exc_info:
+        _run(
+            client.post_single(
+                "/api/v1/video/tasks",
+                resource="video-task",
+                operation="create",
+                json_body={"taskId": "video_1001"}
+            )
+        )
+
+    error = exc_info.value
+    assert attempts["count"] == 1
+    assert error.code == "RUOYI_TIMEOUT"
+    assert error.retryable is False
+
+    _run(client.aclose())
+
+
+def test_ruoyi_client_retries_429_then_succeeds() -> None:
+    attempts = {"count": 0}
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            return httpx.Response(429, json={"code": 429, "msg": "请求过于频繁"})
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "查询成功",
+                "data": {"id": "video_1001"}
+            }
+        )
+
+    client = _build_client(handler, retry_attempts=1)
+
+    result = _run(
+        client.get_single(
+            "/api/v1/video/tasks/1001",
+            resource="video-task",
+            operation="query"
+        )
+    )
+
+    assert attempts["count"] == 2
+    assert result.data == {"id": "video_1001"}
+
+    _run(client.aclose())
 
 
 def test_ruoyi_client_retries_5xx_before_raising() -> None:

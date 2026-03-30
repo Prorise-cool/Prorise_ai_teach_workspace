@@ -14,9 +14,7 @@ import java.util.List;
  */
 public interface ILearningResultService {
 
-    LearningResultVo queryPreview();
-
-    List<LearningResultVo> queryResultList(LearningResultBo bo);
+    List<LearningResultVo> queryCatalogList(LearningResultBo bo);
 
     TableDataInfo<LearningResultVo> queryResultPage(LearningResultBo bo, PageQuery pageQuery);
 }

@@ -22,7 +22,7 @@ async def video_bootstrap() -> dict[str, str]:
 
 @router.post("/tasks", response_model=VideoTaskMetadataPreviewResponse)
 async def create_video_task(payload: VideoTaskMetadataCreateRequest) -> VideoTaskMetadataPreviewResponse:
-    return service.persist_task(payload)
+    return await service.persist_task(payload)
 
 
 @router.get("/tasks", response_model=VideoTaskMetadataPageResponse)
@@ -35,7 +35,7 @@ async def list_video_tasks(
     page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=10, alias="pageSize", ge=1, le=100)
 ) -> VideoTaskMetadataPageResponse:
-    return service.list_tasks(
+    return await service.list_tasks(
         status=status,
         user_id=user_id,
         source_session_id=source_session_id,
@@ -48,7 +48,7 @@ async def list_video_tasks(
 
 @router.get("/tasks/{task_id}", response_model=VideoTaskMetadataSnapshot)
 async def get_video_task(task_id: str) -> VideoTaskMetadataSnapshot:
-    snapshot = service.get_task(task_id)
+    snapshot = await service.get_task(task_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Video task not found")
     return snapshot
@@ -56,4 +56,4 @@ async def get_video_task(task_id: str) -> VideoTaskMetadataSnapshot:
 
 @router.get("/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse)
 async def replay_video_session(session_id: str) -> VideoTaskMetadataPageResponse:
-    return service.replay_session(session_id)
+    return await service.replay_session(session_id)

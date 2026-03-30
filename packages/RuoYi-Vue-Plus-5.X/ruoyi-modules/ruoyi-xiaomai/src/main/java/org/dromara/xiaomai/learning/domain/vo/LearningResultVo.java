@@ -28,17 +28,35 @@ public class LearningResultVo implements Serializable {
     @ExcelProperty("宿主表")
     private String tableName;
 
+    @ExcelProperty("用户ID")
+    private String userId;
+
     @ExcelProperty("来源类型")
     private String sourceType;
 
-    @ExcelProperty("状态语义")
-    private String statusRule;
+    @ExcelProperty("来源会话ID")
+    private String sourceSessionId;
 
-    @ExcelProperty("版本语义")
-    private String versionRule;
+    @ExcelProperty("来源结果ID")
+    private String sourceResultId;
 
-    @ExcelProperty("详情字段")
-    private String detailFields;
+    @ExcelProperty("状态")
+    private String status;
+
+    @ExcelProperty("得分")
+    private Integer score;
+
+    @ExcelProperty("解析摘要")
+    private String analysisSummary;
+
+    @ExcelProperty("详情定位")
+    private String detailRef;
+
+    @ExcelProperty("来源时间")
+    private java.util.Date sourceTime;
+
+    @ExcelProperty("版本号")
+    private Integer versionNo;
 
     @ExcelProperty("备注")
     private String note;

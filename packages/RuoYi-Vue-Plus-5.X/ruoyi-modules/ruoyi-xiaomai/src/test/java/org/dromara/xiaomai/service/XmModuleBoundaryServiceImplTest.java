@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author Codex
  */
+@Tag("dev")
 @Tag("local")
 public class XmModuleBoundaryServiceImplTest {
 

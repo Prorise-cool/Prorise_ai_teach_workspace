@@ -92,13 +92,13 @@ public class VideoTaskServiceImpl implements IVideoTaskService {
         lqw.eq(StringUtils.isNotBlank(bo.getTaskState()), VideoTask::getTaskState, bo.getTaskState());
         lqw.like(StringUtils.isNotBlank(bo.getSummary()), VideoTask::getSummary, bo.getSummary());
         lqw.like(StringUtils.isNotBlank(bo.getErrorSummary()), VideoTask::getErrorSummary, bo.getErrorSummary());
-        lqw.like(StringUtils.isNotBlank(bo.getSourceSessionId()), VideoTask::getSourceSessionId, bo.getSourceSessionId());
+        lqw.eq(StringUtils.isNotBlank(bo.getSourceSessionId()), VideoTask::getSourceSessionId, bo.getSourceSessionId());
         lqw.like(StringUtils.isNotBlank(bo.getSourceArtifactRef()), VideoTask::getSourceArtifactRef, bo.getSourceArtifactRef());
         lqw.like(StringUtils.isNotBlank(bo.getReplayHint()), VideoTask::getReplayHint, bo.getReplayHint());
-        lqw.between(params.get("beginCreateTime") != null && params.get("endCreateTime") != null,
-            VideoTask::getCreateTime, params.get("beginCreateTime"), params.get("endCreateTime"));
-        lqw.between(params.get("beginUpdateTime") != null && params.get("endUpdateTime") != null,
-            VideoTask::getUpdateTime, params.get("beginUpdateTime"), params.get("endUpdateTime"));
+        lqw.ge(params.get("beginCreateTime") != null, VideoTask::getCreateTime, params.get("beginCreateTime"));
+        lqw.le(params.get("endCreateTime") != null, VideoTask::getCreateTime, params.get("endCreateTime"));
+        lqw.ge(params.get("beginUpdateTime") != null, VideoTask::getUpdateTime, params.get("beginUpdateTime"));
+        lqw.le(params.get("endUpdateTime") != null, VideoTask::getUpdateTime, params.get("endUpdateTime"));
         lqw.orderByDesc(VideoTask::getUpdateTime, VideoTask::getId);
         return lqw;
     }

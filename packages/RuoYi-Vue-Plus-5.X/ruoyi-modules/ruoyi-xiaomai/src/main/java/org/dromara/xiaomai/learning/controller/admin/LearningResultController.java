@@ -39,6 +39,6 @@ public class LearningResultController extends BaseController {
     @SaCheckPermission(XmPermissionConstants.LEARNING_COACH_PREFIX + ":query")
     @GetMapping("/results/catalog")
     public R<List<LearningResultVo>> catalog(LearningResultBo bo) {
-        return R.ok(learningResultService.queryResultList(bo));
+        return R.ok(learningResultService.queryCatalogList(bo));
     }
 }

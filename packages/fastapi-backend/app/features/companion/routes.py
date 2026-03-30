@@ -18,12 +18,12 @@ async def companion_bootstrap() -> dict[str, str]:
 
 @router.post("/turns", response_model=CompanionTurnSnapshot)
 async def create_companion_turn(payload: CompanionTurnCreateRequest) -> CompanionTurnSnapshot:
-    return service.persist_turn(payload)
+    return await service.persist_turn(payload)
 
 
 @router.get("/turns/{turn_id}", response_model=CompanionTurnSnapshot)
 async def get_companion_turn(turn_id: str) -> CompanionTurnSnapshot:
-    snapshot = service.get_turn(turn_id)
+    snapshot = await service.get_turn(turn_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Companion turn not found")
     return snapshot
@@ -31,4 +31,4 @@ async def get_companion_turn(turn_id: str) -> CompanionTurnSnapshot:
 
 @router.get("/sessions/{session_id}/replay", response_model=SessionReplaySnapshot)
 async def replay_companion_session(session_id: str) -> SessionReplaySnapshot:
-    return service.replay_session(session_id)
+    return await service.replay_session(session_id)

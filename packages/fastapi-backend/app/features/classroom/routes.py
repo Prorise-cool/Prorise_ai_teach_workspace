@@ -22,7 +22,7 @@ async def classroom_bootstrap() -> dict[str, str]:
 
 @router.post("/tasks", response_model=ClassroomTaskMetadataPreviewResponse)
 async def create_classroom_task(payload: ClassroomTaskMetadataCreateRequest) -> ClassroomTaskMetadataPreviewResponse:
-    return service.persist_task(payload)
+    return await service.persist_task(payload)
 
 
 @router.get("/tasks", response_model=ClassroomTaskMetadataPageResponse)
@@ -35,7 +35,7 @@ async def list_classroom_tasks(
     page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=10, alias="pageSize", ge=1, le=100)
 ) -> ClassroomTaskMetadataPageResponse:
-    return service.list_tasks(
+    return await service.list_tasks(
         status=status,
         user_id=user_id,
         source_session_id=source_session_id,
@@ -48,7 +48,7 @@ async def list_classroom_tasks(
 
 @router.get("/tasks/{task_id}", response_model=ClassroomTaskMetadataSnapshot)
 async def get_classroom_task(task_id: str) -> ClassroomTaskMetadataSnapshot:
-    snapshot = service.get_task(task_id)
+    snapshot = await service.get_task(task_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Classroom task not found")
     return snapshot
@@ -56,4 +56,4 @@ async def get_classroom_task(task_id: str) -> ClassroomTaskMetadataSnapshot:
 
 @router.get("/sessions/{session_id}/replay", response_model=ClassroomTaskMetadataPageResponse)
 async def replay_classroom_session(session_id: str) -> ClassroomTaskMetadataPageResponse:
-    return service.replay_session(session_id)
+    return await service.replay_session(session_id)

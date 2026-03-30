@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  *
  * @author Codex
  */
+@Tag("dev")
 @Tag("local")
 public class AuditCenterControllerTest {
 
