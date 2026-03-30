@@ -1,6 +1,6 @@
 # Story 10.2: RuoYi 小麦业务模块与权限承接规则
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,22 +18,22 @@ so that 长期数据、查询与审计能够在既有框架内稳定落位。
 
 ## Tasks / Subtasks
 
-- [ ] 规划 `ruoyi-xiaomai` 模块边界与注册方式（AC: 1, 3）
-  - [ ] 确认模块位于 `ruoyi-modules` 体系内的落位、`pom.xml` 注册方式与包结构命名。
-  - [ ] 明确小麦业务模块与 `ruoyi-system`、`ruoyi-common-*` 的边界，不在核心认证与权限框架里硬编码业务逻辑。
-  - [ ] 约束模块初始化只承接小麦业务表、菜单、权限与后台查询能力。
-- [ ] 冻结权限标识与菜单 / 按钮规则（AC: 2, 3）
-  - [ ] 为视频任务、课堂会话、学习记录、收藏、问答日志、Learning Coach 结果、审计 / 导出定义统一权限标识。
-  - [ ] 复用 RuoYi 的 `模块:资源:操作` 规则设计菜单权限、按钮权限与导出权限。
-  - [ ] 明确哪些能力仅后台可见，哪些只提供查询不提供修改。
-- [ ] 定义 CRUD / 查询扩展生成策略（AC: 1, 3）
-  - [ ] 识别可直接用 RuoYi Generator 生成的标准业务表与需要手写聚合查询的场景。
-  - [ ] 规定 Controller、Service、Mapper、Bo / Vo、菜单路由的最小目录规范。
-  - [ ] 为后续 `10.8` 的审计 / 导出边界预留统一扩展点。
-- [ ] 补齐权限验证与运维约束（AC: 1, 2, 3）
-  - [ ] 为关键查询、导出与敏感操作加上统一权限校验与操作日志要求。
-  - [ ] 验证 FastAPI 只消费 RuoYi 权限结果，不复制权限真值。
-  - [ ] 明确当前阶段不建设与 RuoYi 平行的新后台产品域。
+- [x] 规划 `ruoyi-xiaomai` 模块边界与注册方式（AC: 1, 3）
+  - [x] 确认模块位于 `ruoyi-modules` 体系内的落位、`pom.xml` 注册方式与包结构命名。
+  - [x] 明确小麦业务模块与 `ruoyi-system`、`ruoyi-common-*` 的边界，不在核心认证与权限框架里硬编码业务逻辑。
+  - [x] 约束模块初始化只承接小麦业务表、菜单、权限与后台查询能力。
+- [x] 冻结权限标识与菜单 / 按钮规则（AC: 2, 3）
+  - [x] 为视频任务、课堂会话、学习记录、收藏、问答日志、Learning Coach 结果、审计 / 导出定义统一权限标识。
+  - [x] 复用 RuoYi 的 `模块:资源:操作` 规则设计菜单权限、按钮权限与导出权限。
+  - [x] 明确哪些能力仅后台可见，哪些只提供查询不提供修改。
+- [x] 定义 CRUD / 查询扩展生成策略（AC: 1, 3）
+  - [x] 识别可直接用 RuoYi Generator 生成的标准业务表与需要手写聚合查询的场景。
+  - [x] 规定 Controller、Service、Mapper、Bo / Vo、菜单路由的最小目录规范。
+  - [x] 为后续 `10.8` 的审计 / 导出边界预留统一扩展点。
+- [x] 补齐权限验证与运维约束（AC: 1, 2, 3）
+  - [x] 为关键查询、导出与敏感操作加上统一权限校验与操作日志要求。
+  - [x] 验证 FastAPI 只消费 RuoYi 权限结果，不复制权限真值。
+  - [x] 明确当前阶段不建设与 RuoYi 平行的新后台产品域。
 
 ## Dev Notes
 
@@ -89,12 +89,42 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `python -m pytest`
+- `python -m pytest packages/fastapi-backend/tests/unit/test_epic10_ruoyi_xiaomai_module_assets.py`
+- `mvn -pl ruoyi-modules/ruoyi-xiaomai -am test -DskipITs`
+- `mvn -pl ruoyi-admin -am -DskipTests compile`
 
 ### Completion Notes List
 
-- 已补齐 RuoYi 小麦业务模块、权限命名与 CRUD / 查询扩展的结构化约束。
+- 已新增 `ruoyi-xiaomai` 模块聚合注册、`ruoyi-admin` 依赖接线和 `SpringDoc` 分组，保持 `RuoYi` 核心认证与权限框架不变。
+- 已通过 `XmModuleBoundaryController`、`XmModuleBoundaryService` 和结构化文档冻结模块边界、资源规划、Generator / 手写查询策略及审计扩展点。
+- 已新增 `20260328_xm_module_bootstrap.sql` 与 `20260328_xm_menu_permission.sql`，冻结小麦根菜单、模块规划菜单和 Epic 10 资源权限清单。
+- 已新增 Python 结构测试并跑通 `packages/fastapi-backend` 全量 `pytest`，结果为 `22 passed`。
+- `ruoyi-xiaomai` 和 `ruoyi-admin` 的 Maven 编译链路已验证通过；当前仓库的 `surefire` 配置会编译测试类但未实际执行新增 JUnit 用例，后续如需 Java 侧执行断言需继续对齐该仓库测试筛选规则。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/10-2-ruoyi-小麦业务模块与权限承接规则.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `docs/01开发人员手册/004-开发规范/0102-RuoYi小麦模块与权限承接规则.md`
+- `packages/RuoYi-Vue-Plus-5.X/pom.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/pom.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/src/main/resources/application.yml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/pom.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/pom.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/constant/XmPermissionConstants.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/controller/admin/XmModuleBoundaryController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/domain/bo/XmModuleResourceBo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/domain/vo/XmModuleBoundaryVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/domain/vo/XmModuleResourceVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/service/IXmModuleBoundaryService.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/service/impl/XmModuleBoundaryServiceImpl.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/README.md`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/service/XmModuleBoundaryServiceImplTest.java`
+- `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_module_bootstrap.sql`
+- `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_menu_permission.sql`
+- `packages/fastapi-backend/tests/unit/test_epic10_ruoyi_xiaomai_module_assets.py`
+
+## Change Log
+
+- 2026-03-29：完成 `Story 10.2` 的 RuoYi 小麦业务模块骨架、权限承接规则、菜单 SQL、结构文档与测试资产。

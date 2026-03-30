@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.xiaomai.learning.mapper.LearningResultMapper">
+
+    <sql id="result_union_raw">
+        SELECT
+            CONCAT('xm_learning_record:', CAST(lr.record_id AS CHAR)) AS record_id,
+            CAST(lr.user_id AS CHAR) AS user_id,
+            lr.result_type AS result_type,
+            '学习起点 / checkpoint' AS display_name,
+            'xm_learning_record' AS table_name,
+            lr.source_type AS source_type,
+            lr.source_session_id AS source_session_id,
+            COALESCE(lr.source_result_id, CAST(lr.record_id AS CHAR)) AS source_result_id,
+            lr.status AS status,
+            lr.score AS score,
+            lr.analysis_summary AS analysis_summary,
+            lr.detail_ref AS detail_ref,
+            COALESCE(lr.source_time, lr.update_time, lr.create_time) AS source_time,
+            lr.version_no AS version_no,
+            '学习起点结果记录，供学习中心聚合与回看。' AS note
+        FROM xm_learning_record lr
+        WHERE lr.result_type = 'checkpoint'
+          AND lr.source_table = 'xm_learning_record'
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_quiz_result:', CAST(qr.quiz_result_id AS CHAR)) AS record_id,
+            CAST(qr.user_id AS CHAR) AS user_id,
+            'quiz' AS result_type,
+            '测验结果' AS display_name,
+            'xm_quiz_result' AS table_name,
+            qr.source_type AS source_type,
+            qr.source_session_id AS source_session_id,
+            COALESCE(qr.source_result_id, CAST(qr.quiz_result_id AS CHAR)) AS source_result_id,
+            qr.status AS status,
+            qr.score AS score,
+            qr.analysis_summary AS analysis_summary,
+            qr.detail_ref AS detail_ref,
+            COALESCE(qr.source_time, qr.update_time, qr.create_time) AS source_time,
+            qr.version_no AS version_no,
+            '测验完成后沉淀为长期结果，不回退到运行态。' AS note
+        FROM xm_quiz_result qr
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_wrongbook:', CAST(wb.wrongbook_id AS CHAR)) AS record_id,
+            CAST(wb.user_id AS CHAR) AS user_id,
+            'wrongbook' AS result_type,
+            '错题本' AS display_name,
+            'xm_learning_wrongbook' AS table_name,
+            wb.source_type AS source_type,
+            wb.source_session_id AS source_session_id,
+            COALESCE(wb.source_result_id, CAST(wb.wrongbook_id AS CHAR)) AS source_result_id,
+            wb.status AS status,
+            NULL AS score,
+            wb.analysis_summary AS analysis_summary,
+            wb.detail_ref AS detail_ref,
+            COALESCE(wb.source_time, wb.update_time, wb.create_time) AS source_time,
+            NULL AS version_no,
+            '错题本挂接测验来源，便于后续回看与导出。' AS note
+        FROM xm_learning_wrongbook wb
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_recommendation:', CAST(rec.recommendation_id AS CHAR)) AS record_id,
+            CAST(rec.user_id AS CHAR) AS user_id,
+            'recommendation' AS result_type,
+            '知识推荐' AS display_name,
+            'xm_learning_recommendation' AS table_name,
+            rec.source_type AS source_type,
+            rec.source_session_id AS source_session_id,
+            COALESCE(rec.source_result_id, CAST(rec.recommendation_id AS CHAR)) AS source_result_id,
+            rec.status AS status,
+            NULL AS score,
+            rec.recommendation_reason AS analysis_summary,
+            rec.detail_ref AS detail_ref,
+            COALESCE(rec.source_time, rec.update_time, rec.create_time) AS source_time,
+            rec.version_no AS version_no,
+            '推荐结果作为长期学习资产保留，不丢失来源。' AS note
+        FROM xm_learning_recommendation rec
+
+        UNION ALL
+
+        SELECT
+            CONCAT('xm_learning_path:', CAST(lp.path_id AS CHAR)) AS record_id,
+            CAST(lp.user_id AS CHAR) AS user_id,
+            'path' AS result_type,
+            '学习路径' AS display_name,
+            'xm_learning_path' AS table_name,
+            lp.source_type AS source_type,
+            lp.source_session_id AS source_session_id,
+            COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR)) AS source_result_id,
+            lp.status AS status,
+            NULL AS score,
+            lp.path_summary AS analysis_summary,
+            lp.detail_ref AS detail_ref,
+            COALESCE(lp.source_time, lp.update_time, lp.create_time) AS source_time,
+            lp.version_no AS version_no,
+            '路径记录必须保留版本信息，不能简单覆盖。' AS note
+        FROM xm_learning_path lp
+    </sql>
+
+    <sql id="result_where">
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND agg.user_id = #{query.userId}
+            </if>
+            <if test="query != null and query.resultType != null and query.resultType != ''">
+                AND agg.result_type = #{query.resultType}
+            </if>
+            <if test="query != null and query.sourceType != null and query.sourceType != ''">
+                AND agg.source_type = #{query.sourceType}
+            </if>
+            <if test="query != null and query.tableName != null and query.tableName != ''">
+                AND agg.table_name = #{query.tableName}
+            </if>
+            <if test="query != null and query.status != null and query.status != ''">
+                AND agg.status = #{query.status}
+            </if>
+            <if test="query != null and query.keyword != null and query.keyword != ''">
+                AND (
+                    agg.display_name LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR agg.analysis_summary LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR agg.detail_ref LIKE CONCAT('%', #{query.keyword}, '%')
+                    OR agg.source_result_id LIKE CONCAT('%', #{query.keyword}, '%')
+                )
+            </if>
+            <if test="query != null and query.beginSourceTime != null">
+                AND agg.source_time <![CDATA[>=]]> #{query.beginSourceTime}
+            </if>
+            <if test="query != null and query.endSourceTime != null">
+                AND agg.source_time <![CDATA[<=]]> #{query.endSourceTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="countResultRecords" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM (
+            <include refid="result_union_raw"/>
+        ) agg
+        <include refid="result_where"/>
+    </select>
+
+    <select id="selectResultRecords" resultType="org.dromara.xiaomai.learning.domain.vo.LearningResultVo">
+        SELECT
+            agg.result_type AS resultType,
+            agg.display_name AS displayName,
+            agg.table_name AS tableName,
+            agg.user_id AS userId,
+            agg.source_type AS sourceType,
+            agg.source_session_id AS sourceSessionId,
+            agg.source_result_id AS sourceResultId,
+            agg.status AS status,
+            agg.score AS score,
+            agg.analysis_summary AS analysisSummary,
+            agg.detail_ref AS detailRef,
+            agg.source_time AS sourceTime,
+            agg.version_no AS versionNo,
+            agg.note AS note
+        FROM (
+            <include refid="result_union_raw"/>
+        ) agg
+        <include refid="result_where"/>
+        ORDER BY agg.source_time DESC, agg.record_id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="selectCatalogRecords" resultType="org.dromara.xiaomai.learning.domain.vo.LearningResultVo">
+        SELECT
+            agg.result_type AS resultType,
+            MAX(agg.display_name) AS displayName,
+            agg.table_name AS tableName,
+            MAX(agg.source_type) AS sourceType,
+            MAX(agg.note) AS note
+        FROM (
+            <include refid="result_union_raw"/>
+        ) agg
+        <include refid="result_where"/>
+        GROUP BY agg.result_type, agg.table_name
+        ORDER BY agg.result_type ASC
+    </select>
+
+    <select id="selectAggregateRecord" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            record_id AS recordId,
+            source_table AS tableName,
+            display_title AS displayName,
+            remark AS note,
+            CAST(user_id AS CHAR) AS userId,
+            result_type AS resultType,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            score AS score,
+            analysis_summary AS analysisSummary,
+            status AS status,
+            detail_ref AS detailRef,
+            version_no AS versionNo
+        FROM xm_learning_record
+        WHERE user_id = #{userId}
+          AND source_table = #{sourceTable}
+          AND source_result_id = #{sourceResultId}
+        ORDER BY update_time DESC, record_id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertCheckpointRecord">
+        INSERT INTO xm_learning_record (
+            record_id,
+            user_id,
+            result_type,
+            display_title,
+            source_type,
+            source_table,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            source_time,
+            status,
+            score,
+            analysis_summary,
+            detail_ref,
+            version_no,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.recordId},
+            #{record.userId},
+            #{record.resultType},
+            #{record.displayName},
+            #{record.sourceType},
+            'xm_learning_record',
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.occurredAt},
+            #{record.status},
+            #{record.score},
+            #{record.analysisSummary},
+            #{record.detailRef},
+            #{record.versionNo},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <insert id="insertAggregateRecord">
+        INSERT INTO xm_learning_record (
+            record_id,
+            user_id,
+            result_type,
+            display_title,
+            source_type,
+            source_table,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            source_time,
+            status,
+            score,
+            analysis_summary,
+            detail_ref,
+            version_no,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.recordId},
+            #{record.userId},
+            #{record.resultType},
+            #{record.displayName},
+            #{record.sourceType},
+            #{record.tableName},
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.occurredAt},
+            #{record.status},
+            #{record.score},
+            #{record.analysisSummary},
+            #{record.detailRef},
+            #{record.versionNo},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <insert id="insertQuizRecord">
+        INSERT INTO xm_quiz_result (
+            quiz_result_id,
+            record_id,
+            user_id,
+            source_type,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            question_total,
+            correct_total,
+            status,
+            score,
+            analysis_summary,
+            detail_ref,
+            source_time,
+            version_no,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.generatedId},
+            #{record.recordId},
+            #{record.userId},
+            #{record.sourceType},
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.questionTotal},
+            #{record.correctTotal},
+            #{record.status},
+            #{record.score},
+            #{record.analysisSummary},
+            #{record.detailRef},
+            #{record.occurredAt},
+            #{record.versionNo},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <insert id="insertWrongbookRecord">
+        INSERT INTO xm_learning_wrongbook (
+            wrongbook_id,
+            record_id,
+            user_id,
+            result_type,
+            source_type,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            question_text,
+            wrong_answer_text,
+            reference_answer_text,
+            analysis_summary,
+            detail_ref,
+            source_time,
+            status,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.generatedId},
+            #{record.recordId},
+            #{record.userId},
+            #{record.resultType},
+            #{record.sourceType},
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.questionText},
+            #{record.wrongAnswerText},
+            #{record.referenceAnswerText},
+            #{record.analysisSummary},
+            #{record.detailRef},
+            #{record.occurredAt},
+            #{record.status},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <insert id="insertRecommendationRecord">
+        INSERT INTO xm_learning_recommendation (
+            recommendation_id,
+            record_id,
+            user_id,
+            result_type,
+            source_type,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            recommendation_reason,
+            target_type,
+            target_ref_id,
+            detail_ref,
+            source_time,
+            status,
+            version_no,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.generatedId},
+            #{record.recordId},
+            #{record.userId},
+            #{record.resultType},
+            #{record.sourceType},
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.analysisSummary},
+            #{record.targetType},
+            #{record.targetRefId},
+            #{record.detailRef},
+            #{record.occurredAt},
+            #{record.status},
+            #{record.versionNo},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <insert id="insertPathRecord">
+        INSERT INTO xm_learning_path (
+            path_id,
+            record_id,
+            user_id,
+            result_type,
+            source_type,
+            source_session_id,
+            source_task_id,
+            source_result_id,
+            path_title,
+            path_summary,
+            step_count,
+            detail_ref,
+            source_time,
+            status,
+            version_no,
+            create_time,
+            update_time,
+            remark
+        ) VALUES (
+            #{record.generatedId},
+            #{record.recordId},
+            #{record.userId},
+            #{record.resultType},
+            #{record.sourceType},
+            #{record.sourceSessionId},
+            #{record.sourceTaskId},
+            #{record.sourceResultId},
+            #{record.pathTitle},
+            #{record.analysisSummary},
+            #{record.stepCount},
+            #{record.detailRef},
+            #{record.occurredAt},
+            #{record.status},
+            #{record.versionNo},
+            #{record.updatedAt},
+            #{record.updatedAt},
+            #{record.note}
+        )
+    </insert>
+
+    <update id="updateAggregateRecord">
+        UPDATE xm_learning_record
+        SET display_title = #{record.displayName},
+            source_type = #{record.sourceType},
+            source_session_id = #{record.sourceSessionId},
+            source_task_id = #{record.sourceTaskId},
+            source_result_id = #{record.sourceResultId},
+            source_time = #{record.occurredAt},
+            status = #{record.status},
+            score = #{record.score},
+            analysis_summary = #{record.analysisSummary},
+            detail_ref = #{record.detailRef},
+            version_no = #{record.versionNo},
+            update_time = #{record.updatedAt},
+            remark = #{record.note}
+        WHERE record_id = #{record.recordId}
+    </update>
+
+    <select id="selectQuizRecordByRecordId" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            quiz_result_id AS generatedId,
+            record_id AS recordId,
+            CAST(user_id AS CHAR) AS userId,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            question_total AS questionTotal,
+            correct_total AS correctTotal,
+            score AS score,
+            analysis_summary AS analysisSummary,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_quiz_result
+        WHERE record_id = #{recordId}
+        LIMIT 1
+    </select>
+
+    <update id="updateQuizRecord">
+        UPDATE xm_quiz_result
+        SET source_type = #{record.sourceType},
+            source_session_id = #{record.sourceSessionId},
+            source_task_id = #{record.sourceTaskId},
+            source_result_id = #{record.sourceResultId},
+            question_total = #{record.questionTotal},
+            correct_total = #{record.correctTotal},
+            status = #{record.status},
+            score = #{record.score},
+            analysis_summary = #{record.analysisSummary},
+            detail_ref = #{record.detailRef},
+            source_time = #{record.occurredAt},
+            version_no = #{record.versionNo},
+            update_time = #{record.updatedAt},
+            remark = #{record.note}
+        WHERE quiz_result_id = #{record.generatedId}
+    </update>
+
+    <select id="selectWrongbookRecordByRecordId" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            wrongbook_id AS generatedId,
+            record_id AS recordId,
+            CAST(user_id AS CHAR) AS userId,
+            result_type AS resultType,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            question_text AS questionText,
+            wrong_answer_text AS wrongAnswerText,
+            reference_answer_text AS referenceAnswerText,
+            analysis_summary AS analysisSummary,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status
+        FROM xm_learning_wrongbook
+        WHERE record_id = #{recordId}
+        LIMIT 1
+    </select>
+
+    <update id="updateWrongbookRecord">
+        UPDATE xm_learning_wrongbook
+        SET result_type = #{record.resultType},
+            source_type = #{record.sourceType},
+            source_session_id = #{record.sourceSessionId},
+            source_task_id = #{record.sourceTaskId},
+            source_result_id = #{record.sourceResultId},
+            question_text = #{record.questionText},
+            wrong_answer_text = #{record.wrongAnswerText},
+            reference_answer_text = #{record.referenceAnswerText},
+            analysis_summary = #{record.analysisSummary},
+            detail_ref = #{record.detailRef},
+            source_time = #{record.occurredAt},
+            status = #{record.status},
+            update_time = #{record.updatedAt},
+            remark = #{record.note}
+        WHERE wrongbook_id = #{record.generatedId}
+    </update>
+
+    <select id="selectRecommendationRecordByRecordId" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            recommendation_id AS generatedId,
+            record_id AS recordId,
+            CAST(user_id AS CHAR) AS userId,
+            result_type AS resultType,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            recommendation_reason AS analysisSummary,
+            target_type AS targetType,
+            target_ref_id AS targetRefId,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_learning_recommendation
+        WHERE record_id = #{recordId}
+        LIMIT 1
+    </select>
+
+    <update id="updateRecommendationRecord">
+        UPDATE xm_learning_recommendation
+        SET result_type = #{record.resultType},
+            source_type = #{record.sourceType},
+            source_session_id = #{record.sourceSessionId},
+            source_task_id = #{record.sourceTaskId},
+            source_result_id = #{record.sourceResultId},
+            recommendation_reason = #{record.analysisSummary},
+            target_type = #{record.targetType},
+            target_ref_id = #{record.targetRefId},
+            detail_ref = #{record.detailRef},
+            source_time = #{record.occurredAt},
+            status = #{record.status},
+            version_no = #{record.versionNo},
+            update_time = #{record.updatedAt},
+            remark = #{record.note}
+        WHERE recommendation_id = #{record.generatedId}
+    </update>
+
+    <select id="selectPathRecordByRecordId" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            path_id AS generatedId,
+            record_id AS recordId,
+            CAST(user_id AS CHAR) AS userId,
+            result_type AS resultType,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            path_title AS pathTitle,
+            path_summary AS analysisSummary,
+            step_count AS stepCount,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_learning_path
+        WHERE record_id = #{recordId}
+        LIMIT 1
+    </select>
+
+    <update id="updatePathRecord">
+        UPDATE xm_learning_path
+        SET result_type = #{record.resultType},
+            source_type = #{record.sourceType},
+            source_session_id = #{record.sourceSessionId},
+            source_task_id = #{record.sourceTaskId},
+            source_result_id = #{record.sourceResultId},
+            path_title = #{record.pathTitle},
+            path_summary = #{record.analysisSummary},
+            step_count = #{record.stepCount},
+            detail_ref = #{record.detailRef},
+            source_time = #{record.occurredAt},
+            status = #{record.status},
+            version_no = #{record.versionNo},
+            update_time = #{record.updatedAt},
+            remark = #{record.note}
+        WHERE path_id = #{record.generatedId}
+    </update>
+
+    <update id="updateAggregateSourceResultId">
+        UPDATE xm_learning_record
+        SET source_result_id = #{sourceResultId}
+        WHERE record_id = #{recordId}
+    </update>
+
+</mapper>
