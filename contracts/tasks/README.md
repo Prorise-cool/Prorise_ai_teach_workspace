@@ -21,6 +21,7 @@ Story `2.5` 在此基础上冻结统一 SSE 事件契约。
 - `sse-sequence.md`：事件顺序、`id` / `sequence` 与 `Last-Event-ID` 语义
 - `redis-runtime.md`：Redis 运行态边界、恢复语义与短期存储约束
 - `redis-keys.md`：`xm_*` key 命名规则与 TTL 速查
+- `provider-switch.md`：Provider 自动切换的事件语义与错误收敛规则
 
 ## 命名规则
 

@@ -1,0 +1,11 @@
+{
+  "provider": "demo-chat",
+  "isHealthy": false,
+  "reason": "provider timeout",
+  "checkedAt": "2026-03-30T19:10:00Z",
+  "metadata": {
+    "source": "provider-call",
+    "failureCount": 2,
+    "errorCode": "TASK_PROVIDER_TIMEOUT"
+  }
+}

@@ -1,6 +1,6 @@
 # Story 2.8: Provider 健康检查、Failover 与缓存策略
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,18 +18,18 @@ so that 我不会因为单点外部故障就完全失去结果。
 
 ## Tasks / Subtasks
 
-- [ ] 实现 Provider 健康检查与健康状态缓存（AC: 1, 3）
-  - [ ] 定义主动探针或被动失败统计规则。
-  - [ ] 使用统一 key 与短 TTL 缓存健康状态。
-- [ ] 实现 Failover 决策逻辑（AC: 1, 2, 3）
-  - [ ] 在工厂层按优先级、健康状态与错误类型选择备 Provider。
-  - [ ] 避免在所有 Provider 失败时陷入无限重试循环。
-- [ ] 对接统一事件与错误语义（AC: 2, 3）
-  - [ ] 发出符合 `Story 2.5` 契约的 `provider_switch` 事件。
-  - [ ] 全部 Provider 不可用时返回明确错误码与失败结果。
-- [ ] 建立健康缓存与切换测试（AC: 1, 2, 3）
-  - [ ] 覆盖主 Provider 健康、主 Provider 不健康、缓存过期刷新、全部 Provider 不可用等场景。
-  - [ ] 覆盖切换事件、切换后成功返回与最终失败收敛。
+- [x] 实现 Provider 健康检查与健康状态缓存（AC: 1, 3）
+  - [x] 定义主动探针或被动失败统计规则。
+  - [x] 使用统一 key 与短 TTL 缓存健康状态。
+- [x] 实现 Failover 决策逻辑（AC: 1, 2, 3）
+  - [x] 在工厂层按优先级、健康状态与错误类型选择备 Provider。
+  - [x] 避免在所有 Provider 失败时陷入无限重试循环。
+- [x] 对接统一事件与错误语义（AC: 2, 3）
+  - [x] 发出符合 `Story 2.5` 契约的 `provider_switch` 事件。
+  - [x] 全部 Provider 不可用时返回明确错误码与失败结果。
+- [x] 建立健康缓存与切换测试（AC: 1, 2, 3）
+  - [x] 覆盖主 Provider 健康、主 Provider 不健康、缓存过期刷新、全部 Provider 不可用等场景。
+  - [x] 覆盖切换事件、切换后成功返回与最终失败收敛。
 
 ## Dev Notes
 
@@ -103,12 +103,23 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `/Volumes/DataDisk/Projects/ProriseProjects/worktrees/prorise-story-2-4/packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/providers/test_factory.py packages/fastapi-backend/tests/unit/providers/test_failover.py packages/fastapi-backend/tests/unit/test_task_contracts.py packages/fastapi-backend/tests/unit/task_framework/test_runtime_store.py`
+- `/Volumes/DataDisk/Projects/ProriseProjects/worktrees/prorise-story-2-4/packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/providers/test_factory.py packages/fastapi-backend/tests/unit/providers/test_failover.py packages/fastapi-backend/tests/unit/task_framework/test_runtime_store.py packages/fastapi-backend/tests/unit/test_task_contracts.py packages/fastapi-backend/tests/test_health.py packages/fastapi-backend/tests/test_bootstrap_routes.py`
 
 ### Completion Notes List
 
-- 已把 Provider 可靠性 Story 拆成健康检查、Failover、事件对接与缓存验证四个可执行面。
+- 已新增 `ProviderHealthStore` 与 `ProviderFailoverService`，把健康缓存、失败分类和主备切换从业务层抽离到 provider 基础设施层。
+- 已在 `ProviderFactory` 暴露 `generate_with_failover` / `synthesize_with_failover` 统一入口，业务侧无需再手写主备切换循环。
+- 已补齐 `provider_switch` 契约文档、健康缓存 mock 与 failover 单测，覆盖主链命中、缓存跳过、TTL 过期恢复与全链失败收敛。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/2-8-provider-健康检查failover-与缓存策略.md`
+- `contracts/tasks/README.md`
+- `contracts/tasks/provider-switch.md`
+- `mocks/tasks/provider-health-cache.json`
+- `mocks/tasks/provider-switch.json`
+- `packages/fastapi-backend/app/providers/factory.py`
+- `packages/fastapi-backend/app/providers/failover.py`
+- `packages/fastapi-backend/app/providers/health.py`
+- `packages/fastapi-backend/tests/unit/providers/test_failover.py`
