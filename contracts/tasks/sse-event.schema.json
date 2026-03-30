@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "contracts/tasks/task-progress-event.schema.json",
-  "title": "TaskProgressEvent",
+  "$id": "contracts/tasks/sse-event.schema.json",
+  "title": "TaskSseEvent",
   "type": "object",
   "additionalProperties": false,
   "required": [

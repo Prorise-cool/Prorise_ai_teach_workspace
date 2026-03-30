@@ -1,0 +1,17 @@
+{
+  "id": "task_mock_completed:evt:000004",
+  "sequence": 4,
+  "event": "completed",
+  "taskId": "task_mock_completed",
+  "taskType": "video",
+  "status": "completed",
+  "progress": 100,
+  "message": "任务执行完成",
+  "timestamp": "2026-03-30T13:05:18Z",
+  "requestId": "req_task_mock_completed_sse",
+  "errorCode": null,
+  "stage": "completed",
+  "result": {
+    "artifactUrl": "https://static.prorise.test/results/task_mock_completed.mp4"
+  }
+}
