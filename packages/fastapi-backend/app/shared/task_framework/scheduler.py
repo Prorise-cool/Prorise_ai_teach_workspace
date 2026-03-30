@@ -16,6 +16,7 @@ from app.shared.task_framework.publisher import (
     TaskEventPublisher
 )
 from app.shared.task_framework.runtime import TaskRuntimeRecorder, TaskRuntimeSnapshot
+from app.shared.task_framework.runtime_store import build_task_event
 from app.shared.task_framework.status import (
     TaskErrorCode,
     TaskInternalStatus,
@@ -268,8 +269,14 @@ class TaskScheduler:
                 progress=progress,
                 request_id=context.request_id,
                 error_code=error_code,
-                source=context.source_module
+                source=context.source_module,
+                context=payload
             )
+            if event is not None:
+                self.runtime_store.append_task_event(
+                    context.task_id,
+                    build_task_event(event=event, snapshot=snapshot, context=payload or {})
+                )
 
         if event is not None and self.event_publisher is not None:
             self.event_publisher.publish(

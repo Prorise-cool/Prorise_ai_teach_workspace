@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import math
+import time
+from copy import deepcopy
 from dataclasses import dataclass, field
+from enum import StrEnum
 from threading import Lock
 from typing import Any
 
@@ -11,7 +15,24 @@ from redis import Redis
 
 from app.core.config import Settings, get_settings
 from app.core.logging import format_trace_timestamp
+from app.core.sse import TaskProgressEvent, ensure_sse_event_identity, parse_sse_event_id
+from app.shared.task_framework.key_builder import (
+    PROVIDER_HEALTH_TTL_SECONDS,
+    TASK_EVENTS_TTL_SECONDS,
+    TASK_MESSAGE_TTL_SECONDS,
+    TASK_RUNTIME_TTL_SECONDS,
+    build_provider_health_key,
+    build_task_events_key,
+    build_task_message_key,
+    build_task_runtime_key,
+)
+from app.shared.task_framework.runtime_store import TaskRuntimeRecoveryState
 from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus, map_internal_status
+
+
+class RuntimeStorageScope(StrEnum):
+    RUNTIME = "runtime"
+    LONG_TERM = "long_term"
 
 
 @dataclass(slots=True)
@@ -20,23 +41,54 @@ class RuntimeStore:
     redis_url: str
     client: Redis | None = None
     storage: dict[str, object] = field(default_factory=dict)
+    expirations: dict[str, float] = field(default_factory=dict)
     _lock: Lock = field(default_factory=Lock, init=False, repr=False)
 
-    def get(self, key: str) -> object | None:
+    def get_runtime_value(self, key: str) -> object | None:
         if self.client is not None:
             raw_value = self.client.get(key)
             return json.loads(raw_value) if raw_value is not None else None
 
         with self._lock:
-            return self.storage.get(key)
+            self._purge_expired_locked(key)
+            value = self.storage.get(key)
+            return deepcopy(value) if value is not None else None
 
-    def set(self, key: str, value: object) -> None:
+    def set_runtime_value(
+        self,
+        key: str,
+        value: object,
+        *,
+        ttl_seconds: int,
+        scope: RuntimeStorageScope = RuntimeStorageScope.RUNTIME
+    ) -> None:
+        if RuntimeStorageScope(scope) is not RuntimeStorageScope.RUNTIME:
+            raise ValueError("RuntimeStore 不能承担长期业务数据持久化")
+        if ttl_seconds <= 0:
+            raise ValueError("RuntimeStore 写入必须显式设置正数 TTL")
+        if not key.startswith("xm_"):
+            raise ValueError("RuntimeStore key 必须使用 xm_ 运行态命名空间")
+
         if self.client is not None:
-            self.client.set(key, json.dumps(value))
+            self.client.set(key, json.dumps(value), ex=ttl_seconds)
             return
 
         with self._lock:
-            self.storage[key] = value
+            self.storage[key] = json.loads(json.dumps(value))
+            self.expirations[key] = self._now() + ttl_seconds
+
+    def ttl(self, key: str) -> int:
+        if self.client is not None:
+            return int(self.client.ttl(key))
+
+        with self._lock:
+            self._purge_expired_locked(key)
+            if key not in self.storage:
+                return -2
+            expires_at = self.expirations.get(key)
+            if expires_at is None:
+                return -1
+            return max(0, math.ceil(expires_at - self._now()))
 
     def clear(self) -> None:
         if self.client is not None:
@@ -45,6 +97,7 @@ class RuntimeStore:
 
         with self._lock:
             self.storage.clear()
+            self.expirations.clear()
 
     def set_task_state(
         self,
@@ -56,7 +109,8 @@ class RuntimeStore:
         task_type: str | None = None,
         request_id: str | None = None,
         error_code: TaskErrorCode | None = None,
-        source: str = "unknown"
+        source: str = "unknown",
+        context: dict[str, object] | None = None
     ) -> dict[str, object]:
         status = map_internal_status(internal_status)
         payload: dict[str, object] = {
@@ -69,31 +123,144 @@ class RuntimeStore:
             "requestId": request_id,
             "errorCode": error_code.value if error_code is not None else None,
             "source": source,
+            "context": dict(context or {}),
             "updatedAt": format_trace_timestamp()
         }
-        self.set(self._task_state_key(task_id), payload)
+        self.set_runtime_value(
+            build_task_runtime_key(task_id),
+            payload,
+            ttl_seconds=TASK_RUNTIME_TTL_SECONDS
+        )
         return payload
 
     def get_task_state(self, task_id: str) -> dict[str, object] | None:
-        record = self.get(self._task_state_key(task_id))
+        record = self.get_runtime_value(build_task_runtime_key(task_id))
         if record is None:
             return None
         return dict(record)
 
     def set_message_mapping(self, message_id: str, task_id: str) -> None:
-        self.set(self._message_key(message_id), task_id)
+        self.set_runtime_value(
+            build_task_message_key(message_id),
+            task_id,
+            ttl_seconds=TASK_MESSAGE_TTL_SECONDS
+        )
 
     def get_task_id_by_message(self, message_id: str) -> str | None:
-        value = self.get(self._message_key(message_id))
+        value = self.get_runtime_value(build_task_message_key(message_id))
         return str(value) if value is not None else None
 
-    @staticmethod
-    def _task_state_key(task_id: str) -> str:
-        return f"task_state:{task_id}"
+    def append_task_event(
+        self,
+        task_id: str,
+        event: TaskProgressEvent | dict[str, Any]
+    ) -> TaskProgressEvent:
+        candidate = event if isinstance(event, TaskProgressEvent) else TaskProgressEvent.model_validate(event)
+        events = self.get_task_events(task_id)
+        next_sequence = (events[-1].sequence or 0) + 1 if events else 1
+        normalized = ensure_sse_event_identity(candidate, fallback_sequence=next_sequence)
+        payload = [
+            item.model_dump(mode="json", by_alias=True)
+            for item in (*events, normalized)
+        ]
+        self.set_runtime_value(
+            build_task_events_key(task_id),
+            payload,
+            ttl_seconds=TASK_EVENTS_TTL_SECONDS
+        )
+        return normalized
+
+    def get_task_events(
+        self,
+        task_id: str,
+        *,
+        after_event_id: str | None = None
+    ) -> list[TaskProgressEvent]:
+        payload = self.get_runtime_value(build_task_events_key(task_id))
+        if payload is None:
+            return []
+
+        events = [TaskProgressEvent.model_validate(item) for item in payload]
+        if after_event_id is None:
+            return events
+
+        after_sequence = self._resolve_after_sequence(task_id, after_event_id, events)
+        return [
+            event
+            for event in events
+            if (event.sequence or 0) > after_sequence
+        ]
+
+    def load_task_recovery_state(
+        self,
+        task_id: str,
+        *,
+        after_event_id: str | None = None
+    ) -> TaskRuntimeRecoveryState:
+        return TaskRuntimeRecoveryState(
+            task_id=task_id,
+            snapshot=self.get_task_state(task_id),
+            events=tuple(self.get_task_events(task_id, after_event_id=after_event_id))
+        )
+
+    def set_provider_health(
+        self,
+        provider: str,
+        *,
+        is_healthy: bool,
+        reason: str | None = None,
+        checked_at: str | None = None,
+        metadata: dict[str, object] | None = None
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "provider": provider,
+            "isHealthy": is_healthy,
+            "reason": reason,
+            "checkedAt": checked_at or format_trace_timestamp(),
+            "metadata": metadata or {}
+        }
+        self.set_runtime_value(
+            build_provider_health_key(provider),
+            payload,
+            ttl_seconds=PROVIDER_HEALTH_TTL_SECONDS
+        )
+        return payload
+
+    def get_provider_health(self, provider: str) -> dict[str, object] | None:
+        payload = self.get_runtime_value(build_provider_health_key(provider))
+        if payload is None:
+            return None
+        return dict(payload)
 
     @staticmethod
-    def _message_key(message_id: str) -> str:
-        return f"task_message:{message_id}"
+    def _resolve_after_sequence(
+        task_id: str,
+        after_event_id: str,
+        events: list[TaskProgressEvent]
+    ) -> int:
+        parsed_identity = parse_sse_event_id(after_event_id)
+        if parsed_identity is not None:
+            parsed_task_id, parsed_sequence = parsed_identity
+            if parsed_task_id == task_id:
+                return parsed_sequence
+
+        for event in events:
+            if event.id == after_event_id:
+                return event.sequence or 0
+
+        return 0
+
+    def _purge_expired_locked(self, key: str) -> None:
+        expires_at = self.expirations.get(key)
+        if expires_at is None:
+            return
+        if expires_at <= self._now():
+            self.storage.pop(key, None)
+            self.expirations.pop(key, None)
+
+    @staticmethod
+    def _now() -> float:
+        return time.time()
 
 
 @dataclass(slots=True, frozen=True)

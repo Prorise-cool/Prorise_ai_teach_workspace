@@ -156,6 +156,7 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
     provider_switch_payload = _load_json("mocks/tasks/sse.provider-switch.json")
     snapshot_payload = _load_json("mocks/tasks/sse.snapshot.json")
     failed_sequence_payload = _load_json("mocks/tasks/sse.sequence.failed.json")
+    runtime_progress_payload = _load_json("mocks/tasks/task-events.progress.json")
     event_schema = _load_json("contracts/tasks/sse-event.schema.json")
 
     for payload in (
@@ -171,6 +172,11 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
 
     for index, payload in enumerate(failed_sequence_payload, start=1):
         model = TaskProgressEvent.model_validate(payload)
+        assert model.sequence == index
+
+    for index, payload in enumerate(runtime_progress_payload, start=1):
+        model = TaskProgressEvent.model_validate(payload)
+        assert model.event == "progress"
         assert model.sequence == index
 
     provider_switch_model = TaskProgressEvent.model_validate(provider_switch_payload)

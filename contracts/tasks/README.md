@@ -19,6 +19,8 @@ Story `2.5` 在此基础上冻结统一 SSE 事件契约。
 - `sse-event.schema.json`：Story `2.5` 冻结后的 SSE 事件 schema
 - `sse-events.md`：七类事件定义、字段语义与 broker 写入约定
 - `sse-sequence.md`：事件顺序、`id` / `sequence` 与 `Last-Event-ID` 语义
+- `redis-runtime.md`：Redis 运行态边界、恢复语义与短期存储约束
+- `redis-keys.md`：`xm_*` key 命名规则与 TTL 速查
 
 ## 命名规则
 
