@@ -50,7 +50,14 @@ TASK_SNAPSHOT_SUCCESS_EXAMPLE = {
         "message": "正在生成分镜与脚本",
         "timestamp": ISO_8601_EXAMPLE,
         "requestId": "req_20260329_processing",
-        "errorCode": None
+        "errorCode": None,
+        "stage": "script_generation",
+        "context": {
+            "source": "status-polling",
+            "nextAction": "keep_waiting"
+        },
+        "resumeFrom": "video_20260329161500_ab12cd34:evt:000003",
+        "lastEventId": "video_20260329161500_ab12cd34:evt:000003"
     }
 }
 

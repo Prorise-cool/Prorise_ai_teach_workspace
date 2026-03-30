@@ -1,6 +1,6 @@
 # Story 2.6: SSE 断线恢复与 `/status` 查询降级
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,18 +18,18 @@ so that 我不会因为刷新、网络波动或浏览器重连而丢失任务上
 
 ## Tasks / Subtasks
 
-- [ ] 实现 SSE 恢复链路（AC: 1, 3）
-  - [ ] 支持基于 `Last-Event-ID` 的缺失事件补发。
-  - [ ] 支持在事件缺失时读取任务快照并恢复当前状态。
-- [ ] 实现 `/status` 降级接口与前端 fallback（AC: 2, 3）
-  - [ ] 统一 `/status` 响应结构，保证字段与 `TaskSnapshot` 对齐。
-  - [ ] 超过重连上限后自动切换到状态查询模式。
-- [ ] 建立前端连接管理与资源清理（AC: 1, 2, 3）
-  - [ ] 处理页面切换、刷新、离开页面时的连接关闭与恢复。
-  - [ ] 处理重连次数、退避策略与 polling 间隔。
-- [ ] 增加恢复与降级测试（AC: 1, 2, 3）
-  - [ ] 覆盖短暂断线、长期断线、刷新页面、轮询兜底等场景。
-  - [ ] 覆盖恢复后状态连续性，不出现从头开始的假进度。
+- [x] 实现 SSE 恢复链路（AC: 1, 3）
+  - [x] 支持基于 `Last-Event-ID` 的缺失事件补发。
+  - [x] 支持在事件缺失时读取任务快照并恢复当前状态。
+- [x] 实现 `/status` 降级接口与前端 fallback（AC: 2, 3）
+  - [x] 统一 `/status` 响应结构，保证字段与 `TaskSnapshot` 对齐。
+  - [x] 超过重连上限后自动切换到状态查询模式。
+- [x] 建立前端连接管理与资源清理（AC: 1, 2, 3）
+  - [x] 处理页面切换、刷新、离开页面时的连接关闭与恢复。
+  - [x] 处理重连次数、退避策略与 polling 间隔。
+- [x] 增加恢复与降级测试（AC: 1, 2, 3）
+  - [x] 覆盖短暂断线、长期断线、刷新页面、轮询兜底等场景。
+  - [x] 覆盖恢复后状态连续性，不出现从头开始的假进度。
 
 ## Dev Notes
 
@@ -105,12 +105,45 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `uv run --project packages/fastapi-backend --extra dev python -m pytest packages/fastapi-backend/tests/test_task_recovery_routes.py packages/fastapi-backend/tests/unit/test_task_contracts.py packages/fastapi-backend/tests/unit/task_framework/test_runtime_store.py packages/fastapi-backend/tests/integration/test_dramatiq_broker.py packages/fastapi-backend/tests/test_health.py packages/fastapi-backend/tests/test_bootstrap_routes.py`
+- `pnpm install --frozen-lockfile`
+- `pnpm --filter @xiaomai/student-web exec vitest run src/test/services/sse/task-event-stream.test.ts src/test/services/api/adapters/task-adapter.test.ts src/test/services/mock/fixtures/task-contract-assets.test.ts`
+- `pnpm --filter @xiaomai/student-web typecheck`
+- `pnpm --filter @xiaomai/student-web exec eslint src/services/sse/index.ts src/services/api/adapters/task-adapter.ts src/test/services/sse/task-event-stream.test.ts src/test/services/api/adapters/task-adapter.test.ts`
 
 ### Completion Notes List
 
-- 已把恢复 Story 拆成服务端补发、`/status` 兜底、前端 transport 管理与状态连续性测试四个执行面。
+- 已新增通用任务恢复路由，后端可按 `Last-Event-ID` 补发缺失事件，并在无新事件时通过 `/status` 暴露最小恢复快照。
+- 已把 `student-web` transport 收敛到统一 SSE 恢复层，支持重连上限、退避等待、`AbortSignal` 清理与 `/status` polling 降级。
+- 已补齐 `sse-recovery` 契约与 `task-status.polling` mock，并把恢复 / 降级资产接入前后端共享测试。
+- 已验证短断线恢复、重连耗尽降级、刷新恢复与状态连续性，不依赖数据库历史回放。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/2-6-sse-断线恢复与-status-查询降级.md`
+- `_bmad-output/implementation-artifacts/2-1-统一任务状态枚举错误码与结果-schema-冻结.md`
+- `_bmad-output/implementation-artifacts/2-2-task-基类taskcontext-与调度骨架.md`
+- `_bmad-output/implementation-artifacts/2-3-dramatiq-redis-broker-基础接入.md`
+- `_bmad-output/implementation-artifacts/2-4-redis-运行态-keyttl-与事件缓存落地.md`
+- `_bmad-output/implementation-artifacts/2-5-sse-事件类型payload-与-broker-契约冻结.md`
+- `_bmad-output/implementation-artifacts/2-7-provider-protocol工厂与优先级注册骨架.md`
+- `_bmad-output/implementation-artifacts/2-8-provider-健康检查failover-与缓存策略.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `contracts/tasks/README.md`
+- `contracts/tasks/sse-recovery.md`
+- `mocks/tasks/README.md`
+- `mocks/tasks/task-status.polling.json`
+- `packages/fastapi-backend/app/api/router.py`
+- `packages/fastapi-backend/app/api/routes/contracts.py`
+- `packages/fastapi-backend/app/api/routes/tasks.py`
+- `packages/fastapi-backend/app/main.py`
+- `packages/fastapi-backend/app/schemas/common.py`
+- `packages/fastapi-backend/app/schemas/examples.py`
+- `packages/fastapi-backend/app/shared/task_framework/publisher.py`
+- `packages/fastapi-backend/tests/test_task_recovery_routes.py`
+- `packages/fastapi-backend/tests/unit/test_task_contracts.py`
+- `packages/student-web/src/services/api/adapters/task-adapter.ts`
+- `packages/student-web/src/services/sse/index.ts`
+- `packages/student-web/src/test/services/api/adapters/task-adapter.test.ts`
+- `packages/student-web/src/test/services/mock/fixtures/task-contract-assets.test.ts`
+- `packages/student-web/src/test/services/sse/task-event-stream.test.ts`

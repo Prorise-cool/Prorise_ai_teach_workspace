@@ -8,6 +8,7 @@ import type {
   TaskEventName,
   TaskLifecycleStatus,
   TaskMockScenario,
+  TaskSnapshot,
   TaskStreamEventPayload
 } from '@/types/task';
 import {
@@ -17,6 +18,7 @@ import {
   TASK_STATUS_VALUES
 } from '@/types/task';
 
+import { resolveTaskAdapter, type TaskAdapter } from '@/services/api/adapters/task-adapter';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
 
 type TaskEventStreamOptions = {
@@ -24,6 +26,17 @@ type TaskEventStreamOptions = {
   signal?: AbortSignal;
   useMock?: boolean;
   lastEventId?: string | null;
+  reconnectAttempts?: number;
+  reconnectDelayMs?: number;
+  pollingIntervalMs?: number;
+  initialSnapshot?: TaskSnapshot | null;
+};
+
+type CreateRealTaskEventStreamOptions = {
+  adapter?: TaskAdapter;
+  reconnectAttempts?: number;
+  reconnectDelayMs?: number;
+  pollingIntervalMs?: number;
 };
 
 type TaskEventParserLogger = Pick<Console, 'warn'>;
@@ -41,6 +54,9 @@ type TaskEventTemplate = Omit<TaskStreamEventPayload, 'taskId' | 'id'> & {
 
 const DEFAULT_TASK_TYPE = 'video';
 const DEFAULT_REQUEST_ID_PREFIX = 'req_task_mock';
+const DEFAULT_RECONNECT_ATTEMPTS = 3;
+const DEFAULT_RECONNECT_DELAY_MS = 250;
+const DEFAULT_POLLING_INTERVAL_MS = 2000;
 
 const MOCK_SSE_SEQUENCES: Record<string, TaskEventTemplate[]> = {
   default: completedSequence as TaskEventTemplate[],
@@ -99,6 +115,103 @@ function toOptionalString(value: unknown) {
 
 function toOptionalResult(value: unknown) {
   return isRecord(value) ? value : null;
+}
+
+function isTerminalTaskStatus(status: TaskLifecycleStatus) {
+  return status === 'completed' || status === 'failed' || status === 'cancelled';
+}
+
+function isTaskSnapshotEqual(left: TaskSnapshot, right: TaskSnapshot) {
+  return (
+    left.taskId === right.taskId &&
+    left.requestId === right.requestId &&
+    left.taskType === right.taskType &&
+    left.status === right.status &&
+    left.progress === right.progress &&
+    left.message === right.message &&
+    left.timestamp === right.timestamp &&
+    left.stage === right.stage &&
+    left.errorCode === right.errorCode &&
+    left.resumeFrom === right.resumeFrom &&
+    left.lastEventId === right.lastEventId &&
+    JSON.stringify(left.context ?? null) === JSON.stringify(right.context ?? null)
+  );
+}
+
+function parseEventSequenceFromId(eventId: string | null | undefined) {
+  if (!eventId) {
+    return 0;
+  }
+
+  const sequence = parseTaskEventId(eventId);
+
+  return sequence ?? 0;
+}
+
+function snapshotToStreamEvent(
+  taskId: string,
+  snapshot: TaskSnapshot,
+  sequence: number,
+  previousEventId: string | null
+): TaskStreamEventPayload {
+  const id = buildTaskEventId(taskId, sequence);
+  const resumeFrom = snapshot.lastEventId ?? previousEventId ?? id;
+
+  return {
+    id,
+    sequence,
+    event: 'snapshot',
+    taskId: snapshot.taskId,
+    taskType: snapshot.taskType,
+    status: snapshot.status,
+    progress: snapshot.progress,
+    message: snapshot.message,
+    timestamp: snapshot.timestamp,
+    requestId: snapshot.requestId,
+    errorCode: snapshot.errorCode ?? null,
+    stage: snapshot.stage ?? null,
+    resumeFrom,
+    context: snapshot.context
+  };
+}
+
+function createAbortError() {
+  const error = new Error('Aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+async function waitWithSignal(ms: number, signal?: AbortSignal) {
+  if (ms <= 0) {
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createAbortError());
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      cleanup();
+      reject(createAbortError());
+    };
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function normalizeTaskEventPayload(
@@ -244,6 +357,73 @@ function parseSseMessages(rawBody: string): RawSseMessage[] {
   return messages;
 }
 
+async function* streamSseAttempt(
+  taskId: string,
+  options: Pick<TaskEventStreamOptions, 'signal' | 'lastEventId'>,
+  logger: TaskEventParserLogger
+) {
+  const headers: HeadersInit = {
+    Accept: 'text/event-stream, application/json'
+  };
+
+  if (options.lastEventId) {
+    headers['Last-Event-ID'] = options.lastEventId;
+  }
+
+  const response = await fetch(
+    `${import.meta.env.VITE_FASTAPI_BASE_URL}/api/v1/tasks/${taskId}/events`,
+    {
+      headers,
+      signal: options.signal
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`任务事件流初始化失败：${response.status}`);
+  }
+
+  const events = await parseTaskEventResponse(response, logger);
+
+  yield* events;
+}
+
+async function* streamPollingFallback(
+  taskId: string,
+  options: { signal?: AbortSignal; pollingIntervalMs: number } &
+    Pick<TaskEventStreamOptions, 'scenario'>,
+  adapter: TaskAdapter,
+  startingSequence: number
+) {
+  let sequence = startingSequence;
+  let previousSnapshot: TaskSnapshot | null = null;
+
+  while (!(options.signal?.aborted ?? false)) {
+    const snapshot = await adapter.getTaskSnapshot(taskId, {
+      scenario: options.scenario,
+      signal: options.signal
+    });
+
+    if (!previousSnapshot || !isTaskSnapshotEqual(snapshot, previousSnapshot)) {
+      sequence += 1;
+      const event = snapshotToStreamEvent(
+        taskId,
+        snapshot,
+        sequence,
+        previousSnapshot?.lastEventId ?? null
+      );
+
+      yield event;
+      previousSnapshot = snapshot;
+
+      if (isTerminalTaskStatus(snapshot.status)) {
+        return;
+      }
+    }
+
+    await waitWithSignal(options.pollingIntervalMs, options.signal);
+  }
+}
+
 export async function parseTaskEventResponse(
   response: Response,
   logger: TaskEventParserLogger = console
@@ -345,32 +525,90 @@ export function createMockTaskEventStream(): TaskEventStream {
   };
 }
 
-export function createRealTaskEventStream(): TaskEventStream {
+export function createRealTaskEventStream(
+  defaults: CreateRealTaskEventStreamOptions = {}
+): TaskEventStream {
+  const adapter = defaults.adapter ?? resolveTaskAdapter();
+
   return {
     async *streamTaskEvents(taskId, options) {
-      const headers: HeadersInit = {
-        Accept: 'text/event-stream, application/json'
-      };
-
-      if (options?.lastEventId) {
-        headers['Last-Event-ID'] = options.lastEventId;
+      if (options?.signal?.aborted) {
+        throw createAbortError();
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_FASTAPI_BASE_URL}/api/v1/tasks/${taskId}/events`,
-        {
-          headers,
-          signal: options?.signal
+      const reconnectAttempts =
+        options?.reconnectAttempts ?? defaults.reconnectAttempts ?? DEFAULT_RECONNECT_ATTEMPTS;
+      const reconnectDelayMs =
+        options?.reconnectDelayMs ?? defaults.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS;
+      const pollingIntervalMs =
+        options?.pollingIntervalMs ?? defaults.pollingIntervalMs ?? DEFAULT_POLLING_INTERVAL_MS;
+      let lastEventId = options?.lastEventId ?? options?.initialSnapshot?.lastEventId ?? null;
+      let sequence = parseEventSequenceFromId(lastEventId);
+      let reconnectCount = 0;
+      const snapshot = options?.initialSnapshot ?? null;
+
+      if (snapshot) {
+        sequence = Math.max(sequence, parseEventSequenceFromId(snapshot.lastEventId));
+        yield snapshotToStreamEvent(taskId, snapshot, sequence + 1, lastEventId);
+
+        if (isTerminalTaskStatus(snapshot.status)) {
+          return;
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`任务事件流初始化失败：${response.status}`);
+        lastEventId = snapshot.lastEventId ?? lastEventId;
+        sequence += 1;
       }
 
-      const events = await parseTaskEventResponse(response);
+      while (!(options?.signal?.aborted ?? false)) {
+        try {
+          for await (const event of streamSseAttempt(
+            taskId,
+            {
+              signal: options?.signal,
+              lastEventId
+            },
+            console
+          )) {
+            sequence = Math.max(sequence, event.sequence);
+            lastEventId = event.id;
+            yield event;
 
-      yield* events;
+            if (isTerminalTaskStatus(event.status)) {
+              return;
+            }
+          }
+
+          reconnectCount += 1;
+          if (reconnectCount > reconnectAttempts) {
+            break;
+          }
+
+          await waitWithSignal(reconnectDelayMs, options?.signal);
+        } catch (error) {
+          if (options?.signal?.aborted) {
+            throw createAbortError();
+          }
+
+          reconnectCount += 1;
+          if (reconnectCount > reconnectAttempts) {
+            break;
+          }
+
+          await waitWithSignal(reconnectDelayMs, options?.signal);
+          void error;
+        }
+      }
+
+      yield* streamPollingFallback(
+        taskId,
+        {
+          scenario: options?.scenario,
+          signal: options?.signal,
+          pollingIntervalMs
+        },
+        adapter,
+        sequence
+      );
     }
   };
 }

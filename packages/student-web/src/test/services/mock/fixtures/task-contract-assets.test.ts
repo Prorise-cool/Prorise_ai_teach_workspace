@@ -10,6 +10,7 @@ import failedEvent from '../../../../../../../mocks/tasks/sse.failed.json';
 import providerSwitchEvent from '../../../../../../../mocks/tasks/sse.provider-switch.json';
 import snapshotEvent from '../../../../../../../mocks/tasks/sse.snapshot.json';
 import failedSequence from '../../../../../../../mocks/tasks/sse.sequence.failed.json';
+import pollingSnapshot from '../../../../../../../mocks/tasks/task-status.polling.json';
 
 describe('shared task contract assets', () => {
   it('allows frontend tests to consume the same SSE payloads as backend contract tests', () => {
@@ -40,6 +41,12 @@ describe('shared task contract assets', () => {
       reason: 'primary provider unavailable'
     });
     expect(snapshotPayload.resumeFrom).toBe('task_mock_snapshot:evt:000002');
+    expect(pollingSnapshot).toMatchObject({
+      taskId: 'task_mock_snapshot',
+      status: 'processing',
+      lastEventId: 'task_mock_snapshot:evt:000003',
+      resumeFrom: 'task_mock_snapshot:evt:000002'
+    });
     expect(failedSequencePayload.map(payload => payload.sequence)).toEqual([1, 2, 3, 4, 5]);
   });
 });

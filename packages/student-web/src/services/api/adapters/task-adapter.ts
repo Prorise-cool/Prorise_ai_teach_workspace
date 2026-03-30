@@ -189,7 +189,7 @@ export function createRealTaskAdapter({
     },
     async getTaskSnapshot(taskId, options) {
       const envelope = await requestDataEnvelope<TaskSnapshot>(client, {
-        url: appendScenario(`/api/v1/tasks/${taskId}/snapshot`, options?.scenario),
+        url: appendScenario(`/api/v1/tasks/${taskId}/status`, options?.scenario),
         method: 'get',
         signal: options?.signal
       });

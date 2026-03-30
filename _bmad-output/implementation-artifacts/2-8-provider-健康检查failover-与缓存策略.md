@@ -1,6 +1,6 @@
 # Story 2.8: Provider 健康检查、Failover 与缓存策略
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

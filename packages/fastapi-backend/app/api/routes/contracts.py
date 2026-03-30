@@ -63,6 +63,13 @@ async def get_task_snapshot_contract() -> dict[str, object]:
         timestamp="2026-03-29T16:15:00Z",
         request_id="req_20260329_processing",
         error_code=None,
+        stage="script_generation",
+        context={
+            "source": "status-polling",
+            "nextAction": "keep_waiting"
+        },
+        resume_from="video_20260329161500_ab12cd34:evt:000003",
+        last_event_id="video_20260329161500_ab12cd34:evt:000003"
     )
     return build_success_envelope(payload)
 

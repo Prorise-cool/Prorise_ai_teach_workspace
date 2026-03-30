@@ -54,6 +54,23 @@ describe('task adapter', () => {
             errorCode: null
           }
         }
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          code: 200,
+          msg: '获取任务快照成功',
+          data: {
+            taskId: 'task_mock_processing',
+            requestId: 'req_task_processing',
+            taskType: 'video',
+            status: 'processing',
+            progress: 42,
+            message: '任务处理中状态已同步',
+            timestamp: '2026-03-30T13:05:00Z',
+            errorCode: null
+          }
+        }
       });
 
     const adapter = createRealTaskAdapter({
@@ -64,6 +81,7 @@ describe('task adapter', () => {
 
     await adapter.listTasks();
     await adapter.getTask('task_mock_completed');
+    await adapter.getTaskSnapshot('task_mock_processing');
 
     expect(request.mock.calls[0]?.[0]).toMatchObject({
       url: '/api/v1/tasks',
@@ -72,6 +90,47 @@ describe('task adapter', () => {
     expect(request.mock.calls[1]?.[0]).toMatchObject({
       url: '/api/v1/tasks/task_mock_completed',
       method: 'get'
+    });
+    expect(request.mock.calls[2]?.[0]).toMatchObject({
+      url: '/api/v1/tasks/task_mock_processing/status',
+      method: 'get'
+    });
+  });
+
+  it('forwards abort signals to the status endpoint', async () => {
+    const request = vi.fn().mockResolvedValueOnce({
+      status: 200,
+      data: {
+        code: 200,
+        msg: '获取任务快照成功',
+        data: {
+          taskId: 'task_mock_processing',
+          requestId: 'req_task_processing',
+          taskType: 'video',
+          status: 'processing',
+          progress: 42,
+          message: '任务处理中状态已同步',
+          timestamp: '2026-03-30T13:05:00Z',
+          errorCode: null
+        }
+      }
+    });
+    const controller = new AbortController();
+
+    const adapter = createRealTaskAdapter({
+      client: {
+        request
+      } as never
+    });
+
+    await adapter.getTaskSnapshot('task_mock_processing', {
+      signal: controller.signal
+    });
+
+    expect(request.mock.calls[0]?.[0]).toMatchObject({
+      url: '/api/v1/tasks/task_mock_processing/status',
+      method: 'get',
+      signal: controller.signal
     });
   });
 });

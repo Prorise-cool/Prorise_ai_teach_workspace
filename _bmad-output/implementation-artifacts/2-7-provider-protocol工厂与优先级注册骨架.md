@@ -1,6 +1,6 @@
 # Story 2.7: Provider Protocol、工厂与优先级注册骨架
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
