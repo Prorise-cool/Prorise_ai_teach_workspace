@@ -12,6 +12,7 @@
     "typecheck:all": "pnpm -r --if-present run typecheck",
     "dev:student-web": "pnpm --filter @xiaomai/student-web dev",
     "dev:fastapi-backend": "packages/fastapi-backend/.venv/bin/python packages/fastapi-backend/run_dev.py",
+    "dev:fastapi-worker": "packages/fastapi-backend/scripts/start-worker.sh",
     "build:student-web": "pnpm --filter @xiaomai/student-web build",
     "lint:student-web": "pnpm --filter @xiaomai/student-web lint",
     "test:student-web": "pnpm --filter @xiaomai/student-web test",

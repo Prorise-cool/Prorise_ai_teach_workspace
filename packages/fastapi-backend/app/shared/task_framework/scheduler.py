@@ -1,8 +1,13 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from app.core.logging import EMPTY_TRACE_VALUE, bind_trace_context, get_logger, reset_trace_context
-from app.infra.sse_broker import InMemorySseBroker
+from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.publisher import (
@@ -18,7 +23,23 @@ from app.shared.task_framework.status import (
     map_internal_status
 )
 
+if TYPE_CHECKING:
+    from app.infra.sse_broker import InMemorySseBroker
+
 logger = get_logger("app.task.scheduler")
+
+TaskFactory = Callable[[TaskContext], BaseTask]
+TaskQueueDispatcher = Callable[[str, dict[str, object]], str]
+
+_REGISTERED_TASKS: dict[str, TaskFactory] = {}
+
+
+@dataclass(slots=True, frozen=True)
+class TaskDispatchReceipt:
+    task_id: str
+    task_type: str
+    message_id: str
+    status: TaskStatus
 
 
 def generate_task_id(prefix: str) -> str:
@@ -56,21 +77,63 @@ def create_task_context(
         reset_trace_context(tokens)
 
 
+def register_task(task_type: str, factory: TaskFactory) -> None:
+    _REGISTERED_TASKS[task_type] = factory
+
+
+def build_task(task_type: str, context: TaskContext) -> BaseTask:
+    try:
+        factory = _REGISTERED_TASKS[task_type]
+    except KeyError as exc:
+        raise KeyError(f"Task type not registered: {task_type}") from exc
+    return factory(context)
+
+
+def serialize_task_context(context: TaskContext) -> dict[str, object]:
+    return {
+        "taskId": context.task_id,
+        "taskType": context.task_type,
+        "userId": context.user_id,
+        "requestId": context.request_id,
+        "retryCount": context.retry_count,
+        "sourceModule": context.source_module,
+        "metadata": dict(context.metadata),
+        "createdAt": context.created_at,
+    }
+
+
+def deserialize_task_context(payload: dict[str, object]) -> TaskContext:
+    return TaskContext(
+        task_id=str(payload["taskId"]),
+        task_type=str(payload["taskType"]),
+        user_id=str(payload["userId"]) if payload.get("userId") is not None else None,
+        request_id=str(payload["requestId"]) if payload.get("requestId") is not None else None,
+        retry_count=int(payload.get("retryCount", 0)),
+        source_module=str(payload.get("sourceModule", "shared")),
+        metadata=dict(payload.get("metadata", {})),
+        created_at=str(payload.get("createdAt")) if payload.get("createdAt") is not None else datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
 class TaskScheduler:
     def __init__(
         self,
         broker: InMemorySseBroker | None = None,
         *,
         event_publisher: TaskEventPublisher | None = None,
-        runtime_recorder: TaskRuntimeRecorder | None = None
+        runtime_recorder: TaskRuntimeRecorder | None = None,
+        runtime_store: RuntimeStore | None = None,
+        queue_dispatcher: TaskQueueDispatcher | None = None
     ) -> None:
         self.broker = broker
         self.event_publisher = event_publisher or (
             BrokerTaskEventPublisher(broker) if broker is not None else None
         )
         self.runtime_recorder = runtime_recorder
+        self.runtime_store = runtime_store
+        self.queue_dispatcher = queue_dispatcher
 
-    async def dispatch(self, task: BaseTask) -> TaskResult:
+    async def dispatch(self, task: BaseTask, *, emit_queued_snapshot: bool = True) -> TaskResult:
         tokens = bind_trace_context(
             request_id=task.context.request_id or EMPTY_TRACE_VALUE,
             task_id=task.context.task_id,
@@ -78,12 +141,13 @@ class TaskScheduler:
         )
         try:
             try:
-                self._emit_snapshot(
-                    context=task.context,
-                    internal_status=TaskInternalStatus.QUEUED,
-                    progress=0,
-                    message="任务已进入调度队列"
-                )
+                if emit_queued_snapshot:
+                    self._emit_snapshot(
+                        context=task.context,
+                        internal_status=TaskInternalStatus.QUEUED,
+                        progress=0,
+                        message="任务已进入调度队列"
+                    )
                 logger.info("Task dispatch started task_type=%s", task.context.task_type)
 
                 await task._execute_prepare()
@@ -119,6 +183,42 @@ class TaskScheduler:
             return result
         finally:
             reset_trace_context(tokens)
+
+    def enqueue_task(self, *, task_type: str, context: TaskContext) -> TaskDispatchReceipt:
+        if task_type not in _REGISTERED_TASKS:
+            raise KeyError(f"Task type not registered: {task_type}")
+        if self.queue_dispatcher is None:
+            raise RuntimeError("Queue dispatcher is not configured")
+
+        self._emit_snapshot(
+            context=context,
+            internal_status=TaskInternalStatus.QUEUED,
+            progress=0,
+            message="任务已进入调度队列"
+        )
+
+        try:
+            message_id = self.queue_dispatcher(task_type, serialize_task_context(context))
+        except Exception:
+            self._emit_snapshot(
+                context=context,
+                internal_status=TaskInternalStatus.ERROR,
+                progress=0,
+                message="任务投递失败",
+                error_code=TaskErrorCode.UNHANDLED_EXCEPTION
+            )
+            raise
+
+        if self.runtime_store is not None:
+            self.runtime_store.set_message_mapping(message_id, context.task_id)
+
+        logger.info("Task message enqueued task_type=%s message_id=%s", task_type, message_id)
+        return TaskDispatchReceipt(
+            task_id=context.task_id,
+            task_type=task_type,
+            message_id=message_id,
+            status=TaskStatus.PENDING
+        )
 
     async def _coerce_failure_result(self, task: BaseTask, exc: Exception) -> TaskResult:
         error_code = self._resolve_error_code(exc)
@@ -158,6 +258,18 @@ class TaskScheduler:
         )
         if self.runtime_recorder is not None:
             self.runtime_recorder.record(snapshot)
+
+        if self.runtime_store is not None:
+            self.runtime_store.set_task_state(
+                task_id=context.task_id,
+                task_type=context.task_type,
+                internal_status=internal_status,
+                message=message,
+                progress=progress,
+                request_id=context.request_id,
+                error_code=error_code,
+                source=context.source_module
+            )
 
         if event is not None and self.event_publisher is not None:
             self.event_publisher.publish(
