@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from app.core.sse import TaskProgressEvent
-from app.infra.sse_broker import InMemorySseBroker
 from app.shared.task_framework.runtime import TaskRuntimeSnapshot
+
+if TYPE_CHECKING:
+    from app.infra.sse_broker import InMemorySseBroker
 
 
 @dataclass(slots=True)
@@ -31,6 +32,8 @@ class BrokerTaskEventPublisher:
         self._broker = broker
 
     def publish(self, event: TaskDispatchEvent) -> None:
+        from app.core.sse import TaskProgressEvent
+
         snapshot = event.snapshot
         self._broker.publish(
             TaskProgressEvent(
