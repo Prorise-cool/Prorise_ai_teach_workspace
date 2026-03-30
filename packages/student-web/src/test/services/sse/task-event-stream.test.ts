@@ -245,6 +245,71 @@ describe('task event stream', () => {
     expect(adapter.getTaskSnapshot).toHaveBeenCalledTimes(2);
   });
 
+  it('falls back to polling immediately when the server requires snapshot recovery', async () => {
+    const adapter = {
+      getTaskSnapshot: vi
+        .fn()
+        .mockResolvedValueOnce({
+          taskId: 'task_real_snapshot_required',
+          requestId: 'req_real_snapshot_required',
+          taskType: 'video',
+          status: 'processing',
+          progress: 64,
+          message: 'restored from snapshot',
+          timestamp: '2026-03-30T13:05:21Z',
+          stage: 'rendering',
+          errorCode: null,
+          lastEventId: 'task_real_snapshot_required:evt:000003'
+        })
+        .mockResolvedValueOnce({
+          taskId: 'task_real_snapshot_required',
+          requestId: 'req_real_snapshot_required',
+          taskType: 'video',
+          status: 'completed',
+          progress: 100,
+          message: 'done',
+          timestamp: '2026-03-30T13:05:25Z',
+          stage: 'done',
+          errorCode: null,
+          lastEventId: 'task_real_snapshot_required:evt:000004'
+        })
+    };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'X-Task-Recovery-Mode': 'snapshot-required',
+          'X-Task-Last-Event-ID': 'task_real_snapshot_required:evt:000003'
+        }
+      })
+    );
+
+    const stream = createRealTaskEventStream({
+      adapter: adapter as never,
+      reconnectAttempts: 3,
+      reconnectDelayMs: 0,
+      pollingIntervalMs: 0
+    });
+    const events = await collectTaskEvents(
+      stream.streamTaskEvents('task_real_snapshot_required')
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(events.map(event => event.event)).toEqual(['snapshot', 'snapshot']);
+    expect(events.at(0)).toMatchObject({
+      sequence: 4,
+      status: 'processing',
+      resumeFrom: 'task_real_snapshot_required:evt:000003'
+    });
+    expect(events.at(-1)).toMatchObject({
+      sequence: 5,
+      status: 'completed',
+      resumeFrom: 'task_real_snapshot_required:evt:000004'
+    });
+    expect(adapter.getTaskSnapshot).toHaveBeenCalledTimes(2);
+  });
+
   it('stops polling when the abort signal is triggered', async () => {
     const controller = new AbortController();
     const adapter = {

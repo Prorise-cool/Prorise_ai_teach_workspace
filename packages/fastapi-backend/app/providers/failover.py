@@ -127,22 +127,28 @@ class ProviderFailoverService:
         failures: list[ProviderAttemptFailure] = []
         for index, provider in enumerate(provider_chain):
             cached = self._health_store.get(provider.provider_id)
-            if cached is not None and not cached.is_healthy and index < len(provider_chain) - 1:
-                switch = ProviderSwitch(
-                    from_provider=provider.provider_id,
-                    to_provider=provider_chain[index + 1].provider_id,
-                    reason=cached.reason or "cached-unhealthy",
-                    error_code=TaskErrorCode(cached.error_code or TaskErrorCode.PROVIDER_UNAVAILABLE),
-                    metadata={"source": "health-cache"},
+            if cached is not None and not cached.is_healthy:
+                error_code = TaskErrorCode(
+                    cached.error_code or TaskErrorCode.PROVIDER_UNAVAILABLE
                 )
+                reason = cached.reason or "cached-unhealthy"
                 failures.append(
                     ProviderAttemptFailure(
                         provider_id=provider.provider_id,
-                        error_code=switch.error_code,
-                        reason=switch.reason,
+                        error_code=error_code,
+                        reason=reason,
                     )
                 )
-                await self._emit_switch(emit_switch, switch)
+
+                if index < len(provider_chain) - 1:
+                    switch = ProviderSwitch(
+                        from_provider=provider.provider_id,
+                        to_provider=provider_chain[index + 1].provider_id,
+                        reason=reason,
+                        error_code=error_code,
+                        metadata={"source": "health-cache"},
+                    )
+                    await self._emit_switch(emit_switch, switch)
                 continue
 
             attempts = max(provider.config.retry_attempts + 1, 1)

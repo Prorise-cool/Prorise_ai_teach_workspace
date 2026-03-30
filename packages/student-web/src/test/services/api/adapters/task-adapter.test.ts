@@ -21,40 +21,9 @@ describe('task adapter', () => {
     expect(snapshot.status).toBe('processing');
   });
 
-  it('maps real adapter responses with the FastAPI task endpoints', async () => {
+  it('keeps real adapter aligned with the current FastAPI recovery endpoints', async () => {
     const request = vi
       .fn()
-      .mockResolvedValueOnce({
-        status: 200,
-        data: {
-          code: 200,
-          msg: '获取任务列表成功',
-          requestId: 'req_task_list_default',
-          rows: [],
-          total: 0
-        }
-      })
-      .mockResolvedValueOnce({
-        status: 200,
-        data: {
-          code: 200,
-          msg: '获取任务详情成功',
-          data: {
-            id: 'task_mock_completed',
-            taskId: 'task_mock_completed',
-            requestId: 'req_task_completed',
-            title: '任务 task_mock_completed',
-            taskType: 'video',
-            status: 'completed',
-            progress: 100,
-            message: '任务执行完成',
-            timestamp: '2026-03-30T13:05:00Z',
-            description: '任务 task_mock_completed 的 mock 详情',
-            resultUrl: 'https://static.prorise.test/results/task_mock_completed.mp4',
-            errorCode: null
-          }
-        }
-      })
       .mockResolvedValueOnce({
         status: 200,
         data: {
@@ -79,19 +48,18 @@ describe('task adapter', () => {
       } as never
     });
 
-    await adapter.listTasks();
-    await adapter.getTask('task_mock_completed');
+    await expect(adapter.listTasks()).rejects.toMatchObject({
+      status: 501,
+      code: 'TASK_OPERATION_UNSUPPORTED'
+    });
+    await expect(adapter.getTask('task_mock_completed')).rejects.toMatchObject({
+      status: 501,
+      code: 'TASK_OPERATION_UNSUPPORTED'
+    });
     await adapter.getTaskSnapshot('task_mock_processing');
 
+    expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toMatchObject({
-      url: '/api/v1/tasks',
-      method: 'get'
-    });
-    expect(request.mock.calls[1]?.[0]).toMatchObject({
-      url: '/api/v1/tasks/task_mock_completed',
-      method: 'get'
-    });
-    expect(request.mock.calls[2]?.[0]).toMatchObject({
       url: '/api/v1/tasks/task_mock_processing/status',
       method: 'get'
     });

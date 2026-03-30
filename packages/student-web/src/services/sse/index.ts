@@ -47,6 +47,14 @@ type RawSseMessage = {
   data: string;
 };
 
+type TaskRecoveryMode = 'replay' | 'snapshot-required';
+
+type TaskSseAttemptResult = {
+  events: TaskStreamEventPayload[];
+  recoveryMode: TaskRecoveryMode;
+  lastEventId: string | null;
+};
+
 type TaskEventTemplate = Omit<TaskStreamEventPayload, 'taskId' | 'id'> & {
   taskId?: string;
   id?: string;
@@ -146,6 +154,20 @@ function parseEventSequenceFromId(eventId: string | null | undefined) {
   const sequence = parseTaskEventId(eventId);
 
   return sequence ?? 0;
+}
+
+function pickLatestEventId(currentEventId: string | null, candidateEventId: string | null) {
+  if (!candidateEventId) {
+    return currentEventId;
+  }
+
+  if (!currentEventId) {
+    return candidateEventId;
+  }
+
+  return parseEventSequenceFromId(candidateEventId) >= parseEventSequenceFromId(currentEventId)
+    ? candidateEventId
+    : currentEventId;
 }
 
 function snapshotToStreamEvent(
@@ -357,11 +379,11 @@ function parseSseMessages(rawBody: string): RawSseMessage[] {
   return messages;
 }
 
-async function* streamSseAttempt(
+async function streamSseAttempt(
   taskId: string,
   options: Pick<TaskEventStreamOptions, 'signal' | 'lastEventId'>,
   logger: TaskEventParserLogger
-) {
+): Promise<TaskSseAttemptResult> {
   const headers: HeadersInit = {
     Accept: 'text/event-stream, application/json'
   };
@@ -383,13 +405,28 @@ async function* streamSseAttempt(
   }
 
   const events = await parseTaskEventResponse(response, logger);
+  const recoveryModeHeader = response.headers.get('x-task-recovery-mode');
+  const recoveryMode: TaskRecoveryMode =
+    recoveryModeHeader === 'snapshot-required' ? 'snapshot-required' : 'replay';
+  const latestEventIdHeader = response.headers.get('x-task-last-event-id');
+  let lastEventId = options.lastEventId ?? null;
 
-  yield* events;
+  for (const event of events) {
+    lastEventId = pickLatestEventId(lastEventId, event.id);
+  }
+
+  lastEventId = pickLatestEventId(lastEventId, latestEventIdHeader);
+
+  return {
+    events,
+    recoveryMode,
+    lastEventId
+  };
 }
 
 async function* streamPollingFallback(
   taskId: string,
-  options: { signal?: AbortSignal; pollingIntervalMs: number } &
+  options: { signal?: AbortSignal; pollingIntervalMs: number; initialLastEventId?: string | null } &
     Pick<TaskEventStreamOptions, 'scenario'>,
   adapter: TaskAdapter,
   startingSequence: number
@@ -409,7 +446,7 @@ async function* streamPollingFallback(
         taskId,
         snapshot,
         sequence,
-        previousSnapshot?.lastEventId ?? null
+        previousSnapshot?.lastEventId ?? options.initialLastEventId ?? null
       );
 
       yield event;
@@ -561,14 +598,16 @@ export function createRealTaskEventStream(
 
       while (!(options?.signal?.aborted ?? false)) {
         try {
-          for await (const event of streamSseAttempt(
+          const attempt = await streamSseAttempt(
             taskId,
             {
               signal: options?.signal,
               lastEventId
             },
             console
-          )) {
+          );
+
+          for (const event of attempt.events) {
             sequence = Math.max(sequence, event.sequence);
             lastEventId = event.id;
             yield event;
@@ -576,6 +615,13 @@ export function createRealTaskEventStream(
             if (isTerminalTaskStatus(event.status)) {
               return;
             }
+          }
+
+          lastEventId = pickLatestEventId(lastEventId, attempt.lastEventId);
+          sequence = Math.max(sequence, parseEventSequenceFromId(lastEventId));
+
+          if (attempt.recoveryMode === 'snapshot-required') {
+            break;
           }
 
           reconnectCount += 1;
@@ -604,7 +650,8 @@ export function createRealTaskEventStream(
         {
           scenario: options?.scenario,
           signal: options?.signal,
-          pollingIntervalMs
+          pollingIntervalMs,
+          initialLastEventId: lastEventId
         },
         adapter,
         sequence

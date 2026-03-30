@@ -186,3 +186,72 @@ def test_failover_raises_provider_all_failed_when_chain_cannot_recover() -> None
         "timeout-chat",
         "broken-chat",
     ]
+
+
+def test_failover_does_not_reprobe_last_cached_unhealthy_provider_until_ttl_expires() -> None:
+    class CountingBrokenLLMProvider:
+        calls = 0
+
+        def __init__(self, config: ProviderRuntimeConfig) -> None:
+            self.config = config
+            self.provider_id = config.provider_id
+
+        async def generate(self, prompt: str) -> ProviderResult:
+            CountingBrokenLLMProvider.calls += 1
+            raise ConnectionError(f"{self.provider_id} unavailable for {prompt}")
+
+    registry = ProviderRegistry()
+    registry.register(
+        ProviderCapability.LLM,
+        "counting-chat",
+        CountingBrokenLLMProvider,
+        default_priority=1,
+    )
+    factory = ProviderFactory(registry)
+    clock = TimeController()
+    original_now = RuntimeStore._now
+    RuntimeStore._now = staticmethod(clock.now)
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    failover_service = factory.create_failover_service(runtime_store)
+    failover_service._health_store.mark_failure(
+        "counting-chat",
+        reason="cached-unhealthy",
+        error_code="TASK_PROVIDER_UNAVAILABLE",
+        source="test",
+    )
+
+    try:
+        with pytest.raises(ProviderAllFailedError) as first_error:
+            asyncio.run(
+                factory.generate_with_failover(
+                    [{"provider": "counting-chat", "priority": 1}],
+                    "lesson",
+                    runtime_store=runtime_store,
+                )
+            )
+        with pytest.raises(ProviderAllFailedError):
+            asyncio.run(
+                factory.generate_with_failover(
+                    [{"provider": "counting-chat", "priority": 1}],
+                    "lesson",
+                    runtime_store=runtime_store,
+                )
+            )
+
+        assert CountingBrokenLLMProvider.calls == 0
+        assert first_error.value.failures[0].reason == "cached-unhealthy"
+
+        clock.advance(61)
+
+        with pytest.raises(ProviderAllFailedError):
+            asyncio.run(
+                factory.generate_with_failover(
+                    [{"provider": "counting-chat", "priority": 1}],
+                    "lesson",
+                    runtime_store=runtime_store,
+                )
+            )
+
+        assert CountingBrokenLLMProvider.calls == 1
+    finally:
+        RuntimeStore._now = staticmethod(original_now)
