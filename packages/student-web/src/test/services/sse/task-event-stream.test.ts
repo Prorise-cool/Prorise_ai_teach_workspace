@@ -123,4 +123,174 @@ describe('task event stream', () => {
       expect.any(Object)
     );
   });
+
+  it('reconnects SSE with the latest event id after a transient disconnect', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          [
+            'id: task_real_retry:evt:000001',
+            'event: connected',
+            'data: {"taskId":"task_real_retry","taskType":"video","status":"pending","progress":0,"message":"connected","timestamp":"2026-03-30T13:05:00Z","requestId":"req_real_retry","errorCode":null}',
+            '',
+            'id: task_real_retry:evt:000002',
+            'event: progress',
+            'data: {"taskId":"task_real_retry","taskType":"video","status":"processing","progress":30,"message":"working","timestamp":"2026-03-30T13:05:05Z","requestId":"req_real_retry","errorCode":null}',
+            ''
+          ].join('\n'),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/event-stream'
+            }
+          }
+        )
+      )
+      .mockRejectedValueOnce(new Error('temporary network failure'))
+      .mockResolvedValueOnce(
+        new Response(
+          [
+            'id: task_real_retry:evt:000003',
+            'event: completed',
+            'data: {"taskId":"task_real_retry","taskType":"video","status":"completed","progress":100,"message":"done","timestamp":"2026-03-30T13:05:08Z","requestId":"req_real_retry","errorCode":null}',
+            ''
+          ].join('\n'),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/event-stream'
+            }
+          }
+        )
+      );
+
+    const stream = createRealTaskEventStream({
+      reconnectAttempts: 2,
+      reconnectDelayMs: 0
+    });
+    const events = await collectTaskEvents(stream.streamTaskEvents('task_real_retry'));
+
+    expect(events.map(event => event.event)).toEqual([
+      'connected',
+      'progress',
+      'completed'
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      headers: {
+        'Last-Event-ID': 'task_real_retry:evt:000002'
+      }
+    });
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({
+      headers: {
+        'Last-Event-ID': 'task_real_retry:evt:000002'
+      }
+    });
+  });
+
+  it('falls back to polling status snapshots after reconnect exhaustion', async () => {
+    const adapter = {
+      getTaskSnapshot: vi
+        .fn()
+        .mockResolvedValueOnce({
+          taskId: 'task_real_polling',
+          requestId: 'req_real_polling',
+          taskType: 'video',
+          status: 'processing',
+          progress: 56,
+          message: 'polling',
+          timestamp: '2026-03-30T13:05:11Z',
+          stage: 'rendering',
+          errorCode: null,
+          lastEventId: 'task_real_polling:evt:000002'
+        })
+        .mockResolvedValueOnce({
+          taskId: 'task_real_polling',
+          requestId: 'req_real_polling',
+          taskType: 'video',
+          status: 'completed',
+          progress: 100,
+          message: 'done',
+          timestamp: '2026-03-30T13:05:14Z',
+          stage: 'done',
+          errorCode: null,
+          lastEventId: 'task_real_polling:evt:000003'
+        })
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('sse unavailable'));
+
+    const stream = createRealTaskEventStream({
+      adapter: adapter as never,
+      reconnectAttempts: 0,
+      reconnectDelayMs: 0,
+      pollingIntervalMs: 0
+    });
+    const events = await collectTaskEvents(
+      stream.streamTaskEvents('task_real_polling')
+    );
+
+    expect(events.map(event => event.event)).toEqual(['snapshot', 'snapshot']);
+    expect(events.at(0)).toMatchObject({
+      status: 'processing',
+      progress: 56,
+      resumeFrom: 'task_real_polling:evt:000002'
+    });
+    expect(events.at(-1)).toMatchObject({
+      status: 'completed',
+      progress: 100,
+      resumeFrom: 'task_real_polling:evt:000003'
+    });
+    expect(adapter.getTaskSnapshot).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops polling when the abort signal is triggered', async () => {
+    const controller = new AbortController();
+    const adapter = {
+      getTaskSnapshot: vi.fn().mockResolvedValue({
+        taskId: 'task_real_abort',
+        requestId: 'req_real_abort',
+        taskType: 'video',
+        status: 'processing',
+        progress: 44,
+        message: 'polling',
+        timestamp: '2026-03-30T13:05:11Z',
+        stage: 'rendering',
+        errorCode: null,
+        lastEventId: 'task_real_abort:evt:000002'
+      })
+    };
+
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('sse unavailable'));
+
+    const stream = createRealTaskEventStream({
+      adapter: adapter as never,
+      reconnectAttempts: 0,
+      reconnectDelayMs: 0,
+      pollingIntervalMs: 1000
+    });
+    const iterator = stream.streamTaskEvents('task_real_abort', {
+      signal: controller.signal
+    })[Symbol.asyncIterator]();
+
+    const firstResult = await iterator.next();
+
+    expect(firstResult.done).toBe(false);
+    if (firstResult.done) {
+      return;
+    }
+    expect(firstResult.value).toMatchObject({
+      event: 'snapshot',
+      status: 'processing'
+    });
+
+    const nextPromise = iterator.next();
+    controller.abort();
+
+    await expect(nextPromise).rejects.toMatchObject({
+      name: 'AbortError'
+    });
+    expect(adapter.getTaskSnapshot).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,6 +1,6 @@
 # Story 2.2: Task 基类、TaskContext 与调度骨架
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

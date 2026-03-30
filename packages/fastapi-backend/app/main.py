@@ -23,6 +23,7 @@ def create_app() -> FastAPI:
         openapi_tags=[
             {"name": "health", "description": "服务健康检查与最小运行态。"},
             {"name": "contracts", "description": "契约输出基线，包含共享响应、任务快照与分页示例。"},
+            {"name": "tasks", "description": "统一任务恢复、状态查询与事件补发。"},
             {"name": "video", "description": "视频功能域骨架。"},
             {"name": "classroom", "description": "课堂功能域骨架。"},
             {"name": "companion", "description": "伴学功能域骨架。"},

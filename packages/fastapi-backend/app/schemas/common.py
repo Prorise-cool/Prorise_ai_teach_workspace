@@ -50,7 +50,10 @@ class ErrorResponseEnvelope(BaseModel):
 
 
 class TaskSnapshotPayload(TaskContractPayload):
-    pass
+    stage: str | None = None
+    context: dict[str, Any] = Field(default_factory=dict)
+    resume_from: str | None = None
+    last_event_id: str | None = None
 
 
 class TaskSnapshotResponseEnvelope(BaseModel):

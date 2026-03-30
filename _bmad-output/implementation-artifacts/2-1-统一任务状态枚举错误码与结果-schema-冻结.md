@@ -1,6 +1,6 @@
 # Story 2.1: 统一任务状态枚举、错误码与结果 schema 冻结
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
