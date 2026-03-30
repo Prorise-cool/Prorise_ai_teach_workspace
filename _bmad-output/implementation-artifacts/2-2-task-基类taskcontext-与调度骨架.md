@@ -1,6 +1,6 @@
 # Story 2.2: Task 基类、TaskContext 与调度骨架
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,18 +18,18 @@ so that 新的长任务不需要从零重写生命周期与状态推进逻辑。
 
 ## Tasks / Subtasks
 
-- [ ] 实现统一上下文对象与生命周期接口（AC: 1, 2）
-  - [ ] 定义 `TaskContext`，包含任务 ID、请求 ID、用户标识、重试信息与来源能力域。
-  - [ ] 设计 `BaseTask` 的 `prepare`、`run`、`handle_error`、`finalize` 等钩子。
-- [ ] 建立统一调度骨架（AC: 1, 3）
-  - [ ] 实现 `TaskScheduler`，负责状态推进、执行包装、异常兜底与结果收敛。
-  - [ ] 明确内部状态与对外五态的映射，不把框架内部细节泄漏到业务层。
-- [ ] 接入统一日志与快照写入（AC: 2, 3）
-  - [ ] 在调度器内透传 `request_id` / `task_id`，确保日志可追踪。
-  - [ ] 异常路径写入失败快照与统一错误码。
-- [ ] 提供 demo task 与框架测试（AC: 1, 2, 3）
-  - [ ] 编写最小 demo task，演示创建、执行、失败与完成链路。
-  - [ ] 为生命周期钩子、上下文透传与异常收敛增加单元测试。
+- [x] 实现统一上下文对象与生命周期接口（AC: 1, 2）
+  - [x] 定义 `TaskContext`，包含任务 ID、请求 ID、用户标识、重试信息与来源能力域。
+  - [x] 设计 `BaseTask` 的 `prepare`、`run`、`handle_error`、`finalize` 等钩子。
+- [x] 建立统一调度骨架（AC: 1, 3）
+  - [x] 实现 `TaskScheduler`，负责状态推进、执行包装、异常兜底与结果收敛。
+  - [x] 明确内部状态与对外五态的映射，不把框架内部细节泄漏到业务层。
+- [x] 接入统一日志与快照写入（AC: 2, 3）
+  - [x] 在调度器内透传 `request_id` / `task_id`，确保日志可追踪。
+  - [x] 异常路径写入失败快照与统一错误码。
+- [x] 提供 demo task 与框架测试（AC: 1, 2, 3）
+  - [x] 编写最小 demo task，演示创建、执行、失败与完成链路。
+  - [x] 为生命周期钩子、上下文透传与异常收敛增加单元测试。
 
 ## Dev Notes
 
@@ -101,12 +101,23 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pytest tests/unit/task_framework/test_base_task.py tests/unit/task_framework/test_scheduler.py tests/unit/test_task_trace.py`
 
 ### Completion Notes List
 
-- 已把统一任务框架实现所需的上下文对象、生命周期钩子、异常收敛与测试边界整理为可执行 Story。
+- 已扩展 `TaskContext`，补齐 `source_module` 与 `metadata`，统一透传任务来源、请求链路与重试上下文。
+- 已落地 `BaseTask` 生命周期钩子、`TaskScheduler` 状态推进骨架，以及运行态快照与事件发布适配层。
+- 已补充 `DemoTask` 与任务框架单测，覆盖生命周期顺序、异常收敛、上下文透传与 demo 成功/失败路径。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/2-2-task-基类taskcontext-与调度骨架.md`
+- `packages/fastapi-backend/app/shared/task_framework/__init__.py`
+- `packages/fastapi-backend/app/shared/task_framework/base.py`
+- `packages/fastapi-backend/app/shared/task_framework/context.py`
+- `packages/fastapi-backend/app/shared/task_framework/scheduler.py`
+- `packages/fastapi-backend/app/shared/task_framework/runtime.py`
+- `packages/fastapi-backend/app/shared/task_framework/publisher.py`
+- `packages/fastapi-backend/app/shared/task_framework/demo_task.py`
+- `packages/fastapi-backend/tests/unit/task_framework/test_base_task.py`
+- `packages/fastapi-backend/tests/unit/task_framework/test_scheduler.py`
