@@ -52,7 +52,11 @@ def test_task_contract_models_serialize_public_fields_in_camel_case() -> None:
         message="任务处理中状态已同步",
         timestamp="2026-03-30T13:05:24Z",
         request_id="req_task_snapshot_001",
-        error_code=None
+        error_code=None,
+        stage="script_generation",
+        context={"source": "status-polling"},
+        resume_from="video_20260330130500_ab12cd34:evt:000003",
+        last_event_id="video_20260330130500_ab12cd34:evt:000003"
     )
     success_envelope = build_success_envelope(snapshot_payload)
 
@@ -64,7 +68,11 @@ def test_task_contract_models_serialize_public_fields_in_camel_case() -> None:
         "message": "任务处理中状态已同步",
         "timestamp": "2026-03-30T13:05:24Z",
         "requestId": "req_task_snapshot_001",
-        "errorCode": None
+        "errorCode": None,
+        "stage": "script_generation",
+        "context": {"source": "status-polling"},
+        "resumeFrom": "video_20260330130500_ab12cd34:evt:000003",
+        "lastEventId": "video_20260330130500_ab12cd34:evt:000003"
     }
 
 
@@ -157,6 +165,7 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
     provider_switch_runtime_payload = _load_json("mocks/tasks/provider-switch.json")
     provider_health_cache_payload = _load_json("mocks/tasks/provider-health-cache.json")
     snapshot_payload = _load_json("mocks/tasks/sse.snapshot.json")
+    polling_snapshot_payload = _load_json("mocks/tasks/task-status.polling.json")
     failed_sequence_payload = _load_json("mocks/tasks/sse.sequence.failed.json")
     runtime_progress_payload = _load_json("mocks/tasks/task-events.progress.json")
     event_schema = _load_json("contracts/tasks/sse-event.schema.json")
@@ -191,6 +200,8 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
     assert runtime_provider_switch_model.from_ == "demo-chat"
     assert runtime_provider_switch_model.to == "backup-chat"
     assert snapshot_model.resume_from == "task_mock_snapshot:evt:000002"
+    assert polling_snapshot_payload["lastEventId"] == "task_mock_snapshot:evt:000003"
+    assert polling_snapshot_payload["resumeFrom"] == "task_mock_snapshot:evt:000002"
     assert provider_health_cache_payload["provider"] == "demo-chat"
     assert provider_health_cache_payload["isHealthy"] is False
 

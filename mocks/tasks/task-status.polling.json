@@ -1,0 +1,17 @@
+{
+  "taskId": "task_mock_snapshot",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 33,
+  "message": "任务处理中，当前通过 /status 轮询恢复上下文",
+  "timestamp": "2026-03-30T13:05:20Z",
+  "requestId": "req_task_mock_snapshot_status",
+  "errorCode": null,
+  "resumeFrom": "task_mock_snapshot:evt:000002",
+  "lastEventId": "task_mock_snapshot:evt:000003",
+  "context": {
+    "source": "status-polling",
+    "pollIntervalMs": 3000,
+    "fallbackReason": "sse_reconnect_limit"
+  }
+}

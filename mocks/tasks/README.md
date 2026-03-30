@@ -1,6 +1,6 @@
 # Task Mocks
 
-Story `2.1` 与 `2.5` 的统一任务 / SSE Mock 资产。
+Story `2.1`、`2.5` 与 `2.6` 的统一任务 / SSE Mock 资产。
 
 ## 目标
 
@@ -26,3 +26,4 @@ Story `2.1` 与 `2.5` 的统一任务 / SSE Mock 资产。
 - `sse.sequence.failed.json`
 - `sse.sequence.snapshot.json`
 - `sse.sequence.provider-switch.json`
+- `task-status.polling.json`
