@@ -18,21 +18,21 @@ so that 前端可以从机器可读资产而非自然语言猜测接口结构。
 
 ## Tasks / Subtasks
 
-- [ ] 建立 FastAPI schema 输出骨架（AC: 1, 3）
-  - [ ] 明确公共响应模型、分页响应模型、错误响应模型的统一位置。
-  - [ ] 约束新接口必须以 schema / model 方式定义，而不是仅返回自由字典。
-  - [ ] 为后续自动导出 OpenAPI 留出入口。
-- [ ] 冻结示例 payload 规则（AC: 1, 2）
-  - [ ] 每类接口至少提供成功、失败和边界示例。
-  - [ ] 任务类接口额外提供状态快照或事件示例。
-  - [ ] 分页类接口提供 `rows`、`total` 示例。
-- [ ] 对齐统一 API 规范（AC: 1, 2, 3）
-  - [ ] 响应格式对齐 `{code, msg, data}` / `{code, msg, rows, total}`。
-  - [ ] 明确日期格式、状态码、错误码与命名风格。
-  - [ ] 避免后续业务 Story 再定义互相冲突的包装结构。
-- [ ] 建立最小验证机制（AC: 1, 2, 3）
-  - [ ] 为 schema 序列化、示例 payload 完整性与 OpenAPI 导出增加测试或校验脚本。
-  - [ ] 验证错误示例不会缺席。
+- [x] 建立 FastAPI schema 输出骨架（AC: 1, 3）
+  - [x] 明确公共响应模型、分页响应模型、错误响应模型的统一位置。
+  - [x] 约束新接口必须以 schema / model 方式定义，而不是仅返回自由字典。
+  - [x] 为后续自动导出 OpenAPI 留出入口。
+- [x] 冻结示例 payload 规则（AC: 1, 2）
+  - [x] 每类接口至少提供成功、失败和边界示例。
+  - [x] 任务类接口额外提供状态快照或事件示例。
+  - [x] 分页类接口提供 `rows`、`total` 示例。
+- [x] 对齐统一 API 规范（AC: 1, 2, 3）
+  - [x] 响应格式对齐 `{code, msg, data}` / `{code, msg, rows, total}`。
+  - [x] 明确日期格式、状态码、错误码与命名风格。
+  - [x] 避免后续业务 Story 再定义互相冲突的包装结构。
+- [x] 建立最小验证机制（AC: 1, 2, 3）
+  - [x] 为 schema 序列化、示例 payload 完整性与 OpenAPI 导出增加测试或校验脚本。
+  - [x] 验证错误示例不会缺席。
 
 ## Dev Notes
 
@@ -105,7 +105,7 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/test_openapi_contracts.py`
 
 ### Completion Notes List
 
@@ -114,3 +114,13 @@ GPT-5 Codex
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-4-后端-schema-openapi-与示例-payload-输出基线.md`
+- `packages/fastapi-backend/app/main.py`
+- `packages/fastapi-backend/app/core/errors.py`
+- `packages/fastapi-backend/app/schemas/common.py`
+- `packages/fastapi-backend/app/schemas/pagination.py`
+- `packages/fastapi-backend/app/schemas/examples.py`
+- `packages/fastapi-backend/tests/test_openapi_contracts.py`
+- `contracts/_shared/common-response.schema.json`
+- `contracts/_shared/error-response.schema.json`
+- `contracts/_shared/error-code-rule.md`
+- `contracts/_shared/status-enum-rule.md`

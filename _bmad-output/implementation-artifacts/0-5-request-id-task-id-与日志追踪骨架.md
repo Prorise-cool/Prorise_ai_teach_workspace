@@ -18,21 +18,21 @@ so that 后续出现跨服务错误时可以进行最小可行排障。
 
 ## Tasks / Subtasks
 
-- [ ] 建立 `request_id` 生成与透传机制（AC: 1）
-  - [ ] 定义中间件或等效入口，为每个请求生成或继承 `request_id`。
-  - [ ] 约束日志、错误响应和调试头部使用同一字段名。
-  - [ ] 明确外部传入 `request_id` 的信任与覆盖规则。
-- [ ] 建立 `task_id` 规则与日志贯穿机制（AC: 2）
-  - [ ] 对齐统一任务 ID 生成规则。
-  - [ ] 让任务创建、调度、执行、SSE 推送与失败日志都带上 `task_id`。
-  - [ ] 明确无任务场景不得强行注入伪造 `task_id`。
-- [ ] 冻结统一日志格式与上下文字段（AC: 1, 2, 3）
-  - [ ] 日志格式对齐 `yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message`。
-  - [ ] 明确最小字段集：时间、级别、logger、request_id、task_id、错误码。
-  - [ ] 避免日志字段命名漂移。
-- [ ] 增加追踪验证（AC: 1, 2, 3）
-  - [ ] 覆盖普通请求、有任务请求、任务失败请求和 SSE 事件日志。
-  - [ ] 验证日志链路中 `request_id` / `task_id` 不丢失。
+- [x] 建立 `request_id` 生成与透传机制（AC: 1）
+  - [x] 定义中间件或等效入口，为每个请求生成或继承 `request_id`。
+  - [x] 约束日志、错误响应和调试头部使用同一字段名。
+  - [x] 明确外部传入 `request_id` 的信任与覆盖规则。
+- [x] 建立 `task_id` 规则与日志贯穿机制（AC: 2）
+  - [x] 对齐统一任务 ID 生成规则。
+  - [x] 让任务创建、调度、执行、SSE 推送与失败日志都带上 `task_id`。
+  - [x] 明确无任务场景不得强行注入伪造 `task_id`。
+- [x] 冻结统一日志格式与上下文字段（AC: 1, 2, 3）
+  - [x] 日志格式对齐 `yyyy-MM-dd HH:mm:ss [thread] LEVEL logger - message`。
+  - [x] 明确最小字段集：时间、级别、logger、request_id、task_id、错误码。
+  - [x] 避免日志字段命名漂移。
+- [x] 增加追踪验证（AC: 1, 2, 3）
+  - [x] 覆盖普通请求、有任务请求、任务失败请求和 SSE 事件日志。
+  - [x] 验证日志链路中 `request_id` / `task_id` 不丢失。
 
 ## Dev Notes
 
@@ -105,7 +105,7 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/unit/test_request_context.py packages/fastapi-backend/tests/unit/test_task_trace.py`
 
 ### Completion Notes List
 
@@ -114,3 +114,7 @@ GPT-5 Codex
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-5-request-id-task-id-与日志追踪骨架.md`
+- `packages/fastapi-backend/app/core/logging.py`
+- `packages/fastapi-backend/app/core/middleware/request_context.py`
+- `packages/fastapi-backend/tests/unit/test_request_context.py`
+- `packages/fastapi-backend/tests/unit/test_task_trace.py`

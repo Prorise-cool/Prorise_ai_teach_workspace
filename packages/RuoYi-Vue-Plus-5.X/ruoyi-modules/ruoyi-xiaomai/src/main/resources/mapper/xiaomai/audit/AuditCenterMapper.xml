@@ -379,6 +379,7 @@
         ) agg
         <include refid="audit_where"/>
         ORDER BY agg.source_time DESC, agg.record_id DESC
+        LIMIT #{limit}
     </select>
 
     <select id="selectAuditDetail" resultType="org.dromara.xiaomai.audit.domain.vo.AuditRecordVo">

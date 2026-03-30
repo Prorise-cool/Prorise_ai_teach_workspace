@@ -18,21 +18,21 @@ so that 团队不会把“半成品页面”、“口头契约”或“不可联
 
 ## Tasks / Subtasks
 
-- [ ] 冻结 Story 类型对应的 DoR（AC: 1, 3）
-  - [ ] 区分 Contract Story、Infrastructure Story、Backend Story、Frontend Story、Persistence Story、Integration Story 的最小输入条件。
-  - [ ] 明确契约、mock、错误码、状态枚举、测试夹具和依赖识别要求。
-  - [ ] 明确正式前端页面 Story 的视觉稿和关键状态要求。
-- [ ] 冻结 Story 类型对应的 DoD（AC: 2, 3）
-  - [ ] 明确代码、测试、文档、AC、状态闭环和环境验证要求。
-  - [ ] 明确“只有页面壳”“只有接口路由”“只有 README”均不算完成。
-  - [ ] 明确哪些 Story 允许以文档 / 契约交付为完成形态。
-- [ ] 冻结并行开发门禁（AC: 1, 2, 3）
-  - [ ] 区分真实接口联调前门禁、主分支合并前门禁、发布前门禁。
-  - [ ] 明确 mock 先行、adapter 隔离和真实接口联调的边界。
-  - [ ] 明确禁止写法与常见伪完成模式。
-- [ ] 输出执行模板与检查清单（AC: 1, 2, 3）
-  - [ ] 提供 Story 评审 checklist 与交付 checklist。
-  - [ ] 让后续 BMAD Story 文件可直接复用统一元数据字段。
+- [x] 冻结 Story 类型对应的 DoR（AC: 1, 3）
+  - [x] 区分 Contract Story、Infrastructure Story、Backend Story、Frontend Story、Persistence Story、Integration Story 的最小输入条件。
+  - [x] 明确契约、mock、错误码、状态枚举、测试夹具和依赖识别要求。
+  - [x] 明确正式前端页面 Story 的视觉稿和关键状态要求。
+- [x] 冻结 Story 类型对应的 DoD（AC: 2, 3）
+  - [x] 明确代码、测试、文档、AC、状态闭环和环境验证要求。
+  - [x] 明确“只有页面壳”“只有接口路由”“只有 README”均不算完成。
+  - [x] 明确哪些 Story 允许以文档 / 契约交付为完成形态。
+- [x] 冻结并行开发门禁（AC: 1, 2, 3）
+  - [x] 区分真实接口联调前门禁、主分支合并前门禁、发布前门禁。
+  - [x] 明确 mock 先行、adapter 隔离和真实接口联调的边界。
+  - [x] 明确禁止写法与常见伪完成模式。
+- [x] 输出执行模板与检查清单（AC: 1, 2, 3）
+  - [x] 提供 Story 评审 checklist 与交付 checklist。
+  - [x] 让后续 BMAD Story 文件可直接复用统一元数据字段。
 
 ## Dev Notes
 
@@ -101,7 +101,7 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `rg --files docs/01开发人员手册/004-开发规范 | rg '0008-story-交付门禁与-dor-dod|0009-并行开发联调门禁'`
 
 ### Completion Notes List
 
@@ -110,3 +110,5 @@ GPT-5 Codex
 ### File List
 
 - `_bmad-output/implementation-artifacts/0-6-story-交付门禁与并行开发-dor-dod-冻结.md`
+- `docs/01开发人员手册/004-开发规范/0008-story-交付门禁与-dor-dod.md`
+- `docs/01开发人员手册/004-开发规范/0009-并行开发联调门禁.md`

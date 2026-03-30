@@ -3,7 +3,12 @@ import asyncio
 import pytest
 
 from app.infra.redis_client import RuntimeStore
-from app.providers.failover import ProviderAllFailedError, ProviderSwitch
+from app.providers.failover import (
+    ProviderAllFailedError,
+    ProviderSwitch,
+    ProviderTerminalError,
+    classify_provider_error,
+)
 from app.providers.factory import ProviderFactory
 from app.shared.task_framework.key_builder import (
     PROVIDER_HEALTH_TTL_SECONDS,
@@ -13,6 +18,7 @@ from app.providers.protocols import (
     ProviderCapability,
     ProviderResult,
     ProviderRuntimeConfig,
+    ProviderError,
 )
 from app.providers.registry import ProviderRegistry
 
@@ -53,6 +59,15 @@ class BrokenLLMProvider:
         raise ConnectionError(f"{self.provider_id} unavailable for {prompt}")
 
 
+class InvalidInputLLMProvider:
+    def __init__(self, config: ProviderRuntimeConfig) -> None:
+        self.config = config
+        self.provider_id = config.provider_id
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        raise ValueError(f"invalid prompt payload: {prompt}")
+
+
 class TimeController:
     def __init__(self) -> None:
         self.current = 5_000.0
@@ -70,6 +85,7 @@ def _build_factory() -> ProviderFactory:
     registry.register(ProviderCapability.LLM, "timeout-chat", TimeoutLLMProvider, default_priority=1)
     registry.register(ProviderCapability.LLM, "backup-chat", BackupLLMProvider, default_priority=10)
     registry.register(ProviderCapability.LLM, "broken-chat", BrokenLLMProvider, default_priority=20)
+    registry.register(ProviderCapability.LLM, "invalid-chat", InvalidInputLLMProvider, default_priority=5)
     return ProviderFactory(registry)
 
 
@@ -186,6 +202,50 @@ def test_failover_raises_provider_all_failed_when_chain_cannot_recover() -> None
         "timeout-chat",
         "broken-chat",
     ]
+
+
+def test_failover_stops_chain_for_non_retryable_invalid_input() -> None:
+    class CountingBackupProvider:
+        calls = 0
+
+        def __init__(self, config: ProviderRuntimeConfig) -> None:
+            self.config = config
+            self.provider_id = config.provider_id
+
+        async def generate(self, prompt: str) -> ProviderResult:
+            CountingBackupProvider.calls += 1
+            return ProviderResult(provider=self.provider_id, content=f"backup:{prompt}")
+
+    registry = ProviderRegistry()
+    registry.register(ProviderCapability.LLM, "invalid-chat", InvalidInputLLMProvider, default_priority=1)
+    registry.register(ProviderCapability.LLM, "backup-chat", CountingBackupProvider, default_priority=2)
+    factory = ProviderFactory(registry)
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    switches: list[ProviderSwitch] = []
+
+    with pytest.raises(ProviderTerminalError) as exc_info:
+        asyncio.run(
+            factory.generate_with_failover(
+                [{"provider": "invalid-chat", "priority": 1}, {"provider": "backup-chat", "priority": 2}],
+                "lesson",
+                runtime_store=runtime_store,
+                emit_switch=switches.append,
+            )
+        )
+
+    assert exc_info.value.error_code.value == "TASK_INVALID_INPUT"
+    assert switches == []
+    assert CountingBackupProvider.calls == 0
+    assert runtime_store.get_provider_health("invalid-chat") is None
+    assert runtime_store.get_provider_health("backup-chat") is None
+
+
+def test_classify_provider_error_marks_authentication_failures_as_non_retryable() -> None:
+    classification = classify_provider_error(ProviderError("unauthorized: invalid api key"))
+
+    assert classification.error_code.value == "TASK_INVALID_INPUT"
+    assert classification.retryable is False
+    assert classification.mark_unhealthy is False
 
 
 def test_failover_does_not_reprobe_last_cached_unhealthy_provider_until_ttl_expires() -> None:

@@ -2,6 +2,7 @@ package org.dromara.xiaomai.audit.service;
 
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.common.core.exception.ServiceException;
 import org.dromara.xiaomai.audit.domain.bo.AuditRecordBo;
 import org.dromara.xiaomai.audit.domain.vo.AuditRecordVo;
 import org.dromara.xiaomai.audit.mapper.AuditCenterMapper;
@@ -15,6 +16,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -81,9 +83,16 @@ public class AuditCenterServiceImplTest {
         AuditCenterServiceImpl service = new AuditCenterServiceImpl(mapper);
         AuditRecordBo bo = new AuditRecordBo();
         bo.setFavorite(Boolean.TRUE);
+        bo.setBeginSourceTime(new Date(1_710_000_000_000L));
+        bo.setEndSourceTime(new Date(1_710_086_400_000L));
         AuditRecordVo record = sampleRecord();
 
-        when(mapper.selectAuditList(argThat(query -> Boolean.TRUE.equals(query.getFavorite()))))
+        when(mapper.countAuditRecords(argThat(query -> Boolean.TRUE.equals(query.getFavorite()))))
+            .thenReturn(1L);
+        when(mapper.selectAuditList(
+            argThat(query -> Boolean.TRUE.equals(query.getFavorite())),
+            eq(2000L)
+        ))
             .thenReturn(List.of(record));
         when(mapper.selectAuditDetail("student_001", "xm_learning_record", "quiz_001"))
             .thenReturn(record);
@@ -94,7 +103,10 @@ public class AuditCenterServiceImplTest {
         assertEquals(1, exportRows.size());
         assertNotNull(detail);
         assertEquals(Boolean.TRUE, detail.getDeleted());
-        verify(mapper).selectAuditList(argThat(query -> Boolean.TRUE.equals(query.getFavorite())));
+        verify(mapper).selectAuditList(
+            argThat(query -> Boolean.TRUE.equals(query.getFavorite())),
+            eq(2000L)
+        );
     }
 
     @Test
@@ -108,6 +120,45 @@ public class AuditCenterServiceImplTest {
 
         assertNull(detail);
         verify(mapper).selectAuditDetail("student_002", "xm_video_task", "video_404");
+    }
+
+    @Test
+    void shouldRequireTimeRangeBeforeExporting() {
+        AuditCenterMapper mapper = mock(AuditCenterMapper.class);
+        AuditCenterServiceImpl service = new AuditCenterServiceImpl(mapper);
+
+        ServiceException error = assertThrows(ServiceException.class, () -> service.queryList(new AuditRecordBo()));
+
+        assertEquals("导出必须同时指定开始时间和结束时间", error.getMessage());
+    }
+
+    @Test
+    void shouldRejectOversizedExportRequest() {
+        AuditCenterMapper mapper = mock(AuditCenterMapper.class);
+        AuditCenterServiceImpl service = new AuditCenterServiceImpl(mapper);
+        AuditRecordBo bo = new AuditRecordBo();
+        bo.setBeginSourceTime(new Date(1_710_000_000_000L));
+        bo.setEndSourceTime(new Date(1_710_086_400_000L));
+
+        when(mapper.countAuditRecords(argThat(query -> query.getBeginSourceTime() != null && query.getEndSourceTime() != null)))
+            .thenReturn(2001L);
+
+        ServiceException error = assertThrows(ServiceException.class, () -> service.queryList(bo));
+
+        assertEquals("导出记录数超过上限 2000 条，请缩小筛选范围", error.getMessage());
+    }
+
+    @Test
+    void shouldRejectExportWindowLongerThanThirtyOneDays() {
+        AuditCenterMapper mapper = mock(AuditCenterMapper.class);
+        AuditCenterServiceImpl service = new AuditCenterServiceImpl(mapper);
+        AuditRecordBo bo = new AuditRecordBo();
+        bo.setBeginSourceTime(new Date(1_710_000_000_000L));
+        bo.setEndSourceTime(new Date(1_712_764_800_001L));
+
+        ServiceException error = assertThrows(ServiceException.class, () -> service.queryList(bo));
+
+        assertEquals("导出时间范围不能超过 31 天", error.getMessage());
     }
 
     private AuditRecordVo sampleRecord() {

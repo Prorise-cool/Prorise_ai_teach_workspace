@@ -35,6 +35,21 @@ so that 长期数据、查询与审计能够在既有框架内稳定落位。
   - [x] 验证 FastAPI 只消费 RuoYi 权限结果，不复制权限真值。
   - [x] 明确当前阶段不建设与 RuoYi 平行的新后台产品域。
 
+### Story Metadata
+
+- Story ID: `10.2`
+- Story Type: `Integration Story`
+- Epic: `Epic 10`
+- Depends On: `10.1`
+- Blocks: `10.3`、`10.4`、`10.5`、`10.6`、`10.7`、`10.8`
+- Contract Asset Path: `docs/01开发人员手册/004-开发规范/0102-RuoYi小麦模块与权限承接规则.md`
+- Mock Asset Path: `N/A`
+- API / Event / Schema Impact: 冻结 `ruoyi-xiaomai` 模块边界、菜单 / 按钮权限命名、查询 / 导出 / 审计权限挂点
+- Persistence Impact: 小麦长期数据通过 RuoYi 业务模块承接，不新增 FastAPI 平行 RBAC 或长期数据库
+- Frontend States Covered: 后台菜单可见、查询可见、导出可见、权限拒绝
+- Error States Covered: 权限标识漂移、平行 RBAC、自建后台域、查询 / 导出缺少操作日志挂点
+- Acceptance Test Notes: 必须验证模块注册、权限命名、`403` 拒绝路径与构建链路稳定
+
 ## Dev Notes
 
 ### Business Context

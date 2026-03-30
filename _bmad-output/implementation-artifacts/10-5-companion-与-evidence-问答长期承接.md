@@ -35,6 +35,21 @@ so that 学习中心能够回看问答过程，后台也能进行审计与分析
   - [x] 覆盖部分失败、引用缺失和白板降级的状态记录。
   - [x] 覆盖学习中心或后台从长期记录回看主要内容的场景。
 
+### Story Metadata
+
+- Story ID: `10.5`
+- Story Type: `Persistence Story`
+- Epic: `Epic 10`
+- Depends On: `10.1`、`10.2`、`10.3`
+- Blocks: `9.1`、`9.2`、`10.7`、`10.8`
+- Contract Asset Path: `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260328_xm_companion_evidence_log.sql`
+- Mock Asset Path: `N/A`
+- API / Event / Schema Impact: 冻结 Companion / Evidence 长期记录字段、锚点 / 范围 / 引用结构、白板动作挂接与回看恢复语义
+- Persistence Impact: `xm_companion_turn`、`xm_whiteboard_action_log`、`xm_knowledge_chat_log` 承接问答长期宿主
+- Frontend States Covered: 完整成功、部分成功、白板降级、引用缺失、整体失败、长期回看恢复
+- Error States Covered: 主回答成功但附加能力降级、来源缺失、锚点丢失、白板对象仅存自由文本
+- Acceptance Test Notes: 必须覆盖 Companion / Evidence 双域回写、结构化附加信息与降级状态恢复
+
 ## Dev Notes
 
 ### Business Context
