@@ -2,9 +2,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.shared.task_framework.contracts import TaskContractPayload, TaskStatusValue
 
 ContractVersion = Literal["1.0.0"]
-TaskStatusValue = Literal["pending", "processing", "completed", "failed", "cancelled"]
 
 
 class ServiceHealthPayload(BaseModel):
@@ -49,16 +49,8 @@ class ErrorResponseEnvelope(BaseModel):
     data: ErrorPayload | None = None
 
 
-class TaskSnapshotPayload(BaseModel):
-    task_id: str
-    task_type: str
-    status: TaskStatusValue
-    progress: int = Field(ge=0, le=100)
-    message: str
-    error_code: str | None = None
-    updated_at: str = Field(
-        description="UTC ISO 8601 时间，例如 2026-03-29T16:15:00Z"
-    )
+class TaskSnapshotPayload(TaskContractPayload):
+    pass
 
 
 class TaskSnapshotResponseEnvelope(BaseModel):
@@ -71,7 +63,7 @@ def build_success_envelope(data: BaseModel, msg: str = "查询成功") -> dict[s
     return {
         "code": 200,
         "msg": msg,
-        "data": data.model_dump(mode="json")
+        "data": data.model_dump(mode="json", by_alias=True)
     }
 
 

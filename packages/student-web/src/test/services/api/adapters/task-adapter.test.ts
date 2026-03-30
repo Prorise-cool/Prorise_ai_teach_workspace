@@ -18,7 +18,7 @@ describe('task adapter', () => {
       'failed'
     ]);
     expect(detail.resultUrl).toBe('https://static.prorise.test/results/task_mock_completed.mp4');
-    expect(snapshot.task?.status).toBe('processing');
+    expect(snapshot.status).toBe('processing');
   });
 
   it('maps real adapter responses with the FastAPI task endpoints', async () => {
@@ -47,7 +47,8 @@ describe('task adapter', () => {
             taskType: 'video',
             status: 'completed',
             progress: 100,
-            updatedAt: '2026-03-29T16:30:00+08:00',
+            message: '任务执行完成',
+            timestamp: '2026-03-30T13:05:00Z',
             description: '任务 task_mock_completed 的 mock 详情',
             resultUrl: 'https://static.prorise.test/results/task_mock_completed.mp4',
             errorCode: null

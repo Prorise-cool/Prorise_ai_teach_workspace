@@ -1,0 +1,10 @@
+{
+  "taskId": "video_20260330130500_ef56gh78",
+  "taskType": "video",
+  "status": "failed",
+  "progress": 87,
+  "message": "任务执行失败",
+  "timestamp": "2026-03-30T13:05:12Z",
+  "requestId": "req_task_failed_001",
+  "errorCode": "TASK_PROVIDER_TIMEOUT"
+}

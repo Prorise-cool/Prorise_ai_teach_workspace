@@ -1,0 +1,14 @@
+{
+  "taskId": "video_20260330130500_mn34op56",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 42,
+  "message": "任务处理中状态已同步",
+  "timestamp": "2026-03-30T13:05:24Z",
+  "requestId": "req_task_snapshot_001",
+  "errorCode": null,
+  "context": {
+    "source": "status-polling",
+    "resumeFrom": "evt_0003"
+  }
+}

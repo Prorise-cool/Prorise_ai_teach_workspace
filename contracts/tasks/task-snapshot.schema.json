@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/tasks/task-snapshot.schema.json",
+  "title": "TaskSnapshot",
+  "allOf": [
+    {
+      "$ref": "./task-result.schema.json"
+    }
+  ]
+}

@@ -88,7 +88,7 @@ function mapTaskDetail(detail: TaskDetail): TaskDetail {
 
 function mapTaskRowsEnvelope(envelope: TaskRowsEnvelope<TaskSummary>): TaskListResult {
   return {
-    requestId: envelope.requestId,
+    requestId: envelope.requestId ?? null,
     items: envelope.rows.map(mapTaskSummary),
     total: envelope.total
   };

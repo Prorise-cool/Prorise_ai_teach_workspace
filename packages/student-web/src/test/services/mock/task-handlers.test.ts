@@ -36,16 +36,14 @@ describe('task mock handlers', () => {
     const payload = (await response.json()) as {
       code: number;
       data: {
-        task: {
-          status: string;
-          errorCode: string | null;
-        };
+        status: string;
+        errorCode: string | null;
       };
     };
 
     expect(response.status).toBe(200);
-    expect(payload.data.task.status).toBe('failed');
-    expect(payload.data.task.errorCode).toBe('TASK_PROVIDER_TIMEOUT');
+    expect(payload.data.status).toBe('failed');
+    expect(payload.data.errorCode).toBe('TASK_PROVIDER_TIMEOUT');
   });
 
   it('returns a forbidden envelope when the scenario requires access denial', async () => {

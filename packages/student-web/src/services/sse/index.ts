@@ -19,12 +19,6 @@ export interface TaskEventStream {
   ): AsyncIterable<TaskEventPayload>;
 }
 
-async function* iterateEvents(events: TaskEventPayload[]) {
-  for (const event of events) {
-    yield event;
-  }
-}
-
 async function parseRealEventResponse(response: Response) {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -53,8 +47,11 @@ async function parseRealEventResponse(response: Response) {
 
 export function createMockTaskEventStream(): TaskEventStream {
   return {
-    streamTaskEvents(taskId, options) {
-      return iterateEvents(getMockTaskEventSequence(taskId, options?.scenario));
+    async *streamTaskEvents(taskId, options) {
+      for (const event of getMockTaskEventSequence(taskId, options?.scenario)) {
+        await Promise.resolve();
+        yield event;
+      }
     }
   };
 }
@@ -78,7 +75,7 @@ export function createRealTaskEventStream(): TaskEventStream {
 
       const events = await parseRealEventResponse(response);
 
-      yield* iterateEvents(events);
+      yield* events;
     }
   };
 }

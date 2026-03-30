@@ -5,15 +5,16 @@ import type {
   TaskDataEnvelope,
   TaskDetail,
   TaskEventPayload,
+  TaskErrorCode,
   TaskLifecycleStatus,
   TaskListResult,
   TaskMockScenario,
-  TaskRowsEnvelope,
   TaskSnapshot,
+  TaskRowsEnvelope,
   TaskSummary
 } from '@/types/task';
 
-const FIXTURE_UPDATED_AT = '2026-03-29T16:30:00+08:00';
+const FIXTURE_TIMESTAMP = '2026-03-30T13:05:00Z';
 const TASK_TYPE = 'video';
 
 type TaskFixtureError = {
@@ -26,7 +27,9 @@ function buildTaskSummary(
   id: string,
   status: TaskLifecycleStatus,
   progress: number,
-  requestId: string
+  requestId: string,
+  message: string,
+  errorCode: TaskErrorCode | null = null
 ): TaskSummary {
   return {
     id,
@@ -36,7 +39,9 @@ function buildTaskSummary(
     taskType: TASK_TYPE,
     status,
     progress,
-    updatedAt: FIXTURE_UPDATED_AT
+    message,
+    timestamp: FIXTURE_TIMESTAMP,
+    errorCode
   };
 }
 
@@ -44,9 +49,11 @@ function buildTaskDetail(
   id: string,
   status: TaskLifecycleStatus,
   progress: number,
-  requestId: string
+  requestId: string,
+  message: string,
+  errorCode: TaskErrorCode | null = null
 ): TaskDetail {
-  const summary = buildTaskSummary(id, status, progress, requestId);
+  const summary = buildTaskSummary(id, status, progress, requestId, message, errorCode);
 
   return {
     ...summary,
@@ -55,7 +62,20 @@ function buildTaskDetail(
       status === 'completed'
         ? `https://static.prorise.test/results/${id}.mp4`
         : null,
-    errorCode: status === 'failed' ? 'TASK_PROVIDER_TIMEOUT' : null
+    errorCode
+  };
+}
+
+function buildTaskSnapshot(detail: TaskDetail): TaskSnapshot {
+  return {
+    taskId: detail.taskId,
+    requestId: detail.requestId,
+    taskType: detail.taskType,
+    status: detail.status,
+    progress: detail.progress,
+    message: detail.message,
+    timestamp: detail.timestamp,
+    errorCode: detail.errorCode
   };
 }
 
@@ -81,15 +101,83 @@ function buildTaskRowsEnvelope(
 }
 
 const taskSummaries = {
-  processing: buildTaskSummary('task_mock_processing', 'processing', 42, 'req_task_processing'),
-  completed: buildTaskSummary('task_mock_completed', 'completed', 100, 'req_task_completed'),
-  failed: buildTaskSummary('task_mock_failed', 'failed', 87, 'req_task_failed')
+  pending: buildTaskSummary(
+    'task_mock_pending',
+    'pending',
+    0,
+    'req_task_pending',
+    '任务已创建，等待调度'
+  ),
+  processing: buildTaskSummary(
+    'task_mock_processing',
+    'processing',
+    42,
+    'req_task_processing',
+    '任务处理中状态已同步'
+  ),
+  completed: buildTaskSummary(
+    'task_mock_completed',
+    'completed',
+    100,
+    'req_task_completed',
+    '任务执行完成'
+  ),
+  failed: buildTaskSummary(
+    'task_mock_failed',
+    'failed',
+    87,
+    'req_task_failed',
+    '任务执行失败',
+    'TASK_PROVIDER_TIMEOUT'
+  ),
+  cancelled: buildTaskSummary(
+    'task_mock_cancelled',
+    'cancelled',
+    0,
+    'req_task_cancelled',
+    '任务已取消',
+    'TASK_CANCELLED'
+  )
 } as const;
 
 const taskDetails = {
-  processing: buildTaskDetail('task_mock_processing', 'processing', 42, 'req_task_processing'),
-  completed: buildTaskDetail('task_mock_completed', 'completed', 100, 'req_task_completed'),
-  failed: buildTaskDetail('task_mock_failed', 'failed', 87, 'req_task_failed')
+  pending: buildTaskDetail(
+    'task_mock_pending',
+    'pending',
+    0,
+    'req_task_pending',
+    '任务已创建，等待调度'
+  ),
+  processing: buildTaskDetail(
+    'task_mock_processing',
+    'processing',
+    42,
+    'req_task_processing',
+    '任务处理中状态已同步'
+  ),
+  completed: buildTaskDetail(
+    'task_mock_completed',
+    'completed',
+    100,
+    'req_task_completed',
+    '任务执行完成'
+  ),
+  failed: buildTaskDetail(
+    'task_mock_failed',
+    'failed',
+    87,
+    'req_task_failed',
+    '任务执行失败',
+    'TASK_PROVIDER_TIMEOUT'
+  ),
+  cancelled: buildTaskDetail(
+    'task_mock_cancelled',
+    'cancelled',
+    0,
+    'req_task_cancelled',
+    '任务已取消',
+    'TASK_CANCELLED'
+  )
 } as const;
 
 export const taskMockFixtures = {
@@ -154,6 +242,10 @@ function throwTaskFixtureError(error: TaskFixtureError): never {
 }
 
 function resolveDetailFixtureById(taskId: string) {
+  if (taskId === taskDetails.pending.id) {
+    return taskDetails.pending;
+  }
+
   if (taskId === taskDetails.processing.id) {
     return taskDetails.processing;
   }
@@ -166,6 +258,10 @@ function resolveDetailFixtureById(taskId: string) {
     return taskDetails.failed;
   }
 
+  if (taskId === taskDetails.cancelled.id) {
+    return taskDetails.cancelled;
+  }
+
   return null;
 }
 
@@ -173,6 +269,10 @@ function resolveScenarioDetail(
   scenario: TaskMockScenario | undefined,
   taskId?: string
 ) {
+  if (scenario === 'pending') {
+    return taskDetails.pending;
+  }
+
   if (scenario === 'processing') {
     return taskDetails.processing;
   }
@@ -183,6 +283,10 @@ function resolveScenarioDetail(
 
   if (scenario === 'failed') {
     return taskDetails.failed;
+  }
+
+  if (scenario === 'cancelled') {
+    return taskDetails.cancelled;
   }
 
   if (taskId) {
@@ -233,13 +337,7 @@ export function getMockTaskSnapshotEnvelope(
 ): TaskDataEnvelope<TaskSnapshot> {
   const detailEnvelope = getMockTaskDetailEnvelope(taskId, scenario);
 
-  return buildTaskDataEnvelope(
-    {
-      requestId: detailEnvelope.data.requestId,
-      task: detailEnvelope.data
-    },
-    '获取任务快照成功'
-  );
+  return buildTaskDataEnvelope(buildTaskSnapshot(detailEnvelope.data), '获取任务快照成功');
 }
 
 export function getMockTaskEventSequence(
@@ -258,10 +356,10 @@ export function getMockTaskEventSequence(
       taskId: detail.taskId,
       requestId: detail.requestId,
       taskType: detail.taskType,
-      status: 'processing',
+      status: 'pending',
       progress: 0,
       message: 'SSE mock 已建立连接',
-      timestamp: FIXTURE_UPDATED_AT
+      timestamp: FIXTURE_TIMESTAMP
     },
     {
       event: 'progress',
@@ -271,7 +369,7 @@ export function getMockTaskEventSequence(
       status: 'processing',
       progress: Math.max(15, detail.progress - 20),
       message: '任务进入处理中',
-      timestamp: FIXTURE_UPDATED_AT
+      timestamp: FIXTURE_TIMESTAMP
     },
     {
       event: 'heartbeat',
@@ -281,7 +379,7 @@ export function getMockTaskEventSequence(
       status: 'processing',
       progress: Math.max(30, detail.progress - 10),
       message: '任务仍在执行中',
-      timestamp: FIXTURE_UPDATED_AT
+      timestamp: FIXTURE_TIMESTAMP
     }
   ];
 
@@ -295,8 +393,8 @@ export function getMockTaskEventSequence(
         taskType: detail.taskType,
         status: 'failed',
         progress: 100,
-        message: '任务执行失败',
-        timestamp: FIXTURE_UPDATED_AT,
+        message: detail.message,
+        timestamp: FIXTURE_TIMESTAMP,
         errorCode: detail.errorCode
       }
     ];
@@ -312,8 +410,25 @@ export function getMockTaskEventSequence(
         taskType: detail.taskType,
         status: 'completed',
         progress: 100,
-        message: '任务执行完成',
-        timestamp: FIXTURE_UPDATED_AT
+        message: detail.message,
+        timestamp: FIXTURE_TIMESTAMP
+      }
+    ];
+  }
+
+  if (detail.status === 'cancelled') {
+    return [
+      ...baseEvents,
+      {
+        event: 'snapshot',
+        taskId: detail.taskId,
+        requestId: detail.requestId,
+        taskType: detail.taskType,
+        status: 'cancelled',
+        progress: 0,
+        message: detail.message,
+        timestamp: FIXTURE_TIMESTAMP,
+        errorCode: detail.errorCode
       }
     ];
   }
@@ -327,8 +442,8 @@ export function getMockTaskEventSequence(
       taskType: detail.taskType,
       status: 'processing',
       progress: detail.progress,
-      message: '任务处理中状态已同步',
-      timestamp: FIXTURE_UPDATED_AT
+      message: detail.message,
+      timestamp: FIXTURE_TIMESTAMP
     }
   ];
 }
