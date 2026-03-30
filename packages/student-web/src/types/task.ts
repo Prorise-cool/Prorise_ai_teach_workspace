@@ -33,6 +33,18 @@ export const TASK_ERROR_CODE_VALUES = [
 
 export type TaskErrorCode = (typeof TASK_ERROR_CODE_VALUES)[number];
 
+export const TASK_EVENT_NAME_VALUES = [
+  'connected',
+  'progress',
+  'provider_switch',
+  'completed',
+  'failed',
+  'heartbeat',
+  'snapshot'
+] as const;
+
+export type TaskEventName = (typeof TASK_EVENT_NAME_VALUES)[number];
+
 export type TaskMockScenario =
   | 'default'
   | 'empty'
@@ -41,17 +53,12 @@ export type TaskMockScenario =
   | 'completed'
   | 'failed'
   | 'cancelled'
+  | 'snapshot'
+  | 'provider_switch'
   | 'unauthorized'
   | 'forbidden';
 
-export type TaskEventName =
-  | 'connected'
-  | 'progress'
-  | 'provider_switch'
-  | 'heartbeat'
-  | 'completed'
-  | 'failed'
-  | 'snapshot';
+export const TASK_EVENT_ID_SEPARATOR = ':evt:';
 
 export interface TaskRuntimeState {
   taskId: string;
@@ -61,6 +68,7 @@ export interface TaskRuntimeState {
   progress: number;
   message: string;
   timestamp: string;
+  stage?: string | null;
   errorCode?: TaskErrorCode | null;
   context?: Record<string, unknown>;
 }
@@ -75,7 +83,10 @@ export interface TaskDetail extends TaskSummary {
   resultUrl: string | null;
 }
 
-export type TaskSnapshot = TaskRuntimeState;
+export interface TaskSnapshot extends TaskRuntimeState {
+  resumeFrom?: string | null;
+  lastEventId?: string | null;
+}
 
 export interface TaskListResult {
   requestId: string | null;
@@ -84,7 +95,19 @@ export interface TaskListResult {
 }
 
 export interface TaskEventPayload extends TaskRuntimeState {
+  id?: string;
+  sequence?: number;
   event: TaskEventName;
+  from?: string | null;
+  to?: string | null;
+  reason?: string | null;
+  result?: Record<string, unknown> | null;
+  resumeFrom?: string | null;
+}
+
+export interface TaskStreamEventPayload extends TaskEventPayload {
+  id: string;
+  sequence: number;
 }
 
 export interface TaskDataEnvelope<T> {

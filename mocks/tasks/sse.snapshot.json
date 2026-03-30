@@ -1,0 +1,15 @@
+{
+  "id": "task_mock_snapshot:evt:000003",
+  "sequence": 3,
+  "event": "snapshot",
+  "taskId": "task_mock_snapshot",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 33,
+  "message": "已恢复到最近可用快照",
+  "timestamp": "2026-03-30T13:05:15Z",
+  "requestId": "req_task_mock_snapshot_sse",
+  "errorCode": null,
+  "stage": "outline",
+  "resumeFrom": "task_mock_snapshot:evt:000002"
+}

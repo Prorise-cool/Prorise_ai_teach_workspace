@@ -1,0 +1,14 @@
+{
+  "id": "task_mock_completed:evt:000001",
+  "sequence": 1,
+  "event": "connected",
+  "taskId": "task_mock_completed",
+  "taskType": "video",
+  "status": "pending",
+  "progress": 0,
+  "message": "SSE 通道已建立",
+  "timestamp": "2026-03-30T13:05:00Z",
+  "requestId": "req_task_mock_completed_sse",
+  "errorCode": null,
+  "stage": "bootstrap"
+}

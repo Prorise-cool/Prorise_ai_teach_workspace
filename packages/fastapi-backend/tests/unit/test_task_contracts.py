@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from app.core.sse import TaskProgressEvent, encode_sse_event
+from app.core.sse import (
+    TaskProgressEvent,
+    build_sse_event_id,
+    encode_sse_event,
+    parse_sse_event_id
+)
+from app.infra.sse_broker import InMemorySseBroker
 from app.schemas.common import TaskSnapshotPayload, build_success_envelope
 from app.shared.task_framework.status import (
     TaskErrorCode,
@@ -15,7 +21,7 @@ from app.shared.task_framework.status import (
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
-def _load_json(relative_path: str) -> dict[str, object]:
+def _load_json(relative_path: str) -> dict[str, object] | list[dict[str, object]]:
     return json.loads((PROJECT_ROOT / relative_path).read_text(encoding="utf-8"))
 
 
@@ -61,53 +67,124 @@ def test_task_contract_models_serialize_public_fields_in_camel_case() -> None:
         "errorCode": None
     }
 
-    encoded = encode_sse_event(
+
+def test_sse_event_encoding_includes_id_sequence_and_aliases() -> None:
+    broker = InMemorySseBroker()
+    encoded_event = broker.publish(
         TaskProgressEvent(
-            event="failed",
+            event="provider_switch",
             task_id="video_20260330130500_ef56gh78",
             task_type="video",
-            status="failed",
+            status="processing",
             progress=87,
-            message="任务执行失败",
+            message="主 Provider 不可用，已切换备用 Provider",
             timestamp="2026-03-30T13:05:12Z",
             request_id="req_task_failed_001",
-            error_code=TaskErrorCode.PROVIDER_TIMEOUT
+            error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+            from_="gemini-2_5-flash",
+            to="claude-3_7-sonnet",
+            reason="primary provider unavailable"
         )
     )
 
-    assert "taskId" in encoded
-    assert "taskType" in encoded
-    assert "requestId" in encoded
-    assert "errorCode" in encoded
-    assert "task_id" not in encoded
-    assert "error_code" not in encoded
+    encoded = encode_sse_event(encoded_event)
+
+    assert encoded.startswith(f"id: {build_sse_event_id(encoded_event.task_id, 1)}\n")
+    assert "\nevent: provider_switch\n" in encoded
+    assert '"taskId":"video_20260330130500_ef56gh78"' in encoded
+    assert '"requestId":"req_task_failed_001"' in encoded
+    assert '"errorCode":"TASK_PROVIDER_UNAVAILABLE"' in encoded
+    assert '"from":"gemini-2_5-flash"' in encoded
+    assert '"task_id"' not in encoded
+    assert '"error_code"' not in encoded
+
+
+def test_sse_broker_assigns_sequential_identity_and_supports_replay_after_event_id() -> None:
+    broker = InMemorySseBroker()
+    task_id = "video_20260330130500_ab12cd34"
+
+    connected = broker.publish(
+        TaskProgressEvent(
+            event="connected",
+            task_id=task_id,
+            task_type="video",
+            status="pending",
+            progress=0,
+            message="SSE 通道已建立",
+            request_id="req_task_sse_001",
+            error_code=None
+        )
+    )
+    progress = broker.publish(
+        TaskProgressEvent(
+            event="progress",
+            task_id=task_id,
+            task_type="video",
+            status="processing",
+            progress=32,
+            message="任务处理中",
+            request_id="req_task_sse_001",
+            error_code=None
+        )
+    )
+    snapshot = broker.publish(
+        TaskProgressEvent(
+            event="snapshot",
+            task_id=task_id,
+            task_type="video",
+            status="processing",
+            progress=32,
+            message="已恢复到最近可用快照",
+            request_id="req_task_sse_001",
+            error_code=None,
+            resume_from=progress.id
+        )
+    )
+
+    assert connected.sequence == 1
+    assert progress.sequence == 2
+    assert snapshot.sequence == 3
+    assert connected.id == build_sse_event_id(task_id, 1)
+    assert parse_sse_event_id(snapshot.id or "") == (task_id, 3)
+    assert [event.sequence for event in broker.replay(task_id)] == [1, 2, 3]
+    assert [event.sequence for event in broker.replay(task_id, after_event_id=connected.id)] == [2, 3]
 
 
 def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
-    success_payload = _load_json("mocks/tasks/task-lifecycle.success.json")
-    failed_payload = _load_json("mocks/tasks/task-lifecycle.failed.json")
-    cancelled_payload = _load_json("mocks/tasks/task-lifecycle.cancelled.json")
-    snapshot_payload = _load_json("mocks/tasks/task-lifecycle.snapshot.json")
-    provider_switch_payload = _load_json("mocks/tasks/task-lifecycle.provider-switch.json")
-    event_schema = _load_json("contracts/tasks/task-progress-event.schema.json")
-    result_schema = _load_json("contracts/tasks/task-result.schema.json")
+    completed_payload = _load_json("mocks/tasks/sse.completed.json")
+    failed_payload = _load_json("mocks/tasks/sse.failed.json")
+    provider_switch_payload = _load_json("mocks/tasks/sse.provider-switch.json")
+    snapshot_payload = _load_json("mocks/tasks/sse.snapshot.json")
+    failed_sequence_payload = _load_json("mocks/tasks/sse.sequence.failed.json")
+    event_schema = _load_json("contracts/tasks/sse-event.schema.json")
 
     for payload in (
-        success_payload,
+        completed_payload,
         failed_payload,
-        cancelled_payload,
+        provider_switch_payload,
         snapshot_payload
     ):
-        model = TaskSnapshotPayload.model_validate(payload)
-        assert model.task_id
+        model = TaskProgressEvent.model_validate(payload)
+        assert model.id
+        assert model.sequence
         assert model.timestamp.endswith("Z")
 
-    event_model = TaskProgressEvent.model_validate(provider_switch_payload)
-    assert event_model.event == "provider_switch"
-    assert event_model.error_code == TaskErrorCode.PROVIDER_UNAVAILABLE
-    assert event_model.context["providerSwitch"]["to"] == "azure-tts"
+    for index, payload in enumerate(failed_sequence_payload, start=1):
+        model = TaskProgressEvent.model_validate(payload)
+        assert model.sequence == index
 
-    assert result_schema["required"] == [
+    provider_switch_model = TaskProgressEvent.model_validate(provider_switch_payload)
+    snapshot_model = TaskProgressEvent.model_validate(snapshot_payload)
+
+    assert provider_switch_model.event == "provider_switch"
+    assert provider_switch_model.from_ == "gemini-2_5-flash"
+    assert provider_switch_model.to == "claude-3_7-sonnet"
+    assert snapshot_model.resume_from == "task_mock_snapshot:evt:000002"
+
+    assert event_schema["required"] == [
+        "id",
+        "sequence",
+        "event",
         "taskId",
         "taskType",
         "status",
@@ -121,8 +198,8 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
         "connected",
         "progress",
         "provider_switch",
-        "heartbeat",
         "completed",
         "failed",
+        "heartbeat",
         "snapshot"
     ]

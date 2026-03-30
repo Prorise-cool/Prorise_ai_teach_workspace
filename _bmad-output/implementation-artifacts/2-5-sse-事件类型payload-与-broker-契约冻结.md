@@ -1,6 +1,6 @@
 # Story 2.5: SSE 事件类型、payload 与 broker 契约冻结
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,18 +18,18 @@ so that 所有等待页、结果页和任务型接口都能消费一致的实时
 
 ## Tasks / Subtasks
 
-- [ ] 冻结事件目录与 payload schema（AC: 1, 3）
-  - [ ] 为七类事件定义触发条件、必填字段、可选字段与示例数据。
-  - [ ] 明确 `id` / `Last-Event-ID` 与 `snapshot` 的公共语义。
-- [ ] 冻结 broker 事件写入约定（AC: 1, 3）
-  - [ ] 定义 broker 内部事件对象、序列化口径与事件顺序保证。
-  - [ ] 定义 `heartbeat` 与 `provider_switch` 的最小字段集。
-- [ ] 提供 mock 事件序列与前端消费样例（AC: 2）
-  - [ ] 在 `mocks/tasks/` 下补齐连接、进度、失败、恢复快照与 Provider 切换样例。
-  - [ ] 在前端 `services/sse` 层建立统一 parser 输入输出约定。
-- [ ] 建立契约测试与回放测试（AC: 1, 2, 3）
-  - [ ] 校验事件 schema。
-  - [ ] 校验同一份 mock 序列可以被前端消费层和后端 broker 测试共同复用。
+- [x] 冻结事件目录与 payload schema（AC: 1, 3）
+  - [x] 为七类事件定义触发条件、必填字段、可选字段与示例数据。
+  - [x] 明确 `id` / `Last-Event-ID` 与 `snapshot` 的公共语义。
+- [x] 冻结 broker 事件写入约定（AC: 1, 3）
+  - [x] 定义 broker 内部事件对象、序列化口径与事件顺序保证。
+  - [x] 定义 `heartbeat` 与 `provider_switch` 的最小字段集。
+- [x] 提供 mock 事件序列与前端消费样例（AC: 2）
+  - [x] 在 `mocks/tasks/` 下补齐连接、进度、失败、恢复快照与 Provider 切换样例。
+  - [x] 在前端 `services/sse` 层建立统一 parser 输入输出约定。
+- [x] 建立契约测试与回放测试（AC: 1, 2, 3）
+  - [x] 校验事件 schema。
+  - [x] 校验同一份 mock 序列可以被前端消费层和后端 broker 测试共同复用。
 
 ## Dev Notes
 
@@ -106,12 +106,40 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pytest tests/unit/test_task_contracts.py tests/unit/test_task_trace.py`
+- `pnpm --filter @xiaomai/student-web typecheck`
+- `pnpm --filter @xiaomai/student-web exec vitest run src/test/services/mock/fixtures/task-contract-assets.test.ts src/test/services/sse/task-event-stream.test.ts`
 
 ### Completion Notes List
 
-- 已把 SSE Story 收敛为事件目录、事件 ID 语义、broker 契约与 mock 序列四个稳定交付物。
+- 已冻结七类 SSE 事件目录、`id` / `sequence` 规则与 `Last-Event-ID` 预留口径，补齐契约文档与 schema。
+- 已让后端 `TaskProgressEvent` 与 `InMemorySseBroker` 统一补齐事件身份、校验关键字段，并支持按 `after_event_id` 回放。
+- 已补齐共享 mock 事件与前端统一 parser，确保前后端围绕同一组事件 JSON 做解析与测试。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/2-5-sse-事件类型payload-与-broker-契约冻结.md`
+- `contracts/tasks/README.md`
+- `contracts/tasks/task-progress-event.schema.json`
+- `contracts/tasks/sse-event.schema.json`
+- `contracts/tasks/sse-events.md`
+- `contracts/tasks/sse-sequence.md`
+- `mocks/tasks/README.md`
+- `mocks/tasks/sse.connected.json`
+- `mocks/tasks/sse.progress.json`
+- `mocks/tasks/sse.provider-switch.json`
+- `mocks/tasks/sse.completed.json`
+- `mocks/tasks/sse.failed.json`
+- `mocks/tasks/sse.heartbeat.json`
+- `mocks/tasks/sse.snapshot.json`
+- `mocks/tasks/sse.sequence.completed.json`
+- `mocks/tasks/sse.sequence.failed.json`
+- `mocks/tasks/sse.sequence.provider-switch.json`
+- `mocks/tasks/sse.sequence.snapshot.json`
+- `packages/student-web/src/services/sse/index.ts`
+- `packages/student-web/src/types/task.ts`
+- `packages/student-web/src/test/services/sse/task-event-stream.test.ts`
+- `packages/student-web/src/test/services/mock/fixtures/task-contract-assets.test.ts`
+- `packages/fastapi-backend/app/core/sse.py`
+- `packages/fastapi-backend/app/infra/sse_broker.py`
+- `packages/fastapi-backend/tests/unit/test_task_contracts.py`

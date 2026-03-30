@@ -1,0 +1,14 @@
+{
+  "id": "task_mock_completed:evt:000002",
+  "sequence": 2,
+  "event": "progress",
+  "taskId": "task_mock_completed",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 18,
+  "message": "任务已进入处理阶段",
+  "timestamp": "2026-03-30T13:05:05Z",
+  "requestId": "req_task_mock_completed_sse",
+  "errorCode": null,
+  "stage": "outline"
+}
