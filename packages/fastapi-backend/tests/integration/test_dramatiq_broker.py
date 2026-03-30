@@ -50,10 +50,12 @@ def test_demo_task_dispatches_through_dramatiq_worker_and_completes(monkeypatch)
             worker.join()
 
             completed_state = client.app.state.runtime_store.get_task_state(context.task_id)
+            completed_events = client.app.state.runtime_store.get_task_events(context.task_id)
 
             assert completed_state["internalStatus"] == "succeeded"
             assert completed_state["status"] == "completed"
             assert completed_state["progress"] == 100
+            assert [event.event for event in completed_events] == ["progress", "completed"]
     finally:
         worker.stop()
         worker_module.runtime_store.clear()
@@ -83,10 +85,12 @@ def test_failed_demo_task_does_not_remain_processing(monkeypatch) -> None:
             worker.join()
 
             failed_state = client.app.state.runtime_store.get_task_state(context.task_id)
+            failed_events = client.app.state.runtime_store.get_task_events(context.task_id)
 
             assert failed_state["internalStatus"] == "error"
             assert failed_state["status"] == "failed"
             assert failed_state["errorCode"] == "TASK_UNHANDLED_EXCEPTION"
+            assert [event.event for event in failed_events] == ["progress", "failed"]
     finally:
         worker.stop()
         worker_module.runtime_store.clear()
