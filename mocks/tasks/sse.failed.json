@@ -1,0 +1,14 @@
+{
+  "id": "task_mock_failed:evt:000005",
+  "sequence": 5,
+  "event": "failed",
+  "taskId": "task_mock_failed",
+  "taskType": "video",
+  "status": "failed",
+  "progress": 62,
+  "message": "任务执行失败",
+  "timestamp": "2026-03-30T13:05:18Z",
+  "requestId": "req_task_mock_failed_sse",
+  "errorCode": "TASK_PROVIDER_TIMEOUT",
+  "stage": "generation"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "task_mock_failed:evt:000003",
+  "sequence": 3,
+  "event": "provider_switch",
+  "taskId": "task_mock_failed",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 36,
+  "message": "主 Provider 不可用，已切换备用 Provider",
+  "timestamp": "2026-03-30T13:05:09Z",
+  "requestId": "req_task_mock_failed_sse",
+  "errorCode": "TASK_PROVIDER_UNAVAILABLE",
+  "stage": "generation",
+  "from": "gemini-2_5-flash",
+  "to": "claude-3_7-sonnet",
+  "reason": "primary provider unavailable"
+}

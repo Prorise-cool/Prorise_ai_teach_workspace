@@ -1,0 +1,14 @@
+{
+  "id": "task_mock_completed:evt:000003",
+  "sequence": 3,
+  "event": "heartbeat",
+  "taskId": "task_mock_completed",
+  "taskType": "video",
+  "status": "processing",
+  "progress": 48,
+  "message": "任务仍在执行中",
+  "timestamp": "2026-03-30T13:05:12Z",
+  "requestId": "req_task_mock_completed_sse",
+  "errorCode": null,
+  "stage": "generation"
+}
