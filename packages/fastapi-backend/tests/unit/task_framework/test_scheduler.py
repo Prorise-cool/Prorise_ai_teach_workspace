@@ -1,5 +1,7 @@
 import asyncio
 
+from app.infra.redis_client import RuntimeStore
+from app.shared.task_framework.key_builder import build_task_events_key, build_task_runtime_key
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.demo_task import DemoTask
@@ -139,3 +141,28 @@ def test_demo_task_success_and_failure_paths() -> None:
     assert success_result.context == {"sourceModule": "demo"}
     assert failure_result.status == TaskStatus.FAILED
     assert failure_result.error_code == TaskErrorCode.UNHANDLED_EXCEPTION
+
+
+def test_scheduler_persists_snapshot_and_event_cache_into_runtime_store() -> None:
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    scheduler = TaskScheduler(runtime_store=runtime_store)
+    context = create_task_context(
+        prefix="video",
+        task_type="video",
+        user_id="student-5",
+        request_id="gateway_request_1005",
+        source_module="video"
+    )
+    task = OrderedTask(context)
+
+    result = asyncio.run(scheduler.dispatch(task))
+    snapshot = runtime_store.get_task_state(context.task_id)
+    events = runtime_store.get_task_events(context.task_id)
+
+    assert result.status == TaskStatus.COMPLETED
+    assert snapshot["status"] == "completed"
+    assert snapshot["context"] == {"requestId": context.request_id}
+    assert [event.event for event in events] == ["progress", "completed"]
+    assert [event.sequence for event in events] == [1, 2]
+    assert 0 < runtime_store.ttl(build_task_runtime_key(context.task_id))
+    assert 0 < runtime_store.ttl(build_task_events_key(context.task_id))
