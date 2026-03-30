@@ -154,6 +154,8 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
     completed_payload = _load_json("mocks/tasks/sse.completed.json")
     failed_payload = _load_json("mocks/tasks/sse.failed.json")
     provider_switch_payload = _load_json("mocks/tasks/sse.provider-switch.json")
+    provider_switch_runtime_payload = _load_json("mocks/tasks/provider-switch.json")
+    provider_health_cache_payload = _load_json("mocks/tasks/provider-health-cache.json")
     snapshot_payload = _load_json("mocks/tasks/sse.snapshot.json")
     failed_sequence_payload = _load_json("mocks/tasks/sse.sequence.failed.json")
     runtime_progress_payload = _load_json("mocks/tasks/task-events.progress.json")
@@ -180,12 +182,17 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
         assert model.sequence == index
 
     provider_switch_model = TaskProgressEvent.model_validate(provider_switch_payload)
+    runtime_provider_switch_model = TaskProgressEvent.model_validate(provider_switch_runtime_payload)
     snapshot_model = TaskProgressEvent.model_validate(snapshot_payload)
 
     assert provider_switch_model.event == "provider_switch"
     assert provider_switch_model.from_ == "gemini-2_5-flash"
     assert provider_switch_model.to == "claude-3_7-sonnet"
+    assert runtime_provider_switch_model.from_ == "demo-chat"
+    assert runtime_provider_switch_model.to == "backup-chat"
     assert snapshot_model.resume_from == "task_mock_snapshot:evt:000002"
+    assert provider_health_cache_payload["provider"] == "demo-chat"
+    assert provider_health_cache_payload["isHealthy"] is False
 
     assert event_schema["required"] == [
         "id",

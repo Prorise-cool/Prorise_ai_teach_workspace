@@ -4,9 +4,12 @@ import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from app.core.config import Settings, get_settings
+from app.infra.redis_client import RuntimeStore, create_runtime_store
+from app.providers.failover import ProviderFailoverService, ProviderSwitch
+from app.providers.health import ProviderHealthStore
 from app.providers.registry import ProviderRegistry
 from app.providers.protocols import (
     LLMProvider,
@@ -97,6 +100,43 @@ class ProviderFactory:
             active_env.get(TTS_CHAIN_ENV, active_settings.default_tts_provider)
         )
         return self.assemble(llm=llm_config, tts=tts_config)
+
+    def create_failover_service(
+        self,
+        runtime_store: RuntimeStore | None = None,
+    ) -> ProviderFailoverService:
+        active_runtime_store = runtime_store or create_runtime_store()
+        return ProviderFailoverService(ProviderHealthStore(active_runtime_store))
+
+    async def generate_with_failover(
+        self,
+        providers: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
+        prompt: str,
+        *,
+        runtime_store: RuntimeStore | None = None,
+        emit_switch: Callable[[ProviderSwitch], Any] | None = None,
+    ) -> ProviderResult:
+        chain = tuple(self.build_chain(ProviderCapability.LLM, providers))
+        return await self.create_failover_service(runtime_store).generate(
+            chain,
+            prompt,
+            emit_switch=emit_switch,
+        )
+
+    async def synthesize_with_failover(
+        self,
+        providers: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
+        text: str,
+        *,
+        runtime_store: RuntimeStore | None = None,
+        emit_switch: Callable[[ProviderSwitch], Any] | None = None,
+    ) -> ProviderResult:
+        chain = tuple(self.build_chain(ProviderCapability.TTS, providers))
+        return await self.create_failover_service(runtime_store).synthesize(
+            chain,
+            text,
+            emit_switch=emit_switch,
+        )
 
     def _coerce_runtime_config(
         self,
