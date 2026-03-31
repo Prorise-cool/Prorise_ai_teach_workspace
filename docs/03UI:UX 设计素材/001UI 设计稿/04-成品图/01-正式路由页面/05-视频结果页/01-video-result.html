@@ -1,47 +1,632 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh" class="light">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>视频结果页 | 小麦</title>
-  <style>
-    body{margin:0;font-family:'PingFang SC',SF-Pro,sans-serif;background:#0f172a;color:#f8fafc}
-    .page{min-height:100vh;padding:2.5rem;background:linear-gradient(135deg,#020617,#111827)}
-    .panel{background:#111827;border-radius:1.25rem;padding:1.75rem;box-shadow:0 30px 65px rgba(15,23,42,.65)}
-    header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
-    h1{margin:0;font-size:2rem}
-    h2{margin-top:0;font-size:1.25rem;color:#cbd5f5}
-    .badge{padding:.4rem .95rem;border-radius:999px;background:#fcd34d;color:#1e1b4b;font-weight:600;font-size:.8rem}
-    .grid{display:grid;gap:1rem;margin-top:1.5rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    p{margin-bottom:1rem;line-height:1.6;color:#e5e7eb}
-  </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 XiaoMai - 视频结果页 (高保真成品)</title>
+
+	<!-- 引入 Google Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
+
+	<!-- 引入 Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Lucide 图标库 -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<!-- XiaoMai Design System V4 Tokens -->
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91',
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: {
+							efficient: '#6D5DF4', humorous: '#FFB020',
+							patient: '#00C48C', serious: '#0091FF',
+						},
+						success: { DEFAULT: '#52c41a', dark: '#51d712' }
+					},
+					fontFamily: { sans: ['Inter', 'Noto Sans SC', 'sans-serif'] },
+					borderRadius: { 'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', 'full': '9999px' },
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'floating': '0 0 40px rgba(0,0,0,0.06)'
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		/* 基础主题与平滑过渡 */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+		}
+
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+		}
+
+		/* 隐藏滚动条但保留功能 */
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
+		}
+
+		/* 聊天滚动条优化 */
+		.chat-scroll::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.chat-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.chat-scroll::-webkit-scrollbar-thumb {
+			background: #e6dcc8;
+			border-radius: 4px;
+		}
+
+		html.dark .chat-scroll::-webkit-scrollbar-thumb {
+			background: #302824;
+		}
+
+		/* 毛玻璃面板 */
+		.glass-panel {
+			background: rgba(255, 255, 255, 0.85);
+			backdrop-filter: blur(20px);
+			-webkit-backdrop-filter: blur(20px);
+		}
+
+		html.dark .glass-panel {
+			background: rgba(31, 26, 24, 0.85);
+		}
+
+		/* 气泡专属倒角 */
+		.bubble-user {
+			border-radius: 20px 20px 4px 20px;
+		}
+
+		.bubble-ai {
+			border-radius: 4px 20px 20px 20px;
+		}
+
+		/* AI 打字机 Loading 动画重构 */
+		.typing-dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background-color: currentColor;
+			animation: typingBounce 1.4s infinite ease-in-out both;
+		}
+
+		.typing-dot:nth-child(1) {
+			animation-delay: -0.32s;
+		}
+
+		.typing-dot:nth-child(2) {
+			animation-delay: -0.16s;
+		}
+
+		@keyframes typingBounce {
+
+			0%,
+			80%,
+			100% {
+				transform: scale(0);
+				opacity: 0.4;
+			}
+
+			40% {
+				transform: scale(1);
+				opacity: 1;
+			}
+		}
+
+		/* 抽屉弹出动画 */
+		.drawer-slide {
+			transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		/* Toast 动画 */
+		.toast {
+			opacity: 0;
+			transform: translate(-50%, -10px) scale(0.95);
+			transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+			pointer-events: none;
+		}
+
+		.toast.active {
+			opacity: 1;
+			transform: translate(-50%, 0) scale(1);
+			z-index: 100;
+		}
+
+		/* IP 呼吸动画 */
+		@keyframes floating-ip {
+			0% {
+				transform: translateY(0);
+			}
+
+			50% {
+				transform: translateY(-4px);
+			}
+
+			100% {
+				transform: translateY(0);
+			}
+		}
+
+		.animate-floating-ip {
+			animation: floating-ip 3s ease-in-out infinite;
+		}
+	</style>
 </head>
-<body>
-  <div class="page">
-    <div class="panel">
-      <header>
-        <div>
-          <div style="font-size:.9rem;color:#9ca3af">Video + Companion</div>
-          <h1>播放页 · 当前秒问答与证据面板</h1>
-        </div>
-        <span class="badge">整合 Companion / Evidence</span>
-      </header>
-      <p>右侧伴学区域与视频播放共存，直接承接当前时间点的提问、白板推导与来源摘要，完全不跳转。页底同步呈现 Retrieval / Evidence Service 的引用片段与解析状态，强调“证据来源”语义。</p>
-      <div class="grid">
-        <div class="panel" style="background:#0f172a">
-          <h2>主播放区</h2>
-          <p>保持沉浸式播放器，控制条、倍速、收藏与分享入口完备，视觉聚焦在视频上。</p>
-        </div>
-        <div class="panel" style="background:#0b1220">
-          <h2>Companion 面板</h2>
-          <p>固定显示“上下文标签 + QA 流 + 白板解释”，配合视频进度自动刷新内容，讲解不出页面。</p>
-        </div>
-        <div class="panel" style="background:#111827">
-          <h2>证据摘要</h2>
-          <p>列出 Retrieval Provider 提供的片段、章节、置信度与引用链接，表明该区域属于 Evidence Service。</p>
-        </div>
-      </div>
-    </div>
-  </div>
+
+<body class="h-screen overflow-hidden flex font-sans selection:bg-brand selection:text-text-primary">
+
+	<!-- 顶部极简主题控制 (演示用，仅占位不影响布局) -->
+	<button id="themeToggle"
+		class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-3 py-1.5 rounded-full glass-panel border border-bordercolor-light dark:border-bordercolor-dark text-xs font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm flex items-center gap-1.5 transition-all">
+		<i data-lucide="sun" class="w-3.5 h-3.5 hidden dark:block"></i>
+		<i data-lucide="moon" class="w-3.5 h-3.5 block dark:hidden"></i>
+		切换主题
+	</button>
+
+	<!-- ==================== 左侧：沉浸式课堂播放区 ==================== -->
+	<main class="flex-1 flex flex-col p-4 md:p-6 relative">
+
+		<!-- 头部导航 -->
+		<header class="flex justify-between items-center mb-4 md:mb-6 shrink-0 relative z-10">
+			<div class="flex items-center gap-3">
+				<a href="#"
+					class="w-10 h-10 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:text-text-primary hover:shadow-sm transition-all">
+					<i data-lucide="chevron-left" class="w-5 h-5"></i>
+				</a>
+				<h1 class="font-extrabold text-xl text-text-primary dark:text-text-primary-dark tracking-tight">
+					微积分：链式法则的几何直观</h1>
+			</div>
+
+			<div class="flex items-center gap-3">
+				<button
+					class="text-sm font-bold border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark px-5 py-2 rounded-full shadow-sm hover:border-brand transition-colors flex items-center gap-2">
+					<i data-lucide="pen-tool" class="w-4 h-4"></i> 课后练习
+				</button>
+			</div>
+		</header>
+
+		<!-- 视频播放主容器 -->
+		<div
+			class="w-full flex-1 bg-surface-dark dark:bg-black rounded-[24px] md:rounded-[32px] overflow-hidden relative shadow-lg group">
+
+			<!-- 视频封面 Mock -->
+			<img src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=1200"
+				alt="Video Cover" class="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-luminosity">
+
+			<!-- 中央播放按钮 -->
+			<div class="absolute inset-0 flex items-center justify-center">
+				<button
+					class="w-20 h-20 bg-brand/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(245,197,71,0.4)] group-hover:scale-110 transition-transform duration-300">
+					<i data-lucide="play" class="w-8 h-8 text-white fill-current ml-1"></i>
+				</button>
+			</div>
+
+			<!-- 底部播放控制条 (悬浮出现) -->
+			<div
+				class="absolute bottom-6 left-6 right-6 glass-panel rounded-2xl p-4 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+				<button class="text-text-primary dark:text-text-primary-dark hover:text-brand transition-colors"><i
+						data-lucide="pause" class="w-5 h-5 fill-current"></i></button>
+				<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark font-mono">02:15 /
+					05:30</span>
+
+				<!-- 进度条 -->
+				<div
+					class="flex-1 h-1.5 bg-bordercolor-light dark:bg-bordercolor-dark rounded-full relative cursor-pointer group/progress">
+					<div class="absolute inset-y-0 left-0 bg-brand w-[40%] rounded-full relative">
+						<!-- 滑块指示器 -->
+						<div
+							class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white rounded-full shadow border-2 border-brand opacity-0 group-hover/progress:opacity-100 transition-opacity">
+						</div>
+					</div>
+				</div>
+
+				<button
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary transition-colors"><i
+						data-lucide="volume-2" class="w-5 h-5"></i></button>
+				<button
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary transition-colors"><i
+						data-lucide="settings" class="w-5 h-5"></i></button>
+				<button
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary transition-colors"><i
+						data-lucide="maximize" class="w-5 h-5"></i></button>
+			</div>
+		</div>
+	</main>
+
+	<!-- ==================== 右侧：Companion 智能侧栏 ==================== -->
+	<aside
+		class="w-[380px] md:w-[420px] bg-surface-light dark:bg-surface-dark border-l border-bordercolor-light dark:border-bordercolor-dark flex flex-col relative shrink-0 z-20 h-full shadow-floating transition-colors duration-400">
+
+		<!-- Header -->
+		<div
+			class="px-5 py-4 border-b border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-center bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md z-10">
+			<div class="flex items-center gap-2.5">
+				<div class="w-8 h-8 rounded-full bg-brand/10 dark:bg-brand/5 flex items-center justify-center">
+					<i data-lucide="bot" class="w-4 h-4 text-brand-dark dark:text-brand"></i>
+				</div>
+				<div class="flex flex-col">
+					<span
+						class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark leading-tight">Companion
+						会话</span>
+					<span
+						class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">随课智能答疑</span>
+				</div>
+			</div>
+
+			<div class="flex items-center space-x-1">
+				<button onclick="toggleEvidenceDrawer()"
+					class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#2c2522] hover:text-text-primary dark:hover:text-text-primary-dark transition-colors tooltip-trigger"
+					title="查看依据">
+					<i data-lucide="paperclip" class="w-4 h-4"></i>
+				</button>
+				<button onclick="toggleHistory()"
+					class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#2c2522] hover:text-text-primary dark:hover:text-text-primary-dark transition-colors tooltip-trigger"
+					title="历史记录">
+					<i data-lucide="clock" class="w-4 h-4"></i>
+				</button>
+			</div>
+		</div>
+
+		<!-- 权限&上下文联动锚点 (Anchor Banner) -->
+		<div
+			class="bg-brand/10 dark:bg-brand/5 px-4 py-2 text-[11px] font-bold text-brand-dark dark:text-brand flex items-center gap-2 border-b border-brand/20 dark:border-brand/10">
+			<i data-lucide="link" class="w-3.5 h-3.5 shrink-0"></i>
+			<span class="truncate">已关联画面：T=02:15 / Scene-02 / 复合函数</span>
+			<button class="ml-auto opacity-70 hover:opacity-100"><i data-lucide="x" class="w-3 h-3"></i></button>
+		</div>
+
+		<!-- 对话气泡区 (核心内容) -->
+		<div class="flex-1 overflow-y-auto chat-scroll p-5 space-y-6 bg-bg-light/30 dark:bg-bg-dark/30 relative"
+			id="chat-container">
+
+			<!-- 用户气泡 (右侧) -->
+			<div class="flex flex-col items-end">
+				<div
+					class="bg-secondary dark:bg-[#2c2522] text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
+					这一步没听懂，为什么外层函数的导数要乘以内层函数的导数？
+				</div>
+				<span class="text-[10px] text-text-secondary/60 dark:text-text-secondary-dark/60 mt-1 mr-1">10:30
+					AM</span>
+			</div>
+
+			<!-- AI 老师气泡 (左侧) -->
+			<div class="flex flex-col items-start w-full">
+				<!-- AI 身份头 -->
+				<div class="flex items-center gap-2 mb-1.5 ml-1">
+					<div
+						class="w-5 h-5 rounded-full bg-agent-serious text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+						严</div>
+					<span class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
+				</div>
+
+				<!-- 气泡本体 -->
+				<div
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 max-w-[90%] leading-relaxed bubble-ai shadow-md relative group">
+					好问题！这正是链式法则的核心。
+					<br><br>
+					你可以把复合函数想象成<strong>“齿轮传动”</strong>：<br>
+					1. 外齿轮转动速度是 <code
+						class="bg-secondary dark:bg-[#2c2522] px-1 py-0.5 rounded text-xs font-mono text-agent-serious">f'(g(x))</code>。<br>
+					2. 内齿轮转动速度是 <code
+						class="bg-secondary dark:bg-[#2c2522] px-1 py-0.5 rounded text-xs font-mono text-agent-serious">g'(x)</code>。<br>
+					<br>
+					因为内齿轮带动外齿轮，所以总的传动速度（变化率）必须是两者的<strong>乘积</strong>。
+
+					<!-- 白板解析区 (Whiteboard Snippet) -->
+					<div
+						class="mt-4 w-full bg-[#faf9f7] dark:bg-[#1a1715] border border-bordercolor-light/60 dark:border-bordercolor-dark/60 rounded-xl p-3 relative overflow-hidden">
+						<div class="flex items-center gap-1.5 mb-2">
+							<i data-lucide="edit-3" class="w-3.5 h-3.5 text-agent-serious"></i>
+							<span
+								class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">Whiteboard</span>
+						</div>
+						<p class="text-[13px] leading-relaxed text-text-secondary dark:text-text-secondary-dark">
+							画面已同步跳转：白板正为您绘制 “外层变化率 × 内层变化率” 的链条齿轮图，并高亮了对应的数学公式。
+						</p>
+					</div>
+
+					<!-- 悬浮复制操作 (Hover 显示) -->
+					<button onclick="copyReply()"
+						class="absolute -right-10 top-2 p-1.5 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark opacity-0 group-hover:opacity-100 hover:text-brand dark:hover:text-brand transition-all shadow-sm">
+						<i data-lucide="copy" class="w-3.5 h-3.5"></i>
+					</button>
+				</div>
+
+				<!-- 追问联想 Pills -->
+				<div class="mt-2.5 ml-1 flex flex-wrap gap-2">
+					<button
+						class="text-[12px] font-medium bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full hover:border-brand hover:text-brand-dark dark:hover:text-brand text-text-secondary dark:text-text-secondary-dark transition-colors shadow-sm">
+						举个具体的例题
+					</button>
+					<button
+						class="text-[12px] font-medium bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full hover:border-brand hover:text-brand-dark dark:hover:text-brand text-text-secondary dark:text-text-secondary-dark transition-colors shadow-sm">
+						再讲通俗一点
+					</button>
+				</div>
+			</div>
+
+			<!-- 用户气泡 (二次追问) -->
+			<div class="flex flex-col items-end">
+				<div
+					class="bg-secondary dark:bg-[#2c2522] text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
+					举个具体的例题
+				</div>
+			</div>
+
+			<!-- AI 思考中 Loading -->
+			<div class="flex flex-col items-start w-full">
+				<div class="flex items-center gap-2 mb-1.5 ml-1">
+					<div
+						class="w-5 h-5 rounded-full bg-agent-serious text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+						严</div>
+					<span class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
+				</div>
+				<div
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark px-5 py-4 max-w-[90%] bubble-ai shadow-sm flex items-center gap-1.5 text-agent-serious">
+					<div class="typing-dot"></div>
+					<div class="typing-dot"></div>
+					<div class="typing-dot"></div>
+				</div>
+			</div>
+
+			<!-- 滚动锚点 -->
+			<div id="chat-bottom" class="h-4"></div>
+		</div>
+
+		<!-- ==================== 底部：问答输入区 ==================== -->
+		<div
+			class="p-4 bg-surface-light dark:bg-surface-dark border-t border-bordercolor-light dark:border-bordercolor-dark relative z-20">
+
+			<!-- 【重点】专属产品 IP 预留位：趴在输入框顶部边缘 -->
+			<div class="absolute -top-[38px] right-6 animate-floating-ip z-30 pointer-events-none drop-shadow-md">
+				<!-- 这里预留给你们的 IP 插图 (例如一个小狐狸或麦穗小人探头) -->
+				<div
+					class="w-14 h-12 bg-brand/20 dark:bg-brand/10 border border-brand/40 border-b-0 rounded-t-xl flex flex-col items-center justify-center relative overflow-hidden">
+					<i data-lucide="smile" class="w-5 h-5 text-brand-dark dark:text-brand mb-0.5"></i>
+					<span class="text-[8px] font-bold text-brand-dark dark:text-brand">IP 趴此处</span>
+				</div>
+			</div>
+
+			<!-- 快捷提问词 -->
+			<div class="flex space-x-2 mb-3 overflow-x-auto no-scrollbar pb-1">
+				<button
+					class="text-[11px] font-bold bg-secondary dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-1"><i
+						data-lucide="help-circle" class="w-3 h-3 text-brand"></i> 没听懂</button>
+				<button
+					class="text-[11px] font-bold bg-secondary dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-1"><i
+						data-lucide="alert-circle" class="w-3 h-3 text-agent-humorous"></i> 这步卡壳了</button>
+				<button
+					class="text-[11px] font-bold bg-secondary dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-1"><i
+						data-lucide="rocket" class="w-3 h-3 text-agent-efficient"></i> 考点延伸</button>
+			</div>
+
+			<!-- 核心输入框容器 -->
+			<div
+				class="bg-secondary/40 dark:bg-[#1a1514] border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
+				<textarea
+					class="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed"
+					rows="2" placeholder="随时提问，AI 老师为你解答..."></textarea>
+
+				<div class="flex justify-between items-center px-3 pb-2 pt-1">
+					<div class="flex items-center space-x-3">
+						<button
+							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark transition-colors">清空</button>
+						<div class="w-1 h-1 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark"></div>
+						<span
+							class="text-[11px] font-medium text-text-secondary/50 dark:text-text-secondary-dark/50 font-mono">0
+							/ 300</span>
+					</div>
+
+					<!-- 发送按钮 -->
+					<button
+						class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md">
+						<i data-lucide="arrow-up" class="w-4 h-4"></i>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- ==================== 侧滑抽屉 1：历史记录 ==================== -->
+		<div id="history-panel"
+			class="absolute inset-y-0 right-0 w-full bg-surface-light dark:bg-surface-dark border-l border-bordercolor-light dark:border-bordercolor-dark transform translate-x-full drawer-slide z-30 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+			<div
+				class="px-5 py-4 border-b border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-center bg-secondary/30 dark:bg-secondary-dark/30">
+				<span class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark">历史问答记录</span>
+				<button onclick="toggleHistory()"
+					class="p-1 rounded-md hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 text-text-secondary transition-colors"><i
+						data-lucide="x" class="w-5 h-5"></i></button>
+			</div>
+
+			<div class="flex-1 overflow-y-auto chat-scroll p-4 space-y-3">
+				<button
+					class="w-full text-left p-4 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark hover:border-brand dark:hover:border-brand shadow-sm transition-all group">
+					<div class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark truncate mb-2">
+						外层函数的导数要乘以内层函数...</div>
+					<div
+						class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark flex justify-between items-center">
+						<span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 今天
+							10:30</span>
+						<span class="opacity-0 group-hover:opacity-100 text-brand font-bold transition-opacity">点击回看
+							↗</span>
+					</div>
+				</button>
+				<button
+					class="w-full text-left p-4 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark hover:border-brand dark:hover:border-brand shadow-sm transition-all group">
+					<div class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark truncate mb-2">
+						傅里叶变换的物理意义是什么？</div>
+					<div
+						class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark flex justify-between items-center">
+						<span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 昨天
+							14:15</span>
+						<span class="opacity-0 group-hover:opacity-100 text-brand font-bold transition-opacity">点击回看
+							↗</span>
+					</div>
+				</button>
+			</div>
+
+			<div
+				class="p-4 border-t border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark">
+				<button
+					class="w-full text-[13px] font-bold rounded-lg border border-red-200 dark:border-red-900/50 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+					清空全部记录
+				</button>
+			</div>
+		</div>
+
+		<!-- ==================== 侧滑抽屉 2：来源依据 ==================== -->
+		<div id="evidence-drawer"
+			class="absolute inset-y-0 right-0 w-full bg-surface-light dark:bg-surface-dark border-l border-bordercolor-light dark:border-bordercolor-dark transform translate-x-full drawer-slide z-40 flex flex-col shadow-[-10px_0_30px_rgba(0,0,0,0.05)]">
+			<div
+				class="px-5 py-4 border-b border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-start bg-secondary/30 dark:bg-secondary-dark/30">
+				<div>
+					<div class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark">依据与来源</div>
+					<div
+						class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mt-1 flex items-center gap-1">
+						<i data-lucide="link" class="w-3 h-3"></i> 锚点：T=02:15 · Scene-02</div>
+				</div>
+				<button onclick="toggleEvidenceDrawer()"
+					class="p-1 rounded-md hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 text-text-secondary transition-colors"><i
+						data-lucide="x" class="w-5 h-5"></i></button>
+			</div>
+
+			<div class="flex-1 overflow-y-auto chat-scroll p-4 space-y-4 bg-bg-light/30 dark:bg-bg-dark/30">
+				<!-- 证据卡片 1 -->
+				<div
+					class="rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark p-4 shadow-sm">
+					<div class="flex items-center gap-2 mb-2">
+						<div
+							class="w-5 h-5 rounded flex items-center justify-center bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+							<i data-lucide="book" class="w-3 h-3"></i></div>
+						<div class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">教材《高数上》3.2 节
+						</div>
+					</div>
+					<div
+						class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mb-2 px-2 py-1 bg-secondary/50 dark:bg-[#2c2522] rounded inline-block">
+						命中片段：链式法则定义段落</div>
+					<p
+						class="text-[13px] text-text-primary dark:text-text-primary-dark/80 leading-relaxed border-l-2 border-brand pl-2 ml-1">
+						若 y=f(u), u=g(x)，则 y' = f'(u)·u'，其中 u' 表示内层变量对 x 的变化率。</p>
+				</div>
+
+				<!-- 证据卡片 2 -->
+				<div
+					class="rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark p-4 shadow-sm">
+					<div class="flex items-center gap-2 mb-2">
+						<div
+							class="w-5 h-5 rounded flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+							<i data-lucide="file-text" class="w-3 h-3"></i></div>
+						<div class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">课堂讲义 Scene 02
+						</div>
+					</div>
+					<div
+						class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mb-2 px-2 py-1 bg-secondary/50 dark:bg-[#2c2522] rounded inline-block">
+						命中片段：齿轮传动类比图</div>
+					<p
+						class="text-[13px] text-text-primary dark:text-text-primary-dark/80 leading-relaxed border-l-2 border-brand pl-2 ml-1">
+						讲义把外层函数和内层函数映射为两级传动，最终变化率需要连乘才能保真。</p>
+				</div>
+			</div>
+
+			<div
+				class="p-4 border-t border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark">
+				<a href="#"
+					class="w-full text-[13px] font-bold rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/50 dark:bg-[#2c2522] py-2.5 text-text-primary dark:text-text-primary-dark hover:border-brand dark:hover:border-brand transition-colors text-center block flex items-center justify-center gap-2">
+					<i data-lucide="external-link" class="w-4 h-4"></i> 在学习中心回看全书
+				</a>
+			</div>
+		</div>
+
+	</aside>
+
+	<!-- ==================== 全局 Toast 提示 ==================== -->
+	<div id="toastMessage"
+		class="toast fixed top-10 left-1/2 -translate-x-1/2 rounded-full glass-panel border border-bordercolor-light dark:border-bordercolor-dark px-6 py-3 text-[14px] font-bold text-text-primary dark:text-text-primary-dark shadow-lg flex items-center gap-2">
+		<div class="w-5 h-5 rounded-full bg-success flex items-center justify-center text-white"><i data-lucide="check"
+				class="w-3 h-3"></i></div>
+		解析已复制到剪贴板
+	</div>
+
+	<script>
+		// 初始化 Lucide 图标
+		lucide.createIcons();
+
+		// 亮暗色切换逻辑 (用于演示)
+		const themeToggle = document.getElementById('themeToggle');
+		const html = document.documentElement;
+		themeToggle.addEventListener('click', () => {
+			html.classList.toggle('dark');
+			html.classList.toggle('light');
+		});
+
+		// 自动滚动到底部
+		function scrollToBottom() {
+			const bottomNode = document.getElementById('chat-bottom');
+			bottomNode.scrollIntoView({ behavior: 'smooth' });
+		}
+		window.onload = scrollToBottom;
+
+		// 历史面板切换
+		function toggleHistory() {
+			const panel = document.getElementById('history-panel');
+			panel.classList.toggle('translate-x-full');
+			// 关闭另一个抽屉防止重叠
+			document.getElementById('evidence-drawer').classList.add('translate-x-full');
+		}
+
+		// 来源抽屉切换
+		function toggleEvidenceDrawer() {
+			const panel = document.getElementById('evidence-drawer');
+			panel.classList.toggle('translate-x-full');
+			// 关闭另一个抽屉防止重叠
+			document.getElementById('history-panel').classList.add('translate-x-full');
+		}
+
+		// Toast 复制提示
+		function copyReply() {
+			const toast = document.getElementById('toastMessage');
+			toast.classList.add('active');
+			setTimeout(() => {
+				toast.classList.remove('active');
+			}, 2500);
+		}
+	</script>
 </body>
+
 </html>

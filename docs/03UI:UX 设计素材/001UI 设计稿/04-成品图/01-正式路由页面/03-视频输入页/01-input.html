@@ -25,7 +25,6 @@
 			theme: {
 				extend: {
 					colors: {
-						// 1. 品牌色
 						brand: {
 							DEFAULT: '#f5c547',
 							dark: '#e6b841',
@@ -35,28 +34,24 @@
 							dark: '#2a2420',
 						},
 						decorative: '#3b1701',
-
-						// 2. 模式表面色
 						bg: {
-							light: '#f5ede1',
-							dark: '#1a1614',
+							light: '#f5ede1', // 温暖的燕麦底色
+							dark: '#110e0d',  // 极深的黑咖底色，拉开对比度
 						},
 						surface: {
-							light: '#ffffff',
-							dark: '#2a2420',
+							light: '#ffffff', // 纯白卡片，突出操作区
+							dark: '#1f1a18',  // 炭灰卡片，在暗色背景上自然浮起
 						},
 						text: {
 							primary: '#3b1701',
 							'primary-dark': '#f5ede1',
 							secondary: '#6b4421',
-							'secondary-dark': '#c4b8a8',
+							'secondary-dark': '#a89f91', // 优化暗色次要文字，提升可读性
 						},
 						bordercolor: {
 							light: '#e6dcc8',
-							dark: '#3d3630',
+							dark: '#302824', // 暗色边框更低调沉稳
 						},
-
-						// 3. 语义色 & 智能体色
 						agent: {
 							efficient: '#6D5DF4',
 							humorous: '#FFB020',
@@ -70,18 +65,17 @@
 					fontFamily: {
 						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
 					},
-					// 4. 圆角系统
 					borderRadius: {
 						'sm': '4px',
 						'md': '8px',
 						'lg': '16px',
+						'xl': '24px',
 						'full': '9999px',
 					},
-					// 5. 阴影系统
 					boxShadow: {
-						'sm': '0 2px 8px rgba(0, 0, 0, 0.10)',
-						'md': '0 4px 16px rgba(0, 0, 0, 0.12)',
-						'lg': '0 8px 24px rgba(0, 0, 0, 0.16)',
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
 					}
 				}
 			}
@@ -89,27 +83,30 @@
 	</script>
 
 	<style>
-		/* 基础主题变量绑定 (无延迟秒切模式) */
+		/* ================= 基础主题与平滑过渡 ================= */
 		html.light {
 			background-color: #f5ede1;
 			color: #3b1701;
 		}
 
 		html.dark {
-			background-color: #1a1614;
+			background-color: #110e0d;
 			color: #f5ede1;
 		}
 
 		body {
-			transition: none;
+			transition: background-color 0.4s ease, color 0.4s ease;
 		}
 
-		/* 优雅细网格背景 */
+		/* ================= 高级背景修饰 (网格 + 渐隐) ================= */
 		.bg-grid-pattern {
 			background-image:
 				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
 				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
-			background-size: 40px 40px;
+			background-size: 32px 32px;
+			/* 网格从上到下优雅渐隐，避免底部杂乱 */
+			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
 		}
 
 		html.dark .bg-grid-pattern {
@@ -117,6 +114,19 @@
 				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
 				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
 		}
+
+		/* 玻璃拟态导航栏 */
+		.glass-nav {
+			background: rgba(255, 255, 255, 0.7);
+			backdrop-filter: blur(24px);
+			-webkit-backdrop-filter: blur(24px);
+		}
+
+		html.dark .glass-nav {
+			background: rgba(31, 26, 24, 0.7);
+		}
+
+		/* 暗色毛玻璃更自然 */
 
 		/* 隐藏滚动条 */
 		.no-scrollbar::-webkit-scrollbar {
@@ -128,18 +138,63 @@
 			scrollbar-width: none;
 		}
 
-		/* 玻璃拟态导航栏 */
-		.glass-nav {
-			background: rgba(255, 255, 255, 0.6);
-			backdrop-filter: blur(20px);
-			-webkit-backdrop-filter: blur(20px);
+		/* ================= 核心：瀑布流布局 (精简 CSS) ================= */
+		.waterfall-container {
+			column-count: 1;
+			column-gap: 1.5rem;
 		}
 
-		html.dark .glass-nav {
-			background: rgba(42, 36, 32, 0.4);
+		@media (min-width: 640px) {
+			.waterfall-container {
+				column-count: 2;
+			}
 		}
 
-		/* 拖拽虚线框动画 */
+		@media (min-width: 1024px) {
+			.waterfall-container {
+				column-count: 3;
+			}
+		}
+
+		.waterfall-item {
+			break-inside: avoid;
+			margin-bottom: 1.5rem;
+			display: inline-block;
+			width: 100%;
+		}
+
+		/* 优雅的卡片入场弹性动效 */
+		@keyframes fadeSlideUp {
+			from {
+				opacity: 0;
+				transform: translateY(30px) scale(0.98);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0) scale(1);
+			}
+		}
+
+		.card-enter {
+			animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+			opacity: 0;
+			/* 初始隐藏，靠动画展现 */
+		}
+
+		/* ================= 交互细节 ================= */
+		.btn-hover-scale {
+			transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.btn-hover-scale:hover {
+			transform: scale(1.02);
+		}
+
+		.btn-hover-scale:active {
+			transform: scale(0.97);
+		}
+
 		.dash-border {
 			background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23f5c547' stroke-width='4' stroke-dasharray='10%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
 			border-radius: 16px;
@@ -152,20 +207,6 @@
 			}
 		}
 
-		/* 按钮悬浮缩放效果 */
-		.btn-hover-scale {
-			transition: transform 0.2s ease;
-		}
-
-		.btn-hover-scale:hover {
-			transform: scale(1.03);
-		}
-
-		.btn-hover-scale:active {
-			transform: scale(0.97);
-		}
-
-		/* 下拉菜单动画类 */
 		.dropdown-open {
 			opacity: 1 !important;
 			transform: scale(1) translateY(0) !important;
@@ -177,27 +218,20 @@
 <body
 	class="min-h-screen flex flex-col relative overflow-y-auto selection:bg-brand selection:text-white overflow-x-hidden">
 
-	<!-- ==================== 0. 背景层：网格 + 弥散光晕 ==================== -->
+	<!-- ==================== 0. 背景层：顶部纯净弥散光晕 + 渐隐网格 ==================== -->
 	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-		<!-- 细网格 -->
 		<div class="absolute inset-0 bg-grid-pattern"></div>
-
-		<!-- 光晕 Blobs (融入背景色系) -->
+		<!-- 仅在顶部中心放置一个宽广而极其柔和的光晕，像天际线一样，绝不干扰内容阅读 -->
 		<div
-			class="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-orange-300/40 dark:bg-orange-900/20 blur-[100px] mix-blend-multiply dark:mix-blend-screen">
-		</div>
-		<div
-			class="absolute top-[5%] right-[-5%] w-[40vw] h-[40vw] rounded-full bg-blue-200/40 dark:bg-blue-900/20 blur-[100px] mix-blend-multiply dark:mix-blend-screen">
-		</div>
-		<div
-			class="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-brand/30 dark:bg-brand-dark/15 blur-[120px] mix-blend-multiply dark:mix-blend-screen">
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/15 dark:bg-brand/5 blur-[100px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
 		</div>
 	</div>
 
-	<!-- ==================== 1. 悬浮全局导航 (三模块线框结构) ==================== -->
+	<!-- ==================== 1. 悬浮全局导航 ==================== -->
 	<header
 		class="w-[94%] max-w-7xl mx-auto mt-6 sticky top-6 z-50 rounded-full flex justify-between items-center p-3 px-4 glass-nav border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
-		<!-- 模块 1：左侧 Logo -->
+
+		<!-- 左侧 Logo -->
 		<a href="#" class="font-bold text-lg flex items-center gap-3">
 			<div
 				class="w-8 h-8 bg-text-primary dark:bg-text-primary-dark rounded-md flex items-center justify-center shadow-sm">
@@ -206,11 +240,11 @@
 			<span class="tracking-tight text-text-primary dark:text-text-primary-dark">XiaoMai</span>
 		</a>
 
-		<!-- 模块 2：中央 核心路由 Tabs -->
+		<!-- 中央 核心路由 Tabs (完整保留了学习中心) -->
 		<nav
-			class="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-secondary-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
+			class="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-surface-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
 			<a href="#"
-				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark shadow-sm">
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light dark:bg-[#2c2522] text-text-primary dark:text-text-primary-dark shadow-sm transition-colors">
 				<i data-lucide="play-square" class="w-4 h-4"></i> 单题讲解
 			</a>
 			<a href="#"
@@ -223,23 +257,19 @@
 			</a>
 		</nav>
 
-		<!-- 模块 3：右侧 全局操作 -->
+		<!-- 右侧 全局操作 -->
 		<div class="flex items-center gap-3">
 			<button id="langToggle"
 				class="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
 				<i data-lucide="globe" class="w-3.5 h-3.5"></i>
 				<span id="langText">中/EN</span>
 			</button>
-
 			<button id="themeToggle"
 				class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
 				<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
 				<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
 			</button>
-
 			<div class="w-px h-5 bg-bordercolor-light dark:bg-bordercolor-dark mx-1"></div>
-
-			<!-- CDN 头像 -->
 			<button
 				class="w-8 h-8 rounded-full border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden hover:ring-2 hover:ring-brand transition-all shadow-sm shrink-0">
 				<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
@@ -251,24 +281,21 @@
 	<main
 		class="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-start px-4 pt-[10vh] pb-12 relative z-20">
 
-		<!-- 标题 -->
 		<div class="text-center mb-8 space-y-4">
 			<span
-				class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-brand/20 text-text-primary dark:text-brand border border-brand/30 shadow-sm uppercase tracking-widest">
+				class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-brand/10 dark:bg-brand/5 text-text-primary dark:text-brand border border-brand/20 dark:border-brand/10 shadow-sm uppercase tracking-widest">
 				<i data-lucide="sparkles" class="w-3 h-3"></i> Video Engine
 			</span>
 			<h1
 				class="text-4xl md:text-[2.75rem] font-extrabold tracking-tight leading-tight text-text-primary dark:text-text-primary-dark">
 				输入或拍题，<br class="md:hidden" />
-				<!-- 关键词渐变高亮 -->
 				<span class="bg-gradient-to-r from-brand to-[#ff8c00] bg-clip-text text-transparent">5分钟生成动画讲解</span>
 			</h1>
 		</div>
 
-		<!-- ================= 核心输入框 (遵循 Tokens 的圆角 lg(16px) 与阴影 Md/Lg) ================= -->
+		<!-- 核心输入框容器 -->
 		<div id="dropContainer" class="w-full max-w-[800px] relative group">
 
-			<!-- 拖拽覆盖层 (隐藏式交互，仅拖入文件时显示) -->
 			<div id="dropOverlay" class="absolute inset-0 z-50 p-2 hidden">
 				<div
 					class="w-full h-full dash-border bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md flex flex-col items-center justify-center rounded-lg shadow-lg">
@@ -282,18 +309,17 @@
 				</div>
 			</div>
 
-			<!-- 容器外壳 -->
+			<!-- 外壳：明确使用 surface 颜色，与底色拉开对比 -->
 			<div
-				class="relative w-full rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md transition-shadow duration-300 focus-within:shadow-lg flex flex-col min-h-[260px]">
+				class="relative w-full rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md transition-shadow duration-300 focus-within:shadow-lg flex flex-col min-h-[260px]">
 
-				<!-- 顶栏：左侧用户 / 右侧 AI 老师 -->
+				<!-- 顶栏 -->
 				<div
-					class="relative z-30 flex items-start justify-between px-3 pt-3 pb-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/30 dark:bg-secondary-dark/30 rounded-t-lg">
+					class="relative z-30 flex items-start justify-between px-3 pt-3 pb-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/30 dark:bg-[#1a1514]/50 rounded-t-xl">
 
-					<!-- 左侧：用户语境区 -->
 					<div class="relative pl-1 pr-2 py-1 w-auto">
 						<button id="userDropdownBtn"
-							class="flex items-center gap-2.5 cursor-pointer transition-all duration-200 group/user rounded-full px-2.5 py-1.5 border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark/80 active:scale-[0.98]">
+							class="flex items-center gap-2.5 cursor-pointer transition-all duration-200 group/user rounded-full px-2.5 py-1.5 border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark hover:bg-surface-light dark:hover:bg-surface-dark active:scale-[0.98]">
 							<div class="shrink-0 relative">
 								<div
 									class="size-7 rounded-full overflow-hidden ring-[1.5px] ring-bordercolor-light dark:ring-bordercolor-dark group-hover/user:ring-brand/60 transition-all duration-300">
@@ -303,36 +329,32 @@
 							</div>
 							<div class="flex-1 min-w-0">
 								<span class="leading-none select-none flex items-center gap-1.5">
-									<span>
-										<span
-											class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">我遇到了难题</span>
-									</span>
+									<span
+										class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">我遇到了难题</span>
 									<i data-lucide="chevron-down" class="size-3.5 text-text-secondary/60 shrink-0"></i>
 								</span>
 							</div>
 						</button>
 
-						<!-- 用户下拉菜单 (Shadow Md, Radius Md) -->
 						<div id="userDropdownMenu"
 							class="absolute left-2 top-[calc(100%+0.5rem)] w-48 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md opacity-0 scale-95 -translate-y-2 pointer-events-none transition-all duration-200 origin-top-left p-1 z-50">
 							<div class="px-3 py-2 text-xs font-bold text-text-secondary dark:text-text-secondary-dark">
 								选择语境</div>
 							<a href="#"
-								class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-secondary-dark rounded-sm"><i
+								class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] rounded-sm"><i
 									data-lucide="help-circle" class="w-4 h-4 text-brand"></i> 我遇到了难题</a>
 							<a href="#"
-								class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-secondary-dark rounded-sm"><i
+								class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] rounded-sm"><i
 									data-lucide="lightbulb" class="w-4 h-4 text-agent-efficient"></i> 我想系统学习</a>
 						</div>
 					</div>
 
-					<!-- 右侧：AI 老师选择区 -->
 					<div class="pr-1 py-1 shrink-0 relative">
 						<div class="flex items-center gap-2">
 							<span
 								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark hidden md:block">主讲老师:</span>
 							<button id="teacherDropdownBtn"
-								class="flex items-center gap-2.5 cursor-pointer rounded-full px-3 py-1.5 transition-all border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark hover:bg-secondary dark:hover:bg-secondary-dark active:scale-[0.98] shadow-sm">
+								class="flex items-center gap-2.5 cursor-pointer rounded-full px-3 py-1.5 transition-all border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-[#2c2522] hover:bg-secondary dark:hover:bg-[#38302c] active:scale-[0.98] shadow-sm">
 								<div class="flex items-center gap-1.5 shrink-0">
 									<div class="w-5 h-5 rounded-full overflow-hidden shrink-0">
 										<img id="selectedTeacherAvatar" src="https://i.pravatar.cc/150?img=58"
@@ -346,15 +368,13 @@
 							</button>
 						</div>
 
-						<!-- AI 教师下拉菜单 -->
 						<div id="teacherDropdownMenu"
 							class="absolute right-0 top-[calc(100%+0.5rem)] w-56 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md opacity-0 scale-95 -translate-y-2 pointer-events-none transition-all duration-200 origin-top-right p-1 z-50">
 							<div
 								class="px-3 py-2 text-xs font-bold text-text-secondary dark:text-text-secondary-dark border-b border-bordercolor-light dark:border-bordercolor-dark mb-1">
 								选择辅导风格</div>
-
 							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-secondary-dark transition-colors text-left"
+								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors text-left"
 								onclick="selectTeacher(this, '32', '严谨教授')">
 								<div class="w-3 h-3 rounded-full bg-agent-serious"></div>
 								<div class="flex flex-col">
@@ -365,7 +385,7 @@
 								</div>
 							</button>
 							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-secondary-dark transition-colors text-left"
+								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors text-left"
 								onclick="selectTeacher(this, '58', '风趣老师')">
 								<div class="w-3 h-3 rounded-full bg-agent-humorous"></div>
 								<div class="flex flex-col">
@@ -376,7 +396,7 @@
 								</div>
 							</button>
 							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-secondary-dark transition-colors text-left"
+								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors text-left"
 								onclick="selectTeacher(this, '47', '温和导师')">
 								<div class="w-3 h-3 rounded-full bg-agent-patient"></div>
 								<div class="flex flex-col">
@@ -387,7 +407,7 @@
 								</div>
 							</button>
 							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-secondary-dark transition-colors text-left"
+								class="w-full flex items-center gap-3 px-3 py-2 rounded-sm hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors text-left"
 								onclick="selectTeacher(this, '11', '干练讲师')">
 								<div class="w-3 h-3 rounded-full bg-agent-efficient"></div>
 								<div class="flex flex-col">
@@ -401,7 +421,7 @@
 					</div>
 				</div>
 
-				<!-- 中间：核心文本输入区 -->
+				<!-- 文本输入区 -->
 				<div class="p-5 flex-1 relative z-20 flex flex-col gap-4">
 					<textarea
 						placeholder="粘贴题目文本，或描述具体题目要求... (将文件拖入此区域即可上传)&#10;&#10;例如：&#10;「求函数 f(x) = x^3 - 3x 的极值点并画出变化趋势」"
@@ -411,41 +431,37 @@
 
 				<!-- 底部：工具栏 & 发送按钮 -->
 				<div
-					class="px-4 py-3 border-t border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark rounded-b-lg relative z-20">
-					<!-- 快捷工具集 -->
+					class="px-4 py-3 border-t border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-between bg-surface-light/80 dark:bg-surface-dark/80 rounded-b-xl relative z-20">
 					<div class="flex items-center gap-2">
 						<button
-							class="w-9 h-9 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/50 dark:bg-secondary-dark/50 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-secondary dark:text-text-secondary-dark dark:hover:text-text-primary-dark transition-colors"
+							class="w-9 h-9 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-secondary dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-[#2c2522] transition-colors"
 							title="上传图片">
 							<i data-lucide="image" class="w-4 h-4"></i>
 						</button>
 						<button
-							class="w-9 h-9 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/50 dark:bg-secondary-dark/50 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-secondary dark:text-text-secondary-dark dark:hover:text-text-primary-dark transition-colors"
+							class="w-9 h-9 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-secondary dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-[#2c2522] transition-colors"
 							title="截图">
 							<i data-lucide="scissors" class="w-4 h-4"></i>
 						</button>
 						<div class="w-px h-6 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 hidden sm:block"></div>
-						<!-- 时长设置 -->
 						<button
-							class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/50 dark:bg-secondary-dark/50 text-xs font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-secondary-dark transition-colors">
+							class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-xs font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors">
 							<i data-lucide="clock" class="w-3.5 h-3.5"></i>
 							<span>目标时长: ~2分钟</span>
 							<i data-lucide="chevron-down" class="w-3 h-3"></i>
 						</button>
 					</div>
 
-					<!-- 飞机 Icon 生成按钮 -->
+					<!-- 发送按钮优化：仅保留按钮整体弹性按压，图标不乱动，尽显专业稳重 -->
 					<button
-						class="flex items-center gap-2 px-6 py-2.5 rounded-md bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark font-bold shadow-sm btn-hover-scale shrink-0 group/send hover:opacity-90 transition-opacity">
+						class="flex items-center gap-2 px-6 py-2.5 rounded-md bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark font-bold shadow-md btn-hover-scale shrink-0 hover:opacity-90 transition-all">
 						<span>生成视频</span>
-						<i data-lucide="send"
-							class="w-4 h-4 group-hover/send:translate-x-1 group-hover/send:-translate-y-1 transition-transform"></i>
+						<i data-lucide="send" class="w-4 h-4"></i>
 					</button>
 				</div>
 			</div>
 		</div>
 
-		<!-- 灵感快捷指令 (小药丸 Radius full) -->
 		<div class="flex flex-wrap justify-center items-center gap-3 mt-8">
 			<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark mr-1">试试解这些题:</span>
 			<button
@@ -463,9 +479,9 @@
 		</div>
 	</main>
 
-	<!-- ==================== 3. 真·瀑布流画廊 (Feed Section) ==================== -->
+	<!-- ==================== 3. 真·瀑布流画廊 ==================== -->
 	<section class="w-full max-w-7xl mx-auto px-6 pb-24 relative z-10">
-		<!-- 头部与过滤器 -->
+
 		<div
 			class="flex flex-col md:flex-row justify-between items-end mb-8 border-b-2 border-text-primary dark:border-text-primary-dark pb-4">
 			<div>
@@ -483,193 +499,51 @@
 			</div>
 		</div>
 
-		<!-- 真实 CSS 瀑布流布局 (使用 columns 属性实现，卡片高度由内容撑开) -->
-		<div id="feedContainer" class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
-
-			<!-- 真实卡片 1 -->
-			<div
-				class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow">
-				<div
-					class="w-full aspect-video bg-secondary dark:bg-secondary-dark relative flex items-center justify-center">
-					<img src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400"
-						alt="Math" class="absolute inset-0 w-full h-full object-cover opacity-60">
-					<i data-lucide="play"
-						class="w-10 h-10 text-white opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-					<div
-						class="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 backdrop-blur-sm rounded-sm text-[10px] font-bold text-white z-10">
-						01:45</div>
-				</div>
-				<div class="p-4">
-					<h3
-						class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">
-						求极限 lim(x->0) (sinx/x) 的几何动画推导</h3>
-					<div
-						class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div
-								class="w-5 h-5 rounded-full bg-agent-serious text-white flex items-center justify-center text-[10px] font-bold">
-								严</div>
-							<span
-								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
-						</div>
-						<span
-							class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">128
-							赞</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- 真实卡片 2 (纵向较高) -->
-			<div
-				class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow">
-				<div
-					class="w-full aspect-[4/3] bg-secondary dark:bg-secondary-dark relative flex flex-col items-center justify-center">
-					<i data-lucide="image" class="w-8 h-8 text-text-secondary/50 mb-2"></i>
-					<span class="text-xs font-bold text-text-secondary/60">原题拍照快照</span>
-					<i data-lucide="play"
-						class="absolute inset-0 m-auto w-10 h-10 text-brand opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-				</div>
-				<div class="p-4">
-					<h3
-						class="font-bold text-[15px] leading-snug mb-2 text-text-primary dark:text-text-primary-dark line-clamp-3">
-						【解答】均匀带电圆环轴线上的电场强度分布规律</h3>
-					<p class="text-xs font-medium text-text-secondary dark:text-text-secondary-dark mb-4 line-clamp-2">
-						利用微积分和对称性，将圆环分割为微元进行电场叠加计算，这道题的难点在于...</p>
-					<div
-						class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div
-								class="w-5 h-5 rounded-full bg-agent-patient text-white flex items-center justify-center text-[10px] font-bold">
-								温</div>
-							<span
-								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">温和导师</span>
-						</div>
-						<span
-							class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">85
-							赞</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- 真实卡片 3 (正方形) -->
-			<div
-				class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow">
-				<div
-					class="w-full aspect-square bg-secondary dark:bg-secondary-dark relative flex items-center justify-center">
-					<img src="https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?auto=format&fit=crop&q=80&w=400"
-						alt="Code" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity">
-					<i data-lucide="play"
-						class="w-10 h-10 text-white opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-				</div>
-				<div class="p-4">
-					<h3
-						class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">
-						多元函数条件极值：拉格朗日乘数法直观理解</h3>
-					<div
-						class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div
-								class="w-5 h-5 rounded-full bg-agent-efficient text-white flex items-center justify-center text-[10px] font-bold">
-								效</div>
-							<span
-								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">干练讲师</span>
-						</div>
-						<span
-							class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">2.3k
-							播放</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- 真实卡片 4 -->
-			<div
-				class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow">
-				<div
-					class="w-full aspect-[16/10] bg-secondary dark:bg-secondary-dark relative flex items-center justify-center">
-					<span class="text-xs font-bold text-text-secondary/60">[受力分析动图]</span>
-					<i data-lucide="play"
-						class="absolute inset-0 m-auto w-10 h-10 text-brand opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-				</div>
-				<div class="p-4">
-					<h3
-						class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">
-						滑块木板相对滑动问题中的临界状态解析</h3>
-					<div
-						class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div
-								class="w-5 h-5 rounded-full bg-agent-humorous text-white flex items-center justify-center text-[10px] font-bold">
-								幽</div>
-							<span
-								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">风趣老师</span>
-						</div>
-						<span
-							class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">450
-							播放</span>
-					</div>
-				</div>
-			</div>
+		<!-- CSS 瀑布流容器 -->
+		<div id="feedContainer" class="waterfall-container">
+			<!-- JS 动态注入内容 -->
 		</div>
 
-		<!-- 加载更多按钮 -->
-		<div class="flex justify-center mt-10">
+		<!-- 加载状态与按钮 -->
+		<div class="flex flex-col items-center justify-center mt-10 h-12 relative">
 			<button id="loadMoreBtn"
-				class="border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark px-6 py-2.5 rounded-md font-bold hover:bg-secondary dark:hover:bg-secondary-dark transition-colors flex items-center gap-2 shadow-sm btn-hover-scale">
-				加载更多解题视频 <i data-lucide="arrow-down" class="w-4 h-4"></i>
+				class="border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-primary dark:text-text-primary-dark px-6 py-2.5 rounded-full font-bold hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors flex items-center gap-2 shadow-sm btn-hover-scale disabled:opacity-80 disabled:cursor-not-allowed disabled:transform-none">
+				<span class="btn-text">加载更多解题视频</span>
+				<i data-lucide="arrow-down" class="w-4 h-4 btn-icon"></i>
+				<i data-lucide="loader-2" class="w-4 h-4 animate-spin hidden loading-icon text-brand"></i>
 			</button>
 		</div>
 	</section>
 
 	<script>
-		// 1. 初始化 Lucide 图标
+		// 1. 初始化图标
 		lucide.createIcons();
 
-		// 2. 亮暗色秒切逻辑 (直接操作 HTML 上的 light/dark class)
+		// 2. 主题与语言
 		const themeToggle = document.getElementById('themeToggle');
 		const html = document.documentElement;
-
 		themeToggle.addEventListener('click', () => {
-			if (html.classList.contains('dark')) {
-				html.classList.remove('dark');
-				html.classList.add('light');
-			} else {
-				html.classList.remove('light');
-				html.classList.add('dark');
-			}
+			html.classList.toggle('dark');
+			html.classList.toggle('light');
 		});
 
-		// 语言切换演示
 		const langToggle = document.getElementById('langToggle');
 		const langText = document.getElementById('langText');
 		langToggle.addEventListener('click', () => {
 			langText.innerText = langText.innerText === '中/EN' ? 'EN/中' : '中/EN';
 		});
 
-		// 3. 拖拽上传区域交互逻辑
+		// 3. 拖拽逻辑
 		const dropContainer = document.getElementById('dropContainer');
 		const dropOverlay = document.getElementById('dropOverlay');
+		dropContainer.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.classList.remove('hidden'); });
+		dropOverlay.addEventListener('dragleave', (e) => { e.preventDefault(); dropOverlay.classList.add('hidden'); });
+		dropOverlay.addEventListener('drop', (e) => { e.preventDefault(); dropOverlay.classList.add('hidden'); });
 
-		dropContainer.addEventListener('dragover', (e) => {
-			e.preventDefault();
-			dropOverlay.classList.remove('hidden');
-		});
-
-		dropOverlay.addEventListener('dragleave', (e) => {
-			e.preventDefault();
-			dropOverlay.classList.add('hidden');
-		});
-
-		dropOverlay.addEventListener('drop', (e) => {
-			e.preventDefault();
-			dropOverlay.classList.add('hidden');
-			console.log('文件已拖放:', e.dataTransfer.files);
-		});
-
-		// 4. 真实下拉菜单交互
+		// 4. 下拉菜单
 		function setupDropdown(btnId, menuId) {
 			const btn = document.getElementById(btnId);
 			const menu = document.getElementById(menuId);
-
 			btn.addEventListener('click', (e) => {
 				e.stopPropagation();
 				document.querySelectorAll('.dropdown-open').forEach(el => {
@@ -677,10 +551,8 @@
 				});
 				menu.classList.toggle('dropdown-open');
 			});
-
 			menu.addEventListener('click', (e) => e.stopPropagation());
 		}
-
 		setupDropdown('userDropdownBtn', 'userDropdownMenu');
 		setupDropdown('teacherDropdownBtn', 'teacherDropdownMenu');
 
@@ -690,94 +562,106 @@
 			});
 		});
 
-		// 老师选择逻辑更新
 		function selectTeacher(btnElement, avatarId, teacherName) {
 			document.getElementById('selectedTeacherAvatar').src = `https://i.pravatar.cc/150?img=${avatarId}`;
 			document.getElementById('selectedTeacherName').innerText = teacherName;
 			document.getElementById('teacherDropdownMenu').classList.remove('dropdown-open');
 		}
 
-		// 5. 瀑布流中的沉浸式骨架屏逻辑
-		const loadMoreBtn = document.getElementById('loadMoreBtn');
+		// 5. 瀑布流渲染 (默认10条，点击+20条)
 		const feedContainer = document.getElementById('feedContainer');
+		const loadMoreBtn = document.getElementById('loadMoreBtn');
+		const btnText = loadMoreBtn.querySelector('.btn-text');
+		const btnIcon = loadMoreBtn.querySelector('.btn-icon');
+		const loadingIcon = loadMoreBtn.querySelector('.loading-icon');
 
-		// 骨架屏的 HTML 结构，专门匹配瀑布流内的元素 (使用 animate-pulse 提供骨架闪烁动画)
-		const skeletonHTML = `
-			<div class="skeleton-card break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark p-4 shadow-sm animate-pulse mb-6">
-				<div class="w-full aspect-[4/3] bg-secondary dark:bg-secondary-dark rounded-md mb-4"></div>
-				<div class="h-4 bg-secondary dark:bg-secondary-dark rounded w-3/4 mb-3"></div>
-				<div class="h-4 bg-secondary dark:bg-secondary-dark rounded w-1/2 mb-6"></div>
-				<div class="flex justify-between pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark">
-					<div class="w-20 h-4 bg-secondary dark:bg-secondary-dark rounded"></div>
-					<div class="w-12 h-4 bg-secondary dark:bg-secondary-dark rounded"></div>
-				</div>
-			</div>
-			<div class="skeleton-card break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark p-4 shadow-sm animate-pulse mb-6">
-				<div class="w-full aspect-video bg-secondary dark:bg-secondary-dark rounded-md mb-4"></div>
-				<div class="h-4 bg-secondary dark:bg-secondary-dark rounded w-full mb-3"></div>
-				<div class="h-4 bg-secondary dark:bg-secondary-dark rounded w-2/3 mb-6"></div>
-				<div class="flex justify-between pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark">
-					<div class="w-20 h-4 bg-secondary dark:bg-secondary-dark rounded"></div>
-					<div class="w-12 h-4 bg-secondary dark:bg-secondary-dark rounded"></div>
-				</div>
-			</div>
-		`;
+		const mockTemplates = [
+			{ type: "image", title: "求极限 lim(x->0) (sinx/x) 的几何动画推导", author: "严谨教授", short: "严", bg: "bg-agent-serious", likes: "128 赞", aspect: "aspect-video" },
+			{ type: "text", title: "均匀带电圆环轴线上的电场强度分布规律", desc: "利用微积分和对称性，将圆环分割为微元进行电场叠加计算...", author: "温和导师", short: "温", bg: "bg-agent-patient", likes: "85 赞", aspect: "aspect-[4/3]" },
+			{ type: "image", title: "多元函数条件极值：拉格朗日乘数法直观理解", author: "干练讲师", short: "效", bg: "bg-agent-efficient", likes: "2.3k 播放", aspect: "aspect-square" },
+			{ type: "diagram", title: "滑块木板相对滑动问题中的临界状态解析", author: "风趣老师", short: "幽", bg: "bg-agent-humorous", likes: "450 播放", aspect: "aspect-[16/10]" },
+			{ type: "image", title: "麦克斯韦方程组的流体动力学模拟", author: "严谨教授", short: "严", bg: "bg-agent-serious", likes: "94 赞", aspect: "aspect-[4/3]" },
+			{ type: "diagram", title: "立体几何：截面法求圆锥体积", author: "干练讲师", short: "效", bg: "bg-agent-efficient", likes: "1.1k 播放", aspect: "aspect-[3/4]" }
+		];
 
-		// 真实数据的 HTML 结构
-		const newCardsHTML = `
-			<div class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500">
-				<div class="w-full aspect-[4/3] bg-secondary dark:bg-secondary-dark relative flex items-center justify-center">
-					<img src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=400" alt="Physics" class="absolute inset-0 w-full h-full object-cover opacity-60">
-					<i data-lucide="play" class="w-10 h-10 text-white opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-				</div>
-				<div class="p-4">
-					<h3 class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">麦克斯韦方程组的流体动力学模拟可视化</h3>
-					<div class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div class="w-5 h-5 rounded-full bg-agent-serious text-white flex items-center justify-center text-[10px] font-bold">严</div>
-							<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
-						</div>
-						<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">94 赞</span>
-					</div>
-				</div>
-			</div>
-			<div class="break-inside-avoid bg-surface-light dark:bg-surface-dark rounded-lg border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-shadow animate-in fade-in slide-in-from-bottom-4 duration-500">
-				<div class="w-full aspect-video bg-secondary dark:bg-secondary-dark relative flex items-center justify-center">
-					<span class="text-xs font-bold text-text-secondary/60">[几何动画]</span>
-					<i data-lucide="play" class="absolute inset-0 m-auto w-10 h-10 text-brand opacity-90 group-hover:scale-110 transition-transform z-10 fill-current"></i>
-				</div>
-				<div class="p-4">
-					<h3 class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">立体几何：截面法求圆锥体积</h3>
-					<div class="flex justify-between items-center pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-						<div class="flex items-center gap-2">
-							<div class="w-5 h-5 rounded-full bg-agent-efficient text-white flex items-center justify-center text-[10px] font-bold">效</div>
-							<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">干练讲师</span>
-						</div>
-						<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">1.1k 播放</span>
-					</div>
-				</div>
-			</div>
-		`;
+		function generateCardHTML(index) {
+			const tpl = mockTemplates[Math.floor(Math.random() * mockTemplates.length)];
+			const imgUrl = `https://picsum.photos/seed/${Math.random()}/400/300`;
+			let mediaContent = '';
+			let extraDesc = '';
 
+			if (tpl.type === 'image') {
+				mediaContent = `
+                    <img src="${imgUrl}" alt="Cover" class="absolute inset-0 w-full h-full object-cover opacity-80 dark:opacity-60 mix-blend-multiply dark:mix-blend-luminosity transition-all duration-300 group-hover:opacity-100 group-hover:mix-blend-normal group-hover:scale-105">
+                    <i data-lucide="play" class="w-10 h-10 text-white opacity-90 group-hover:scale-110 transition-transform z-10 fill-current drop-shadow-md"></i>
+                    <div class="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm rounded-sm text-[10px] font-bold text-white z-10">0${Math.floor(Math.random() * 4) + 1}:${Math.floor(Math.random() * 50) + 10}</div>
+                `;
+			} else if (tpl.type === 'text') {
+				mediaContent = `
+                    <i data-lucide="image" class="w-8 h-8 text-text-secondary/50 mb-2"></i>
+                    <span class="text-xs font-bold text-text-secondary/60">原题拍照快照</span>
+                    <i data-lucide="play" class="absolute inset-0 m-auto w-10 h-10 text-brand opacity-90 group-hover:scale-110 transition-transform z-10 fill-current drop-shadow-sm"></i>
+                `;
+				extraDesc = `<p class="text-[13px] font-medium text-text-secondary dark:text-text-secondary-dark mb-4 line-clamp-2">${tpl.desc}</p>`;
+			} else {
+				mediaContent = `
+                    <span class="text-xs font-bold text-text-secondary/60">[受力分析动图]</span>
+                    <i data-lucide="play" class="absolute inset-0 m-auto w-10 h-10 text-brand opacity-90 group-hover:scale-110 transition-transform z-10 fill-current drop-shadow-sm"></i>
+                `;
+			}
+
+			// 渐次出现的动画延迟
+			const delay = (index % 10) * 80;
+
+			return `
+                <div class="waterfall-item card-enter" style="animation-delay: ${delay}ms">
+                    <div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden group cursor-pointer shadow-sm hover:shadow-md transition-all duration-300">
+                        <div class="w-full ${tpl.aspect} bg-secondary/50 dark:bg-[#1a1514] relative flex flex-col items-center justify-center overflow-hidden">
+                            ${mediaContent}
+                        </div>
+                        <div class="p-4 flex flex-col">
+                            <h3 class="font-bold text-[15px] leading-snug mb-3 text-text-primary dark:text-text-primary-dark line-clamp-2">${tpl.title}</h3>
+                            ${extraDesc}
+                            <div class="flex justify-between items-center pt-3 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-full ${tpl.bg} text-white flex items-center justify-center text-[10px] font-bold shadow-sm">${tpl.short}</div>
+                                    <span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">${tpl.author}</span>
+                                </div>
+                                <span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1">${tpl.likes}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+		}
+
+		function renderCards(count) {
+			let cardsHTML = '';
+			for (let i = 0; i < count; i++) {
+				cardsHTML += generateCardHTML(i);
+			}
+			feedContainer.insertAdjacentHTML('beforeend', cardsHTML);
+			lucide.createIcons();
+		}
+
+		// 默认先加载 10 个
+		renderCards(10);
+
+		// 点击再加载 20 个
 		loadMoreBtn.addEventListener('click', () => {
-			// 1. 隐藏按钮
-			loadMoreBtn.parentElement.classList.add('hidden');
+			loadMoreBtn.disabled = true;
+			btnText.innerText = '正在拉取数据...';
+			btnIcon.classList.add('hidden');
+			loadingIcon.classList.remove('hidden');
 
-			// 2. 直接将骨架屏塞入瀑布流容器中（让它们参与排版）
-			feedContainer.insertAdjacentHTML('beforeend', skeletonHTML);
-
-			// 3. 模拟网络请求
 			setTimeout(() => {
-				// 移除骨架屏
-				document.querySelectorAll('.skeleton-card').forEach(el => el.remove());
+				renderCards(20);
 
-				// 插入真实数据
-				feedContainer.insertAdjacentHTML('beforeend', newCardsHTML);
-				lucide.createIcons();
-
-				// 恢复按钮显示
-				loadMoreBtn.parentElement.classList.remove('hidden');
-			}, 1500); // 1.5秒演示动画
+				loadMoreBtn.disabled = false;
+				btnText.innerText = '加载更多解题视频 (20条)';
+				btnIcon.classList.remove('hidden');
+				loadingIcon.classList.add('hidden');
+			}, 1000); // 1秒演示Loading动画
 		});
 	</script>
 </body>
