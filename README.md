@@ -90,10 +90,11 @@ mvn -pl ruoyi-admin -am spring-boot:run -Dspring-boot.run.profiles=dev
 
 ### 最小启动边界
 
-- `packages/student-web/`：学生端前台。当前要求是工程骨架、测试链和环境变量基线可运行，不代表业务页面已交付。
-- `packages/fastapi-backend/`：AI 功能服务框架骨架。当前提供 `core / infra / providers / features / shared` 分层、`FastAPI` 入口、健康检查、骨架路由与最小测试。
+- `packages/student-web/`：学生端前台。当前已具备首页骨架、认证契约 seam、mock / real adapter 与测试链；正式业务页面仍待后续 Epic 继续交付。
+- `packages/fastapi-backend/`：AI 功能服务宿主。当前除 `core / infra / providers / features / shared` 分层外，已经落地统一任务恢复、Provider failover、长期承接 API 与 `video / classroom / companion / knowledge / learning` 路由及测试面。
 - `packages/RuoYi-Vue-Plus-5.X/`：认证、RBAC 与长期业务数据宿主。
-- `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/`：小麦业务模块预留目录，当前只冻结边界，不承载正式业务实现。
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/`：小麦业务模块实际 Java 落点，当前已接入聚合构建链并承接 Epic 10 的模块边界与权限基线。
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-xiaomai/`：历史预留目录，当前仅保留边界说明，不作为正式业务代码目录。
 - `references/`：只读参考来源，不作为业务代码落点。
 
 ### 启动顺序建议
