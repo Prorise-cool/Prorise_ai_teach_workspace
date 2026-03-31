@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-30 18:16:30 +0800
+last_updated: 2026-03-31 15:12:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -57,6 +57,7 @@ development_status:
   1-4-首页双入口理解与非阻塞推荐提示: ready-for-dev
   1-5-输入壳层中的老师风格最小选择配置: ready-for-dev
   1-6-角色边界与入口级权限可见性: ready-for-dev
+  1-7-营销落地页与-home-首页分流: ready-for-dev
   epic-1-retrospective: optional
   epic-2: done
   2-1-统一任务状态枚举错误码与结果-schema-冻结: done
@@ -74,6 +75,7 @@ development_status:
   3-3-图片-ocr-前置预处理接口: backlog
   3-4-视频任务创建接口与初始化运行态: backlog
   3-5-创建后跳转等待页与任务上下文承接: backlog
+  3-6-视频输入页公开视频广场与复用入口: backlog
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-视频流水线阶段进度区间与结果契约冻结: backlog
@@ -85,6 +87,7 @@ development_status:
   4-7-视频等待页前端状态机恢复与降级: backlog
   4-8-视频结果页播放器与结果操作: backlog
   4-9-视频侧-sessionartifactgraph-回写: backlog
+  4-10-视频结果公开发布与输入页复用卡片: backlog
   epic-4-retrospective: optional
   epic-5: backlog
   5-1-课堂任务契约结果-schema-与-mock-session-基线: backlog
@@ -95,6 +98,8 @@ development_status:
   5-6-课堂结果页中的幻灯片讨论与白板浏览: backlog
   5-7-会话结束信号与课后触发出口: backlog
   5-8-课堂侧-sessionartifactgraph-回写: backlog
+  5-9-课堂输入页联网搜索增强与证据范围配置: backlog
+  5-10-课堂结果导出与分享产物: backlog
   epic-5-retrospective: optional
   epic-6: backlog
   6-1-timeanchorturn-schema-与-mock-companion-turns-基线: backlog
@@ -112,6 +117,7 @@ development_status:
   7-4-文档上传解析状态与范围切换: backlog
   7-5-引用来源展示与术语解释: backlog
   7-6-证据问答回写与学习中心回看: backlog
+  7-7-联网搜索-provider-与生成前证据增强: backlog
   epic-7-retrospective: optional
   epic-8: backlog
   8-1-学后入口契约与-checkpoint-quiz-path-schema-冻结: backlog
