@@ -1,6 +1,6 @@
 ## Epic 7: 资料依据、来源回看与证据深挖
-用户可以上传资料、查看引用来源、追溯证据依据，并在来源抽屉 / 证据面板中继续深挖。  
-**FRs covered:** `FR-UI-006`、`FR-KQ-001~006`、`FR-PV-004`  
+用户可以上传资料、联网检索公开来源、查看引用来源、追溯证据依据，并在来源抽屉 / 证据面板中继续深挖。  
+**FRs covered:** `FR-UI-006`、`FR-KQ-001~007`、`FR-PV-004`  
 **NFRs covered:** `NFR-PF-004`、`NFR-SE-004`、`NFR-AR-005`  
 **Primary Story Types:** `Contract Story`、`Frontend Story`、`Backend Story`、`Persistence Story`、`Integration Story`
 
@@ -9,6 +9,7 @@ Epic 7 负责“资料依据层”，回答的是：
 - 资料里怎么说？
 - 这句话的来源在哪里？
 - 术语是什么意思？
+- 能不能联网找公开资料补充？
 - 能不能围绕我的材料继续深挖？  
 
 它不是：
@@ -22,6 +23,7 @@ Epic 7 负责“资料依据层”，回答的是：
 - 文档上传
 - 解析状态
 - 范围切换
+- 联网搜索 / 公开资料检索
 - 引用来源展示
 - 术语解释
 - EvidenceProvider 抽象
@@ -35,6 +37,7 @@ Epic 7 负责“资料依据层”，回答的是：
 
 ### Dependencies
 - 依赖 `Epic 2` 的任务框架与 Provider 抽象。
+- 依赖 `Epic 5` 的课堂输入页来承接生成前联网搜索配置。
 - 依赖 `Epic 6` 的边界约束，以避免 Companion 与 Evidence 语义混淆。
 - 依赖 `Epic 10` 的问答记录长期承接。
 - 可在 mock 模式下先推进，不必等待真实外部平台完全接通。  
@@ -44,9 +47,16 @@ Epic 7 负责“资料依据层”，回答的是：
 - 文档上传与解析状态语义已初步确定。  
 - Evidence 与 Companion 的边界已成文。  
 
+### Frontend Design Reference
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/05-视频结果页/02-video-result.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/08-课堂结果页/01-classroom.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/12-学习中心页/01-learning.html`
+- 当前补充规则：Evidence 仍以来源抽屉 / 证据面板形态嵌入结果页与学习中心；即使某些成品图只展示了入口或样例卡片，或课堂结果页未完整展开来源抽屉入口，也不得回退为独立学生端 `/knowledge` 路由；资料上传、解析状态、范围切换、术语解释与历史切换等业务点仍必须按 Story `7.2`、`7.4` 与 `7.5` 补足
+
 ### Exit Criteria
 - 用户可在结果页 / 学习中心打开证据面板；
 - 可上传资料并查看解析状态；
+- 可在允许的场景下联网搜索公开资料并返回统一 citation 语义；
 - 问答尽可能展示来源；
 - 术语可在同一面板解释；
 - 历史证据记录可被长期回看。  
@@ -56,6 +66,7 @@ Story `7.1` 是 Evidence 域所有工作的共同前置。
 Story `7.2` 可在 mock citation 数据下先做。  
 Story `7.3` 与 `7.4` 可并行推进，一个负责外部能力适配，一个负责任务化解析状态。  
 Story `7.6` 要尽早与 `Epic 9` 的学习中心聚合字段对齐。  
+Story `7.7` 需与 `Epic 5 / Story 5.9` 对齐输入配置透传与生成前增强语义。  
 
 ### Story List
 - Story 7.1: Evidence 契约、来源抽屉 schema 与 mock 数据基线  
@@ -64,6 +75,7 @@ Story `7.6` 要尽早与 `Epic 9` 的学习中心聚合字段对齐。
 - Story 7.4: 文档上传、解析状态与范围切换  
 - Story 7.5: 引用来源展示与术语解释  
 - Story 7.6: 证据问答回写与学习中心回看  
+- Story 7.7: 联网搜索 Provider 与生成前证据增强  
 
 ### Story 7.1: Evidence 契约、来源抽屉 schema 与 mock 数据基线
 **Story Type:** `Contract Story`  
@@ -234,5 +246,32 @@ So that 我可以围绕同一资料持续学习而不用重复提问。
 - 学习中心回看最小详情结构
 - 历史范围字段映射
 
----
+### Story 7.7: 联网搜索 Provider 与生成前证据增强
+**Story Type:** `Integration Story`  
+As a 需要公开资料增强的课堂生成链路，  
+I want 通过统一的 Evidence Provider 接入联网搜索并把结果映射为可消费证据，  
+So that 课堂输入页开启联网搜索后，生成前链路可以稳定使用公开资料而不破坏现有 Evidence 边界。  
 
+**Acceptance Criteria:**
+**Given** 课堂输入页开启联网搜索并提交任务  
+**When** Evidence / Retrieval 层执行公开资料检索  
+**Then** 系统通过统一 Provider 接口访问公开搜索能力  
+**And** 返回结果会被映射为内部统一的 citation / snippet 结构，而不是把外部平台原始结构直接泄漏给上层  
+
+**Given** 用户关闭联网搜索或当前任务不允许使用公开资料  
+**When** 系统执行课堂生成  
+**Then** 生成前链路不会隐式调用联网搜索  
+**And** 业务层不需要靠猜测或脆弱默认值判断是否该走公开资料检索  
+
+**Given** Provider 超时、失败或返回低可信结果  
+**When** 系统结束本次检索尝试  
+**Then** 上层获得明确降级信号、错误语义或空结果说明  
+**And** 不会伪造依据，也不会把失败状态伪装成“已有可靠公开来源”  
+
+**Deliverables:**
+- 联网搜索 Provider 适配
+- citation / snippet 映射规则
+- 生成前证据增强调用链
+- 降级与错误语义
+
+---

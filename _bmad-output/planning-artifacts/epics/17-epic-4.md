@@ -1,8 +1,8 @@
 ## Epic 4: 单题视频生成、结果消费与失败恢复
-用户可以完成视频生成主链路、透明等待、结果播放、失败解释、TTS Failover 与视频侧 SessionArtifactGraph 回写。  
-**FRs covered:** `FR-UI-004`、`FR-VS-002~009`、`FR-VP-001~003`  
+用户可以完成视频生成主链路、透明等待、结果播放、公开发布 / 复用、失败解释、TTS Failover 与视频侧 SessionArtifactGraph 回写。  
+**FRs covered:** `FR-UI-004`、`FR-VS-002~009`、`FR-VP-001~004`  
 **NFRs covered:** `NFR-PF-002`、`NFR-PF-005`、`NFR-SE-005`  
-**Primary Story Types:** `Contract Story`、`Backend Story`、`Frontend Story`、`Persistence Story`
+**Primary Story Types:** `Contract Story`、`Backend Story`、`Frontend Story`、`Persistence Story`、`Integration Story`
 
 ### Objective
 Epic 4 负责视频主链路的“执行与消费”部分。  
@@ -17,6 +17,7 @@ Epic 4 负责视频主链路的“执行与消费”部分。
 - COS 上传；
 - 等待页状态机；
 - 结果页与播放器；
+- 结果公开发布与输入页复用卡片；
 - 视频侧 SessionArtifactGraph 回写。  
 
 它不包括：
@@ -38,6 +39,7 @@ Epic 4 负责视频主链路的“执行与消费”部分。
 - 等待页
 - 结果页
 - 视频播放器
+- 公开发布状态与最小复用卡片 payload
 - 视频侧 artifact 回写
 
 ### Out of Scope
@@ -45,22 +47,31 @@ Epic 4 负责视频主链路的“执行与消费”部分。
 - 课堂生成
 - Companion 逻辑
 - Evidence 检索
+- 评论、点赞、关注等社区互动
 - Quiz 逻辑
 
 ### Dependencies
 - 依赖 `Epic 2` 的任务框架、SSE 与 Provider 抽象。  
 - 依赖 `Epic 3` 的视频任务创建起点。  
 - 依赖 `Epic 10` 的任务元数据与 artifact 长期回写。  
+- `Epic 3` 的公开视频发现区会消费本 Epic 产出的公开结果元数据。  
 
 ### Entry Criteria
 - 视频 stage 命名与阶段进度分布已稳定。  
 - 等待页与结果页关键状态说明稳定。  
 - 沙箱安全边界已明确。  
 
+### Frontend Design Reference
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/04-视频等待页/01-generating.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/05-视频结果页/02-video-result.html`
+- 参考共享状态：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/02-共享交互与通用状态/01-任务等待与进度/task-progress-shell.html`
+- 当前补充规则：视频结果成品图已覆盖播放器、Companion 与来源抽屉，但未完整展开公开发布 / 取消公开 / 复用入口；前端仍必须按 Story `4.8` 与 `4.10` 补足结果操作区
+
 ### Exit Criteria
 - 视频任务可以完整执行或失败退出；  
 - 等待页可以透明展示状态并支持恢复；  
 - 结果页可以稳定消费视频；  
+- 公开视频可显式发布、取消公开并被输入页复用；  
 - 失败原因和 Provider 切换可解释；  
 - 视频侧 artifact 已可供 Companion 消费。  
 
@@ -69,6 +80,7 @@ Story `4.1` 是前后端的共同前置。
 Story `4.7` 和 `4.8` 可在 `4.1 + Epic 2` 完成后基于 mock 先做。  
 Story `4.2 ~ 4.6` 可由后端并行实现，但以统一 stage 契约为边界。  
 Story `4.9` 必须在视频结果 schema 稳定后接入。  
+Story `4.10` 依赖 `4.6` 的结果元数据与 `4.8` 的结果页壳层，但可围绕冻结 payload 并行推进。  
 
 ### Story List
 - Story 4.1: 视频流水线阶段、进度区间与结果契约冻结  
@@ -80,6 +92,7 @@ Story `4.9` 必须在视频结果 schema 稳定后接入。
 - Story 4.7: 视频等待页前端状态机、恢复与降级  
 - Story 4.8: 视频结果页、播放器与结果操作  
 - Story 4.9: 视频侧 SessionArtifactGraph 回写  
+- Story 4.10: 视频结果公开发布与输入页复用卡片  
 
 ### Story 4.1: 视频流水线阶段、进度区间与结果契约冻结
 **Story Type:** `Contract Story`  
@@ -316,6 +329,11 @@ So that 我可以立刻完成一次完整的单题复习体验。
 **Then** `Companion`、`Evidence / Retrieval` 与 `Learning Coach` 仅作为后续动作入口或侧区域能力  
 **And** 不会抢占播放器作为主叙事中心的位置  
 
+**Given** 页面需要承接结果操作  
+**When** 用户查看结果摘要区与结果操作区  
+**Then** 页面提供公开发布 / 取消公开、结果复用入口与必要状态反馈  
+**And** 即使当前成品图未完整展开该操作区，也不能遗漏 Story `4.10` 约定的业务动作
+
 **Deliverables:**
 - 视频结果页
 - Video.js 封装
@@ -351,5 +369,32 @@ So that Companion 不需要反向依赖视频流水线内部实现。
 - 失败处理逻辑
 - Companion 消费说明
 
----
+### Story 4.10: 视频结果公开发布与输入页复用卡片
+**Story Type:** `Integration Story`  
+As a 产出讲解结果的用户，  
+I want 在视频结果页显式公开发布可复用的视频结果，  
+So that 输入页可以发现这些公开结果并为其他用户提供快速复用入口。  
 
+**Acceptance Criteria:**
+**Given** 视频任务已经完成且结果满足公开条件  
+**When** 用户在 `/video/:id` 执行公开发布  
+**Then** 系统记录公开状态、最小卡片元数据与稳定结果标识  
+**And** 默认私有结果不会在未确认的情况下自动进入公开发现区  
+
+**Given** 某个结果已经公开发布  
+**When** `/video/input` 请求公开卡片数据  
+**Then** 输入页可获得标题 / 摘要、知识点、封面 / 时长与复用所需最小字段  
+**And** 不需要额外拼装社区详情数据或依赖独立视频社区页  
+
+**Given** 用户取消公开、公开失败或权限不足  
+**When** 结果页更新公开状态  
+**Then** 页面返回明确反馈并同步到公开发现区  
+**And** 不会把失败或未授权结果伪装成已公开可复用状态  
+
+**Deliverables:**
+- 公开发布 / 取消公开动作
+- 公开结果最小元数据 schema
+- 输入页复用卡片 payload
+- 公开状态失败与权限处理
+
+---
