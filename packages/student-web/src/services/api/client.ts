@@ -1,3 +1,6 @@
+import { emitAuthSignal } from '@/services/auth-signals';
+import { readStoredAccessToken } from '@/services/auth-storage';
+
 export type ApiRequestMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export type ApiRequestConfig = {
@@ -7,6 +10,7 @@ export type ApiRequestConfig = {
   headers?: HeadersInit;
   credentials?: RequestCredentials;
   signal?: AbortSignal;
+  authSignalMode?: 'default' | 'silent';
 };
 
 export type ApiClientResponse<T> = {
@@ -119,6 +123,10 @@ function resolveRequestUrl(baseURL: string | undefined, url: string) {
   return new URL(url, baseURL).toString();
 }
 
+function shouldAttachStoredAccessToken(url: string) {
+  return !url.startsWith('/auth/login') && !url.startsWith('/auth/register');
+}
+
 function createRequestSignal(timeout: number, signal?: AbortSignal) {
   const controller = new AbortController();
   const relayAbort = () => controller.abort(signal?.reason);
@@ -163,7 +171,8 @@ export function createApiClient({
       data,
       headers,
       credentials: requestCredentials,
-      signal
+      signal,
+      authSignalMode = 'default'
     }: ApiRequestConfig) {
       const requestHeaders = new Headers(headers);
       const { signal: requestSignal, cleanup } = createRequestSignal(timeout, signal);
@@ -173,6 +182,15 @@ export function createApiClient({
         headers: requestHeaders,
         signal: requestSignal
       };
+      const storedAccessToken = readStoredAccessToken();
+
+      if (
+        storedAccessToken &&
+        !requestHeaders.has('Authorization') &&
+        shouldAttachStoredAccessToken(url)
+      ) {
+        requestHeaders.set('Authorization', `Bearer ${storedAccessToken}`);
+      }
 
       if (data !== undefined) {
         if (isJsonSerializableBody(data)) {
@@ -193,12 +211,24 @@ export function createApiClient({
         };
 
         if (!response.ok) {
-          throw new ApiClientError(
+          const error = new ApiClientError(
             response.status,
             parseErrorMessage(parsedBody, response.statusText || '请求失败'),
             parsedBody,
             result as ApiClientResponse<unknown>
           );
+
+          if (
+            authSignalMode !== 'silent' &&
+            (response.status === 401 || response.status === 403)
+          ) {
+            emitAuthSignal({
+              status: response.status,
+              message: error.message
+            });
+          }
+
+          throw error;
         }
 
         return result;

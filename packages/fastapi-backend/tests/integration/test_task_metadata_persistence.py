@@ -10,6 +10,7 @@ from app.features.video.service import VideoService
 from app.main import create_app
 import app.features.classroom.routes as classroom_routes
 import app.features.video.routes as video_routes
+import app.shared.ruoyi_auth as ruoyi_auth
 from app.shared.ruoyi_client import RuoYiClient
 
 
@@ -22,6 +23,15 @@ def _build_client_factory(handler):
             retry_attempts=0,
             retry_delay_seconds=0.0
         )
+
+    return factory
+
+
+def _build_auth_client_factory(handler):
+    client_factory = _build_client_factory(handler)
+
+    def factory(_access_token: str) -> RuoYiClient:
+        return client_factory()
 
     return factory
 
@@ -65,6 +75,31 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     def handler(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content.decode("utf-8")) if request.content else None
+        if request.url.path == "/system/user/getInfo":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "user": {
+                            "userId": "student_100",
+                            "userName": "student_demo",
+                            "nickName": "小麦同学",
+                            "roles": [{"roleKey": "student", "roleName": "学生"}]
+                        },
+                        "roles": ["student"],
+                        "permissions": [
+                            "video:task:add",
+                            "video:task:list",
+                            "video:task:query",
+                            "classroom:session:add",
+                            "classroom:session:list",
+                            "classroom:session:query"
+                        ]
+                    }
+                }
+            )
         if request.url.path == "/video/task/list":
             rows = _filter_rows(state["video"], request.url.params)
             return httpx.Response(200, json={"code": 200, "msg": "ok", "rows": rows, "total": len(rows)})
@@ -89,9 +124,13 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    monkeypatch.setattr(video_routes, "service", VideoService(client_factory=_build_client_factory(handler)))
-    monkeypatch.setattr(classroom_routes, "service", ClassroomService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+    client_factory = _build_client_factory(handler)
+    monkeypatch.setattr(video_routes, "service", VideoService(client_factory=client_factory))
+    monkeypatch.setattr(classroom_routes, "service", ClassroomService(client_factory=client_factory))
+    monkeypatch.setattr(ruoyi_auth, "create_ruoyi_client", _build_auth_client_factory(handler))
+    client = TestClient(create_app())
+    client.headers.update({"Authorization": "Bearer valid-token"})
+    return client
 
 
 def test_task_metadata_routes_persist_query_and_replay_with_ruoyi_time_format(client: TestClient) -> None:

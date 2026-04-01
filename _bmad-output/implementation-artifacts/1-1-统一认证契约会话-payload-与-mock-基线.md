@@ -1,6 +1,6 @@
 # Story 1.1: 统一认证契约、会话 payload 与 mock 基线
 
-Status: done
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -122,6 +122,7 @@ GPT-5 Codex
 - 已新增认证领域类型、会话聚合服务、mock / real adapter 与 `401/403` 统一错误语义。
 - 已新增认证契约说明与 mock session 示例，补齐对外可消费的文档化资产。
 - 已补充 adapter、service、mock handlers 单元测试，并完成 `test`、`typecheck`、`lint` 验证。
+- 已按当前 Epic 1 收口状态把 Story 1.1 从 `done` 回调到 `review`，等待与 1.2 ~ 1.7 的合并审查一起闭环。
 
 ### File List
 
@@ -144,3 +145,4 @@ GPT-5 Codex
 
 - 2026-03-28：完成 Story 1.1 契约冻结，实现认证领域类型、mock / real adapter、mock handlers、契约文档与单元测试，并将状态推进到 `review`。
 - 2026-03-29：补齐 GitHub Flow 收口；确认 `master` 已包含 Story 1.1 实现产物，关闭 Issue `#1`，并将 Story 状态同步为 `done`。
+- 2026-04-01：根据 Epic 1 当前统一收口节奏，将 Story 1.1 状态回调为 `review`，与后续入口 / 认证实现一并进入审查。

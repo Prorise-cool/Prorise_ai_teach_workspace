@@ -9,6 +9,8 @@ declare global {
   const Link: typeof import('react-router-dom').Link
   const NavLink: typeof import('react-router-dom').NavLink
   const Outlet: typeof import('react-router-dom').Outlet
+  const resetAuthStoreForTest: typeof import('../stores/auth-store').resetAuthStoreForTest
+  const useAuthStore: typeof import('../stores/auth-store').useAuthStore
   const useEffect: typeof import('react').useEffect
   const useLocation: typeof import('react-router-dom').useLocation
   const useMemo: typeof import('react').useMemo

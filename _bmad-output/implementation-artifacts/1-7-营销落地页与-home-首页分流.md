@@ -1,6 +1,6 @@
 # Story 1.7: 营销落地页与 home 首页分流
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -19,22 +19,22 @@ so that 产品获客与实际使用入口可以同时清晰成立而不互相污
 
 ## Tasks / Subtasks
 
-- [ ] 固定 `/landing` 与 `/` 的路由分工（AC: 1, 2, 3）
-  - [ ] 明确 `/` 为默认产品首页，`/landing` 为营销落地页。
-  - [ ] 补齐从营销页进入产品首页或登录页的 CTA 跳转规则。
-  - [ ] 约束未登录与已登录两种情况下的跳转恢复语义。
-- [ ] 设计营销页信息架构（AC: 1, 4）
-  - [ ] 保留品牌价值、双入口总览、老师风格、试点方案、FAQ、联系 CTA 等营销模块。
-  - [ ] 明确哪些内容属于营销包装，哪些内容属于当前已上线产品主链。
-  - [ ] 避免把营销页长文案回灌到 `/` 默认首页。
-- [ ] 处理营销 CTA 的降级与状态说明（AC: 3, 4）
-  - [ ] 主要体验 CTA 指向 `/` 或 `/login`。
-  - [ ] 合作 / 试点 CTA 以静态表单、咨询动作或预约说明承接。
-  - [ ] 缺少真实线索系统时提供静态降级说明，而不是伪造已开通后台能力。
-- [ ] 增加营销页分流测试（AC: 1, 2, 3, 4）
-  - [ ] 覆盖 `/` 与 `/landing` 的默认访问分工。
-  - [ ] 覆盖主要体验 CTA、合作 CTA 和未登录回跳场景。
-  - [ ] 覆盖营销文案与默认首页职责边界不串位。
+- [x] 固定 `/landing` 与 `/` 的路由分工（AC: 1, 2, 3）
+  - [x] 明确 `/` 为默认产品首页，`/landing` 为营销落地页。
+  - [x] 补齐从营销页进入产品首页或登录页的 CTA 跳转规则。
+  - [x] 约束未登录与已登录两种情况下的跳转恢复语义。
+- [x] 设计营销页信息架构（AC: 1, 4）
+  - [x] 保留品牌价值、双入口总览、老师风格、试点方案、FAQ、联系 CTA 等营销模块。
+  - [x] 明确哪些内容属于营销包装，哪些内容属于当前已上线产品主链。
+  - [x] 避免把营销页长文案回灌到 `/` 默认首页。
+- [x] 处理营销 CTA 的降级与状态说明（AC: 3, 4）
+  - [x] 主要体验 CTA 指向 `/` 或 `/login`。
+  - [x] 合作 / 试点 CTA 以静态表单、咨询动作或预约说明承接。
+  - [x] 缺少真实线索系统时提供静态降级说明，而不是伪造已开通后台能力。
+- [x] 增加营销页分流测试（AC: 1, 2, 3, 4）
+  - [x] 覆盖 `/` 与 `/landing` 的默认访问分工。
+  - [x] 覆盖主要体验 CTA、合作 CTA 和未登录回跳场景。
+  - [x] 覆盖营销文案与默认首页职责边界不串位。
 
 ## Dev Notes
 
@@ -88,12 +88,24 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pnpm --filter @xiaomai/student-web typecheck`：通过。
+- `pnpm --filter @xiaomai/student-web lint`：通过。
+- `pnpm --filter @xiaomai/student-web test`：通过，`18` 个测试文件、`53` 个用例全部通过。
 
 ### Completion Notes List
 
-- 已将营销落地页的业务定位、路由分流与 CTA 承接规则固定为开发执行文档。
+- 已实现独立 `/landing` 营销落地页，与默认产品首页 `/` 完成职责分流。
+- 已补齐品牌价值、双入口概览、老师风格亮点、试点 / 合作 CTA、FAQ 与联系承接模块。
+- 已把主要体验 CTA 导流到 `/` 或 `/login`，并通过静态咨询承接合作 / 试点线索。
+- 已补充营销页分流测试，验证营销文案不会回灌默认首页，当前状态推进到 `review`。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-7-营销落地页与-home-首页分流.md`
+- `packages/student-web/src/app/routes/index.tsx`
+- `packages/student-web/src/features/landing/landing-page.tsx`
+- `packages/student-web/src/test/features/landing/landing-page.test.tsx`
+
+## Change Log
+
+- 2026-04-01：完成 Story 1.7 的 `/landing` 营销页、首页分流与 CTA 测试，状态推进到 `review`。

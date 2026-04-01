@@ -240,7 +240,8 @@ export function createRealAuthAdapter({
       const payload = await requestRuoyiEnvelope<RuoyiLoginToken>(client, {
         url: '/auth/login',
         method: 'post',
-        data: normalizeLoginInput(input)
+        data: normalizeLoginInput(input),
+        authSignalMode: 'silent'
       });
 
       return mapRuoyiLoginToken(payload);
@@ -249,7 +250,8 @@ export function createRealAuthAdapter({
       const payload = await requestRuoyiEnvelope<RuoyiLoginToken>(client, {
         url: '/auth/register',
         method: 'post',
-        data: normalizeRegisterInput(input)
+        data: normalizeRegisterInput(input),
+        authSignalMode: 'silent'
       });
 
       return mapRuoyiLoginToken(payload);
@@ -263,7 +265,8 @@ export function createRealAuthAdapter({
     async getCurrentUser(accessToken) {
       const payload = await requestRuoyiEnvelope<RuoyiUserInfo>(client, {
         url: '/system/user/getInfo',
-        method: 'get'
+        method: 'get',
+        authSignalMode: 'silent'
       }, accessToken);
 
       return mapRuoyiUserInfo(payload);
