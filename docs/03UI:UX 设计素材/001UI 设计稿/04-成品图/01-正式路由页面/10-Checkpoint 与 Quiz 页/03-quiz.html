@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 正式 Quiz</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script src="https://unpkg.com/lucide@latest"></script>
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', '2xl': '32px', 'full': '9999px',
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'dock': '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04)',
+					}
+				}
+			}
+		};
+	</script>
+	<style>
+		/* 锁定页面为视窗大小，消除多余滚动条 */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+		}
+
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		/* 全局背景网格 */
+		.bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(59, 23, 1, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.03) 1px, transparent 1px);
+			background-size: 40px 40px;
+			mask-image: radial-gradient(ellipse at top, black 50%, transparent 90%);
+			-webkit-mask-image: radial-gradient(ellipse at top, black 50%, transparent 90%);
+		}
+
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.02) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.02) 1px, transparent 1px);
+		}
+
+		.custom-scroll::-webkit-scrollbar {
+			width: 4px;
+			height: 4px;
+		}
+
+		.custom-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.custom-scroll::-webkit-scrollbar-thumb {
+			background: #e6dcc8;
+			border-radius: 4px;
+		}
+
+		html.dark .custom-scroll::-webkit-scrollbar-thumb {
+			background: #302824;
+		}
+
+		.btn-transition {
+			transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.btn-hover-scale {
+			transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.btn-hover-scale:hover {
+			transform: scale(1.02);
+		}
+
+		.btn-hover-scale:active {
+			transform: scale(0.97);
+		}
+
+		/* Dock Icon 交互动效 */
+		.dock-container {
+			overflow: visible !important;
+		}
+
+		.dock-icon-wrapper {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-end;
+		}
+
+		.dock-icon {
+			transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
+			transform-origin: bottom center;
+		}
+
+		.dock-icon-wrapper:hover .dock-icon {
+			transform: translateY(-3px);
+		}
+
+		.dock-tooltip {
+			position: absolute;
+			top: -36px;
+			left: 50%;
+			transform: translateX(-50%) translateY(4px);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.15s ease, transform 0.15s ease;
+			white-space: nowrap;
+			z-index: 100;
+		}
+
+		.dock-icon-wrapper:hover .dock-tooltip {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
+		}
+
+		/* Assistant Breathing Animation */
+		@keyframes breath {
+
+			0%,
+			100% {
+				box-shadow: 0 0 0 0 rgba(245, 197, 71, 0.4);
+			}
+
+			50% {
+				box-shadow: 0 0 0 6px rgba(245, 197, 71, 0);
+			}
+		}
+
+		.bot-breath {
+			animation: breath 3s infinite ease-in-out;
+		}
+
+		/* 答题切题平滑动效 */
+		.question-transition {
+			transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+	</style>
+</head>
+
+<body
+	class="h-screen w-screen overflow-hidden relative selection:bg-brand/30 selection:text-text-primary flex flex-col">
+	<!-- 全局背景 -->
+	<div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/15 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<!-- 极简顶部导航栏 -->
+	<header
+		class="relative z-20 w-full max-w-[1500px] mx-auto h-[72px] px-6 flex justify-between items-center shrink-0">
+		<!-- Logo -->
+		<a href="../01-首页与入口/02-home.html"
+			class="font-bold text-lg flex items-center gap-3 hover:opacity-80 transition-opacity">
+			<div
+				class="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
+				<i data-lucide="leaf" class="w-4.5 h-4.5 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span
+				class="tracking-tight text-text-primary dark:text-text-primary-dark text-xl hidden sm:block">XiaoMai</span>
+		</a>
+
+		<!-- 侧边栏联动控制按钮 -->
+		<button onclick="toggleSidebar()"
+			class="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm btn-transition">
+			<i data-lucide="panel-right" class="w-5 h-5"></i>
+			<span class="text-[13px] font-bold hidden sm:block">辅导助手</span>
+		</button>
+	</header>
+
+	<!-- 主视窗区：三栏自适应布局 -->
+	<div
+		class="relative z-20 flex-1 w-full max-w-[1500px] mx-auto flex flex-row items-stretch px-4 pb-[90px] overflow-hidden gap-6">
+
+		<!-- 左侧：独立答题卡 (仅在宽屏显示) -->
+		<aside
+			class="hidden lg:flex flex-col w-[260px] h-full shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-[24px] shadow-sm p-5 transition-all">
+			<div class="flex justify-between items-center mb-5 shrink-0">
+				<h3 class="font-black text-[16px] text-text-primary dark:text-text-primary-dark tracking-tight">答题卡</h3>
+				<span
+					class="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark px-2.5 py-1 rounded-md shadow-sm">2
+					/ 20</span>
+			</div>
+
+			<div
+				class="flex items-center gap-3 mb-5 text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border-b border-bordercolor-light dark:border-bordercolor-dark pb-4 shrink-0">
+				<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-success shadow-sm"></span>正确
+				</div>
+				<div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-error shadow-sm"></span>错误
+				</div>
+				<div class="flex items-center gap-1.5"><span
+						class="w-2 h-2 rounded-sm bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark"></span>未答
+				</div>
+			</div>
+
+			<!-- 题号矩阵区，独立滚动 -->
+			<div class="flex-1 overflow-y-auto custom-scroll pr-2 mb-4">
+				<div class="grid grid-cols-5 gap-2" id="answer-grid">
+					<!-- JS 动态填充 -->
+				</div>
+			</div>
+
+			<button
+				class="w-full shrink-0 bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark font-bold text-[13px] py-3 rounded-xl hover:opacity-90 btn-transition shadow-sm flex items-center justify-center gap-2">
+				<i data-lucide="send" class="w-4 h-4"></i> 提交答卷
+			</button>
+		</aside>
+
+		<!-- 中间：核心答题区 -->
+		<main class="flex-1 h-full overflow-y-auto custom-scroll flex flex-col relative px-1 md:px-2">
+
+			<!-- 顶部控制条 -->
+			<div class="flex flex-wrap items-center justify-between gap-3 mb-4 shrink-0">
+				<div class="flex flex-wrap items-center gap-2">
+					<div
+						class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-widest shadow-sm">
+						正式 Quiz
+					</div>
+					<span
+						class="lg:hidden px-3 py-1.5 rounded-lg bg-brand/10 dark:bg-brand/5 border border-brand/20 dark:border-brand/10 text-[11px] font-bold text-text-primary dark:text-brand shadow-sm">
+						第 2 / 20 题
+					</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<a href="01-portal.html"
+						class="px-3 py-1.5 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">
+						退出测验
+					</a>
+				</div>
+			</div>
+
+			<!-- 题目主容器 -->
+			<div id="question-content-container"
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-[24px] shadow-sm flex flex-col w-full question-transition relative overflow-hidden shrink-0">
+
+				<!-- 卡片内装饰背景光 -->
+				<div
+					class="absolute -top-32 -left-32 w-64 h-64 bg-brand/5 rounded-full blur-[60px] pointer-events-none">
+				</div>
+
+				<div class="p-6 md:p-8 lg:p-10 relative z-10">
+
+					<div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+						<div class="flex items-center gap-3">
+							<span
+								class="text-[11px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2.5 py-1.5 rounded-md shadow-sm uppercase tracking-wider">单选题</span>
+							<span
+								class="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark">考点：复合函数求导</span>
+						</div>
+						<span
+							class="text-[12px] font-bold text-brand-dark dark:text-brand bg-brand/10 dark:bg-brand/5 px-2.5 py-1 rounded-md">答对本题可提升
+							2% 熟练度</span>
+					</div>
+
+					<div
+						class="text-[17px] md:text-[19px] font-bold mb-8 leading-relaxed text-text-primary dark:text-text-primary-dark">
+						若函数 <code
+							class="font-mono bg-secondary dark:bg-[#1a1614] text-brand-dark dark:text-brand px-2 py-0.5 rounded-md border border-bordercolor-light dark:border-bordercolor-dark mx-1 text-[0.9em] shadow-sm">y = sin(x²)</code>，求其导数
+						<code
+							class="font-mono bg-secondary dark:bg-[#1a1614] text-brand-dark dark:text-brand px-2 py-0.5 rounded-md border border-bordercolor-light dark:border-bordercolor-dark mx-1 text-[0.9em] shadow-sm">y'</code>
+						的正确结果是：
+					</div>
+
+					<!-- 选项区 -->
+					<div class="flex flex-col gap-3 md:gap-4 mb-10">
+						<div
+							class="p-4 md:p-5 rounded-[16px] border border-error dark:border-[#bf0004] bg-[#fff1f0] dark:bg-[#3a1c1c] flex items-center justify-between shadow-sm transition-all cursor-pointer">
+							<div class="flex items-center gap-4 text-error dark:text-[#ff4d4f]">
+								<span
+									class="w-8 h-8 rounded-lg bg-white dark:bg-[#1f1a18] border border-error dark:border-[#bf0004] flex items-center justify-center font-bold text-sm shadow-sm shrink-0">A</span>
+								<span class="font-mono text-[15px] md:text-[16px] font-bold">cos(x²)</span>
+							</div>
+							<i data-lucide="x" class="w-5 h-5 text-error dark:text-[#ff4d4f] shrink-0"></i>
+						</div>
+
+						<div
+							class="p-4 md:p-5 rounded-[16px] border-[2px] border-success bg-[#f6ffed] dark:bg-[#1a2e1b] flex items-center justify-between shadow-sm transition-all cursor-pointer">
+							<div class="flex items-center gap-4 text-success">
+								<span
+									class="w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">B</span>
+								<span class="font-mono text-[15px] md:text-[16px] font-bold">2x · cos(x²)</span>
+							</div>
+							<i data-lucide="check" class="w-6 h-6 text-success stroke-[3] shrink-0"></i>
+						</div>
+
+						<div
+							class="p-4 md:p-5 rounded-[16px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#1a1614]/50 flex items-center gap-4 text-text-secondary dark:text-text-secondary-dark opacity-70 hover:opacity-100 hover:border-text-primary dark:hover:border-text-primary-dark transition-all cursor-pointer">
+							<span
+								class="w-8 h-8 rounded-lg bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center font-bold text-sm shadow-sm shrink-0">C</span>
+							<span class="font-mono text-[15px] md:text-[16px]">-2x · cos(x²)</span>
+						</div>
+					</div>
+
+					<!-- 解析区 -->
+					<div
+						class="rounded-[20px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/60 dark:bg-[#1a1614] p-6 shadow-sm">
+						<div class="flex items-center justify-between mb-5">
+							<h4
+								class="font-black flex items-center gap-2 text-[15px] text-text-primary dark:text-text-primary-dark">
+								<div
+									class="w-7 h-7 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm">
+									<i data-lucide="lightbulb"
+										class="w-4 h-4 text-brand-dark dark:text-brand fill-current"></i>
+								</div>
+								智能解析
+							</h4>
+							<button
+								class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark px-3 py-1.5 rounded-lg flex items-center gap-1.5 hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">
+								<i data-lucide="bookmark-plus" class="w-3.5 h-3.5"></i> 收入错题本
+							</button>
+						</div>
+						<div
+							class="text-[14px] text-text-primary/90 dark:text-text-primary-dark/90 leading-relaxed font-medium">
+							<p class="mb-3">根据链式法则 <code
+									class="font-mono text-[0.9em] bg-surface-light dark:bg-surface-dark px-1.5 py-0.5 rounded border border-bordercolor-light dark:border-bordercolor-dark">y' = f'(g(x)) · g'(x)</code>：
+							</p>
+							<ol
+								class="list-decimal pl-6 space-y-2 text-text-secondary dark:text-text-secondary-dark marker:font-bold">
+								<li>外层函数是 <code class="font-mono text-[0.9em]">sin(u)</code>，其导数为 <code
+										class="font-mono text-[0.9em]">cos(u)</code>。</li>
+								<li>内层函数是 <code class="font-mono text-[0.9em]">u = x²</code>，其导数为 <code
+										class="font-mono text-[0.9em]">2x</code>。</li>
+								<li>两者相乘得到：<strong class="text-text-primary dark:text-text-primary-dark">2x ·
+										cos(x²)</strong>。</li>
+							</ol>
+						</div>
+					</div>
+
+					<!-- 底部切换台 -->
+					<div
+						class="mt-8 pt-6 border-t border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-center">
+						<button
+							class="px-4 py-2.5 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5">
+							<i data-lucide="arrow-left" class="w-4 h-4"></i> 上一题
+						</button>
+						<button onclick="nextQuestion()"
+							class="bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-xl px-6 py-2.5 font-bold text-[14px] hover:opacity-90 flex items-center gap-2 btn-transition shadow-md btn-hover-scale">
+							下一题 <i data-lucide="arrow-right" class="w-4 h-4"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 占位防止滚动到底部被遮挡 -->
+			<div class="h-6 shrink-0"></div>
+		</main>
+
+		<!-- 移动端遮罩层 -->
+		<div id="mobile-overlay"
+			class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[55] hidden xl:hidden transition-opacity"
+			onclick="toggleSidebar()"></div>
+
+		<!-- 右侧：Companion 智能侧栏 (支持联动折叠) -->
+		<aside id="companion-wrapper"
+			class="absolute right-0 max-xl:fixed max-xl:inset-y-0 z-[60] w-[320px] sm:w-[380px] translate-x-full xl:translate-x-0 xl:relative xl:z-20 xl:w-[380px] xl:opacity-100 transition-all duration-300 ease-in-out shrink-0 overflow-hidden h-full">
+
+			<div
+				class="w-[320px] sm:w-[380px] h-full bg-surface-light dark:bg-surface-dark border-l xl:border border-bordercolor-light dark:border-bordercolor-dark xl:rounded-[28px] shadow-2xl xl:shadow-sm flex flex-col relative">
+
+				<div
+					class="px-5 py-4 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 flex justify-between items-center bg-transparent shrink-0">
+					<div class="flex items-center gap-3">
+						<div
+							class="w-9 h-9 rounded-full bg-brand/20 dark:bg-brand/10 flex items-center justify-center bot-breath">
+							<i data-lucide="bot" class="w-5 h-5 text-brand-dark dark:text-brand"></i>
+						</div>
+						<div class="flex flex-col">
+							<span
+								class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark leading-tight">Learning
+								Coach</span>
+							<span
+								class="flex items-center gap-1.5 text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark">
+								<span class="w-1.5 h-1.5 rounded-full bg-brand"></span> 测验辅导中
+							</span>
+						</div>
+					</div>
+					<button onclick="toggleSidebar()"
+						class="p-2 rounded-lg text-text-secondary hover:bg-secondary dark:hover:bg-[#2c2522] xl:hidden btn-transition">
+						<i data-lucide="x" class="w-4 h-4"></i>
+					</button>
+				</div>
+
+				<div class="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-[#1a1614]/20">
+					<div class="flex flex-col items-start w-full">
+						<div class="flex items-center gap-2 mb-1.5 ml-1">
+							<span
+								class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
+						</div>
+						<div
+							class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 rounded-[4px_20px_20px_20px] max-w-[92%] leading-relaxed shadow-sm font-medium">
+							如果你对这道题的链式法则没把握，我可以先帮你拆出“外层函数”和“内层函数”，再一步一步带你算。
+						</div>
+					</div>
+				</div>
+
+				<!-- 底部输入区 -->
+				<div
+					class="p-4 bg-surface-light dark:bg-surface-dark border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 shrink-0">
+					<div class="flex flex-col gap-2 mb-3">
+						<button
+							class="text-[12px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm">
+							<i data-lucide="help-circle" class="w-4 h-4 text-brand"></i> 先给我拆题思路
+						</button>
+						<button
+							class="text-[12px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm">
+							<i data-lucide="play-circle" class="w-4 h-4 text-agent-efficient"></i> 回看相关视频片段
+						</button>
+					</div>
+
+					<div
+						class="bg-secondary/40 dark:bg-[#1a1514] border border-bordercolor-light dark:border-bordercolor-dark rounded-xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
+						<textarea
+							class="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed custom-scroll"
+							rows="2" placeholder="或者直接问我问题..."></textarea>
+						<div class="flex justify-between items-center px-3 pb-2 pt-1">
+							<span class="text-[11px] font-medium text-text-secondary/50 font-mono">0 / 300</span>
+							<button
+								class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center hover:bg-brand active:scale-95 transition-all shadow-md btn-hover-scale">
+								<i data-lucide="arrow-up" class="w-4 h-4"></i>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</aside>
+	</div>
+
+	<!-- ==================== 底部：macOS 风格专属 Dock ==================== -->
+	<div class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+		<div
+			class="pointer-events-auto bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2 rounded-[24px] shadow-dock flex items-end gap-1 dock-container">
+
+			<div class="dock-icon-wrapper w-10 relative">
+				<div
+					class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-text-primary dark:bg-text-primary-dark">
+				</div>
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					正式测验</div>
+				<a href="#"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm">
+					<i data-lucide="clipboard-check" class="w-5 h-5"></i>
+				</a>
+			</div>
+
+			<div class="dock-icon-wrapper w-10">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					学习中心</div>
+				<a href="#"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition">
+					<i data-lucide="book-open" class="w-5 h-5"></i>
+				</a>
+			</div>
+
+			<div class="w-px h-8 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 self-center mb-1"></div>
+
+			<div class="dock-icon-wrapper w-10">
+				<div class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold"
+					id="lang-tooltip">中 / EN</div>
+				<button id="dockLangToggle"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition">
+					<i data-lucide="globe" class="w-5 h-5"></i>
+				</button>
+			</div>
+
+			<div class="dock-icon-wrapper w-10">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					切换主题</div>
+				<button id="dockThemeToggle"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition">
+					<i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+					<i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+				</button>
+			</div>
+
+			<div class="dock-icon-wrapper w-10 relative">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					设置</div>
+				<a href="#"
+					class="dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition">
+					<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
+				</a>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		lucide.createIcons();
+
+		// 生成答题卡矩阵
+		const answerGrid = document.getElementById('answer-grid');
+		let gridHtml = '';
+		for (let i = 1; i <= 20; i++) {
+			let classes = 'w-full aspect-square rounded-lg font-bold text-[13px] flex items-center justify-center shadow-sm btn-hover-scale transition-all duration-300 ';
+			if (i === 1) classes += 'bg-success text-white';
+			else if (i === 2) classes += 'bg-error text-white ring-2 ring-text-primary dark:ring-text-primary-dark ring-offset-2 ring-offset-surface-light dark:ring-offset-surface-dark btn-q2';
+			else if (i === 3) classes += 'bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:border-text-primary dark:hover:border-text-primary-dark btn-q3';
+			else classes += 'bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:border-text-primary dark:hover:border-text-primary-dark';
+			gridHtml += `<button class="${classes}">${i}</button>`;
+		}
+		answerGrid.innerHTML = gridHtml;
+
+		// 主题切换逻辑
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		const html = document.documentElement;
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggleBtn.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+
+		// 语言切换演示
+		const langToggleBtn = document.getElementById('dockLangToggle');
+		const langTooltip = document.getElementById('lang-tooltip');
+		if (langToggleBtn && langTooltip) {
+			langToggleBtn.addEventListener('click', () => {
+				langTooltip.innerText = langTooltip.innerText.includes('EN') ? 'EN / 中' : '中 / EN';
+			});
+		}
+
+		// 侧边栏平滑折叠逻辑
+		function toggleSidebar() {
+			const wrapper = document.getElementById('companion-wrapper');
+			const overlay = document.getElementById('mobile-overlay');
+			const isDesktop = window.innerWidth >= 1280;
+
+			if (isDesktop) {
+				wrapper.classList.toggle('xl:w-[380px]');
+				wrapper.classList.toggle('xl:w-0');
+				wrapper.classList.toggle('xl:ml-6');
+				wrapper.classList.toggle('xl:ml-0');
+				wrapper.classList.toggle('xl:opacity-100');
+				wrapper.classList.toggle('xl:opacity-0');
+			} else {
+				wrapper.classList.toggle('translate-x-full');
+				wrapper.classList.toggle('translate-x-0');
+				if (overlay) overlay.classList.toggle('hidden');
+			}
+		}
+
+		// 监听窗口大小变化以防状态混乱
+		window.addEventListener('resize', () => {
+			const wrapper = document.getElementById('companion-wrapper');
+			const overlay = document.getElementById('mobile-overlay');
+			if (window.innerWidth >= 1280) {
+				if (overlay && !overlay.classList.contains('hidden')) overlay.classList.add('hidden');
+				wrapper.classList.add('xl:w-[380px]', 'xl:ml-6', 'xl:opacity-100');
+				wrapper.classList.remove('xl:w-0', 'xl:ml-0', 'xl:opacity-0', 'translate-x-0');
+				wrapper.classList.add('translate-x-full');
+			}
+		});
+
+		// SPA 切题动画演示
+		function nextQuestion() {
+			const container = document.getElementById('question-content-container');
+			const q2Btn = document.querySelector('.btn-q2');
+			const q3Btn = document.querySelector('.btn-q3');
+
+			container.style.opacity = '0';
+			container.style.transform = 'translateX(-20px)';
+
+			setTimeout(() => {
+				container.style.transform = 'translateX(20px)';
+				void container.offsetWidth;
+				container.style.opacity = '1';
+				container.style.transform = 'translateX(0)';
+
+				if (q2Btn && q3Btn) {
+					q2Btn.classList.remove('ring-2', 'ring-text-primary', 'dark:ring-text-primary-dark', 'ring-offset-2', 'ring-offset-surface-light', 'dark:ring-offset-surface-dark');
+					q3Btn.classList.remove('bg-secondary', 'dark:bg-[#1a1614]', 'border-bordercolor-light', 'dark:border-bordercolor-dark', 'text-text-secondary', 'dark:text-text-secondary-dark');
+					q3Btn.classList.add('bg-brand', 'text-[#3b1701]', 'border-brand', 'ring-2', 'ring-text-primary', 'dark:ring-text-primary-dark', 'ring-offset-2', 'ring-offset-surface-light', 'dark:ring-offset-surface-dark');
+				}
+			}, 300);
+		}
+	</script>
+</body>
+
+</html>

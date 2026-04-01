@@ -1,23 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="light">
 
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>小麦 XiaoMai - 登录与注册</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
 	<!-- 引入 Remix Icon (包含各种社交图标和 UI 图标) -->
 	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+	<script>
+		(function () {
+			const savedTheme = localStorage.getItem('xiaomai-theme') || 'light';
+			document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+			document.documentElement.classList.toggle('light', savedTheme !== 'dark');
+		})();
+	</script>
 
 	<style>
 		:root {
-			--bg-main: #14110e;
-			--bg-panel: #231f1c;
-			--bg-input: #191614;
-			--border-color: #38322d;
-			--text-main: #ffffff;
-			--text-muted: #8c857f;
+			--bg-main: #f5ede1;
+			--bg-panel: #ffffff;
+			--bg-input: #fbf6ef;
+			--border-color: #e6dcc8;
+			--text-main: #3b1701;
+			--text-muted: #6b4421;
 			--brand-yellow: #f5c547;
-			--brand-yellow-hover: #e0b236;
+			--brand-yellow-hover: #e6b841;
 
 			--char-1: #d97736;
 			--char-2: #e3d5c8;
@@ -25,34 +37,59 @@
 			--char-4: #5c534a;
 		}
 
+		html.dark {
+			--bg-main: #110e0d;
+			--bg-panel: #1f1a18;
+			--bg-input: #181412;
+			--border-color: #302824;
+			--text-main: #f5ede1;
+			--text-muted: #a89f91;
+			--brand-yellow: #f5c547;
+			--brand-yellow-hover: #e6b841;
+		}
+
 		* {
 			box-sizing: border-box;
 			margin: 0;
 			padding: 0;
-			font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+			font-family: 'Inter', 'Noto Sans SC', sans-serif;
 		}
 
 		body {
 			min-height: 100vh;
 			display: flex;
-			background: var(--bg-main);
+			background-color: var(--bg-main);
+			background-image:
+				radial-gradient(circle at 50% 0%, rgba(245, 197, 71, 0.18), transparent 38%),
+				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: auto, 32px 32px, 32px 32px;
 			color: var(--text-main);
 			overflow: hidden;
 			justify-content: center;
 			align-items: center;
 			padding: 20px;
+			transition: background-color 0.4s ease, color 0.4s ease;
+		}
+
+		html.dark body {
+			background-image:
+				radial-gradient(circle at 50% 0%, rgba(245, 197, 71, 0.08), transparent 38%),
+				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
 		}
 
 		.container {
 			width: 100%;
 			max-width: 1080px;
 			/* 加宽以适应多列布局 */
-			height: 700px;
-			/* 稍微加高让内容更舒展 */
+			height: min(680px, calc(100vh - 40px));
+			max-height: calc(100vh - 40px);
 			display: flex;
 			border-radius: 24px;
 			overflow: hidden;
-			box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+			border: 1px solid var(--border-color);
+			box-shadow: 0 28px 72px rgba(59, 23, 1, 0.12);
 			background: var(--bg-panel);
 		}
 
@@ -66,27 +103,31 @@
 		}
 
 		.right-panel::-webkit-scrollbar-thumb {
-			background: rgba(255, 255, 255, 0.1);
+			background: rgba(107, 68, 33, 0.18);
 			border-radius: 4px;
 		}
 
 		.right-panel::-webkit-scrollbar-thumb:hover {
-			background: rgba(255, 255, 255, 0.2);
+			background: rgba(107, 68, 33, 0.28);
 		}
 
 		/* ================= 左侧视觉面板 ================= */
 		.left-panel {
 			flex: 1;
 			position: relative;
-			background: linear-gradient(135deg, #1c1815 0%, #0a0807 100%);
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(245, 237, 225, 0.92) 100%);
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
 			padding: 40px;
-			border-right: 1px solid rgba(255, 255, 255, 0.05);
+			border-right: 1px solid var(--border-color);
 			overflow: hidden;
 			min-width: 400px;
+		}
+
+		html.dark .left-panel {
+			background: linear-gradient(180deg, rgba(31, 26, 24, 0.96) 0%, rgba(17, 14, 13, 0.98) 100%);
 		}
 
 		.hero-text {
@@ -283,7 +324,7 @@
 		}
 
 		.char-4 .mouth {
-			background: var(--bg-main);
+			background: #3b1701;
 			width: 16px;
 			height: 4px;
 			margin-top: 12px;
@@ -355,7 +396,7 @@
 		}
 
 		.state-hidden .char-4 .eye {
-			border-bottom-color: var(--bg-main);
+			border-bottom-color: #3b1701;
 		}
 
 		.state-hidden .pupil {
@@ -415,7 +456,7 @@
 		}
 
 		.state-sleep .char-4 .eye {
-			border-bottom-color: var(--bg-main);
+			border-bottom-color: #3b1701;
 		}
 
 		.state-sleep .pupil {
@@ -515,12 +556,19 @@
 		/* ================= 右侧表单面板 ================= */
 		.right-panel {
 			flex: 1.2;
-			padding: 50px 70px;
+			padding: 42px 70px 46px;
 			/* 增加内边距让排版不挤 */
 			position: relative;
 			display: flex;
 			flex-direction: column;
 			overflow-y: auto;
+			background: rgba(255, 255, 255, 0.78);
+			backdrop-filter: blur(24px);
+			-webkit-backdrop-filter: blur(24px);
+		}
+
+		html.dark .right-panel {
+			background: rgba(31, 26, 24, 0.88);
 		}
 
 		.brand-header {
@@ -532,11 +580,46 @@
 			font-weight: 600;
 		}
 
+		.panel-toolbar {
+			position: absolute;
+			top: 24px;
+			right: 28px;
+			display: flex;
+			justify-content: flex-end;
+			z-index: 2;
+		}
+
+		.icon-btn {
+			width: 40px;
+			height: 40px;
+			border: 1px solid var(--border-color);
+			border-radius: 9999px;
+			background: rgba(255, 255, 255, 0.74);
+			color: var(--text-muted);
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			font-size: 18px;
+			transition: all 0.2s ease;
+		}
+
+		html.dark .icon-btn {
+			background: rgba(31, 26, 24, 0.92);
+		}
+
+		.icon-btn:hover {
+			color: var(--text-main);
+			background: var(--bg-panel);
+			transform: translateY(-1px);
+		}
+
 		.brand-icon {
 			width: 24px;
 			height: 24px;
-			background: #fff;
-			border-radius: 4px;
+			background: var(--text-main);
+			border-radius: 8px;
+			box-shadow: 0 6px 16px rgba(59, 23, 1, 0.12);
 		}
 
 		/* 视图系统 */
@@ -581,7 +664,7 @@
 			display: flex;
 			gap: 24px;
 			margin-bottom: 28px;
-			border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+			border-bottom: 1px solid var(--border-color);
 		}
 
 		.auth-mode {
@@ -595,7 +678,7 @@
 		}
 
 		.auth-mode:hover {
-			color: #d1cbc5;
+			color: var(--text-main);
 		}
 
 		.auth-mode.active {
@@ -643,7 +726,7 @@
 			font-size: 13px;
 			font-weight: 600;
 			margin-bottom: 8px;
-			color: #d1cbc5;
+			color: var(--text-muted);
 		}
 
 		.input-wrapper {
@@ -651,7 +734,7 @@
 			align-items: center;
 			background: var(--bg-input);
 			border: 1px solid var(--border-color);
-			border-radius: 10px;
+			border-radius: 16px;
 			padding: 0 16px;
 			height: 48px;
 			transition: border-color 0.2s, box-shadow 0.2s;
@@ -718,9 +801,9 @@
 			width: 100%;
 			height: 48px;
 			background: var(--brand-yellow);
-			color: #111;
+			color: #3b1701;
 			border: none;
-			border-radius: 10px;
+			border-radius: 9999px;
 			font-size: 16px;
 			font-weight: 600;
 			cursor: pointer;
@@ -898,7 +981,7 @@
 			height: 44px;
 			background: transparent;
 			border: 1px solid var(--border-color);
-			border-radius: 8px;
+			border-radius: 16px;
 			color: var(--text-muted);
 			font-size: 14px;
 			cursor: pointer;
@@ -960,6 +1043,11 @@
 				background: var(--bg-panel);
 				z-index: 10;
 				overflow-y: auto;
+			}
+
+			.panel-toolbar {
+				top: 18px;
+				right: 18px;
 			}
 
 			.brand-header {
@@ -1050,6 +1138,11 @@
 
 		<!-- 右侧交互面板 -->
 		<div class="right-panel">
+			<div class="panel-toolbar">
+				<button id="theme-toggle" class="icon-btn" aria-label="切换亮暗色">
+					<i id="theme-icon" class="ri-moon-line"></i>
+				</button>
+			</div>
 			<div class="brand-header">
 				<div class="brand-icon"></div>
 				<span>小麦 XiaoMai</span>
@@ -1232,6 +1325,21 @@
 		const charactersWrapper = document.getElementById('characters');
 		let isAnimatingJump = false;
 		let idleTimer; // 用于睡眠彩蛋
+		const themeToggleBtn = document.getElementById('theme-toggle');
+		const themeIcon = document.getElementById('theme-icon');
+		const html = document.documentElement;
+
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+			themeIcon.className = theme === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+		}
+
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggleBtn.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
 
 		// 1. 顶层大视图切换逻辑
 		function switchView(viewId) {

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 专属学习路径</title>
+
+	<!-- 引入 Google Fonts 提升字体质感 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+
+	<!-- 引入 Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Lucide 图标库 -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<!-- 严格配置 Tailwind，注入设计系统规范 -->
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', 'full': '9999px',
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'inner-soft': 'inset 0 2px 10px rgba(0, 0, 0, 0.03)',
+						'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		/* ================= 基础主题与 CSS 变量 ================= */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+			--loader-text: #3b1701;
+			--loader-spotlight-main: rgba(59, 23, 1, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+			--glass-bg: rgba(255, 255, 255, 0.6);
+			--glass-border: rgba(230, 220, 200, 0.5);
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+			--loader-text: #f5ede1;
+			--loader-spotlight-main: rgba(245, 237, 225, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+			--glass-bg: rgba(42, 36, 32, 0.4);
+			--glass-border: rgba(61, 54, 48, 0.5);
+		}
+
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		.custom-scroll::-webkit-scrollbar {
+			width: 4px;
+			height: 4px;
+		}
+
+		.custom-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.custom-scroll::-webkit-scrollbar-thumb {
+			background: #e6dcc8;
+			border-radius: 4px;
+		}
+
+		html.dark .custom-scroll::-webkit-scrollbar-thumb {
+			background: #302824;
+		}
+
+		/* 统一的高级背景修饰 (网格) */
+		.bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: 32px 32px;
+			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+		}
+
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
+		}
+
+		/* 玻璃拟态导航栏 */
+		.glass-nav {
+			background: rgba(255, 255, 255, 0.85);
+			backdrop-filter: blur(24px);
+			-webkit-backdrop-filter: blur(24px);
+		}
+
+		html.dark .glass-nav {
+			background: rgba(31, 26, 24, 0.85);
+		}
+
+		/* 视图切换 */
+		.view-hidden {
+			display: none !important;
+		}
+
+		@keyframes fadeSlideUp {
+			from {
+				opacity: 0;
+				transform: translateY(15px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.view-enter {
+			animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+		}
+
+		.stagger-1 {
+			animation-delay: 0.05s;
+			opacity: 0;
+		}
+
+		.stagger-2 {
+			animation-delay: 0.15s;
+			opacity: 0;
+		}
+
+		/* 克制的交互过渡 */
+		.btn-transition {
+			transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+		}
+
+		.timeline-dash {
+			background-image: linear-gradient(to bottom, currentColor 50%, transparent 50%);
+			background-size: 2px 10px;
+		}
+
+
+		/* ================= Loading 动效核心 CSS ================= */
+		.loader-wrapper {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.75rem;
+			font-weight: 900;
+			user-select: none;
+			color: var(--loader-text);
+			letter-spacing: 0.1em;
+			overflow: hidden;
+			font-family: 'Inter', sans-serif;
+			text-transform: uppercase;
+			transition: color 0.5s ease;
+		}
+
+		.loader {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			background-color: transparent;
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image:
+				radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
+				radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
+		}
+
+		.loader-letter {
+			position: relative;
+			display: inline-block;
+			opacity: 0.15;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
+		}
+
+		.loader-letter:nth-child(1) {
+			animation-delay: 0.1s;
+		}
+
+		.loader-letter:nth-child(2) {
+			animation-delay: 0.22s;
+		}
+
+		.loader-letter:nth-child(3) {
+			animation-delay: 0.34s;
+		}
+
+		.loader-letter:nth-child(4) {
+			animation-delay: 0.46s;
+		}
+
+		.loader-letter:nth-child(5) {
+			animation-delay: 0.58s;
+		}
+
+		.loader-letter:nth-child(6) {
+			animation-delay: 0.70s;
+		}
+
+		.loader-letter:nth-child(7) {
+			animation-delay: 0.82s;
+		}
+
+		.loader-letter:nth-child(8) {
+			animation-delay: 0.94s;
+		}
+
+		.loader-letter:nth-child(9) {
+			animation-delay: 1.06s;
+		}
+
+		.loader-letter:nth-child(10) {
+			animation-delay: 1.18s;
+		}
+
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-60%);
+			}
+
+			100% {
+				transform: translate(60%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.2;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.15;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.03) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.4;
+			}
+
+			100% {
+				opacity: 0.15;
+				filter: blur(2px);
+			}
+		}
+
+		/* 条纹进度条 */
+		.progress-fill {
+			height: 100%;
+			border-radius: 9999px;
+			background-color: #f5c547;
+			background-image: linear-gradient(-45deg,
+					rgba(255, 255, 255, 0.4) 25%, transparent 25%, transparent 50%,
+					rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 75%, transparent);
+			background-size: 32px 32px;
+			animation: progress-pan 1.5s linear infinite;
+			transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+			position: relative;
+		}
+
+		.progress-fill::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 9999px;
+			box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
+			opacity: 0.7;
+		}
+
+		@keyframes progress-pan {
+			0% {
+				background-position: 0 0;
+			}
+
+			100% {
+				background-position: 32px 0;
+			}
+		}
+
+		/* 玻璃态日志面板 */
+		.glass-panel {
+			background: var(--glass-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--glass-border);
+			mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+		}
+
+		.log-item {
+			animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			transform: translateX(-8px);
+		}
+
+		@keyframes slideIn {
+			to {
+				opacity: 1;
+				transform: translateX(0);
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 6px;
+			height: 14px;
+			background-color: #f5c547;
+			animation: blink 1s step-end infinite;
+			vertical-align: middle;
+			margin-left: 6px;
+			border-radius: 2px;
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0;
+			}
+		}
+
+		/* Tips 动画 */
+		.tip-transition {
+			transition: opacity 0.5s ease, transform 0.5s ease;
+		}
+
+		.tip-hidden {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+
+		.tip-visible {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	</style>
+</head>
+
+<body class="min-h-screen flex flex-col relative overflow-y-auto custom-scroll overflow-x-hidden">
+
+	<!-- ==================== 0. 全局背景层 ==================== -->
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/10 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<!-- ==================== 1. 悬浮全局导航 ==================== -->
+	<header
+		class="w-[94%] max-w-5xl mx-auto mt-6 sticky top-6 z-50 rounded-full flex justify-between items-center p-3 px-4 glass-nav border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+		<a href="#" class="font-bold text-lg flex items-center gap-3">
+			<div
+				class="w-8 h-8 bg-text-primary dark:bg-text-primary-dark rounded-md flex items-center justify-center shadow-sm">
+				<i data-lucide="leaf" class="w-4 h-4 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block">XiaoMai</span>
+		</a>
+
+		<nav
+			class="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-surface-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 btn-transition">
+				<i data-lucide="play-square" class="w-4 h-4"></i> 单题讲解
+			</a>
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 btn-transition">
+				<i data-lucide="layout-template" class="w-4 h-4"></i> 主题课堂
+			</a>
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light dark:bg-[#2c2522] text-text-primary dark:text-text-primary-dark shadow-sm btn-transition">
+				<i data-lucide="book-open" class="w-4 h-4"></i> 学习中心
+			</a>
+		</nav>
+
+		<div class="flex items-center gap-2 md:gap-3">
+			<!-- 演示用切换按钮，实际不属于 Header -->
+			<button onclick="switchView('view-generating')"
+				class="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition">预览：生成态</button>
+			<button onclick="switchView('view-path')"
+				class="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition">预览：结果态</button>
+			<div class="w-px h-5 bg-bordercolor-light dark:border-bordercolor-dark mx-1 hidden sm:block"></div>
+
+			<button id="themeToggle"
+				class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark btn-transition">
+				<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+				<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+			</button>
+			<button
+				class="w-8 h-8 rounded-full border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden hover:ring-2 hover:border-brand btn-transition shadow-sm shrink-0">
+				<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
+			</button>
+		</div>
+	</header>
+
+	<main class="w-full max-w-4xl mx-auto mt-8 md:mt-12 px-4 pb-24 relative z-10 flex-1 flex flex-col">
+
+		<!-- ==================== 视图 1：高级 Loading 态 (融合原版动效) ==================== -->
+		<div id="view-generating"
+			class="view-enter flex-1 flex flex-col items-center justify-center min-h-[60vh] w-full max-w-2xl mx-auto pt-6">
+
+			<!-- 原版 Loading 动效 -->
+			<div class="mb-12 mt-4 scale-75 md:scale-100">
+				<div class="loader-wrapper" aria-label="Generating">
+					<span class="loader-letter">G</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">R</span>
+					<span class="loader-letter">A</span>
+					<span class="loader-letter">T</span>
+					<span class="loader-letter">I</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">G</span>
+					<div class="loader"></div>
+				</div>
+			</div>
+
+			<!-- 进度与状态文字区 -->
+			<div class="w-full mb-10 px-4 md:px-0">
+				<div class="flex justify-between items-end mb-4 px-1">
+					<div class="flex flex-col">
+						<span
+							class="text-xl font-bold mb-1 transition-colors text-text-primary dark:text-text-primary-dark">正在编排专属学习路径</span>
+						<span
+							class="text-sm text-text-secondary dark:text-text-secondary-dark opacity-80">多智能体协同规划中，预计还需要
+							5 秒</span>
+					</div>
+					<span
+						class="text-4xl font-black font-mono tracking-tighter drop-shadow-sm text-text-primary dark:text-text-primary-dark">65%</span>
+				</div>
+
+				<!-- 进度条轨道 -->
+				<div
+					class="h-3 w-full bg-bordercolor-light/50 dark:border-bordercolor-dark/50 rounded-full shadow-inner-soft overflow-hidden p-0.5 backdrop-blur-sm">
+					<div class="progress-fill shadow-sm" style="width: 65%;"></div>
+				</div>
+			</div>
+
+			<!-- 玻璃态无界日志面板 -->
+			<div
+				class="w-full glass-panel rounded-2xl font-mono text-[13px] relative shadow-glass overflow-hidden flex flex-col h-48">
+				<div class="custom-scroll flex-1 overflow-y-auto p-6 space-y-4 relative">
+					<div class="space-y-4">
+						<div
+							class="log-item flex items-start gap-3 text-text-secondary dark:text-text-secondary-dark opacity-60">
+							<i data-lucide="check-circle-2" class="text-success mt-0.5 w-4 h-4 shrink-0"></i>
+							<span class="leading-relaxed">读取历史测验与互动记录 <span
+									class="text-[10px] ml-1.5 border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded opacity-70">Data
+									Fetch</span></span>
+						</div>
+						<div class="log-item flex items-start gap-3 text-text-secondary dark:text-text-secondary-dark opacity-60"
+							style="animation-delay: 0.1s;">
+							<i data-lucide="check-circle-2" class="text-success mt-0.5 w-4 h-4 shrink-0"></i>
+							<span class="leading-relaxed">锁定知识薄弱点：隐函数求导、链式法则 <span
+									class="text-[10px] ml-1.5 border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded opacity-70">Analysis</span></span>
+						</div>
+						<div class="log-item flex items-start gap-3 font-medium text-text-primary dark:text-text-primary-dark"
+							style="animation-delay: 0.2s;">
+							<i data-lucide="loader-2" class="animate-spin text-brand mt-0.5 w-4 h-4 shrink-0"></i>
+							<span class="leading-relaxed">调度跨引擎资源：匹配视频与课堂任务<span class="cursor-blink"></span></span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 极简 Tips 提示 -->
+			<div class="mt-8 flex items-center justify-center gap-2 max-w-lg w-full">
+				<i data-lucide="sparkles" class="text-brand animate-pulse w-4 h-4 shrink-0"></i>
+				<div
+					class="text-sm text-text-secondary dark:text-text-secondary-dark opacity-80 font-medium overflow-hidden h-5 w-full relative">
+					<div id="tip-text" class="absolute w-full tip-transition tip-visible truncate text-center">
+						小麦提示：学习路径生成基于您最近 3 次的学习反馈数据
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ==================== 视图 2：路径展示与执行态 (绝对的静态美) ==================== -->
+		<div id="view-path" class="w-full flex flex-col gap-6 md:gap-8 view-hidden">
+
+			<!-- 1. Header 卡片：路径元数据 -->
+			<div
+				class="view-enter stagger-1 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 shadow-sm">
+				<div class="flex flex-col md:flex-row justify-between items-start gap-8">
+					<div class="flex-1">
+						<div class="flex items-center gap-3 mb-4">
+							<span
+								class="inline-flex items-center text-[10px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded uppercase tracking-widest">
+								Target Path
+							</span>
+							<span class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">
+								预计完成周期：3 天
+							</span>
+						</div>
+						<h1
+							class="text-3xl font-black tracking-tight mb-4 text-text-primary dark:text-text-primary-dark">
+							微积分求导进阶攻坚</h1>
+						<p
+							class="text-[14px] text-text-secondary dark:text-text-secondary-dark leading-relaxed max-w-2xl font-medium">
+							基于你最近在“隐函数”和“链式法则”小测中的错题记录，系统为你编排了这条针对性的攻坚路径。包含 2 个视频、1 堂互动课与最终评测。
+						</p>
+					</div>
+
+					<!-- 静态精美的进度模块 -->
+					<div
+						class="w-full md:w-[240px] bg-secondary/30 dark:bg-[#1a1614]/50 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 shrink-0 flex flex-col justify-center">
+						<div class="flex justify-between items-end mb-3">
+							<span
+								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">总体进度</span>
+							<span
+								class="text-lg font-black text-text-primary dark:text-text-primary-dark tracking-tight">25%</span>
+						</div>
+						<div
+							class="w-full h-2 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden border border-bordercolor-light dark:border-bordercolor-dark shadow-inner mb-5">
+							<div class="h-full bg-text-primary dark:bg-text-primary-dark rounded-full w-[25%]"></div>
+						</div>
+						<button
+							class="w-full bg-surface-light dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark text-[12px] font-bold py-2 rounded-lg hover:bg-secondary dark:hover:bg-bordercolor-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition flex justify-center items-center shadow-sm">
+							调整目标设定
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 2. 核心：路径节点时间线 (纯粹的色彩对比区分状态) -->
+			<div
+				class="view-enter stagger-2 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-10 shadow-sm">
+
+				<h3
+					class="text-sm font-black uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mb-8">
+					Milestones
+				</h3>
+
+				<div class="flex flex-col">
+
+					<!-- ================= 节点 1：已完成 (Video) ================= -->
+					<div class="flex gap-4 md:gap-6 relative">
+						<!-- 左侧轴心 -->
+						<div class="flex flex-col items-center relative z-10 w-10 shrink-0">
+							<!-- 静态图标 -->
+							<div
+								class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center border-2 border-surface-light dark:border-surface-dark shrink-0">
+								<i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+							</div>
+							<!-- 实线链接 -->
+							<div
+								class="w-[2px] flex-1 bg-text-primary dark:bg-text-primary-dark mt-1 rounded-full opacity-30">
+							</div>
+						</div>
+
+						<!-- 右侧内容卡片 -->
+						<div class="flex-1 pb-10">
+							<div class="opacity-60 hover:opacity-100 btn-transition">
+								<div class="flex items-center gap-2 mb-2">
+									<span
+										class="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark">
+										视频复习
+									</span>
+									<h3
+										class="text-[15px] font-bold text-text-secondary dark:text-text-secondary-dark line-through decoration-text-secondary/50">
+										概念纠偏：复合函数求导</h3>
+								</div>
+								<p
+									class="text-[13px] text-text-secondary dark:text-text-secondary-dark mb-3 leading-relaxed max-w-2xl">
+									已观看视频并完成对应的随手练。相关知识点评估达标。</p>
+								<a href="#"
+									class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:underline">
+									回看记录 &rarr;
+								</a>
+							</div>
+						</div>
+					</div>
+
+					<!-- ================= 节点 2：当前进行中 (Classroom) ================= -->
+					<div class="flex gap-4 md:gap-6 relative">
+						<!-- 左侧轴心 -->
+						<div class="flex flex-col items-center relative z-10 w-10 shrink-0">
+							<!-- 品牌色实心大图标突出重点 -->
+							<div
+								class="w-8 h-8 rounded-full bg-brand text-[#3b1701] flex items-center justify-center border-2 border-surface-light dark:border-surface-dark shrink-0 z-10">
+								<i data-lucide="map-pin" class="w-4 h-4 fill-[#3b1701]/20 stroke-[2.5]"></i>
+							</div>
+							<!-- 虚线链接 -->
+							<div
+								class="w-[2px] flex-1 mt-1 timeline-dash text-bordercolor-light dark:text-bordercolor-dark opacity-80">
+							</div>
+						</div>
+
+						<!-- 右侧内容卡片 (主推态，依靠边框和背景色强调) -->
+						<div class="flex-1 pb-10">
+							<div
+								class="bg-secondary/40 dark:bg-[#2c2522]/40 border-2 border-brand/50 rounded-xl p-5 relative">
+								<!-- 角标，极其克制 -->
+								<div
+									class="absolute top-4 right-5 text-[10px] font-black text-brand-dark dark:text-brand uppercase tracking-widest">
+									Next Action
+								</div>
+
+								<div class="flex items-center gap-2 mb-3">
+									<span
+										class="text-[10px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-1.5 py-0.5 rounded">
+										互动课堂
+									</span>
+									<h3 class="text-[16px] font-black text-text-primary dark:text-text-primary-dark">
+										隐函数求导法与对数求导</h3>
+								</div>
+								<p
+									class="text-[14px] text-text-secondary dark:text-text-secondary-dark mb-5 leading-relaxed max-w-2xl font-medium">
+									系统已为你自动生成了本堂课程，包含 5 页交互幻灯片推导与伴学助手（Companion）讨论区。</p>
+
+								<!-- 实心按钮，提供明确行动指引，取消缩放动画 -->
+								<button
+									class="bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark rounded-lg px-6 py-2.5 font-bold text-[13px] hover:opacity-80 btn-transition flex items-center gap-2">
+									开始学习 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+								</button>
+							</div>
+						</div>
+					</div>
+
+					<!-- ================= 节点 3：未解锁 (Quiz) ================= -->
+					<div class="flex gap-4 md:gap-6 relative">
+						<div class="flex flex-col items-center relative z-10 w-10 shrink-0">
+							<div
+								class="w-8 h-8 rounded-full bg-surface-light dark:bg-surface-dark border-2 border-bordercolor-light dark:border-bordercolor-dark text-text-secondary/50 flex items-center justify-center shrink-0">
+								<div class="w-2 h-2 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark"></div>
+							</div>
+							<div
+								class="w-[2px] flex-1 mt-1 timeline-dash text-bordercolor-light dark:text-bordercolor-dark opacity-80">
+							</div>
+						</div>
+
+						<div class="flex-1 pb-10">
+							<div class="opacity-50">
+								<div class="flex items-center gap-2 mb-2">
+									<span
+										class="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark">
+										阶段测验
+									</span>
+									<h3 class="text-[15px] font-bold text-text-secondary dark:text-text-secondary-dark">
+										综合求导大闯关</h3>
+								</div>
+								<p
+									class="text-[13px] text-text-secondary/80 dark:text-text-secondary-dark/80 max-w-2xl">
+									包含 5 道题的正式测验，完成上方课堂后解锁。</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- ================= 节点 4：未解锁 (Video) - 终点 ================= -->
+					<div class="flex gap-4 md:gap-6 relative">
+						<div class="flex flex-col items-center relative z-10 w-10 shrink-0">
+							<div
+								class="w-8 h-8 rounded-full bg-surface-light dark:bg-surface-dark border-2 border-bordercolor-light dark:border-bordercolor-dark text-text-secondary/50 flex items-center justify-center shrink-0">
+								<div class="w-2 h-2 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark"></div>
+							</div>
+						</div>
+
+						<div class="flex-1">
+							<div class="opacity-50">
+								<div class="flex items-center gap-2 mb-2">
+									<span
+										class="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark">
+										实战视频
+									</span>
+									<h3 class="text-[15px] font-bold text-text-secondary dark:text-text-secondary-dark">
+										真题：多元求导极值证明</h3>
+								</div>
+								<p
+									class="text-[13px] text-text-secondary/80 dark:text-text-secondary-dark/80 max-w-2xl">
+									作为路径的最终挑战，系统将自动生成一段复杂真题的动画讲解。</p>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+
+		</div>
+	</main>
+
+	<script>
+		lucide.createIcons();
+
+		// 亮暗色切换
+		const themeToggle = document.getElementById('themeToggle');
+		const html = document.documentElement;
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggle.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+
+		// Tips 轮播
+		const tips = [
+			"小麦提示：学习路径生成基于您最近 3 次的学习反馈数据",
+			"小麦可以精准定位您的薄弱环节并动态调整题目难度",
+			"复杂的概念将自动生成交互式的专属课堂，请耐心等待"
+		];
+		let currentTipIndex = 0;
+		const tipElement = document.getElementById('tip-text');
+
+		setInterval(() => {
+			if (!tipElement) return;
+			tipElement.classList.remove('tip-visible');
+			tipElement.classList.add('tip-hidden');
+
+			setTimeout(() => {
+				currentTipIndex = (currentTipIndex + 1) % tips.length;
+				tipElement.innerText = tips[currentTipIndex];
+				tipElement.classList.remove('tip-hidden');
+				tipElement.classList.add('tip-visible');
+			}, 500);
+		}, 6000);
+
+		// 视图切换逻辑
+		function switchView(viewId) {
+			document.getElementById('view-generating').classList.add('view-hidden');
+			document.getElementById('view-path').classList.add('view-hidden');
+
+			const target = document.getElementById(viewId);
+			target.classList.remove('view-hidden');
+
+			// 重置动画状态保证流畅入场
+			const animatedEls = target.querySelectorAll('.view-enter');
+			if (animatedEls.length === 0 && target.classList.contains('view-enter')) {
+				target.classList.remove('view-enter');
+				void target.offsetWidth;
+				target.classList.add('view-enter');
+			} else {
+				animatedEls.forEach(el => {
+					el.classList.remove('view-enter');
+					void el.offsetWidth;
+					el.classList.add('view-enter');
+				});
+			}
+
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+	</script>
+</body>
+
+</html>

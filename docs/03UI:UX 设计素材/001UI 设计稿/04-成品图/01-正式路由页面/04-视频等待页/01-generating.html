@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="antialiased">
+<html lang="zh-CN" class="light">
 
 <head>
 	<meta charset="UTF-8">
@@ -12,10 +12,10 @@
 	<!-- 引入 Inter 字体 -->
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
 
-	<!-- Tailwind 配置 & XiaoMai Design Tokens -->
+	<!-- 配置 Tailwind 及 XiaoMai Design Tokens -->
 	<script>
 		tailwind.config = {
-			darkMode: 'class', // 开启基于 class 的暗色模式
+			darkMode: 'class',
 			theme: {
 				extend: {
 					fontFamily: {
@@ -29,29 +29,27 @@
 							secondary: '#f5ede1',
 							'secondary-dark': '#2a2420',
 							decorative: '#3b1701',
-							// 亮色模式表面
-							'bg-light': '#fdfaf6', /* 稍微提亮基础背景色，更显干净 */
+							'bg-light': '#f5ede1',
 							'surface-light': '#ffffff',
 							'text-primary': '#3b1701',
 							'text-secondary': '#6b4421',
 							'border-light': '#e6dcc8',
-							// 暗色模式表面
-							'bg-dark': '#12100e', /* 加深暗色背景，凸显光晕 */
-							'surface-dark': '#1e1a17',
+							'bg-dark': '#1a1614',
+							'surface-dark': '#2a2420',
 							'text-primary-dark': '#f5ede1',
-							'text-secondary-dark': '#a39788',
-							'border-dark': '#302a25',
-							// 语义色
+							'text-secondary-dark': '#c4b8a8',
+							'border-dark': '#3d3630',
 							success: '#52c41a',
 							warning: '#ff6700',
 							error: '#f82834',
 						}
 					},
-					spacing: {
-						'1': '4px', '2': '8px', '3': '12px', '4': '16px', '5': '20px', '6': '24px', '8': '32px', '10': '40px',
-					},
-					borderRadius: {
-						'sm': '4px', 'md': '8px', 'lg': '16px', 'full': '9999px',
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.06)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'inner-soft': 'inset 0 2px 10px rgba(0, 0, 0, 0.03)',
+						'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
 					}
 				}
 			}
@@ -61,202 +59,231 @@
 	<!-- 主题初始化脚本 (防止闪烁) -->
 	<script>
 		if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-			document.documentElement.classList.add('dark')
+			document.documentElement.classList.add('dark');
 		} else {
-			document.documentElement.classList.remove('dark')
+			document.documentElement.classList.remove('dark');
 		}
 	</script>
 
 	<style>
-		/* ================= CSS 变量定义 (适配亮/暗色高级质感) ================= */
+		/* ================= 核心 CSS 变量 ================= */
 		:root {
-			--grid-color: rgba(59, 23, 1, 0.04);
+			/* 背景系统 */
+			--bg-color: #fcfaf7;
+			--grid-color: rgba(107, 68, 33, 0.06);
 			--glow-color: rgba(245, 197, 71, 0.15);
-			/* 亮色下的微弱主色光晕 */
+			/* 日志面板玻璃态 */
+			--glass-bg: rgba(255, 255, 255, 0.5);
+			--glass-border: rgba(230, 220, 200, 0.5);
+			--log-mask-end: rgba(255, 255, 255, 1);
+
+			/* 原版 Loading 动画颜色适配 */
 			--loader-text: #3b1701;
-			--log-mask-gradient: linear-gradient(180deg, transparent 0%, black 15%, black 85%, transparent 100%);
-			--glass-bg: rgba(255, 255, 255, 0.4);
-			--glass-border: rgba(255, 255, 255, 0.6);
+			--loader-spotlight-main: rgba(59, 23, 1, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
 		}
 
 		.dark {
-			--grid-color: rgba(245, 237, 225, 0.03);
+			/* 背景系统 */
+			--bg-color: #151210;
+			--grid-color: rgba(245, 237, 225, 0.04);
 			--glow-color: rgba(245, 197, 71, 0.08);
-			/* 暗色下的深邃环境光 */
+			/* 日志面板玻璃态 */
+			--glass-bg: rgba(42, 36, 32, 0.4);
+			--glass-border: rgba(61, 54, 48, 0.5);
+			--log-mask-end: rgba(21, 18, 16, 1);
+
+			/* 原版 Loading 动画颜色适配 (解决暗色下显脏的问题) */
 			--loader-text: #f5ede1;
-			--glass-bg: rgba(30, 26, 23, 0.4);
-			--glass-border: rgba(245, 237, 225, 0.05);
+			/* 暗色下聚光灯变为极其清透的米白发光体 */
+			--loader-spotlight-main: rgba(245, 237, 225, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
 		}
 
+		/* 沉浸式网格背景 */
 		body {
-			transition: background-color 0.6s ease, color 0.6s ease;
-		}
-
-		/* ================= 高级空间感背景 ================= */
-		.bg-grid {
+			background-color: var(--bg-color);
 			background-image:
-				linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-				linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+				linear-gradient(var(--grid-color) 1px, transparent 1px),
+				linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
 			background-size: 32px 32px;
-			/* 边缘羽化，中间清晰 */
-			mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
-			-webkit-mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
+			transition: background-color 0.5s ease, background-image 0.5s ease;
 		}
 
-		.bg-ambient-glow {
+		/* 居中环境光晕 */
+		.ambient-glow {
 			position: absolute;
-			top: 40%;
+			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
 			width: 80vw;
-			height: 80vw;
-			max-width: 800px;
-			max-height: 800px;
-			background: radial-gradient(circle, var(--glow-color) 0%, transparent 60%);
+			height: 80vh;
+			background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
 			pointer-events: none;
-			z-index: 0;
-			transition: background 0.6s ease;
+			z-index: -1;
+			transition: background 0.5s ease;
 		}
 
-		/* ================= 纯净的 GENERATING 流光文字 ================= */
+		/* ================= 原汁原味的 Loading 动画 ================= */
 		.loader-wrapper {
 			position: relative;
 			display: inline-flex;
-			font-size: 3rem;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.75rem;
+			/* 稍微放大一点点增强视觉冲击力 */
 			font-weight: 900;
 			user-select: none;
-			letter-spacing: 0.15em;
+			color: var(--loader-text);
+			letter-spacing: 0.1em;
+			overflow: hidden;
+			font-family: 'Inter', sans-serif;
 			text-transform: uppercase;
+			transition: color 0.5s ease;
 		}
 
-		/* 流光扫过效果 */
-		.loader-wrapper::before {
-			content: "GENERATING";
+		.loader {
 			position: absolute;
 			inset: 0;
-			background: linear-gradient(90deg, transparent 0%, rgba(245, 197, 71, 0.8) 50%, transparent 100%);
-			background-size: 200% auto;
-			color: transparent;
-			-webkit-background-clip: text;
-			background-clip: text;
-			animation: shine 3s linear infinite;
-			z-index: 3;
-			pointer-events: none;
+			z-index: 1;
+			background-color: transparent;
+			/* 经典的条纹遮罩 */
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			/* 聚光灯：引用CSS变量，使得暗色模式下发白光，亮色模式下发深色光 */
+			background-image:
+				radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
+				radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
 		}
 
 		.loader-letter {
-			color: var(--loader-text);
-			opacity: 0.15;
+			position: relative;
 			display: inline-block;
-			animation: loader-letter-anim 4s infinite linear;
-			transition: color 0.6s ease;
+			opacity: 0.15;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
 		}
 
-		/* 字母波浪延迟 */
+		/* 字母延迟动画 */
 		.loader-letter:nth-child(1) {
 			animation-delay: 0.1s;
 		}
 
 		.loader-letter:nth-child(2) {
-			animation-delay: 0.2s;
+			animation-delay: 0.22s;
 		}
 
 		.loader-letter:nth-child(3) {
-			animation-delay: 0.3s;
+			animation-delay: 0.34s;
 		}
 
 		.loader-letter:nth-child(4) {
-			animation-delay: 0.4s;
+			animation-delay: 0.46s;
 		}
 
 		.loader-letter:nth-child(5) {
-			animation-delay: 0.5s;
+			animation-delay: 0.58s;
 		}
 
 		.loader-letter:nth-child(6) {
-			animation-delay: 0.6s;
+			animation-delay: 0.70s;
 		}
 
 		.loader-letter:nth-child(7) {
-			animation-delay: 0.7s;
+			animation-delay: 0.82s;
 		}
 
 		.loader-letter:nth-child(8) {
-			animation-delay: 0.8s;
+			animation-delay: 0.94s;
 		}
 
 		.loader-letter:nth-child(9) {
-			animation-delay: 0.9s;
+			animation-delay: 1.06s;
 		}
 
 		.loader-letter:nth-child(10) {
-			animation-delay: 1.0s;
+			animation-delay: 1.18s;
 		}
 
-		/* ================= 进度条发光动效 ================= */
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-60%);
+			}
+
+			100% {
+				transform: translate(60%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.2;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.15;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.03) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.4;
+			}
+
+			100% {
+				opacity: 0.15;
+				filter: blur(2px);
+			}
+		}
+
+		/* ================= 进度条动效 ================= */
 		.progress-fill {
+			height: 100%;
+			width: 50%;
+			border-radius: 9999px;
+			background-color: #f5c547;
 			background-image: linear-gradient(-45deg,
 					rgba(255, 255, 255, 0.4) 25%, transparent 25%, transparent 50%,
 					rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 75%, transparent);
 			background-size: 32px 32px;
 			animation: progress-pan 1.5s linear infinite;
 			transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-			box-shadow: 0 0 16px rgba(245, 197, 71, 0.6);
-			/* 核心发光点 */
+			position: relative;
 		}
 
-		/* ================= 玻璃态日志面板 ================= */
-		.glass-panel {
-			background-color: var(--glass-bg);
-			border: 1px solid var(--glass-border);
-			backdrop-filter: blur(12px);
-			-webkit-backdrop-filter: blur(12px);
-			transition: background-color 0.6s ease, border-color 0.6s ease;
-		}
-
-		.log-container {
-			-webkit-mask-image: var(--log-mask-gradient);
-			mask-image: var(--log-mask-gradient);
-		}
-
-		.log-scroll::-webkit-scrollbar {
-			width: 0px;
-		}
-
-		.log-item {
-			animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-		}
-
-		/* ================= 动画 Keyframes ================= */
-		@keyframes shine {
-			0% {
-				background-position: -100% center;
-			}
-
-			100% {
-				background-position: 200% center;
-			}
-		}
-
-		@keyframes loader-letter-anim {
-
-			0%,
-			100% {
-				opacity: 0.15;
-				filter: blur(1px);
-				transform: translateY(0);
-			}
-
-			10% {
-				opacity: 1;
-				filter: blur(0);
-				transform: translateY(-3px) scale(1.02);
-			}
-
-			30% {
-				opacity: 0.3;
-				transform: translateY(0);
-			}
+		.progress-fill::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 9999px;
+			box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
+			opacity: 0.7;
 		}
 
 		@keyframes progress-pan {
@@ -266,6 +293,43 @@
 
 			100% {
 				background-position: 32px 0;
+			}
+		}
+
+		/* ================= 玻璃态日志面板 ================= */
+		.glass-panel {
+			background: var(--glass-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--glass-border);
+			/* 添加上下渐隐效果，融入背景 */
+			mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+		}
+
+		.log-scroll::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.log-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.log-scroll::-webkit-scrollbar-thumb {
+			background: var(--glass-border);
+			border-radius: 4px;
+		}
+
+		.log-item {
+			animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			transform: translateX(-8px);
+		}
+
+		@keyframes slideIn {
+			to {
+				opacity: 1;
+				transform: translateX(0);
 			}
 		}
 
@@ -281,18 +345,6 @@
 			}
 		}
 
-		@keyframes slideUpFade {
-			from {
-				opacity: 0;
-				transform: translateY(12px);
-			}
-
-			to {
-				opacity: 1;
-				transform: translateY(0);
-			}
-		}
-
 		.cursor-blink {
 			display: inline-block;
 			width: 6px;
@@ -304,14 +356,14 @@
 			border-radius: 2px;
 		}
 
-		/* 提示词渐隐 */
+		/* Tips 动画 */
 		.tip-transition {
 			transition: opacity 0.5s ease, transform 0.5s ease;
 		}
 
 		.tip-hidden {
 			opacity: 0;
-			transform: translateY(5px);
+			transform: translateY(10px);
 		}
 
 		.tip-visible {
@@ -322,218 +374,199 @@
 </head>
 
 <body
-	class="bg-brand-bg-light dark:bg-brand-bg-dark text-brand-text-primary dark:text-brand-text-primary-dark min-h-screen flex flex-col relative overflow-hidden">
+	class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 text-brand-text-primary dark:text-brand-text-primary-dark transition-colors duration-500 relative z-0 overflow-hidden">
 
-	<!-- 环境层：居中光晕与超细网格，消除黑线感 -->
-	<div class="bg-ambient-glow"></div>
-	<div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
+	<!-- 环境光晕 -->
+	<div class="ambient-glow"></div>
 
-	<!-- 顶部导航：极简透明 -->
-	<header class="w-full px-6 py-6 flex items-center justify-between relative z-20">
+	<!-- 顶部控制区 (返回工作台 & 主题切换) -->
+	<header class="fixed top-0 left-0 w-full px-8 py-6 flex items-center justify-between z-50">
 		<a href="#"
-			class="group flex items-center gap-2 text-sm font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-text-primary dark:hover:text-brand-text-primary-dark transition-colors">
+			class="text-sm font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-text-primary dark:hover:text-brand-text-primary-dark flex items-center gap-2 transition-colors group">
 			<div
-				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center group-hover:bg-brand-border-light/50 dark:group-hover:bg-brand-border-dark/50 transition-colors backdrop-blur-md">
+				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center group-hover:bg-brand-border-light dark:group-hover:bg-brand-border-dark transition-colors backdrop-blur-sm">
 				<i class="ri-arrow-left-line text-lg"></i>
 			</div>
 			返回工作台
 		</a>
 
-		<!-- 亮暗色切换 & 状态 -->
-		<div class="flex items-center gap-6">
-			<div class="flex items-center gap-2">
-				<span class="relative flex h-2 w-2">
-					<span
-						class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-					<span class="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
-				</span>
-				<span
-					class="text-xs font-semibold text-brand-text-secondary dark:text-brand-text-secondary-dark tracking-widest uppercase opacity-80">Engine
-					Active</span>
-			</div>
-
-			<button id="theme-toggle"
-				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center text-brand-text-secondary dark:text-brand-text-secondary-dark hover:bg-brand-border-light/50 dark:hover:bg-brand-border-dark/50 transition-colors backdrop-blur-md">
-				<i id="theme-icon" class="ri-moon-line text-lg"></i>
-			</button>
-		</div>
+		<!-- 主题切换按钮 -->
+		<button onclick="toggleTheme()"
+			class="w-10 h-10 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center text-brand-text-secondary dark:text-brand-text-secondary-dark hover:bg-brand-border-light dark:hover:bg-brand-border-dark transition-all backdrop-blur-sm shadow-sm group">
+			<i
+				class="ri-sun-line text-lg block dark:hidden group-hover:rotate-45 transition-transform duration-300"></i>
+			<i
+				class="ri-moon-line text-lg hidden dark:block group-hover:-rotate-12 transition-transform duration-300"></i>
+		</button>
 	</header>
 
-	<!-- 主体内空区：沉浸、呼吸感 -->
-	<main class="flex-1 flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-6 relative z-10 -mt-8">
+	<!-- 左下角状态模拟器 (弱化显示) -->
+	<div
+		class="fixed bottom-6 left-6 flex flex-col gap-2 z-50 opacity-40 hover:opacity-100 transition-opacity duration-300">
+		<span
+			class="text-[10px] font-bold uppercase tracking-widest text-brand-text-secondary dark:text-brand-text-secondary-dark ml-2 mb-1">Debug
+			Controls</span>
+		<div
+			class="flex flex-col gap-2 bg-white/50 dark:bg-black/30 backdrop-blur-md p-2 rounded-xl border border-brand-border-light dark:border-brand-border-dark">
+			<button onclick="simulateSSE('normal')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-primary px-3 py-1.5 rounded-md text-xs font-medium transition-colors">1.
+				渲染动画 (50%)</button>
+			<button onclick="simulateSSE('fix')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-warning px-3 py-1.5 rounded-md text-xs font-medium transition-colors">2.
+				触发修复 (60%)</button>
+			<button onclick="simulateSSE('tts')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-success px-3 py-1.5 rounded-md text-xs font-medium transition-colors">3.
+				合成视频 (90%)</button>
+		</div>
+	</div>
 
-		<!-- 炫酷文本：已移除遮罩引起的怪异线条，改为全息流光 -->
-		<div class="mb-14 md:scale-105">
+	<!-- ==================== 核心内容区 (无盒子设计) ==================== -->
+	<main class="w-full max-w-2xl relative z-10 flex flex-col items-center mt-8">
+
+		<!-- 还原的原版 Loading 动效 -->
+		<div class="mb-14 mt-4">
 			<div class="loader-wrapper" aria-label="Generating">
-				<span class="loader-letter">G</span><span class="loader-letter">E</span><span
-					class="loader-letter">N</span><span class="loader-letter">E</span><span
-					class="loader-letter">R</span><span class="loader-letter">A</span><span
-					class="loader-letter">T</span><span class="loader-letter">I</span><span
-					class="loader-letter">N</span><span class="loader-letter">G</span>
+				<span class="loader-letter">G</span>
+				<span class="loader-letter">E</span>
+				<span class="loader-letter">N</span>
+				<span class="loader-letter">E</span>
+				<span class="loader-letter">R</span>
+				<span class="loader-letter">A</span>
+				<span class="loader-letter">T</span>
+				<span class="loader-letter">I</span>
+				<span class="loader-letter">N</span>
+				<span class="loader-letter">G</span>
+				<div class="loader"></div>
 			</div>
 		</div>
 
-		<!-- 进度与信息展示区 -->
-		<div class="w-full max-w-2xl mb-10">
+		<!-- 进度与状态文字区 -->
+		<div class="w-full mb-10 px-4 md:px-0">
 			<div class="flex justify-between items-end mb-4 px-1">
-				<div class="flex flex-col gap-1.5">
-					<span class="text-xl font-bold tracking-wide" id="status-title">正在渲染动画帧</span>
-					<span
-						class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80 font-medium"
-						id="eta-text">预计还需要 2 分 30 秒，后台会自动完成</span>
+				<div class="flex flex-col">
+					<span class="text-xl font-bold mb-1 transition-colors" id="status-title">正在渲染动画帧</span>
+					<span class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80"
+						id="eta-text">预计还需要 2 分 30 秒</span>
 				</div>
 				<span id="progress-text"
-					class="text-4xl font-black font-mono tracking-tighter text-brand-primary drop-shadow-[0_0_16px_rgba(245,197,71,0.4)]">50%</span>
+					class="text-4xl font-black font-mono tracking-tighter drop-shadow-sm">50%</span>
 			</div>
 
-			<!-- 发光进度条 -->
+			<!-- 进度条轨道 -->
 			<div
-				class="h-2 w-full bg-brand-border-light/60 dark:bg-brand-border-dark/60 rounded-full overflow-hidden backdrop-blur-sm">
-				<div class="progress-fill h-full w-1/2 bg-brand-primary rounded-full relative" id="progress-bar"></div>
+				class="h-3 w-full bg-brand-border-light/50 dark:bg-brand-border-dark/50 rounded-full shadow-inner-soft overflow-hidden p-0.5 backdrop-blur-sm">
+				<div class="progress-fill shadow-sm" id="progress-bar"></div>
 			</div>
 		</div>
 
-		<!-- 玻璃态日志面板：提供微微的承托感，不再完全凌乱 -->
-		<div class="w-full max-w-2xl h-36 glass-panel rounded-2xl relative font-mono text-[13px] shadow-sm">
-			<div class="log-container h-full w-full">
-				<div
-					class="log-scroll h-full overflow-y-auto px-6 pb-6 pt-8 space-y-4 relative flex flex-col justify-end">
-
-					<!-- Normal Log -->
-					<div class="log-normal space-y-4">
-						<div
-							class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70">
-							<i class="ri-check-line text-brand-success mt-0.5 font-bold"></i>
-							<span>题目语义解析完成 <span
-									class="text-[10px] ml-2 px-1.5 py-0.5 rounded border border-current opacity-40">Understanding</span></span>
-						</div>
-						<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70"
-							style="animation-delay: 0.1s;">
-							<i class="ri-check-line text-brand-success mt-0.5 font-bold"></i>
-							<span>分镜脚本与 Manim 代码生成完毕 <span
-									class="text-[10px] ml-2 px-1.5 py-0.5 rounded border border-current opacity-40">Code
-									Gen</span></span>
-						</div>
-						<div class="log-item flex items-start gap-3 font-medium text-brand-text-primary dark:text-brand-text-primary-dark"
-							style="animation-delay: 0.2s;">
-							<i
-								class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 drop-shadow-[0_0_8px_rgba(245,197,71,0.6)]"></i>
-							<span>沙箱环境运行中：正在渲染 Manim 动画帧<span class="cursor-blink"></span></span>
-						</div>
+		<!-- 玻璃态无界日志面板 -->
+		<div
+			class="w-full glass-panel rounded-2xl font-mono text-[13px] relative shadow-glass overflow-hidden flex flex-col h-48">
+			<div class="log-scroll flex-1 overflow-y-auto p-6 space-y-4 relative">
+				<!-- 常规阶段内容 -->
+				<div class="log-normal space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">题目语义解析完成 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Understanding</span></span>
 					</div>
-
-					<!-- Fix Log -->
-					<div class="log-fix hidden space-y-4">
-						<div
-							class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70">
-							<i class="ri-check-line text-brand-success mt-0.5 font-bold"></i>
-							<span>分镜脚本与 Manim 代码生成完毕</span>
-						</div>
-						<div class="log-item flex items-start gap-3 text-brand-warning">
-							<i class="ri-error-warning-line mt-0.5 font-bold"></i>
-							<span>沙箱渲染异常，触发自动修复链 <span
-									class="text-[10px] ml-2 px-1.5 py-0.5 rounded border border-current opacity-60">Auto-Fix
-									1/2</span></span>
-						</div>
-						<div
-							class="log-item flex items-start gap-3 font-medium text-brand-text-primary dark:text-brand-text-primary-dark mt-1">
-							<i
-								class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 drop-shadow-[0_0_8px_rgba(245,197,71,0.6)]"></i>
-							<span>正在重新编译代码并渲染...<span class="cursor-blink"></span></span>
-						</div>
+					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
+						style="animation-delay: 0.1s;">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
+								Gen</span></span>
 					</div>
+					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱环境运行中：正在渲染 Manim 动画帧<span class="cursor-blink"></span></span>
+					</div>
+				</div>
 
-					<!-- TTS Log -->
-					<div class="log-tts hidden space-y-4">
-						<div
-							class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70">
-							<i class="ri-check-line text-brand-success mt-0.5 font-bold"></i>
-							<span>沙箱渲染 Manim 动画帧成功</span>
-						</div>
-						<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70"
-							style="animation-delay: 0.1s;">
-							<i class="ri-check-line text-brand-success mt-0.5 font-bold"></i>
-							<span>TTS 语音轨道合成完毕</span>
-						</div>
-						<div class="log-item flex items-start gap-3 font-medium text-brand-text-primary dark:text-brand-text-primary-dark"
-							style="animation-delay: 0.2s;">
-							<i
-								class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 drop-shadow-[0_0_8px_rgba(245,197,71,0.6)]"></i>
-							<span>正在合成最终视频并推送到云端...<span class="cursor-blink"></span></span>
-						</div>
+				<!-- 修复阶段内容 -->
+				<div class="log-fix hidden space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
+								Gen</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 text-brand-warning font-medium">
+						<i class="ri-error-warning-fill mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱渲染异常，触发自动修复链 <span
+								class="text-[10px] ml-1.5 bg-brand-warning/10 border border-brand-warning/30 px-1.5 py-0.5 rounded text-brand-warning">Auto-Fix
+								1/2</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 font-medium mt-2">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">正在重新编译代码并渲染...<span class="cursor-blink"></span></span>
+					</div>
+				</div>
+
+				<!-- TTS/合成阶段内容 -->
+				<div class="log-tts hidden space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱渲染 Manim 动画帧成功 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Render
+								Completed</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
+						style="animation-delay: 0.1s;">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">TTS 语音轨道合成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Audio
+								Gen</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">正在合成最终视频并推送到云端...<span class="cursor-blink"></span></span>
 					</div>
 				</div>
 			</div>
 		</div>
 
-		<!-- 极简 Tips -->
-		<div
-			class="mt-10 flex items-center justify-center gap-2.5 text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark/80 font-medium h-6">
-			<i class="ri-sparkling-fill text-brand-primary animate-pulse"></i>
-			<div id="tip-text" class="tip-transition tip-visible">小麦提示：生成完毕后，您还可以通过自然语言二次修改画面。</div>
+		<!-- 极简 Tips 提示 -->
+		<div class="mt-8 flex items-center justify-center gap-2 max-w-lg w-full">
+			<i class="ri-sparkling-fill text-brand-primary animate-pulse text-lg"></i>
+			<div
+				class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80 font-medium overflow-hidden h-5 w-full relative">
+				<div id="tip-text" class="absolute w-full tip-transition tip-visible truncate text-center">
+					小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦
+				</div>
+			</div>
 		</div>
 
 	</main>
 
-	<!-- 演示控制栏 (用于开发/演示环境测试，浮动于左下角) -->
-	<div class="fixed bottom-6 left-6 z-50 flex flex-col gap-2 opacity-20 hover:opacity-100 transition-opacity">
-		<div
-			class="text-[10px] font-mono text-brand-text-secondary dark:text-brand-text-secondary-dark uppercase tracking-widest">
-			Dev Controls</div>
-		<div class="flex gap-2 glass-panel p-1.5 rounded-lg">
-			<button onclick="simulateSSE('normal')"
-				class="text-xs px-3 py-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Normal
-				(50%)</button>
-			<button onclick="simulateSSE('fix')"
-				class="text-xs px-3 py-1.5 rounded text-brand-warning hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Fix
-				(60%)</button>
-			<button onclick="simulateSSE('tts')"
-				class="text-xs px-3 py-1.5 rounded text-brand-success hover:bg-black/5 dark:hover:bg-white/5 transition-colors">TTS
-				(90%)</button>
-		</div>
-	</div>
-
 	<!-- 交互脚本 -->
 	<script>
-		// --- 亮暗色切换逻辑 ---
-		const themeToggleBtn = document.getElementById('theme-toggle');
-		const themeIcon = document.getElementById('theme-icon');
-
-		if (document.documentElement.classList.contains('dark')) {
-			themeIcon.className = 'ri-sun-line text-lg';
+		// 主题切换逻辑
+		function toggleTheme() {
+			if (document.documentElement.classList.contains('dark')) {
+				document.documentElement.classList.remove('dark');
+				localStorage.theme = 'light';
+			} else {
+				document.documentElement.classList.add('dark');
+				localStorage.theme = 'dark';
+			}
 		}
 
-		themeToggleBtn.addEventListener('click', () => {
-			document.documentElement.classList.toggle('dark');
-			const isDark = document.documentElement.classList.contains('dark');
-			themeIcon.className = isDark ? 'ri-sun-line text-lg' : 'ri-moon-line text-lg';
-			localStorage.theme = isDark ? 'dark' : 'light';
-		});
-
-		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-			if (!('theme' in localStorage)) {
-				if (e.matches) {
-					document.documentElement.classList.add('dark');
-					themeIcon.className = 'ri-sun-line text-lg';
-				} else {
-					document.documentElement.classList.remove('dark');
-					themeIcon.className = 'ri-moon-line text-lg';
-				}
-			}
-		});
-
-		// --- Tips 轮播逻辑 ---
+		// 轮播 Tips 数据
 		const tips = [
-			"小麦提示：生成完毕后，您还可以通过自然语言二次修改画面。",
-			"复杂的数学公式推导，小麦会自动为您添加高亮引导。",
-			"视频渲染过程需要在云端进行大量计算，感谢您的耐心等待。",
-			"您可以随时切换板书风格、讲师音色和教学节奏。",
-			"生成历史会自动保存在您的工作台，随时可以回来查看。"
+			"小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦",
+			"你知道吗？复杂的数学公式推导，小麦会自动为您添加高亮引导",
+			"视频渲染过程需要在云端沙箱进行大量计算，感谢您的耐心等待",
+			"小麦可以根据您的需求，随时切换板书风格和讲述人声音",
+			"生成历史会自动保存在您的工作台，随时可以回来查看或修改"
 		];
-
 		let currentTipIndex = 0;
 		const tipElement = document.getElementById('tip-text');
 
+		// 轮播逻辑
 		setInterval(() => {
 			tipElement.classList.remove('tip-visible');
 			tipElement.classList.add('tip-hidden');
@@ -541,28 +574,30 @@
 			setTimeout(() => {
 				currentTipIndex = (currentTipIndex + 1) % tips.length;
 				tipElement.innerText = tips[currentTipIndex];
-
 				tipElement.classList.remove('tip-hidden');
 				tipElement.classList.add('tip-visible');
 			}, 500);
 		}, 6000);
 
-		// --- 状态切换逻辑 (演示用) ---
+		// 模拟状态切换逻辑
 		function simulateSSE(stage) {
 			const progressBar = document.getElementById('progress-bar');
 			const progressText = document.getElementById('progress-text');
 			const etaText = document.getElementById('eta-text');
 			const statusTitle = document.getElementById('status-title');
 
+			// 隐藏所有日志
 			document.querySelector('.log-normal').classList.add('hidden');
 			document.querySelector('.log-fix').classList.add('hidden');
 			document.querySelector('.log-tts').classList.add('hidden');
+
+			// 移除可能附加的特殊颜色类
+			statusTitle.classList.remove('text-brand-warning', 'text-brand-success');
 
 			if (stage === 'normal') {
 				progressBar.style.width = '50%';
 				progressText.innerText = '50%';
 				statusTitle.innerText = '正在渲染动画帧';
-				statusTitle.className = 'text-xl font-bold tracking-wide';
 				document.querySelector('.log-normal').classList.remove('hidden');
 				etaText.innerText = '预计还需要 2 分 30 秒，后台会自动完成';
 			}
@@ -570,18 +605,40 @@
 				progressBar.style.width = '60%';
 				progressText.innerText = '60%';
 				statusTitle.innerText = '自动优化代码逻辑';
-				statusTitle.className = 'text-xl font-bold tracking-wide text-brand-warning drop-shadow-[0_0_8px_rgba(255,103,0,0.4)]';
+				statusTitle.classList.add('text-brand-warning');
 				document.querySelector('.log-fix').classList.remove('hidden');
-				etaText.innerText = '系统正在尝试自动修复动画 (1/2)，请稍作等待';
+				etaText.innerText = '系统正在尝试自动修复动画 (1/2)，请多花一点点耐心';
 			}
 			else if (stage === 'tts') {
 				progressBar.style.width = '90%';
 				progressText.innerText = '90%';
 				statusTitle.innerText = '视频合成中';
-				statusTitle.className = 'text-xl font-bold tracking-wide';
+				statusTitle.classList.add('text-brand-success');
 				document.querySelector('.log-tts').classList.remove('hidden');
 				etaText.innerText = '马上就好！即将为您展现最终内容...';
 			}
+		}
+	</script>
+
+
+	<script>
+		// 初始化图标
+		if (window.lucide) {
+			window.lucide.createIcons();
+		}
+		// 亮暗色切换
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		function applyTheme(theme) {
+			document.documentElement.classList.toggle('dark', theme === 'dark');
+			document.documentElement.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		if (themeToggleBtn) {
+			themeToggleBtn.addEventListener('click', () => {
+				const isDark = document.documentElement.classList.contains('dark');
+				applyTheme(isDark ? 'light' : 'dark');
+			});
 		}
 	</script>
 </body>

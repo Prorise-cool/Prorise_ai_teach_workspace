@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>XiaoMai - Virtual Classroom</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+	<!-- Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- Lucide Icons -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						'sans': ['Inter', 'sans-serif'],
+					},
+					colors: {
+						primary: 'var(--primary)',
+						bg: 'var(--bg)',
+						surface: 'var(--surface)',
+						'text-main': 'var(--text-main)',
+						'text-muted': 'var(--text-muted)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		html,
+		body {
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+			font-family: 'Inter', sans-serif;
+			background-color: var(--bg);
+			color: var(--text-main);
+			transition: background-color 0.5s ease, color 0.5s ease;
+		}
+
+		/* 严格使用 Figma JSON 导出的原始色值 */
+		:root {
+			--bg: #f5ede1;
+			--surface: #ffffff;
+			--text-main: #3b1701;
+			--text-muted: #6b4421;
+			--primary: #f5c547;
+			--wave-bg: #f5c547;
+			--btn-inner: #ffffff;
+		}
+
+		html.dark {
+			--bg: #1a1614;
+			--surface: #2a2420;
+			--text-main: #ffffff;
+			--text-muted: #c4b8a8;
+			--primary: #f5c547;
+			--wave-bg: #f5c547;
+			--btn-inner: #ffffff;
+		}
+
+		@keyframes fadeLeft {
+			0% {
+				opacity: 0;
+				transform: translateX(-50px);
+			}
+
+			100% {
+				opacity: 1;
+				transform: translateX(0);
+			}
+		}
+
+		@keyframes fadeRight {
+			0% {
+				opacity: 0;
+				transform: translateX(50px);
+			}
+
+			100% {
+				opacity: 1;
+				transform: translateX(0);
+			}
+		}
+
+		.anim-left {
+			animation: fadeLeft 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			animation-delay: 0.1s;
+		}
+
+		.anim-right {
+			animation: fadeRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			animation-delay: 0.2s;
+		}
+
+		/* 完美还原原稿排版比例 */
+		.title-huge {
+			font-size: clamp(4rem, 6.6vw, 96px);
+			line-height: 1;
+			letter-spacing: -2px;
+			font-weight: 900;
+			white-space: nowrap;
+		}
+
+		.title-sub {
+			font-size: clamp(1.8rem, 2.7vw, 40px);
+			line-height: 1.1;
+			font-weight: 900;
+		}
+
+		/* 核心修改：角色适度缩小并下沉，左移对齐魔法棒 */
+		.role-fixed {
+			position: fixed;
+			bottom: -12vh;
+			/* 角色整体往下沉，不再那么靠上 */
+			left: 50%;
+			transform: translateX(-52%);
+			/* 略微左偏，让魔法棒完美指向右侧文字 */
+			width: clamp(700px, 110vw, 1500px);
+			/* 尺寸从115vw收敛到95vw，解决比例过大问题 */
+			max-width: none;
+			height: auto;
+			z-index: 30;
+			pointer-events: none;
+			object-fit: contain;
+		}
+
+		/* ================= Dock 样式 ================= */
+		.dock-container {
+			overflow: visible !important;
+		}
+
+		.dock-icon-wrapper {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-end;
+		}
+
+		.dock-icon {
+			transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
+			transform-origin: bottom center;
+		}
+
+		.dock-icon-wrapper:hover .dock-icon {
+			transform: translateY(-3px);
+		}
+
+		.dock-tooltip {
+			position: absolute;
+			top: -36px;
+			left: 50%;
+			transform: translateX(-50%) translateY(4px);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.15s ease, transform 0.15s ease;
+			white-space: nowrap;
+		}
+
+		.dock-icon-wrapper:hover .dock-tooltip {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
+		}
+
+		.dock-bg {
+			background-color: white;
+		}
+
+		html.dark .dock-bg {
+			background-color: #2a2420;
+		}
+
+		.dock-border {
+			border: 1px solid #e6dcc8;
+		}
+
+		html.dark .dock-border {
+			border-color: #302824;
+		}
+
+		.dock-text {
+			color: #3b1701;
+		}
+
+		html.dark .dock-text {
+			color: white;
+		}
+
+		.dock-text-secondary {
+			color: #6b4421;
+		}
+
+		html.dark .dock-text-secondary {
+			color: #c4b8a8;
+		}
+
+		.dock-divider {
+			background-color: #e6dcc8;
+		}
+
+		html.dark .dock-divider {
+			background-color: #302824;
+		}
+	</style>
+</head>
+
+<body class="relative w-full h-full flex flex-col items-center">
+
+	<!-- 背景光晕 -->
+	<div
+		class="fixed top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#f5c547] opacity-40 blur-[120px] pointer-events-none z-10">
+	</div>
+
+	<!-- 主体文字排版区 -->
+	<!-- 稍微上移至 top-[42%] 让文字更紧凑地与角色产生交互 -->
+	<main
+		class="absolute top-[40%] lg:top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[1440px] px-[6%] lg:px-[120px] flex flex-col md:flex-row justify-between items-center z-20 pointer-events-none gap-10 md:gap-0">
+
+		<!-- 左侧 -->
+		<div
+			class="flex flex-col anim-left pointer-events-auto w-full md:w-auto items-center md:items-start text-center md:text-left gap-2">
+			<h1 class="title-huge text-text-main">XMAI</h1>
+			<h1 class="title-huge text-text-main">VIRTUAL<br>CLASSROOM</h1>
+		</div>
+
+		<!-- 右侧 -->
+		<div
+			class="flex flex-col gap-6 w-full max-w-[400px] anim-right pointer-events-auto items-center md:items-start text-center md:text-left">
+			<div class="flex flex-col title-sub">
+				<span class="text-text-main">YOUR PERSONAL</span>
+				<span class="text-primary">AI TEACHER</span>
+				<span class="text-text-main">AVAILABLE 24/7</span>
+			</div>
+
+			<p class="text-text-muted text-[14px] leading-[1.5]">
+				Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a
+				question for a 5-minute animated explanation.
+			</p>
+
+			<button
+				class="mt-2 bg-primary text-[#3b1701] font-bold text-[16px] py-[16px] px-[40px] rounded-full hover:brightness-110 active:scale-95 transition-all w-fit">
+				Start Learning
+			</button>
+		</div>
+	</main>
+
+	<!-- 角色图 -->
+	<img src="role.png" alt="Character Role" class="role-fixed" onerror="this.style.display='none'">
+
+	<!-- 重点突破：底层波浪与控制区 -->
+	<!-- 核心修改：高度降低至 26vh (最高320px)，消除梯形过高造成的笨重感 -->
+	<div
+		class="absolute bottom-0 left-0 w-full h-[25vh] md:h-[26vh] min-h-[200px] max-h-[320px] pointer-events-none z-40">
+
+		<svg class="absolute bottom-0 left-0 w-full h-full preserve-3d" preserveAspectRatio="none"
+			viewBox="0 0 1440 327">
+			<path d="M-10.5-39.7c409.4 253.7 1010.8 253.7 1459.4 12.9l-8.9 353.8-1440 0z"
+				class="fill-[var(--wave-bg)] transition-colors duration-500"></path>
+		</svg>
+
+		<!-- 播放器外包围 -->
+		<div
+			class="absolute top-[46.5%] left-1/2 -translate-x-1/2 -translate-y-[33%] flex items-center justify-center gap-[40px] lg:gap-[60px] w-full z-50 pointer-events-auto">
+
+			<span class="text-[12px] font-bold tracking-[3px] text-[#5c4014] hidden md:block w-[180px] text-right">ENTER
+				WORKSPACE</span>
+
+			<!-- 外层黄色融合圆圈 -->
+			<button
+				class="relative flex justify-center items-center group shrink-0 transition-transform duration-300 hover:scale-105 active:scale-95 w-[96px] h-[96px] lg:w-[116px] lg:h-[116px] bg-[var(--wave-bg)] rounded-full">
+
+				<!-- 内部白色圆圈 -->
+				<div
+					class="relative w-[68px] h-[68px] lg:w-[82px] lg:h-[82px] bg-[var(--btn-inner)] rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.15)] flex justify-center items-center pl-1.5 z-10">
+					<svg class="w-[18px] h-[22px] lg:w-[22px] lg:h-[28px] text-[var(--wave-bg)] fill-current"
+						viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path d="M5 3L19 12L5 21V3Z" />
+					</svg>
+				</div>
+			</button>
+
+			<span class="text-[12px] font-bold tracking-[3px] text-[#5c4014] hidden md:block w-[180px] text-left">ENTER
+				WORKSPACE</span>
+		</div>
+	</div>
+
+	<!-- 导航栏 -->
+	<nav
+		class="absolute top-0 left-0 w-full h-[100px] flex justify-between items-center px-[6%] lg:px-[120px] z-50 pointer-events-none">
+		<div class="flex items-center pointer-events-auto">
+			<span class="text-primary font-bold text-[24px]">XiaoMai</span>
+		</div>
+
+		<div class="hidden md:flex gap-8 pointer-events-auto">
+			<a href="#" class="text-[14px] text-text-main hover:text-primary transition-colors">关于我们</a>
+			<a href="#" class="text-[14px] text-text-main hover:text-primary transition-colors">产品亮点</a>
+			<a href="#" class="text-[14px] text-text-main hover:text-primary transition-colors">销售计划</a>
+			<a href="#" class="text-[14px] text-text-main hover:text-primary transition-colors">常见问题</a>
+		</div>
+
+		<div class="flex items-center gap-4 pointer-events-auto">
+			<button id="theme-toggle"
+				class="w-[36px] h-[36px] rounded-full bg-surface flex justify-center items-center text-text-main hover:text-primary transition-colors shadow-sm">
+				<i data-lucide="moon" id="theme-icon" class="w-[18px] h-[18px]"></i>
+			</button>
+		</div>
+	</nav>
+
+	<script>
+		lucide.createIcons();
+
+		const html = document.documentElement;
+		const themeToggle = document.getElementById('theme-toggle');
+		const themeIcon = document.getElementById('theme-icon');
+
+		themeToggle.addEventListener('click', () => {
+			html.classList.toggle('dark');
+			themeIcon.setAttribute('data-lucide', html.classList.contains('dark') ? 'moon' : 'sun');
+			lucide.createIcons();
+		});
+	</script>
+	<!-- Code injected by live-server -->
+	<script>
+		// <![CDATA[  <-- For SVG support
+		if ('WebSocket' in window) {
+			(function () {
+				function refreshCSS() {
+					var sheets = [].slice.call(document.getElementsByTagName("link"));
+					var head = document.getElementsByTagName("head")[0];
+					for (var i = 0; i < sheets.length; ++i) {
+						var elem = sheets[i];
+						var parent = elem.parentElement || head;
+						parent.removeChild(elem);
+						var rel = elem.rel;
+						if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+							var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+							elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+						}
+						parent.appendChild(elem);
+					}
+				}
+				var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+				var address = protocol + window.location.host + window.location.pathname + '/ws';
+				var socket = new WebSocket(address);
+				socket.onmessage = function (msg) {
+					if (msg.data == 'reload') window.location.reload();
+					else if (msg.data == 'refreshcss') refreshCSS();
+				};
+				if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+					console.log('Live reload enabled.');
+					sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+				}
+			})();
+		}
+		else {
+			console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+		}
+		// ]]>
+	</script>
+
+
+	<script>
+		// 初始化图标
+		if (window.lucide) {
+			window.lucide.createIcons();
+		}
+		// 亮暗色切换
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		function applyTheme(theme) {
+			document.documentElement.classList.toggle('dark', theme === 'dark');
+			document.documentElement.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		if (themeToggleBtn) {
+			themeToggleBtn.addEventListener('click', () => {
+				const isDark = document.documentElement.classList.contains('dark');
+				applyTheme(isDark ? 'light' : 'dark');
+			});
+		}
+	</script>
+</body>
+
+</html>

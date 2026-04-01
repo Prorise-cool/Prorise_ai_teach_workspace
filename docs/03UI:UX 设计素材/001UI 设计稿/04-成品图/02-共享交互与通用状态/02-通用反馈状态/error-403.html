@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 权限不足</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script src="https://unpkg.com/lucide@latest"></script>
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif']
+					},
+					boxShadow: {
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)'
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+		}
+
+		body {
+			font-family: 'Inter', 'Noto Sans SC', sans-serif;
+			transition: background-color 0.4s ease, color 0.4s ease;
+		}
+
+		.bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: 32px 32px;
+			mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 35%, transparent 100%);
+		}
+
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
+		}
+	</style>
+</head>
+
+<body class="min-h-screen overflow-hidden relative selection:bg-brand/30 selection:text-text-primary">
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/15 dark:bg-brand/5 blur-[100px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<header class="w-[94%] max-w-6xl mx-auto pt-6 flex items-center justify-between relative z-20">
+		<a href="#" class="font-bold text-lg flex items-center gap-3">
+			<div
+				class="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-md">
+				<i data-lucide="leaf" class="w-4.5 h-4.5 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block text-xl">XiaoMai</span>
+		</a>
+		<button id="themeToggle"
+			class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
+			<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+			<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+		</button>
+	</header>
+
+	<main class="min-h-[calc(100vh-88px)] px-6 flex items-center justify-center relative z-10">
+		<div
+			class="w-full max-w-3xl bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-bordercolor-light dark:border-bordercolor-dark rounded-[28px] p-8 md:p-12 shadow-lg">
+			<div class="flex flex-col lg:flex-row lg:items-start gap-8">
+				<div class="flex-1">
+					<div
+						class="w-16 h-16 rounded-2xl bg-warning/10 dark:bg-warning-dark/15 border border-warning/20 dark:border-warning-dark/30 flex items-center justify-center shadow-md mb-6">
+						<i data-lucide="shield-alert" class="w-8 h-8 text-warning dark:text-warning-dark"></i>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2 mb-4">
+						<span
+							class="px-3 py-1.5 rounded-full bg-secondary dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">当前账号暂时无法访问</span>
+						<span
+							class="px-3 py-1.5 rounded-full bg-warning/10 dark:bg-warning-dark/15 border border-warning/20 dark:border-warning-dark/30 text-[11px] font-bold text-warning dark:text-warning-dark">切换身份试试看</span>
+					</div>
+
+					<h1
+						class="text-3xl md:text-4xl font-black tracking-tight text-text-primary dark:text-text-primary-dark leading-tight mb-4">
+						你已登录，但当前角色没有权限访问这个页面。
+					</h1>
+					<p class="text-[15px] leading-relaxed text-text-secondary dark:text-text-secondary-dark mb-8">
+						这通常是因为你所在的班级、角色或功能开通范围还没有覆盖到这里。你可以先返回公开入口，或切换到拥有权限的账号继续访问。</p>
+
+					<div class="flex flex-wrap items-center gap-3 mb-8">
+						<button
+							class="px-5 py-3 rounded-xl bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark text-[14px] font-bold shadow-md hover:opacity-90 transition-opacity">
+							返回首页
+						</button>
+						<button
+							class="px-5 py-3 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[14px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors">
+							切换账号
+						</button>
+						<button
+							class="px-5 py-3 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[14px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark transition-colors">
+							返回上一页
+						</button>
+					</div>
+
+					<div
+						class="rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#1a1514]/70 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+						<div>
+							<p class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">建议反馈</p>
+							<p class="text-[12px] leading-relaxed text-text-secondary dark:text-text-secondary-dark mt-1">
+								如果你认为自己应当拥有访问权限，请联系管理员核对角色、班级绑定或功能开通范围。</p>
+						</div>
+						<button
+							class="px-4 py-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors w-fit">
+							联系管理员
+						</button>
+					</div>
+				</div>
+
+				<div
+					class="w-full lg:w-[280px] rounded-[24px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/40 dark:bg-[#1a1514]/80 p-5 shadow-md">
+					<p class="text-[11px] font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mb-3">
+						权限上下文
+					</p>
+					<div class="space-y-3">
+						<div class="rounded-xl bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4">
+							<p class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark mb-1">当前身份</p>
+							<p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">学生端账号 · 课程访客组</p>
+						</div>
+						<div class="rounded-xl bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4">
+							<p class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark mb-1">拦截原因</p>
+							<p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">目标页面需要教师角色或已开通班级权限。</p>
+						</div>
+						<div class="rounded-xl bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4">
+							<p class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark mb-1">推荐动作</p>
+							<p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">返回公开入口，或切换到拥有权限的账号继续访问。</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+
+	<script>
+		lucide.createIcons();
+
+		const html = document.documentElement;
+		const themeToggle = document.getElementById('themeToggle');
+
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggle.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+	</script>
+</body>
+
+</html>

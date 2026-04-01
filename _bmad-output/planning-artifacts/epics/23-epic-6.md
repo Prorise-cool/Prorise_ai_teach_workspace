@@ -53,6 +53,12 @@ Epic 6 负责“会话内即时伴学”这一共享消费层。
 - `TimeAnchor` 类型边界已讨论清晰。  
 - Companion 侧栏最小 UI 结构已冻结。  
 
+### Frontend Design Reference
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/05-视频结果页/02-video-result.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/08-课堂结果页/01-classroom.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/10-Checkpoint 与 Quiz 页/03-quiz.html`
+- 当前补充规则：Companion 侧栏在不同页面可共用同一视觉系统，但视频页 / 课堂页 / quiz 页都必须按各自页面骨架独立落地，不得再以单文件多状态演示稿替代正式页面；`TimeAnchor` 绑定、白板降级、权限失败与服务暂不可用等状态仍必须按 Story `6.2` ~ `6.6` 完整实现
+
 ### Exit Criteria
 - 视频页与课堂页都能挂载同一套 Companion 交互；
 - 所有提问都绑定 `TimeAnchor`；
@@ -273,4 +279,3 @@ So that 我既能重看追问结果，又能在不同会话页获得一致交互
 - 双页复用说明
 
 ---
-

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 XiaoMai - 课堂生成与 Agent 翻牌</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'sans-serif'],
+						mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+					},
+					colors: {
+						brand: {
+							primary: '#f5c547',
+							'primary-dark': '#e6b841',
+							secondary: '#f5ede1',
+							'secondary-dark': '#2a2420',
+							decorative: '#3b1701',
+							'bg-light': '#f5ede1',
+							'surface-light': '#ffffff',
+							'text-primary': '#3b1701',
+							'text-secondary': '#6b4421',
+							'border-light': '#e6dcc8',
+							'bg-dark': '#1a1614',
+							'surface-dark': '#2a2420',
+							'text-primary-dark': '#f5ede1',
+							'text-secondary-dark': '#c4b8a8',
+							'border-dark': '#3d3630',
+							success: '#52c41a',
+							warning: '#ff6700',
+							error: '#f82834',
+						},
+						agent: {
+							serious: '#0091FF',
+							efficient: '#6D5DF4',
+							patient: '#00C48C'
+						}
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.06)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'inner-soft': 'inset 0 2px 10px rgba(0, 0, 0, 0.03)',
+						'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<script>
+		if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	</script>
+
+	<style>
+		/* ================= 核心 CSS 变量 ================= */
+		:root {
+			/* 背景系统 */
+			--bg-color: #fcfaf7;
+			--grid-color: rgba(107, 68, 33, 0.06);
+			--glow-color: rgba(245, 197, 71, 0.15);
+			/* 日志与卡片玻璃态 */
+			--glass-bg: rgba(255, 255, 255, 0.5);
+			--glass-border: rgba(230, 220, 200, 0.5);
+
+			/* 原版 Loading 动画颜色适配 */
+			--loader-text: #3b1701;
+			--loader-spotlight-main: rgba(59, 23, 1, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		}
+
+		.dark {
+			/* 背景系统 */
+			--bg-color: #151210;
+			--grid-color: rgba(245, 237, 225, 0.04);
+			--glow-color: rgba(245, 197, 71, 0.08);
+			/* 日志与卡片玻璃态 */
+			--glass-bg: rgba(42, 36, 32, 0.4);
+			--glass-border: rgba(61, 54, 48, 0.5);
+
+			/* 原版 Loading 动画颜色适配 */
+			--loader-text: #f5ede1;
+			--loader-spotlight-main: rgba(245, 237, 225, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		}
+
+		/* 沉浸式网格背景 */
+		body {
+			background-color: var(--bg-color);
+			background-image:
+				linear-gradient(var(--grid-color) 1px, transparent 1px),
+				linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+			background-size: 32px 32px;
+			transition: background-color 0.5s ease, background-image 0.5s ease;
+		}
+
+		/* 居中环境光晕 */
+		.ambient-glow {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 80vw;
+			height: 80vh;
+			background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+			pointer-events: none;
+			z-index: -1;
+			transition: background 0.5s ease;
+		}
+
+		/* ================= 原版 Loading 动画 ================= */
+		.loader-wrapper {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.75rem;
+			font-weight: 900;
+			user-select: none;
+			color: var(--loader-text);
+			letter-spacing: 0.1em;
+			overflow: hidden;
+			font-family: 'Inter', sans-serif;
+			text-transform: uppercase;
+			transition: color 0.5s ease;
+		}
+
+		.loader {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			background-color: transparent;
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			background-image:
+				radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
+				radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
+		}
+
+		.loader-letter {
+			position: relative;
+			display: inline-block;
+			opacity: 0.15;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
+		}
+
+		.loader-letter:nth-child(1) {
+			animation-delay: 0.1s;
+		}
+
+		.loader-letter:nth-child(2) {
+			animation-delay: 0.22s;
+		}
+
+		.loader-letter:nth-child(3) {
+			animation-delay: 0.34s;
+		}
+
+		.loader-letter:nth-child(4) {
+			animation-delay: 0.46s;
+		}
+
+		.loader-letter:nth-child(5) {
+			animation-delay: 0.58s;
+		}
+
+		.loader-letter:nth-child(6) {
+			animation-delay: 0.70s;
+		}
+
+		.loader-letter:nth-child(7) {
+			animation-delay: 0.82s;
+		}
+
+		.loader-letter:nth-child(8) {
+			animation-delay: 0.94s;
+		}
+
+		.loader-letter:nth-child(9) {
+			animation-delay: 1.06s;
+		}
+
+		.loader-letter:nth-child(10) {
+			animation-delay: 1.18s;
+		}
+
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-60%);
+			}
+
+			100% {
+				transform: translate(60%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.2;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.15;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.03) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.4;
+			}
+
+			100% {
+				opacity: 0.15;
+				filter: blur(2px);
+			}
+		}
+
+		/* ================= 进度条动效 ================= */
+		.progress-fill {
+			height: 100%;
+			width: 45%;
+			border-radius: 9999px;
+			background-color: #f5c547;
+			background-image: linear-gradient(-45deg,
+					rgba(255, 255, 255, 0.4) 25%, transparent 25%, transparent 50%,
+					rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 75%, transparent);
+			background-size: 32px 32px;
+			animation: progress-pan 1.5s linear infinite;
+			transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+			position: relative;
+		}
+
+		.progress-fill::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 9999px;
+			box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
+			opacity: 0.7;
+		}
+
+		@keyframes progress-pan {
+			0% {
+				background-position: 0 0;
+			}
+
+			100% {
+				background-position: 32px 0;
+			}
+		}
+
+		/* ================= 玻璃态基础面板 ================= */
+		.glass-panel {
+			background: var(--glass-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--glass-border);
+		}
+
+		/* 渐变遮罩日志区 */
+		.log-panel-mask {
+			mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+		}
+
+		.log-item {
+			animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			transform: translateX(-8px);
+		}
+
+		@keyframes slideIn {
+			to {
+				opacity: 1;
+				transform: translateX(0);
+			}
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0;
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 6px;
+			height: 14px;
+			background-color: #f5c547;
+			animation: blink 1s step-end infinite;
+			vertical-align: middle;
+			margin-left: 6px;
+			border-radius: 2px;
+		}
+
+		/* ================= 翻牌动效 (Agent Reveal) ================= */
+		.flip-card {
+			perspective: 1200px;
+			height: 280px;
+			cursor: default;
+		}
+
+		.flip-inner {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			transform-style: preserve-3d;
+			transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.flip-card.revealed .flip-inner {
+			transform: rotateY(180deg);
+		}
+
+		.flip-face {
+			position: absolute;
+			inset: 0;
+			backface-visibility: hidden;
+			-webkit-backface-visibility: hidden;
+			border-radius: 1.5rem;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+
+		/* 正面：统一使用全局的玻璃态样式 */
+		.flip-face.front {
+			background: var(--glass-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--glass-border);
+			align-items: center;
+			justify-content: center;
+			box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.2);
+		}
+
+		/* 背面：展示具体的 Agent 信息 */
+		.flip-face.back {
+			transform: rotateY(180deg);
+			background: var(--card-bg, #ffffff);
+			border: 1px solid var(--card-border, #e6dcc8);
+			box-shadow: 0 10px 30px -10px var(--card-shadow, rgba(0, 0, 0, 0.1));
+			padding: 1.5rem;
+		}
+
+		/* 隐藏视图类 */
+		.view-hidden {
+			display: none !important;
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		.view-active {
+			animation: fadeIn 0.6s ease forwards;
+		}
+
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+				transform: scale(0.98);
+			}
+
+			to {
+				opacity: 1;
+				transform: scale(1);
+			}
+		}
+
+		/* Tips 动画 */
+		.tip-transition {
+			transition: opacity 0.5s ease, transform 0.5s ease;
+		}
+
+		.tip-hidden {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+
+		.tip-visible {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	</style>
+</head>
+
+<body
+	class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 text-brand-text-primary dark:text-brand-text-primary-dark transition-colors duration-500 relative z-0 overflow-hidden">
+
+	<div class="ambient-glow"></div>
+
+	<header class="fixed top-0 left-0 w-full px-8 py-6 flex items-center justify-between z-50">
+		<a href="#"
+			class="text-sm font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-text-primary dark:hover:text-brand-text-primary-dark flex items-center gap-2 transition-colors group">
+			<div
+				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center group-hover:bg-brand-border-light dark:group-hover:bg-brand-border-dark transition-colors backdrop-blur-sm">
+				<i class="ri-arrow-left-line text-lg"></i>
+			</div>
+			后台运行并返回
+		</a>
+
+		<button onclick="toggleTheme()"
+			class="w-10 h-10 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center text-brand-text-secondary dark:text-brand-text-secondary-dark hover:bg-brand-border-light dark:hover:bg-brand-border-dark transition-all backdrop-blur-sm shadow-sm group">
+			<i
+				class="ri-sun-line text-lg block dark:hidden group-hover:rotate-45 transition-transform duration-300"></i>
+			<i
+				class="ri-moon-line text-lg hidden dark:block group-hover:-rotate-12 transition-transform duration-300"></i>
+		</button>
+	</header>
+
+	<div
+		class="fixed bottom-6 left-6 flex flex-col gap-2 z-50 opacity-40 hover:opacity-100 transition-opacity duration-300">
+		<span
+			class="text-[10px] font-bold uppercase tracking-widest text-brand-text-secondary dark:text-brand-text-secondary-dark ml-2 mb-1">Dev
+			Controls</span>
+		<div
+			class="flex flex-col gap-2 bg-white/50 dark:bg-black/30 backdrop-blur-md p-2 rounded-xl border border-brand-border-light dark:border-brand-border-dark">
+			<button onclick="switchState('generating')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-primary px-3 py-1.5 rounded-md text-xs font-medium transition-colors">1.
+				生成加载</button>
+			<button onclick="switchState('reveal')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-success px-3 py-1.5 rounded-md text-xs font-medium transition-colors">2.
+				Agent 翻牌</button>
+		</div>
+	</div>
+
+	<main class="w-full max-w-4xl relative z-10 flex flex-col items-center mt-8">
+
+		<div id="state-generating" class="w-full max-w-2xl flex flex-col items-center view-active">
+			<div class="mb-14 mt-4">
+				<div class="loader-wrapper" aria-label="Generating">
+					<span class="loader-letter">G</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">E</span>
+					<span class="loader-letter">R</span>
+					<span class="loader-letter">A</span>
+					<span class="loader-letter">T</span>
+					<span class="loader-letter">I</span>
+					<span class="loader-letter">N</span>
+					<span class="loader-letter">G</span>
+					<div class="loader"></div>
+				</div>
+			</div>
+
+			<div class="w-full mb-10 px-4 md:px-0">
+				<div class="flex justify-between items-end mb-4 px-1">
+					<div class="flex flex-col">
+						<span class="text-xl font-bold mb-1 transition-colors">正在解析知识点，构建大纲</span>
+						<span
+							class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80">预计还需要
+							2 分 30 秒</span>
+					</div>
+					<span class="text-4xl font-black font-mono tracking-tighter drop-shadow-sm">45%</span>
+				</div>
+
+				<div
+					class="h-3 w-full bg-brand-border-light/50 dark:bg-brand-border-dark/50 rounded-full shadow-inner-soft overflow-hidden p-0.5 backdrop-blur-sm">
+					<div class="progress-fill shadow-sm"></div>
+				</div>
+			</div>
+
+			<div
+				class="w-full glass-panel rounded-2xl font-mono text-[13px] relative shadow-glass overflow-hidden flex flex-col h-48 log-panel-mask">
+				<div class="flex-1 overflow-hidden p-6 space-y-4 relative flex flex-col justify-end">
+					<div class="space-y-4">
+						<div
+							class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-50">
+							<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+							<span class="leading-relaxed">任务初始化完成 <span
+									class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Task
+									Queued</span></span>
+						</div>
+						<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-70"
+							style="animation-delay: 0.1s;">
+							<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+							<span class="leading-relaxed">成功解析语义，知识点拓扑图构建完毕 <span
+									class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Graph
+									Built</span></span>
+						</div>
+						<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
+							<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+							<span class="leading-relaxed">正在分配专属教学 Agent 与编排分镜脚本<span
+									class="cursor-blink"></span></span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mt-8 flex items-center justify-center gap-2 w-full">
+				<i class="ri-sparkling-fill text-brand-primary animate-pulse text-lg"></i>
+				<div
+					class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80 font-medium overflow-hidden h-5 w-full max-w-sm relative">
+					<div id="tip-text" class="absolute w-full tip-transition tip-visible truncate text-center">
+						小麦提示：AI 正在为你构建多智能体专属课堂
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="state-reveal" class="w-full flex flex-col items-center view-hidden">
+
+			<div class="text-center mb-10 transform transition-all duration-700 delay-100 translate-y-4 opacity-0"
+				id="reveal-header">
+				<span
+					class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-full bg-brand-success/10 text-brand-success border border-brand-success/20 shadow-sm uppercase tracking-widest mb-4">
+					<i class="ri-check-double-line text-sm"></i> Match Complete
+				</span>
+				<h2 class="text-3xl md:text-4xl font-black mb-3 tracking-tight">课堂角色分配完毕</h2>
+				<p class="text-[15px] font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark">
+					系统已根据您的学习偏好，自动匹配了最佳多智能体教学阵容
+				</p>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full px-4 mb-10">
+				<div class="flip-card" id="card-1"
+					style="--card-bg: var(--bg-surface-light, #ffffff); --card-border: #0091FF; --card-shadow: rgba(0, 145, 255, 0.15);">
+					<div class="flip-inner">
+						<div class="flip-face front group">
+							<i
+								class="ri-user-star-line text-4xl text-brand-text-secondary/40 dark:text-brand-text-secondary-dark/40 mb-3 group-hover:scale-110 transition-transform"></i>
+							<span
+								class="text-[11px] font-bold text-brand-text-secondary/60 dark:text-brand-text-secondary-dark/60 uppercase tracking-widest">Teacher</span>
+						</div>
+						<div
+							class="flip-face back bg-brand-surface-light dark:bg-brand-surface-dark border-2 border-[#0091FF]/30 dark:border-[#0091FF]/50 relative">
+							<div
+								class="absolute top-0 right-0 w-24 h-24 bg-[#0091FF]/5 rounded-bl-[100px] pointer-events-none">
+							</div>
+							<div class="flex justify-between items-start mb-6 relative z-10">
+								<span
+									class="text-[10px] font-bold bg-[#0091FF]/10 text-[#0091FF] px-2.5 py-1 rounded-full uppercase tracking-wider">主讲老师</span>
+								<div
+									class="w-10 h-10 rounded-full bg-[#0091FF] text-white flex items-center justify-center text-[13px] font-bold shadow-md shadow-[#0091FF]/30">
+									严</div>
+							</div>
+							<h3 class="text-[20px] font-extrabold mb-2">严谨教授</h3>
+							<p
+								class="text-[13px] text-brand-text-secondary dark:text-brand-text-secondary-dark leading-relaxed font-medium">
+								负责拆解核心概念，把控整体课堂结构与知识准确度。
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="flip-card" id="card-2"
+					style="--card-bg: var(--bg-surface-light, #ffffff); --card-border: #6D5DF4; --card-shadow: rgba(109, 93, 244, 0.15);">
+					<div class="flip-inner">
+						<div class="flip-face front group">
+							<i
+								class="ri-user-smile-line text-4xl text-brand-text-secondary/40 dark:text-brand-text-secondary-dark/40 mb-3 group-hover:scale-110 transition-transform"></i>
+							<span
+								class="text-[11px] font-bold text-brand-text-secondary/60 dark:text-brand-text-secondary-dark/60 uppercase tracking-widest">Student</span>
+						</div>
+						<div
+							class="flip-face back bg-brand-surface-light dark:bg-brand-surface-dark border-2 border-[#6D5DF4]/30 dark:border-[#6D5DF4]/50 relative">
+							<div
+								class="absolute top-0 right-0 w-24 h-24 bg-[#6D5DF4]/5 rounded-bl-[100px] pointer-events-none">
+							</div>
+							<div class="flex justify-between items-start mb-6 relative z-10">
+								<span
+									class="text-[10px] font-bold bg-[#6D5DF4]/10 text-[#6D5DF4] px-2.5 py-1 rounded-full uppercase tracking-wider">追问代理</span>
+								<div
+									class="w-10 h-10 rounded-full bg-[#6D5DF4] text-white flex items-center justify-center text-[13px] font-bold shadow-md shadow-[#6D5DF4]/30">
+									奇</div>
+							</div>
+							<h3 class="text-[20px] font-extrabold mb-2">好奇学生</h3>
+							<p
+								class="text-[13px] text-brand-text-secondary dark:text-brand-text-secondary-dark leading-relaxed font-medium">
+								基于初学者视角，在关键难点处替你向主讲老师发起提问。
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="flip-card" id="card-3"
+					style="--card-bg: var(--bg-surface-light, #ffffff); --card-border: #00C48C; --card-shadow: rgba(0, 196, 140, 0.15);">
+					<div class="flip-inner">
+						<div class="flip-face front group">
+							<i
+								class="ri-user-heart-line text-4xl text-brand-text-secondary/40 dark:text-brand-text-secondary-dark/40 mb-3 group-hover:scale-110 transition-transform"></i>
+							<span
+								class="text-[11px] font-bold text-brand-text-secondary/60 dark:text-brand-text-secondary-dark/60 uppercase tracking-widest">Assistant</span>
+						</div>
+						<div
+							class="flip-face back bg-brand-surface-light dark:bg-brand-surface-dark border-2 border-[#00C48C]/30 dark:border-[#00C48C]/50 relative">
+							<div
+								class="absolute top-0 right-0 w-24 h-24 bg-[#00C48C]/5 rounded-bl-[100px] pointer-events-none">
+							</div>
+							<div class="flex justify-between items-start mb-6 relative z-10">
+								<span
+									class="text-[10px] font-bold bg-[#00C48C]/10 text-[#00C48C] px-2.5 py-1 rounded-full uppercase tracking-wider">课程助教</span>
+								<div
+									class="w-10 h-10 rounded-full bg-[#00C48C] text-white flex items-center justify-center text-[13px] font-bold shadow-md shadow-[#00C48C]/30">
+									结</div>
+							</div>
+							<h3 class="text-[20px] font-extrabold mb-2">总结专员</h3>
+							<p
+								class="text-[13px] text-brand-text-secondary dark:text-brand-text-secondary-dark leading-relaxed font-medium">
+								负责将黑板上的推导和公式转化为通俗易懂的图表总结。
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="h-14 flex justify-center w-full">
+				<button id="btn-enter-class"
+					class="flex items-center gap-2 px-8 py-3.5 rounded-full bg-brand-text-primary dark:bg-brand-text-primary-dark text-brand-surface-light dark:text-brand-bg-dark font-bold shadow-lg hover:scale-105 active:scale-95 opacity-0 transform translate-y-4 pointer-events-none transition-all duration-700 ease-out text-[15px]">
+					确认并进入课堂 <i class="ri-arrow-right-line text-lg"></i>
+				</button>
+			</div>
+		</div>
+
+	</main>
+
+	<script>
+		// 主题切换逻辑
+		function toggleTheme() {
+			if (document.documentElement.classList.contains('dark')) {
+				document.documentElement.classList.remove('dark');
+				localStorage.theme = 'light';
+			} else {
+				document.documentElement.classList.add('dark');
+				localStorage.theme = 'dark';
+			}
+		}
+
+		// 轮播 Tips 数据
+		const tips = [
+			"小麦提示：AI 正在为你构建多智能体专属课堂",
+			"你知道吗？复杂的数学公式推导，小麦会自动为您添加高亮引导",
+			"根据您的学习偏好，系统会自动配置最适合的讲述人风格"
+		];
+		let currentTipIndex = 0;
+		const tipElement = document.getElementById('tip-text');
+
+		// 轮播逻辑
+		setInterval(() => {
+			if (!tipElement) return;
+			tipElement.classList.remove('tip-visible');
+			tipElement.classList.add('tip-hidden');
+			setTimeout(() => {
+				currentTipIndex = (currentTipIndex + 1) % tips.length;
+				tipElement.innerText = tips[currentTipIndex];
+				tipElement.classList.remove('tip-hidden');
+				tipElement.classList.add('tip-visible');
+			}, 500);
+		}, 6000);
+
+
+		// ================= 状态切换与翻牌动画 =================
+		let revealTimers = [];
+
+		function clearRevealTimers() {
+			revealTimers.forEach(timer => clearTimeout(timer));
+			revealTimers = [];
+		}
+
+		function playAutoReveal() {
+			clearRevealTimers();
+			const header = document.getElementById('reveal-header');
+			const cards = [document.getElementById('card-1'), document.getElementById('card-2'), document.getElementById('card-3')];
+			const btnEnter = document.getElementById('btn-enter-class');
+
+			// Reset
+			header.classList.remove('opacity-100', 'translate-y-0');
+			header.classList.add('opacity-0', 'translate-y-4');
+			cards.forEach(card => card.classList.remove('revealed'));
+			btnEnter.classList.remove('opacity-100', 'translate-y-0');
+			btnEnter.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+
+			// 1. Header fade in
+			revealTimers.push(setTimeout(() => {
+				header.classList.remove('opacity-0', 'translate-y-4');
+				header.classList.add('opacity-100', 'translate-y-0');
+			}, 300));
+
+			// 2. Cards flip sequence
+			cards.forEach((card, index) => {
+				const timer = setTimeout(() => {
+					card.classList.add('revealed');
+				}, 800 + (index * 400));
+				revealTimers.push(timer);
+			});
+
+			// 3. Button fade in
+			const btnTimer = setTimeout(() => {
+				btnEnter.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+				btnEnter.classList.add('opacity-100', 'translate-y-0');
+			}, 800 + (cards.length * 400) + 400);
+			revealTimers.push(btnTimer);
+		}
+
+		function switchState(state) {
+			const genView = document.getElementById('state-generating');
+			const revealView = document.getElementById('state-reveal');
+
+			if (state === 'generating') {
+				revealView.classList.remove('view-active');
+				setTimeout(() => {
+					revealView.classList.add('view-hidden');
+					genView.classList.remove('view-hidden');
+					genView.classList.add('view-active');
+				}, 100);
+				clearRevealTimers();
+			} else if (state === 'reveal') {
+				genView.classList.remove('view-active');
+				setTimeout(() => {
+					genView.classList.add('view-hidden');
+					revealView.classList.remove('view-hidden');
+					revealView.classList.add('view-active');
+					playAutoReveal();
+				}, 100);
+			}
+		}
+	</script>
+</body>
+
+</html>

@@ -1,157 +1,369 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh" class="light">
 
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>小麦 - 历史记录页 (/history) 线框图</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 历史记录</title>
+
+	<!-- 引入 Google Fonts 提升字体质感 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+
+	<!-- 引入 Tailwind CSS -->
 	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Lucide 图标库 -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<!-- 严格配置 Tailwind，注入设计系统规范 -->
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', '2xl': '32px', 'full': '9999px',
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'dock': '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04)',
+						'island': '0 10px 30px -5px rgba(0, 0, 0, 0.2)',
+					}
+				}
+			}
+		}
+	</script>
+
 	<style>
-		/* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
-		* {
-			border-radius: 0 !important;
-			box-shadow: none !important;
-			font-family: monospace, sans-serif;
+		/* ================= 基础主题与 CSS 变量 ================= */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
 		}
 
-		.wf-border {
-			border: 2px solid #000;
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
 		}
 
-		.wf-border-dashed {
-			border: 2px dashed #000;
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+			-webkit-font-smoothing: antialiased;
 		}
 
-		.bg-grid {
-			background-size: 40px 40px;
+		.custom-scroll::-webkit-scrollbar {
+			width: 4px;
+			height: 4px;
+		}
+
+		.custom-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.custom-scroll::-webkit-scrollbar-thumb {
+			background: #e6dcc8;
+			border-radius: 4px;
+		}
+
+		html.dark .custom-scroll::-webkit-scrollbar-thumb {
+			background: #302824;
+		}
+
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
+		}
+
+		/* 统一的高级背景修饰 (网格) */
+		.bg-grid-pattern {
 			background-image:
-				linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-				linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: 32px 32px;
+			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
 		}
 
-		.ux-annotation {
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
+		}
+
+		/* 视图入场动画 */
+		@keyframes fadeSlideUp {
+			from {
+				opacity: 0;
+				transform: translateY(15px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.view-enter {
+			animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+			opacity: 0;
+		}
+
+		.stagger-1 {
+			animation-delay: 0.05s;
+		}
+
+		.stagger-2 {
+			animation-delay: 0.10s;
+		}
+
+		.stagger-3 {
+			animation-delay: 0.15s;
+		}
+
+		.stagger-4 {
+			animation-delay: 0.20s;
+		}
+
+		/* 克制的交互过渡 (仅背景色和边框颜色变化) */
+		.btn-transition {
+			transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, color 0.2s ease;
+		}
+
+		/* 极其克制的卡片 Hover (无位移，仅边框和阴影) */
+		.hover-card-soft {
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.hover-card-soft:hover {
+			border-color: var(--tw-border-opacity);
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+		}
+
+		html.dark .hover-card-soft:hover {
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+		}
+
+		/* Dock Icon 悬停动效：允许元素跳出盒子 */
+		.dock-container {
+			overflow: visible !important;
+		}
+
+		.dock-icon-wrapper {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-end;
+		}
+
+		.dock-icon {
+			transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
+			transform-origin: bottom center;
+		}
+
+		.dock-icon-wrapper:hover .dock-icon {
+			transform: translateY(-3px);
+		}
+
+		/* Mac 风格 Tooltip */
+		.dock-tooltip {
 			position: absolute;
-			background: #000;
-			color: #fff;
-			font-size: 10px;
-			padding: 2px 6px;
-			z-index: 50;
+			top: -36px;
+			left: 50%;
+			transform: translateX(-50%) translateY(4px);
+			opacity: 0;
 			pointer-events: none;
-			font-weight: bold;
+			transition: opacity 0.15s ease, transform 0.15s ease;
+			white-space: nowrap;
 		}
 
-		.ux-annotation-blue {
-			background: #2563eb;
+		.dock-icon-wrapper:hover .dock-tooltip {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
 		}
 
-		/* 列表项 Hover 效果 */
-		.list-item-hover:hover {
-			background-color: #f9fafb;
-			transform: translateX(4px);
-			transition: all 0.2s ease;
+		/* 表单 Select Reset */
+		select {
+			appearance: none;
+			-webkit-appearance: none;
 		}
 	</style>
 </head>
 
-<body class="bg-gray-50 text-black min-h-screen bg-grid pb-20">
+<body class="min-h-screen flex flex-col relative overflow-y-auto custom-scroll overflow-x-hidden">
 
-	<!-- ==================== 全局导航 ==================== -->
+	<!-- ==================== 0. 全局背景层 ==================== -->
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/10 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<!-- ==================== 1. 顶部：独立 Logo & 返回按钮 ==================== -->
 	<header
-		class="w-[94%] max-w-5xl mx-auto mt-6 wf-border bg-white p-3 flex justify-between items-center sticky top-6 z-40">
-			<a href="../01-首页与入口/02-home.html" class="flex items-center gap-3 font-bold px-2 text-black">
-				<div
-					class="w-8 h-8 flex items-center justify-center bg-gray-100 border-2 border-dashed border-black text-[10px]">
-					LG</div>
-				<span class="text-lg">XiaoMai</span>
+		class="w-full max-w-5xl mx-auto mt-6 px-6 z-40 relative flex justify-between items-start pointer-events-none">
+		<!-- 独立 Logo -->
+		<a href="../01-首页与入口/02-home.html"
+			class="font-bold text-lg flex items-center gap-3 pointer-events-auto hover:opacity-80 transition-opacity">
+			<div
+				class="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
+				<i data-lucide="leaf" class="w-4.5 h-4.5 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span
+				class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block text-xl">XiaoMai</span>
+		</a>
+
+		<!-- 顶部返回工作台按钮 -->
+		<div class="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto">
+			<a href="learning.html"
+				class="bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark rounded-full px-5 py-2.5 flex items-center gap-2 shadow-sm border border-bordercolor-light dark:border-bordercolor-dark transition-all duration-200 hover:-translate-y-0.5">
+				<i data-lucide="arrow-left" class="w-4 h-4"></i>
+				<span class="text-sm font-bold">返回聚合页</span>
 			</a>
-			<nav class="hidden md:flex gap-1 border-2 border-black p-1 bg-gray-50">
-				<!-- 高亮学习中心，因为 history 是其子域 -->
-				<a href="../03-视频输入页/01-input.html"
-					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">🎬 单题讲解</a>
-				<a href="../06-课堂输入页/01-input.html"
-					class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">📚 主题课堂</a>
-				<a href="../12-学习中心页/01-learning.html" class="bg-black text-white px-5 py-1.5 text-sm font-bold">📖 学习中心</a>
-			</nav>
-			<div class="flex items-center gap-4 px-2">
-				<button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">EN/中</button>
-				<button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">☼/☾</button>
-				<a href="../13-个人资料页/01-profile.html"
-					class="w-8 h-8 flex items-center justify-center wf-border cursor-pointer hover:bg-gray-100 text-[10px] text-black"
-					title="当前位置">Usr</a>
 		</div>
 	</header>
 
-	<!-- ==================== 主内容区 (Data List 模式) ==================== -->
-	<main class="w-[94%] max-w-5xl mx-auto mt-8 relative">
-
-		<div class="ux-annotation -top-3 -left-1">/history：作为 /learning 的明细视图，纯粹聚焦列表管理</div>
+	<!-- ==================== 2. 主内容区 (Data List 模式) ==================== -->
+	<main class="w-[94%] max-w-5xl mx-auto mt-12 mb-12 pb-40 relative z-10 flex flex-col gap-6">
 
 		<!-- 顶部控制台 -->
-		<div
-			class="bg-white wf-border p-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
+		<div class="view-enter stagger-1 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-2">
 			<div>
-				<div class="flex items-center gap-2 mb-4">
-						<a href="../12-学习中心页/01-learning.html"
-							class="text-sm font-bold text-gray-500 hover:text-black cursor-pointer">&larr;
-							返回学习中心聚合页</a>
-				</div>
-				<h1 class="text-3xl font-black mb-2">生成与学习历史</h1>
-				<p class="text-sm text-gray-600">管理您在小麦平台上产生的所有内容记录。</p>
+				<h1
+					class="text-[28px] md:text-3xl font-black mb-2 text-text-primary dark:text-text-primary-dark tracking-tight">
+					生成与学习历史</h1>
+				<p class="text-[14px] font-medium text-text-secondary dark:text-text-secondary-dark">管理您在小麦平台上产生的所有内容记录。
+				</p>
 			</div>
 
-			<!-- 右侧批量操作 -->
-			<div class="flex gap-3">
-				<button
-					class="wf-border px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors">清空历史</button>
-			</div>
+			<!-- 右侧批量操作：清空历史 (纯正的 Solid Color) -->
+			<button
+				class="bg-[#fff1f0] dark:bg-[#3a1c1c] border border-error dark:border-[#bf0004] text-error dark:text-[#ff4d4f] hover:bg-error hover:text-white dark:hover:bg-[#bf0004] dark:hover:text-white rounded-xl px-5 py-2.5 font-bold text-[13px] btn-transition shadow-sm flex items-center gap-2">
+				<i data-lucide="trash-2" class="w-4 h-4"></i> 清空历史
+			</button>
 		</div>
 
-		<!-- 过滤器 (Filter Bar) -->
-		<div class="bg-white wf-border border-b-0 p-2 flex flex-wrap gap-1 sticky top-[88px] z-30">
-			<button class="px-6 py-2 text-sm font-bold bg-black text-white">全部分类</button>
-			<button class="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100">🎬 单题讲解 (42)</button>
-			<button class="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100">📚 主题课堂 (18)</button>
-			<button class="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100">📝 测验结果 (5)</button>
-			<button class="px-6 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100">💬 伴学问答 (128)</button>
+		<!-- 过滤器 (Filter Bar) - 粘性吸顶 -->
+		<div
+			class="view-enter stagger-2 sticky top-4 z-30 bg-bg-light/95 dark:bg-bg-dark/95 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0 border-b border-bordercolor-light dark:border-bordercolor-dark flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
 
-			<div class="ml-auto flex items-center gap-2 px-2">
-				<select class="wf-border px-3 py-1.5 text-xs font-bold bg-transparent outline-none cursor-pointer">
+			<!-- 分类 Filters -->
+			<div class="flex gap-2.5 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0">
+				<!-- 激活态 -->
+				<button
+					class="shrink-0 bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm btn-transition">全部
+					(206)</button>
+				<!-- 未激活态 (纯实底) -->
+				<button
+					class="shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm btn-transition flex items-center gap-1.5">
+					<i data-lucide="play-square" class="w-3.5 h-3.5"></i> 讲解 (42)
+				</button>
+				<button
+					class="shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm btn-transition flex items-center gap-1.5">
+					<i data-lucide="layout-template" class="w-3.5 h-3.5"></i> 课堂 (18)
+				</button>
+				<button
+					class="shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm btn-transition flex items-center gap-1.5">
+					<i data-lucide="file-text" class="w-3.5 h-3.5"></i> 测验 (5)
+				</button>
+				<button
+					class="shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm btn-transition flex items-center gap-1.5">
+					<i data-lucide="message-square" class="w-3.5 h-3.5"></i> 答疑 (128)
+				</button>
+			</div>
+
+			<!-- 时间 Select (坚实背景) -->
+			<div class="relative shrink-0 w-full md:w-auto">
+				<select
+					class="w-full md:w-auto bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 pr-10 rounded-lg text-[13px] font-bold shadow-sm outline-none cursor-pointer">
 					<option>最近 7 天</option>
 					<option>最近 30 天</option>
 					<option>全部时间</option>
 				</select>
+				<i data-lucide="chevron-down"
+					class="w-4 h-4 text-text-secondary dark:text-text-secondary-dark absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"></i>
 			</div>
 		</div>
 
 		<!-- 历史列表区 -->
-		<div class="bg-white wf-border flex flex-col relative">
-			<div class="ux-annotation -top-3 right-4 ux-annotation-blue">数据源：RuoYi xm_learning_record 业务表</div>
+		<div class="flex flex-col gap-4 view-enter stagger-3">
 
 			<!-- List Item 1: 视频 (Video Engine) -->
 			<div
-				class="p-5 border-b-2 border-dashed border-gray-200 list-item-hover flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm">
+				<!-- 纯正的 Thumbnail 材质 -->
 				<div
-					class="w-32 aspect-video bg-gray-100 wf-border flex items-center justify-center text-xs text-gray-400 shrink-0">
-					[视频封面]
-				</div>
-				<div class="flex-1 flex flex-col gap-1 w-full">
-					<div class="flex justify-between items-start">
-						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-bold bg-black text-white px-1.5 py-0.5">单题讲解</span>
-							<h3 class="text-lg font-black truncate max-w-sm">洛必达法则的几何意义推导</h3>
-						</div>
-						<span class="text-xs font-bold text-gray-400">今天 14:30</span>
+					class="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
+					<img src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400"
+						class="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-luminosity">
+					<div
+						class="w-10 h-10 rounded-full bg-text-primary dark:bg-surface-dark flex items-center justify-center border border-transparent dark:border-bordercolor-dark z-10 shadow-md">
+						<i data-lucide="play" class="w-4 h-4 fill-surface-light text-surface-light ml-0.5"></i>
 					</div>
-					<p class="text-xs text-gray-500">风格：风趣老师 ｜ 时长：03:45 ｜ 状态：生成完毕</p>
+				</div>
+
+				<div class="flex-1 flex flex-col gap-1 w-full h-full justify-between">
+					<div>
+						<div class="flex justify-between items-start mb-1.5">
+							<div class="flex items-center gap-2">
+								<span
+									class="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">单题讲解</span>
+								<h3
+									class="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
+									洛必达法则的几何意义推导</h3>
+							</div>
+							<span
+								class="text-[11px] font-bold text-text-secondary/70 dark:text-text-secondary-dark/70 shrink-0">今天
+								14:30</span>
+						</div>
+						<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark font-medium">风格：风趣老师 ｜
+							时长：03:45 ｜ 状态：生成完毕</p>
+					</div>
 
 					<!-- 操作栏 -->
-					<div class="flex items-center justify-between mt-3">
-							<a href="../05-视频结果页/01-video-result.html"
-								class="wf-border bg-black text-white px-4 py-1.5 text-xs font-bold hover:bg-gray-800 transition-colors">▶
-								播放回看</a>
-						<div class="flex gap-3 text-xs font-bold">
-							<button class="text-gray-500 hover:text-black">⭐ 收藏</button>
-							<button class="text-red-500 hover:underline">删除</button>
+					<div
+						class="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
+						<a href="#"
+							class="bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:opacity-90 btn-transition shadow-sm flex items-center gap-1.5">
+							<i data-lucide="play-circle" class="w-3.5 h-3.5"></i> 播放回看
+						</a>
+						<div class="flex items-center gap-4 text-[12px] font-bold">
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-brand-dark dark:hover:text-brand btn-transition flex items-center gap-1"><i
+									data-lucide="star" class="w-3.5 h-3.5"></i> 收藏</button>
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"><i
+									data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除</button>
 						</div>
 					</div>
 				</div>
@@ -159,28 +371,48 @@
 
 			<!-- List Item 2: 课堂 (Classroom Engine) -->
 			<div
-				class="p-5 border-b-2 border-dashed border-gray-200 list-item-hover flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm">
 				<div
-					class="w-32 aspect-video bg-gray-100 wf-border flex items-center justify-center text-xs text-gray-400 shrink-0">
-					[课堂预览]
-				</div>
-				<div class="flex-1 flex flex-col gap-1 w-full">
-					<div class="flex justify-between items-start">
-						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-bold border border-black px-1.5 py-0.5">主题课堂</span>
-							<h3 class="text-lg font-black truncate max-w-sm">多元函数条件极值：拉格朗日乘数法</h3>
-						</div>
-						<span class="text-xs font-bold text-gray-400">昨天 22:15</span>
+					class="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
+					<img src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=400"
+						class="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-luminosity">
+					<div
+						class="w-10 h-10 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark z-10 shadow-md">
+						<i data-lucide="layout-template"
+							class="w-4 h-4 text-text-primary dark:text-text-primary-dark"></i>
 					</div>
-					<p class="text-xs text-gray-500">风格：严谨教授 ｜ 进度：停留在 Scene 03 / 共 5 页</p>
+				</div>
 
-					<div class="flex items-center justify-between mt-3">
-							<a href="../08-课堂结果页/01-classroom.html"
-								class="wf-border bg-white text-black px-4 py-1.5 text-xs font-bold hover:bg-gray-100 transition-colors">继续学习
-								&rarr;</a>
-						<div class="flex gap-3 text-xs font-bold">
-							<button class="text-black font-black">★ 已收藏</button>
-							<button class="text-red-500 hover:underline">删除</button>
+				<div class="flex-1 flex flex-col gap-1 w-full h-full justify-between">
+					<div>
+						<div class="flex justify-between items-start mb-1.5">
+							<div class="flex items-center gap-2">
+								<span
+									class="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">主题课堂</span>
+								<h3
+									class="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
+									多元函数条件极值：拉格朗日乘数法</h3>
+							</div>
+							<span
+								class="text-[11px] font-bold text-text-secondary/70 dark:text-text-secondary-dark/70 shrink-0">昨天
+								22:15</span>
+						</div>
+						<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark font-medium">风格：严谨教授 ｜
+							进度：停留在 Scene 03 / 共 5 页</p>
+					</div>
+
+					<div
+						class="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
+						<a href="#"
+							class="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5">
+							继续学习 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+						</a>
+						<div class="flex items-center gap-4 text-[12px] font-bold">
+							<button class="text-brand-dark dark:text-brand flex items-center gap-1"><i
+									data-lucide="star" class="w-3.5 h-3.5 fill-brand"></i> 已收藏</button>
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"><i
+									data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除</button>
 						</div>
 					</div>
 				</div>
@@ -188,55 +420,89 @@
 
 			<!-- List Item 3: 测验 (Learning Coach) -->
 			<div
-				class="p-5 border-b-2 border-dashed border-gray-200 list-item-hover flex flex-col sm:flex-row gap-5 items-start sm:items-center bg-gray-50/50">
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm">
+				<!-- 分数方块，坚实材质 -->
 				<div
-					class="w-32 aspect-video bg-white wf-border-dashed flex flex-col items-center justify-center shrink-0">
-					<span class="text-2xl font-black">86<span class="text-xs">分</span></span>
-					<span class="text-[10px] text-gray-500 mt-1">错 2 题</span>
+					class="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex flex-col items-center justify-center shrink-0">
+					<span
+						class="text-3xl font-black font-mono text-text-primary dark:text-text-primary-dark tracking-tighter">86<span
+							class="text-sm font-sans ml-0.5">分</span></span>
+					<span
+						class="text-[11px] font-bold text-error dark:text-[#ff4d4f] mt-1 bg-error/10 dark:bg-error/20 px-2 py-0.5 rounded">错
+						2 题</span>
 				</div>
-				<div class="flex-1 flex flex-col gap-1 w-full">
-					<div class="flex justify-between items-start">
-						<div class="flex items-center gap-2">
-							<span
-								class="text-[10px] font-bold border border-gray-400 text-gray-600 px-1.5 py-0.5">课后测验</span>
-							<h3 class="text-lg font-bold truncate max-w-sm text-gray-800">隐函数求导法则阶段考核</h3>
-						</div>
-						<span class="text-xs font-bold text-gray-400">2天前</span>
-					</div>
-					<p class="text-xs text-gray-500">关联课堂：隐函数求导法与对数求导法</p>
 
-					<div class="flex items-center justify-between mt-3">
-							<a href="../10-Checkpoint 与 Quiz 页/01-quiz-session.html"
-								class="wf-border bg-white text-black px-4 py-1.5 text-xs font-bold hover:bg-gray-100 transition-colors">查看解析</a>
-						<div class="flex gap-3 text-xs font-bold">
-							<button class="text-red-500 hover:underline">删除</button>
+				<div class="flex-1 flex flex-col gap-1 w-full h-full justify-between">
+					<div>
+						<div class="flex justify-between items-start mb-1.5">
+							<div class="flex items-center gap-2">
+								<span
+									class="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">课后测验</span>
+								<h3
+									class="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
+									隐函数求导法则阶段考核</h3>
+							</div>
+							<span
+								class="text-[11px] font-bold text-text-secondary/70 dark:text-text-secondary-dark/70 shrink-0">2天前</span>
+						</div>
+						<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark font-medium">
+							关联课堂：隐函数求导法与对数求导法</p>
+					</div>
+
+					<div
+						class="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
+						<a href="#"
+							class="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5">
+							<i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> 查看解析
+						</a>
+						<div class="flex items-center gap-4 text-[12px] font-bold">
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"><i
+									data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除</button>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- List Item 4: 会话伴学 (Companion / Evidence) -->
-			<div class="p-5 list-item-hover flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+			<!-- List Item 4: 会话伴学 (Companion QA) -->
+			<div
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm">
 				<div
-					class="w-32 h-16 bg-blue-50 wf-border-dashed border-blue-300 flex items-center justify-center text-2xl shrink-0">
-					💬
+					class="w-full sm:w-40 h-24 bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0">
+					<i data-lucide="message-square"
+						class="w-8 h-8 text-text-secondary dark:text-text-secondary-dark opacity-50"></i>
 				</div>
-				<div class="flex-1 flex flex-col gap-1 w-full">
-					<div class="flex justify-between items-start">
-						<div class="flex items-center gap-2">
-							<span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5">伴学答疑</span>
-							<h3 class="text-sm font-bold truncate max-w-sm text-gray-800">“傅里叶变换的物理意义是什么？”</h3>
-						</div>
-						<span class="text-xs font-bold text-gray-400">3天前</span>
-					</div>
-					<p class="text-xs text-gray-500">命中视频锚点 (T=01:15) ｜ 包含 1 条白板解释与引用来源</p>
 
-					<div class="flex items-center justify-between mt-3">
-							<a href="../05-视频结果页/01-video-result.html"
-								class="wf-border bg-white text-black px-4 py-1.5 text-xs font-bold hover:bg-gray-100 transition-colors">回看完整会话</a>
-						<div class="flex gap-3 text-xs font-bold">
-							<button class="text-gray-500 hover:text-black">⭐ 收藏</button>
-							<button class="text-red-500 hover:underline">删除</button>
+				<div class="flex-1 flex flex-col gap-1 w-full h-full justify-between">
+					<div>
+						<div class="flex justify-between items-start mb-1.5">
+							<div class="flex items-center gap-2">
+								<span
+									class="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">伴学答疑</span>
+								<h3
+									class="text-[15px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
+									“傅里叶变换的物理意义是什么？”</h3>
+							</div>
+							<span
+								class="text-[11px] font-bold text-text-secondary/70 dark:text-text-secondary-dark/70 shrink-0">3天前</span>
+						</div>
+						<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark font-medium">命中视频锚点
+							(T=01:15) ｜ 包含 1 条白板解释与引用来源</p>
+					</div>
+
+					<div
+						class="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
+						<a href="#"
+							class="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5">
+							<i data-lucide="messages-square" class="w-3.5 h-3.5"></i> 回看会话
+						</a>
+						<div class="flex items-center gap-4 text-[12px] font-bold">
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-brand-dark dark:hover:text-brand btn-transition flex items-center gap-1"><i
+									data-lucide="star" class="w-3.5 h-3.5"></i> 收藏</button>
+							<button
+								class="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"><i
+									data-lucide="trash-2" class="w-3.5 h-3.5"></i> 删除</button>
 						</div>
 					</div>
 				</div>
@@ -244,20 +510,137 @@
 
 		</div>
 
-		<!-- 分页占位 -->
-		<div class="mt-6 flex justify-center">
-			<div class="flex gap-1">
+		<!-- 分页控件 (坚实纯色按钮) -->
+		<div class="mt-8 flex justify-center view-enter stagger-4">
+			<div class="flex gap-2">
 				<button
-					class="wf-border bg-gray-100 px-3 py-1 text-xs font-bold text-gray-400 cursor-not-allowed">上一页</button>
-				<button class="wf-border bg-black text-white px-3 py-1 text-xs font-bold">1</button>
-				<button class="wf-border bg-white hover:bg-gray-50 px-3 py-1 text-xs font-bold">2</button>
-				<button class="wf-border bg-white hover:bg-gray-50 px-3 py-1 text-xs font-bold">3</button>
-				<button class="wf-border bg-white hover:bg-gray-50 px-3 py-1 text-xs font-bold">下一页</button>
+					class="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary/50 dark:text-text-secondary-dark/50 px-3 py-1.5 rounded-lg text-[13px] font-bold cursor-not-allowed shadow-sm">上一页</button>
+				<button
+					class="bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-3.5 py-1.5 rounded-lg text-[13px] font-bold shadow-sm btn-transition">1</button>
+				<button
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-3.5 py-1.5 rounded-lg text-[13px] font-bold shadow-sm btn-transition">2</button>
+				<button
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark px-3.5 py-1.5 rounded-lg text-[13px] font-bold shadow-sm btn-transition">3</button>
+				<button
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:border-text-primary dark:hover:border-text-primary-dark px-3 py-1.5 rounded-lg text-[13px] font-bold shadow-sm btn-transition">下一页</button>
 			</div>
 		</div>
 
 	</main>
 
+	<!-- ==================== 3. 底部：macOS 风格专属 Dock ==================== -->
+	<div class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+		<div
+			class="pointer-events-auto bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2 rounded-[24px] shadow-dock flex items-end gap-1 dock-container">
+
+			<!-- App Icon: 单题讲解 -->
+			<div class="dock-icon-wrapper w-10">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					单题讲解
+				</div>
+				<a href="#"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 transition-colors">
+					<i data-lucide="play-square" class="w-5 h-5"></i>
+				</a>
+			</div>
+
+			<!-- App Icon: 主题课堂 -->
+			<div class="dock-icon-wrapper w-10">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					主题课堂
+				</div>
+				<a href="#"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 transition-colors">
+					<i data-lucide="layout-template" class="w-5 h-5"></i>
+				</a>
+			</div>
+
+			<!-- App Icon: 学习中心 (已激活态) -->
+			<div class="dock-icon-wrapper w-10 relative">
+				<div
+					class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-text-primary dark:bg-text-primary-dark">
+				</div>
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					学习中心
+				</div>
+				<a href="learning.html"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm">
+					<i data-lucide="book-open" class="w-5 h-5"></i>
+				</a>
+			</div>
+
+			<!-- 分割线 -->
+			<div class="w-px h-8 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 self-center mb-1"></div>
+
+			<!-- 工具图标: 中/EN 多语言切换 -->
+			<div class="dock-icon-wrapper w-10">
+				<div class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold"
+					id="lang-tooltip">
+					中 / EN
+				</div>
+				<button id="dockLangToggle"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 transition-colors">
+					<i data-lucide="globe" class="w-5 h-5"></i>
+				</button>
+			</div>
+
+			<!-- 工具图标: 亮暗色切换 -->
+			<div class="dock-icon-wrapper w-10">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					切换主题
+				</div>
+				<button id="dockThemeToggle"
+					class="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-bordercolor-light/50 dark:hover:bg-bordercolor-dark/50 transition-colors">
+					<i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+					<i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+				</button>
+			</div>
+
+			<!-- 工具图标: 用户设置 -->
+			<div class="dock-icon-wrapper w-10 relative">
+				<div
+					class="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+					设置
+				</div>
+				<a href="profile.html"
+					class="dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm">
+					<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
+				</a>
+			</div>
+
+		</div>
+	</div>
+
+	<script>
+		// 初始化图标
+		lucide.createIcons();
+
+		// 亮暗色切换
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		const html = document.documentElement;
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggleBtn.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+
+		// 语言切换演示
+		const langToggleBtn = document.getElementById('dockLangToggle');
+		const langTooltip = document.getElementById('lang-tooltip');
+		if (langToggleBtn && langTooltip) {
+			langToggleBtn.addEventListener('click', () => {
+				langTooltip.innerText = langTooltip.innerText.includes('EN') ? 'EN / 中' : '中 / EN';
+			});
+		}
+	</script>
 </body>
 
 </html>

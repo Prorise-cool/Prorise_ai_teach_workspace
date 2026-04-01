@@ -44,6 +44,15 @@ Epic 8 负责“会话后层”。
 - 会话后路由与页面边界已冻结。  
 - `checkpoint / quiz / path` 的最小交互状态说明已稳定。  
 
+### Frontend Design Reference
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/10-Checkpoint 与 Quiz 页/01-entry.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/10-Checkpoint 与 Quiz 页/02-checkpoint.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/10-Checkpoint 与 Quiz 页/03-quiz.html`
+- 参考成品图：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/11-学习路径页/01-path.html`
+- 参考入口页面：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/05-视频结果页/02-video-result.html`
+- 参考入口页面：`docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/01-正式路由页面/08-课堂结果页/01-classroom.html`
+- 当前补充规则：`Checkpoint / Quiz` 成品图已拆分为会话后入口、checkpoint、quiz 三个独立页面，正式实现必须分别对应独立路由与页面骨架；前端开发时必须以这 3 个成品页为直接视觉基准，不得回退成单页面状态机；视频 / 课堂结果页必须保留进入 Learning Coach 的明确 CTA
+
 ### Exit Criteria
 - 用户可从会话结束后进入 Learning Coach；
 - checkpoint 可快速完成并给出反馈；
@@ -112,6 +121,11 @@ So that 我可以在合适的时机继续做巩固而不是被强行打断主叙
 **When** 用户点击继续学习  
 **Then** 可以基于冻结的路由参数和 mock 数据进入相应流程  
 **And** 不需要等待真实 quiz 或路径规划服务完全可用  
+
+**Given** 当前高保真稿已将会话后入口、checkpoint 与 quiz 拆成独立成品页  
+**When** 前端落地正式路由  
+**Then** 仍需分别实现会话后入口、`/checkpoint/:sessionId` 与 `/quiz/:sessionId` 的独立进入、刷新恢复与回跳语义  
+**And** 不得把 3 个页面再次压回一个不可区分的单页面状态机
 
 **Given** 用户中途退出 Learning Coach  
 **When** 用户返回原结果页或学习中心  
@@ -265,4 +279,3 @@ So that 这些结果可以进入学习中心回看与运营审计边界。
 - 持久化映射说明
 
 ---
-

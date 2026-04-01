@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" class="dark">
+<html lang="zh" class="light">
 
 <head>
 	<meta charset="UTF-8" />
@@ -8,13 +8,25 @@
 	<meta name="description" content="中国首个 AIGC 原生虚拟教室，通过双入口、4 种 AI 老师和 Manim 动画实现沉浸式个性化学习。" />
 	<meta name="reference-order"
 		content="Navbar -> Hero -> Sponsors -> Benefits -> Features -> Services -> HowItWorks -> Testimonials -> Team -> Community -> Pricing -> Contact -> FAQ -> Footer" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet" />
+	<script>
+		(function () {
+			const savedTheme = localStorage.getItem("xiaomai-theme") || "light";
+			document.documentElement.classList.toggle("dark", savedTheme === "dark");
+			document.documentElement.classList.toggle("light", savedTheme !== "dark");
+		})();
+	</script>
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script src="https://unpkg.com/lucide@latest"></script>
 	<script>
 		tailwind.config = {
 			darkMode: "class",
 			theme: {
-				container: { center: true, padding: "1.5rem", screens: { "2xl": "1400px" } },
+				container: { center: true, padding: "16px", screens: { "2xl": "1400px" } },
 				extend: {
 					colors: {
 						border: "hsl(var(--border))",
@@ -29,13 +41,34 @@
 						accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
 						popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
 						card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
+						success: "hsl(var(--success))",
+						warning: "hsl(var(--warning))",
+						error: "hsl(var(--error))",
+					},
+					fontSize: {
+						'xs': ['12px', '18px'],      // Caption
+						'sm': ['14px', '20px'],      // Body Small
+						'base': ['16px', '24px'],    // Body
+						'lg': ['18px', '28px'],      // Body Large
+						'xl': ['20px', '28px'],
+						'2xl': ['24px', '32px'],     // H3
+						'3xl': ['30px', '36px'],
+						'4xl': ['36px', '40px'],     // H2
+						'5xl': ['48px', '1.1'],      // H1
+						'6xl': ['60px', '1.1'],
 					},
 					borderRadius: {
-						xl: "calc(var(--radius) + 4px)",
-						lg: "var(--radius)",
-						md: "calc(var(--radius) - 2px)",
-						sm: "calc(var(--radius) - 4px)",
+						xl: "calc(var(--radius-lg) + 4px)",
+						lg: "var(--radius-lg)",
+						md: "var(--radius-md)",
+						sm: "var(--radius-sm)",
+						full: "var(--radius-full)"
 					},
+					boxShadow: {
+						'sm': 'var(--shadow-sm)',
+						'md': 'var(--shadow-md)',
+						'lg': 'var(--shadow-lg)',
+					}
 				},
 			},
 		};
@@ -46,93 +79,120 @@
 		}
 
 		:root {
+			/* 颜色系统 - Light Mode */
 			--background: 36 50% 92%;
+			/* #f5ede1 */
 			--foreground: 23 97% 12%;
+			/* #3b1701 Text Primary */
 			--card: 0 0% 100%;
+			/* #ffffff Surface */
 			--card-foreground: 23 97% 12%;
 			--popover: 0 0% 100%;
 			--popover-foreground: 23 97% 12%;
 			--primary: 43 90% 62%;
+			/* #f5c547 */
 			--primary-foreground: 23 97% 12%;
-			--secondary: 0 0% 100%;
+			--secondary: 36 50% 92%;
+			/* #f5ede1 */
 			--secondary-foreground: 23 97% 12%;
-			--muted: 36 50% 92%;
+			--muted: 40 37% 84%;
+			/* #e6dcc8 */
 			--muted-foreground: 28 53% 27%;
+			/* #6b4421 Text Secondary */
 			--accent: 36 50% 92%;
 			--accent-foreground: 23 97% 12%;
 			--destructive: 359 100% 65%;
-			--destructive-foreground: 36 50% 92%;
+			/* #f82834 Error */
+			--destructive-foreground: 0 0% 100%;
 			--border: 40 37% 84%;
+			/* #e6dcc8 */
 			--input: 40 37% 84%;
 			--ring: 43 90% 62%;
+			/* Primary */
+
+			/* 语义色 */
 			--success: 100 77% 44%;
-			--warning: 40 96% 53%;
+			/* #52c41a */
+			--warning: 24 100% 50%;
+			/* #ff6700 */
 			--error: 359 100% 65%;
-			--radius: 0.75rem;
+			/* #f82834 */
+
+			/* 智能体/讲师风格色 */
+			--agent-efficient: #6D5DF4;
+			--agent-humorous: #FFB020;
+			--agent-patient: #00C48C;
+			--agent-serious: #0091FF;
+
+			/* 圆角系统 */
 			--radius-sm: 4px;
 			--radius-md: 8px;
 			--radius-lg: 16px;
 			--radius-full: 9999px;
-			--spacing-2: 8px;
-			--spacing-4: 16px;
-			--spacing-6: 24px;
-			--spacing-10: 40px;
+
+			/* 阴影系统 */
+			--shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.10);
+			--shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+			--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+			--shadow-xl: 0 20px 25px -5px rgba(245, 197, 71, 0.18);
+
+			/* 其他装饰 */
 			--brand-glow: 245 197 71;
 			--style-color: #f5c547;
 			--style-glow: 245 197 71;
-			--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-			--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-			--shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-			--shadow-xl: 0 20px 25px -5px rgba(245, 197, 71, 0.18);
 		}
 
 		.dark {
+			/* 颜色系统 - Dark Mode */
 			--background: 20 13% 9%;
+			/* #1a1614 */
 			--foreground: 36 50% 92%;
+			/* #f5ede1 Text Primary */
 			--card: 24 14% 15%;
+			/* #2a2420 Surface */
 			--card-foreground: 36 50% 92%;
 			--popover: 20 13% 9%;
 			--popover-foreground: 36 50% 92%;
 			--primary: 43 77% 58%;
-			--primary-foreground: 36 50% 92%;
+			/* #e6b841 Primary Dark */
+			--primary-foreground: 20 13% 9%;
 			--secondary: 24 14% 15%;
+			/* #2a2420 */
 			--secondary-foreground: 36 50% 92%;
-			--muted: 24 14% 15%;
+			--muted: 28 12% 21%;
+			/* #3d3630 */
 			--muted-foreground: 34 19% 71%;
+			/* #c4b8a8 Text Secondary */
 			--accent: 24 14% 15%;
 			--accent-foreground: 36 50% 92%;
-			--destructive: 1 100% 73%;
-			--destructive-foreground: 36 50% 92%;
+			--destructive: 359 100% 38%;
+			/* #bf0004 Error Dark */
+			--destructive-foreground: 0 0% 100%;
 			--border: 28 12% 21%;
+			/* #3d3630 Border Dark */
 			--input: 28 12% 21%;
 			--ring: 43 77% 58%;
-			--success: 98 62% 53%;
-			--warning: 42 100% 62%;
-			--error: 1 100% 73%;
+
+			/* 语义色 Dark */
+			--success: 100 84% 46%;
+			/* #51d712 */
+			--warning: 17 100% 48%;
+			/* #f34700 */
+			--error: 359 100% 38%;
+			/* #bf0004 */
+
 			--brand-glow: 230 184 65;
 			--style-color: #e6b841;
 			--style-glow: 230 184 65;
 			--shadow-xl: 0 20px 25px -5px rgba(230, 184, 65, 0.22);
 		}
 
-		html[data-style="serious"] {
-			--style-color: #4a6fa5;
-			--style-glow: 74 111 165;
-		}
-
-		html[data-style="humorous"] {
-			--style-color: #ff9500;
-			--style-glow: 255 149 0;
-		}
-
-		html[data-style="patient"] {
-			--style-color: #52c41a;
-			--style-glow: 82 196 26;
-		}
-
+		html[data-style="serious"],
+		html[data-style="humorous"],
+		html[data-style="patient"],
 		html[data-style="efficient"] {
-			--style-color: #722ed1;
-			--style-glow: 114 46 209;
+			--style-color: #f5c547;
+			--style-glow: 245 197 71;
 		}
 
 		* {
@@ -144,7 +204,7 @@
 			min-height: 100vh;
 			background: hsl(var(--background));
 			color: hsl(var(--foreground));
-			font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+			font-family: "Inter", "Noto Sans SC", sans-serif;
 			position: relative;
 			overflow-x: hidden;
 		}
@@ -155,7 +215,7 @@
 			position: fixed;
 			width: 24rem;
 			height: 24rem;
-			border-radius: 9999px;
+			border-radius: var(--radius-full);
 			filter: blur(110px);
 			opacity: 0.18;
 			pointer-events: none;
@@ -176,24 +236,24 @@
 		}
 
 		.glass-nav {
-			background: rgb(255 255 255 / 0.78);
-			backdrop-filter: blur(16px);
+			background: rgb(255 255 255 / 0.72);
+			backdrop-filter: blur(24px);
 		}
 
 		.dark .glass-nav {
-			background: rgb(42 36 32 / 0.66);
-			backdrop-filter: blur(16px);
+			background: rgb(31 26 24 / 0.72);
+			backdrop-filter: blur(24px);
 		}
 
 		.glass-surface {
-			background: rgb(255 255 255 / 0.8);
+			background: rgb(255 255 255 / 0.76);
 			backdrop-filter: blur(24px);
-			border: 1px solid rgb(255 255 255 / 0.35);
+			border: 1px solid rgb(230 220 200 / 0.9);
 		}
 
 		.dark .glass-surface {
-			background: rgb(42 36 32 / 0.82);
-			border-color: rgb(255 255 255 / 0.08);
+			background: rgb(31 26 24 / 0.82);
+			border-color: rgb(48 40 36 / 0.95);
 		}
 
 		.brand-mark {
@@ -218,10 +278,12 @@
 			align-items: center;
 			justify-content: center;
 			gap: 0.25rem;
-			border-radius: var(--radius);
-			font-size: 0.875rem;
+			border-radius: var(--radius-md);
+			font-size: 14px;
+			/* Body Small */
 			font-weight: 600;
-			padding: 0.5rem 1rem;
+			padding: 8px 16px;
+			/* spacing-2, spacing-4 */
 			transition: all 0.2s ease-in-out;
 			cursor: pointer;
 			border: none;
@@ -231,7 +293,7 @@
 
 		.btn:hover {
 			transform: translateY(-2px);
-			box-shadow: var(--shadow-md);
+			box-shadow: var(--shadow-sm);
 		}
 
 		.btn:active {
@@ -259,17 +321,19 @@
 		}
 
 		.btn-sm {
-			height: 2.25rem;
-			padding: 0 0.75rem;
-			font-size: 0.8rem;
+			height: 36px;
+			padding: 0 12px;
+			/* spacing-3 */
+			font-size: 12px;
+			/* Caption */
 		}
 
 		.badge {
 			display: inline-flex;
 			align-items: center;
-			border-radius: 9999px;
-			padding: 0.125rem 0.625rem;
-			font-size: 0.75rem;
+			border-radius: var(--radius-full);
+			padding: 2px 10px;
+			font-size: 12px;
 			font-weight: 600;
 			transition: color 0.15s;
 		}
@@ -290,34 +354,37 @@
 		}
 
 		.card {
-			border-radius: var(--radius);
+			border-radius: var(--radius-lg);
 			border: 1px solid hsl(var(--border));
 			background: hsl(var(--card));
 			color: hsl(var(--card-foreground));
 		}
 
 		.card-header {
-			padding: 1.5rem;
+			padding: 24px;
+			/* spacing-6 */
 		}
 
 		.card-content {
-			padding: 0 1.5rem 1.5rem;
+			padding: 0 24px 24px;
 		}
 
 		.card-footer {
-			padding: 0 1.5rem 1.5rem;
+			padding: 0 24px 24px;
 			display: flex;
 			align-items: center;
 		}
 
 		.card-title {
-			font-size: 1.25rem;
-			font-weight: 600;
+			font-size: 24px;
+			/* H3 */
+			font-weight: 500;
 			line-height: 1.2;
 		}
 
 		.card-description {
-			font-size: 0.875rem;
+			font-size: 14px;
+			/* Body Small */
 			color: hsl(var(--muted-foreground));
 		}
 
@@ -365,26 +432,26 @@
 		}
 
 		.style-chip {
-			padding: 0.5rem 0.875rem;
-			border-radius: 9999px;
+			padding: 8px 14px;
+			border-radius: var(--radius-full);
 			border: 1px solid hsl(var(--border));
 			background: transparent;
 			color: hsl(var(--foreground));
 			transition: all 0.2s ease-in-out;
 			cursor: pointer;
-			font-size: 0.875rem;
+			font-size: 14px;
 			font-weight: 600;
 		}
 
 		.style-chip[data-active="true"] {
-			background: rgb(var(--style-glow) / 0.14);
-			color: var(--style-color);
-			border-color: rgb(var(--style-glow) / 0.35);
-			box-shadow: 0 8px 20px rgb(var(--style-glow) / 0.18);
+			background: rgb(var(--brand-glow) / 0.14);
+			color: hsl(var(--foreground));
+			border-color: rgb(var(--brand-glow) / 0.3);
+			box-shadow: 0 12px 24px rgb(var(--brand-glow) / 0.16);
 		}
 
 		.teacher-preview {
-			min-height: 1.75rem;
+			min-height: 28px;
 		}
 
 		.teacher-grid,
@@ -398,7 +465,8 @@
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
 			justify-content: center;
-			gap: 1rem;
+			gap: 16px;
+			/* spacing-4 */
 		}
 
 		.teacher-card {
@@ -408,7 +476,7 @@
 			min-height: 100%;
 			overflow: hidden;
 			border: 1px solid hsl(var(--border));
-			border-radius: 1.25rem;
+			border-radius: var(--radius-lg);
 			background: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.78));
 			box-shadow: var(--shadow-md);
 		}
@@ -426,7 +494,7 @@
 			position: relative;
 			overflow: hidden;
 			aspect-ratio: 5 / 4;
-			max-height: 13.75rem;
+			max-height: 220px;
 			background: hsl(var(--accent));
 		}
 
@@ -445,28 +513,29 @@
 		}
 
 		.teacher-card-body {
-			padding: 1rem 1rem 0.7rem;
+			padding: 16px 16px 12px;
 			display: flex;
 			flex-direction: column;
-			gap: 0.7rem;
+			gap: 12px;
 		}
 
 		.teacher-card-head {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			gap: 0.5rem;
+			gap: 8px;
 		}
 
 		.teacher-card-title {
 			display: flex;
 			flex-direction: column;
-			gap: 0.35rem;
+			gap: 6px;
 		}
 
 		.teacher-card-name {
-			font-size: 1.05rem;
-			font-weight: 700;
+			font-size: 16px;
+			font-weight: 600;
+			/* Semibold */
 			line-height: 1.2;
 		}
 
@@ -474,18 +543,18 @@
 			display: inline-flex;
 			align-items: center;
 			width: fit-content;
-			padding: 0.22rem 0.65rem;
-			border-radius: 9999px;
+			padding: 4px 10px;
+			border-radius: var(--radius-full);
 			border: 1px solid var(--teacher-accent-border);
 			background: var(--teacher-accent-soft);
 			color: var(--teacher-accent);
-			font-size: 0.72rem;
-			font-weight: 700;
+			font-size: 12px;
+			font-weight: 600;
 			letter-spacing: 0.02em;
 		}
 
 		.teacher-card-index {
-			font-size: 1.75rem;
+			font-size: 28px;
 			font-weight: 700;
 			line-height: 1;
 			color: rgb(0 0 0 / 0.08);
@@ -497,9 +566,9 @@
 
 		.teacher-card-summary {
 			color: hsl(var(--muted-foreground));
-			font-size: 0.92rem;
+			font-size: 14px;
 			line-height: 1.65;
-			min-height: 4.5rem;
+			min-height: 72px;
 			display: -webkit-box;
 			-webkit-line-clamp: 3;
 			-webkit-box-orient: vertical;
@@ -509,23 +578,23 @@
 		.teacher-tag-row {
 			display: flex;
 			flex-wrap: wrap;
-			gap: 0.4rem;
+			gap: 6px;
 		}
 
 		.teacher-tag {
 			display: inline-flex;
 			align-items: center;
-			padding: 0.32rem 0.58rem;
-			border-radius: 9999px;
+			padding: 5px 9px;
+			border-radius: var(--radius-full);
 			border: 1px solid var(--teacher-accent-border);
 			background: var(--teacher-accent-soft);
 			color: hsl(var(--foreground));
-			font-size: 0.72rem;
+			font-size: 12px;
 			line-height: 1;
 		}
 
 		.teacher-card-footer {
-			padding: 0 1rem 1rem;
+			padding: 0 16px 16px;
 			margin-top: auto;
 			display: flex;
 			justify-content: flex-end;
@@ -534,14 +603,14 @@
 		.teacher-mini-btn {
 			display: inline-flex;
 			align-items: center;
-			gap: 0.35rem;
-			padding: 0.42rem 0.72rem;
-			border-radius: 9999px;
+			gap: 6px;
+			padding: 6px 12px;
+			border-radius: var(--radius-full);
 			border: 1px solid hsl(var(--border));
 			background: hsl(var(--accent));
 			color: hsl(var(--foreground));
-			font-size: 0.72rem;
-			font-weight: 700;
+			font-size: 12px;
+			font-weight: 600;
 			transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 			cursor: pointer;
 		}
@@ -560,7 +629,7 @@
 		.teacher-modal-overlay {
 			position: fixed;
 			inset: 0;
-			padding: 1rem;
+			padding: 16px;
 			background: rgba(14, 10, 6, 0.58);
 			backdrop-filter: blur(10px);
 			z-index: 60;
@@ -576,13 +645,13 @@
 
 		.teacher-modal {
 			position: relative;
-			width: min(760px, calc(100vw - 2rem));
+			width: min(760px, calc(100vw - 32px));
 			max-height: min(84vh, 920px);
 			margin: 4vh auto;
-			padding: 1.5rem;
+			padding: 24px;
 			overflow: auto;
 			border: 1px solid hsl(var(--border));
-			border-radius: 2rem;
+			border-radius: var(--radius-lg);
 			background: hsl(var(--card));
 			color: hsl(var(--card-foreground));
 			box-shadow: 0 30px 80px rgba(12, 10, 8, 0.28);
@@ -596,11 +665,11 @@
 
 		.teacher-modal-close {
 			position: absolute;
-			top: 1rem;
-			right: 1rem;
-			width: 2.5rem;
-			height: 2.5rem;
-			border-radius: 9999px;
+			top: 16px;
+			right: 16px;
+			width: 40px;
+			height: 40px;
+			border-radius: var(--radius-full);
 			border: 1px solid hsl(var(--border));
 			background: transparent;
 			color: hsl(var(--foreground));
@@ -611,42 +680,44 @@
 		}
 
 		.teacher-modal-header {
-			padding-right: 3.25rem;
+			padding-right: 52px;
 			display: flex;
 			flex-direction: column;
-			gap: 0.85rem;
+			gap: 14px;
 		}
 
 		.teacher-modal-pill {
 			display: inline-flex;
 			align-items: center;
 			width: fit-content;
-			padding: 0.35rem 0.85rem;
-			border-radius: 9999px;
+			padding: 6px 14px;
+			border-radius: var(--radius-full);
 			border: 1px solid var(--teacher-accent-border);
 			background: var(--teacher-accent-soft);
 			color: var(--teacher-accent);
-			font-size: 0.78rem;
-			font-weight: 700;
+			font-size: 12px;
+			font-weight: 600;
 			letter-spacing: 0.02em;
 		}
 
 		.teacher-modal-title {
-			font-size: clamp(1.6rem, 2vw, 2.3rem);
+			font-size: 36px;
+			/* H2 */
 			line-height: 1.15;
-			font-weight: 700;
+			font-weight: 600;
 		}
 
 		.teacher-modal-summary {
 			color: hsl(var(--muted-foreground));
 			line-height: 1.8;
+			font-size: 16px;
 		}
 
 		.teacher-modal-grid {
 			display: grid;
 			grid-template-columns: repeat(1, minmax(0, 1fr));
-			gap: 1rem;
-			margin-top: 1.5rem;
+			gap: 16px;
+			margin-top: 24px;
 		}
 
 		@media (min-width: 768px) {
@@ -656,9 +727,9 @@
 		}
 
 		.teacher-modal-card {
-			padding: 1rem;
+			padding: 16px;
 			border: 1px solid hsl(var(--border));
-			border-radius: 1.25rem;
+			border-radius: var(--radius-lg);
 			background: rgb(255 255 255 / 0.55);
 		}
 
@@ -667,40 +738,43 @@
 		}
 
 		.teacher-modal-label {
-			margin-bottom: 0.65rem;
+			margin-bottom: 10px;
 			color: hsl(var(--muted-foreground));
-			font-size: 0.75rem;
-			font-weight: 700;
+			font-size: 12px;
+			/* Caption */
+			font-weight: 600;
 			letter-spacing: 0.08em;
 			text-transform: uppercase;
 		}
 
 		.teacher-modal-list {
 			margin: 0;
-			padding-left: 1.1rem;
+			padding-left: 18px;
 			display: grid;
-			gap: 0.55rem;
+			gap: 8px;
 			line-height: 1.7;
+			font-size: 14px;
 		}
 
 		.teacher-modal-quote {
 			margin: 0;
-			padding-left: 0.9rem;
+			padding-left: 14px;
 			border-left: 3px solid hsl(var(--primary));
 			color: hsl(var(--foreground));
 			font-style: italic;
 			line-height: 1.8;
+			font-size: 14px;
 		}
 
 		.nav-flyout {
 			position: absolute;
-			top: calc(100% + 0.75rem);
+			top: calc(100% + 12px);
 			left: 50%;
 			transform: translateX(-50%) translateY(8px);
 			opacity: 0;
 			pointer-events: none;
 			transition: opacity 0.2s ease, transform 0.2s ease;
-			border-radius: 1.25rem;
+			border-radius: var(--radius-lg);
 			border: 1px solid hsl(var(--border));
 			background: hsl(var(--card));
 			box-shadow: var(--shadow-lg);
@@ -782,7 +856,7 @@
 
 		.marquee-track {
 			display: flex;
-			gap: 3rem;
+			gap: 48px;
 			animation: marquee 20s linear infinite;
 			width: max-content;
 		}
@@ -810,14 +884,15 @@
 			align-items: center;
 			justify-content: space-between;
 			width: 100%;
-			padding: 1rem 0;
+			padding: 16px 0;
 			font-weight: 500;
 			cursor: pointer;
 			background: none;
 			border: none;
 			color: inherit;
 			text-align: left;
-			font-size: 1rem;
+			font-size: 16px;
+			/* Body */
 		}
 
 		.accordion-trigger svg {
@@ -841,8 +916,9 @@
 		}
 
 		.accordion-content-inner {
-			padding-bottom: 1rem;
+			padding-bottom: 16px;
 			line-height: 1.7;
+			font-size: 14px;
 		}
 
 		.sheet-overlay {
@@ -874,8 +950,8 @@
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
-			border-radius: 0 1.5rem 1.5rem 0;
-			padding: 1.5rem;
+			border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+			padding: 24px;
 			box-shadow: var(--shadow-lg);
 		}
 
@@ -895,7 +971,7 @@
 
 		.carousel-slide {
 			flex: 0 0 100%;
-			padding: 0 0.5rem;
+			padding: 0 8px;
 		}
 
 		@media (min-width: 768px) {
@@ -914,9 +990,9 @@
 			position: absolute;
 			top: 50%;
 			transform: translateY(-50%);
-			width: 2.5rem;
-			height: 2.5rem;
-			border-radius: 9999px;
+			width: 40px;
+			height: 40px;
+			border-radius: var(--radius-full);
 			border: 1px solid hsl(var(--border));
 			background: hsl(var(--background));
 			display: flex;
@@ -938,27 +1014,28 @@
 		}
 
 		.carousel-btn-prev {
-			left: -1.25rem;
+			left: -20px;
 		}
 
 		.carousel-btn-next {
-			right: -1.25rem;
+			right: -20px;
 		}
 
 		.input-field {
 			width: 100%;
-			border-radius: var(--radius);
+			border-radius: var(--radius-md);
 			border: 1px solid hsl(var(--input));
 			background: transparent;
-			padding: 0.75rem 0.875rem;
-			font-size: 0.875rem;
+			padding: 12px 14px;
+			font-size: 14px;
+			/* Body Small */
 			color: hsl(var(--foreground));
 			outline: none;
 		}
 
 		.input-field:focus {
 			border-color: hsl(var(--ring));
-			box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2), var(--shadow-xl);
+			box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2), var(--shadow-md);
 		}
 
 		.input-field::placeholder {
@@ -966,7 +1043,8 @@
 		}
 
 		.form-label {
-			font-size: 0.875rem;
+			font-size: 14px;
+			/* Body Small */
 			font-weight: 500;
 		}
 
@@ -979,15 +1057,15 @@
 			appearance: none;
 			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b4421' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 			background-repeat: no-repeat;
-			background-position: right 0.75rem center;
-			padding-right: 2.5rem;
+			background-position: right 12px center;
+			padding-right: 40px;
 		}
 
 		.lang-toggle {
 			cursor: pointer;
-			font-size: 0.8rem;
-			padding: 0.35rem 0.65rem;
-			border-radius: 9999px;
+			font-size: 12px;
+			padding: 6px 10px;
+			border-radius: var(--radius-full);
 			border: 1px solid hsl(var(--border));
 			background: transparent;
 			color: hsl(var(--foreground));
@@ -1006,20 +1084,20 @@
 		}
 
 		.svg-icon svg {
-			width: 1.125rem;
-			height: 1.125rem;
+			width: 18px;
+			height: 18px;
 			fill: currentColor;
 		}
 
 		.svg-icon-lg svg {
-			width: 5rem;
-			height: 5rem;
+			width: 80px;
+			height: 80px;
 		}
 
 		.avatar-shell {
-			width: 3rem;
-			height: 3rem;
-			border-radius: 9999px;
+			width: 48px;
+			height: 48px;
+			border-radius: var(--radius-full);
 			overflow: hidden;
 			background: hsl(var(--secondary));
 			display: inline-flex;
@@ -1038,6 +1116,79 @@
 				transition-duration: 0.01ms !important;
 				scroll-behavior: auto !important;
 			}
+		}
+
+		/* ================= Dock 样式 ================= */
+		.dock-container {
+			overflow: visible !important;
+		}
+
+		.dock-icon-wrapper {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			justify-content: flex-end;
+		}
+
+		.dock-icon {
+			transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
+			transform-origin: bottom center;
+		}
+
+		.dock-icon-wrapper:hover .dock-icon {
+			transform: translateY(-3px);
+		}
+
+		.dock-tooltip {
+			position: absolute;
+			top: -36px;
+			left: 50%;
+			transform: translateX(-50%) translateY(4px);
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.15s ease, transform 0.15s ease;
+			white-space: nowrap;
+		}
+
+		.dock-icon-wrapper:hover .dock-tooltip {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0);
+		}
+
+		.dock-bg {
+			background-color: var(--surface);
+		}
+
+		html.dark .dock-bg {
+			background-color: var(--surface);
+		}
+
+		.dock-border {
+			border: 1px solid var(--border);
+		}
+
+		html.dark .dock-border {
+			border-color: var(--border);
+		}
+
+		.dock-text {
+			color: var(--text-main);
+		}
+
+		.dock-text-secondary {
+			color: var(--text-muted);
+		}
+
+		html.dark .dock-text {
+			color: #ffffff;
+		}
+
+		html.dark .dock-text-secondary {
+			color: #c4b8a8;
+		}
+
+		.dock-divider {
+			background-color: var(--border);
 		}
 	</style>
 </head>
@@ -1060,24 +1211,24 @@
 					</button>
 					<div class="nav-flyout">
 						<div class="grid w-[620px] grid-cols-2 gap-5 p-4">
-							<div class="rounded-2xl overflow-hidden border border-border/60 bg-card">
+							<div class="rounded-lg overflow-hidden border border-border/60 bg-card">
 								<img src="./assets/demo-img.jpg" alt="Demo" class="h-full w-full object-cover" />
 							</div>
 							<ul class="flex flex-col gap-2">
 
-								<li class="rounded-2xl p-4 text-sm hover:bg-muted/70 transition-colors">
+								<li class="rounded-lg p-4 text-sm hover:bg-muted/70 transition-colors">
 									<p class="mb-1 font-semibold leading-none text-foreground"
 										data-i18n="nav.featurePreview.0.title">双入口即达</p>
 									<p class="line-clamp-2 text-muted-foreground"
 										data-i18n="nav.featurePreview.0.description">“我想学 XXX” 与 “帮我讲这道题” 同屏清晰呈现。</p>
 								</li>
-								<li class="rounded-2xl p-4 text-sm hover:bg-muted/70 transition-colors">
+								<li class="rounded-lg p-4 text-sm hover:bg-muted/70 transition-colors">
 									<p class="mb-1 font-semibold leading-none text-foreground"
 										data-i18n="nav.featurePreview.1.title">4 种 AI 老师</p>
 									<p class="line-clamp-2 text-muted-foreground"
 										data-i18n="nav.featurePreview.1.description">严肃、幽默、耐心、高效，三秒内感知差异。</p>
 								</li>
-								<li class="rounded-2xl p-4 text-sm hover:bg-muted/70 transition-colors">
+								<li class="rounded-lg p-4 text-sm hover:bg-muted/70 transition-colors">
 									<p class="mb-1 font-semibold leading-none text-foreground"
 										data-i18n="nav.featurePreview.2.title">5 分钟生成</p>
 									<p class="line-clamp-2 text-muted-foreground"
@@ -1140,20 +1291,20 @@
 					</div>
 					<div class="flex flex-col gap-2">
 
-						<a href="#testimonials" class="btn btn-ghost justify-start text-base rounded-2xl"
+						<a href="#testimonials" class="btn btn-ghost justify-start text-base rounded-lg"
 							data-sheet-close data-i18n="nav.routes.0.label">口碑</a>
-						<a href="#team" class="btn btn-ghost justify-start text-base rounded-2xl" data-sheet-close
+						<a href="#team" class="btn btn-ghost justify-start text-base rounded-lg" data-sheet-close
 							data-i18n="nav.routes.1.label">老师风格</a>
-						<a href="#contact" class="btn btn-ghost justify-start text-base rounded-2xl" data-sheet-close
+						<a href="#contact" class="btn btn-ghost justify-start text-base rounded-lg" data-sheet-close
 							data-i18n="nav.routes.2.label">联系</a>
-						<a href="#faq" class="btn btn-ghost justify-start text-base rounded-2xl" data-sheet-close
+						<a href="#faq" class="btn btn-ghost justify-start text-base rounded-lg" data-sheet-close
 							data-i18n="nav.routes.3.label">常见问题</a>
 					</div>
 				</div>
 
 				<div class="flex flex-col gap-3">
 					<div class="separator"></div>
-					<button type="button" class="btn btn-ghost justify-start rounded-2xl" data-theme-toggle
+					<button type="button" class="btn btn-ghost justify-start rounded-lg" data-theme-toggle
 						data-i18n-aria="common.themeLight" aria-label="切到浅色">
 						<span class="theme-light flex gap-2 items-center">
 							<i data-lucide="moon" class="size-5" aria-hidden="true"></i>
@@ -1180,7 +1331,7 @@
 					</div>
 
 					<div
-						class="max-w-screen-lg mx-auto text-center text-5xl md:text-6xl font-semibold leading-tight tracking-tight">
+						class="max-w-screen-lg mx-auto text-center text-5xl font-semibold leading-tight tracking-tight">
 						<h1><span data-i18n="hero.titlePrefix">体验</span><span
 								class="text-transparent bg-clip-text hero-gradient"
 								data-i18n="hero.titleAccent">小麦</span><span
@@ -1209,12 +1360,12 @@
 						class="absolute -top-6 right-10 w-[88%] h-16 lg:h-[80%] style-glow blur-3xl rounded-full img-shadow-animation">
 					</div>
 
-					<img class="w-full md:w-[1200px] mx-auto rounded-[24px] relative leading-none flex items-center border border-t-2 style-border img-border-animation shadow-hero"
+					<img class="w-full md:w-[1200px] mx-auto rounded-lg relative leading-none flex items-center border border-t-2 style-border img-border-animation shadow-hero"
 						src="./assets/hero-image-dark.jpg" data-hero-image data-light="./assets/hero-image-light.jpg"
 						data-dark="./assets/hero-image-dark.jpg" alt="小麦 landing hero" />
 
 					<div
-						class="absolute bottom-0 left-0 w-full h-20 md:h-32 bg-gradient-to-b from-background/0 via-background/50 to-background rounded-[24px]">
+						class="absolute bottom-0 left-0 w-full h-20 md:h-32 bg-gradient-to-b from-background/0 via-background/50 to-background rounded-lg">
 					</div>
 				</div>
 			</div>
@@ -1222,7 +1373,7 @@
 
 
 		<section id="sponsors" class="max-w-[82%] mx-auto pb-24 sm:pb-32">
-			<h2 class="text-lg md:text-xl text-center mb-6" data-i18n="sponsors.title">技术底座与课堂能力</h2>
+			<h2 class="text-lg text-center mb-6" data-i18n="sponsors.title">技术底座与课堂能力</h2>
 			<div class="mx-auto marquee-container">
 				<div class="marquee-track">
 
@@ -1291,14 +1442,14 @@
 			<div class="grid lg:grid-cols-2 place-items-center lg:gap-24">
 				<div>
 					<h2 class="text-lg text-primary mb-2 tracking-wider" data-i18n="benefits.eyebrow">价值</h2>
-					<h2 class="text-3xl md:text-4xl font-bold mb-4" data-i18n="benefits.title">让教师和学生都明显省力</h2>
+					<h2 class="text-4xl font-bold mb-4" data-i18n="benefits.title">让教师和学生都明显省力</h2>
 					<p class="text-xl text-muted-foreground mb-8" data-i18n="benefits.description">
 						围绕教师备课提效与学生理解提升两个核心目标，聚焦呈现小麦在生成效率、学习体验与内容传播上的实际价值。</p>
 				</div>
 				<div class="grid lg:grid-cols-2 gap-4 w-full">
 
 					<div
-						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-[24px]">
+						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-lg">
 						<div class="card-header">
 							<div class="flex justify-between">
 								<i data-lucide="blocks" class="size-8 mb-6 text-primary" aria-hidden="true"></i>
@@ -1311,7 +1462,7 @@
 							教师不再手工做脚本、动画、配音和剪辑，课堂资源能在当天快速上线。</div>
 					</div>
 					<div
-						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-[24px]">
+						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-lg">
 						<div class="card-header">
 							<div class="flex justify-between">
 								<i data-lucide="line-chart" class="size-8 mb-6 text-primary" aria-hidden="true"></i>
@@ -1324,7 +1475,7 @@
 							从系统化学习到单题答疑，学生不需要先理解复杂功能分区就能上手。</div>
 					</div>
 					<div
-						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-[24px]">
+						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-lg">
 						<div class="card-header">
 							<div class="flex justify-between">
 								<i data-lucide="wallet" class="size-8 mb-6 text-primary" aria-hidden="true"></i>
@@ -1337,7 +1488,7 @@
 							Manim 的程序化讲解更适合公式、几何、流程和抽象概念可视化。</div>
 					</div>
 					<div
-						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-[24px]">
+						class="card bg-muted/50 dark:bg-card hover:bg-background dark:hover:bg-background transition-all delay-75 group/number rounded-lg">
 						<div class="card-header">
 							<div class="flex justify-between">
 								<i data-lucide="sparkles" class="size-8 mb-6 text-primary" aria-hidden="true"></i>
@@ -1356,7 +1507,7 @@
 
 		<section id="features" class="container py-24 sm:py-32">
 			<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="features.eyebrow">亮点</h2>
-			<h2 class="text-3xl md:text-4xl text-center font-bold mb-4" data-i18n="features.title">真正体现产品差异的关键能力</h2>
+			<h2 class="text-4xl text-center font-bold mb-4" data-i18n="features.title">真正体现产品差异的关键能力</h2>
 			<h3 class="md:w-1/2 mx-auto text-xl text-center text-muted-foreground mb-8"
 				data-i18n="features.description">围绕输入引导、内容生成、风格表达与学习延展进行设计，让用户从第一次使用开始就感受到更贴近教学场景的完整体验。</h3>
 			<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1439,49 +1590,50 @@
 			</div>
 		</section>
 
-
 		<section id="services" class="container py-24 sm:py-32">
 			<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="services.eyebrow">场景</h2>
-			<h2 class="text-3xl md:text-4xl text-center font-bold mb-4" data-i18n="services.title">从备课到答疑，一套流程跑完</h2>
+			<h2 class="text-4xl text-center font-bold mb-4" data-i18n="services.title">从备课到答疑，一套流程跑完</h2>
 			<h3 class="md:w-1/2 mx-auto text-xl text-center text-muted-foreground mb-8"
 				data-i18n="services.description">覆盖课堂生成、单题讲解、学习沉淀与院校协同四类核心场景，帮助产品从试用走向真实教学落地。</h3>
 			<div class="grid sm:grid-cols-2 lg:grid-cols-2 gap-4 w-full lg:w-[60%] mx-auto">
 
 				<div>
-					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-[24px]">
+					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-lg">
 						<div class="card-header">
 							<h3 class="card-title" data-i18n="services.items.0.title">课堂生成模式</h3>
-							<p class="card-description" data-i18n="services.items.0.description">输入知识点，生成完整课堂脚本、视频与测验。
+							<p class="card-description mt-2" data-i18n="services.items.0.description">
+								输入知识点，生成完整课堂脚本、视频与测验。
 							</p>
 						</div>
 
 					</div>
 				</div>
 				<div>
-					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-[24px]">
+					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-lg">
 						<div class="card-header">
 							<h3 class="card-title" data-i18n="services.items.1.title">单题讲解模式</h3>
-							<p class="card-description" data-i18n="services.items.1.description">拍照识题或粘贴描述，快速获得单题动画讲解视频。
+							<p class="card-description mt-2" data-i18n="services.items.1.description">
+								拍照识题或粘贴描述，快速获得单题动画讲解视频。
 							</p>
 						</div>
 
 					</div>
 				</div>
 				<div>
-					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-[24px]">
+					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-lg">
 						<div class="card-header">
 							<h3 class="card-title" data-i18n="services.items.2.title">个人学习中心</h3>
-							<p class="card-description" data-i18n="services.items.2.description">
+							<p class="card-description mt-2" data-i18n="services.items.2.description">
 								历史记录、收藏、进度追踪，帮助学生建立连续复习路径。</p>
 						</div>
 
 					</div>
 				</div>
 				<div>
-					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-[24px]">
+					<div class="card bg-muted/60 dark:bg-card h-full relative rounded-lg">
 						<div class="card-header">
 							<h3 class="card-title" data-i18n="services.items.3.title">院校试点工作台</h3>
-							<p class="card-description" data-i18n="services.items.3.description">
+							<p class="card-description mt-2" data-i18n="services.items.3.description">
 								支持教师协作、课程分发和试点数据复盘，适合教学团队联动。</p>
 						</div>
 						<span class="badge badge-secondary absolute -top-2 -right-3">PRO</span>
@@ -1494,7 +1646,7 @@
 		<section id="how-it-works" class="container py-24 sm:py-32">
 			<div class="text-center mb-8">
 				<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="howItWorks.eyebrow">流程</h2>
-				<h2 class="text-3xl md:text-4xl text-center font-bold" data-i18n="howItWorks.title">从输入到惊喜，只走 4 步</h2>
+				<h2 class="text-4xl text-center font-bold" data-i18n="howItWorks.title">从输入到惊喜，只走 4 步</h2>
 			</div>
 
 			<div class="lg:w-[80%] mx-auto relative">
@@ -1577,7 +1729,7 @@
 			<div class="text-center mb-8">
 				<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="testimonials.eyebrow">口碑
 				</h2>
-				<h2 class="text-3xl md:text-4xl text-center font-bold mb-4" data-i18n="testimonials.title">
+				<h2 class="text-4xl text-center font-bold mb-4" data-i18n="testimonials.title">
 					来自学生、教师和自学者的第一批反馈</h2>
 			</div>
 
@@ -1586,7 +1738,7 @@
 					<div class="carousel-track" data-carousel-track>
 
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1610,14 +1762,15 @@
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.0.name">林嘉琪
 											</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.0.role">高职学生</p>
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.0.role">
+												高职学生</p>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1641,14 +1794,15 @@
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.1.name">陈老师
 											</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.1.role">高职教师</p>
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.1.role">
+												高职教师</p>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1671,8 +1825,10 @@
 										</div>
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.2.name">Ava
-												Li</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.2.role">职业转型自学者
+												Li
+											</h3>
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.2.role">
+												职业转型自学者
 											</p>
 										</div>
 									</div>
@@ -1680,7 +1836,7 @@
 							</div>
 						</div>
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1704,7 +1860,8 @@
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.3.name">何文涛
 											</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.3.role">考前冲刺学生
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.3.role">
+												考前冲刺学生
 											</p>
 										</div>
 									</div>
@@ -1712,7 +1869,7 @@
 							</div>
 						</div>
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1736,7 +1893,8 @@
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.4.name">黄教研员
 											</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.4.role">课程负责人
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.4.role">
+												课程负责人
 											</p>
 										</div>
 									</div>
@@ -1744,7 +1902,7 @@
 							</div>
 						</div>
 						<div class="carousel-slide">
-							<div class="card bg-muted/50 dark:bg-card h-full rounded-[24px]">
+							<div class="card bg-muted/50 dark:bg-card h-full rounded-lg">
 								<div class="card-content pt-6 pb-0">
 									<div class="flex gap-1 pb-6">
 										<i data-lucide="star" class="size-4 fill-primary text-primary"
@@ -1768,7 +1926,8 @@
 										<div class="flex flex-col">
 											<h3 class="card-title text-lg" data-i18n="testimonials.reviews.5.name">
 												Sophia Zhou</h3>
-											<p class="card-description" data-i18n="testimonials.reviews.5.role">学习产品观察者
+											<p class="card-description mt-1" data-i18n="testimonials.reviews.5.role">
+												学习产品观察者
 											</p>
 										</div>
 									</div>
@@ -1792,7 +1951,7 @@
 		<section id="team" class="container py-24 sm:py-32">
 			<div class="text-center mb-10 max-w-[840px] mx-auto">
 				<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="team.eyebrow">AI 老师</h2>
-				<h2 class="text-3xl md:text-4xl text-center font-bold" data-i18n="team.title">选择更适合你的 AI 老师</h2>
+				<h2 class="text-4xl text-center font-bold" data-i18n="team.title">选择更适合你的 AI 老师</h2>
 				<p class="mt-4 text-lg md:text-xl text-muted-foreground leading-relaxed" data-i18n="team.description">
 					当前先展示 4 位 AI 老师，分别覆盖不同学习节奏与理解偏好。后续新增老师时，这里的卡片列表会继续扩展。</p>
 			</div>
@@ -1875,12 +2034,12 @@
 
 		<section id="pricing" class="container py-24 sm:py-32">
 			<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="pricing.eyebrow">试点方案</h2>
-			<h2 class="text-3xl md:text-4xl text-center font-bold mb-4" data-i18n="pricing.title">先把核心体验跑通，再讨论规模化</h2>
+			<h2 class="text-4xl text-center font-bold mb-4" data-i18n="pricing.title">先把核心体验跑通，再讨论规模化</h2>
 			<h3 class="md:w-1/2 mx-auto text-xl text-center text-muted-foreground pb-14"
 				data-i18n="pricing.description">以试点阶段的真实使用门槛和协作深度为依据，分别为学生、教师与院校团队提供清晰的使用方案。</h3>
 			<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-4">
 
-				<div class="card rounded-[24px] ">
+				<div class="card rounded-lg ">
 					<div class="card-header">
 						<h3 class="card-title pb-2" data-i18n="pricing.plans.0.title">学生版</h3>
 						<p class="card-description pb-4" data-i18n="pricing.plans.0.description">适合个人快速试用和日常复习。</p>
@@ -1916,7 +2075,7 @@
 					</div>
 				</div>
 				<div
-					class="card rounded-[24px] drop-shadow-xl shadow-black/10 dark:shadow-white/10 border-[1.5px] border-primary lg:scale-[1.04]">
+					class="card rounded-lg drop-shadow-xl shadow-black/10 dark:shadow-white/10 border-[1.5px] border-primary lg:scale-[1.04]">
 					<div class="card-header">
 						<h3 class="card-title pb-2" data-i18n="pricing.plans.1.title">教师版</h3>
 						<p class="card-description pb-4" data-i18n="pricing.plans.1.description">适合备课、翻转课堂与资源建设。</p>
@@ -1951,7 +2110,7 @@
 							data-i18n="pricing.plans.1.button">申请教师试点</a>
 					</div>
 				</div>
-				<div class="card rounded-[24px] ">
+				<div class="card rounded-lg ">
 					<div class="card-header">
 						<h3 class="card-title pb-2" data-i18n="pricing.plans.2.title">院校版</h3>
 						<p class="card-description pb-4" data-i18n="pricing.plans.2.description">适合教研组、试点专业与项目制课程。</p>
@@ -1995,7 +2154,7 @@
 				<div>
 					<div class="mb-4">
 						<h2 class="text-lg text-primary mb-2 tracking-wider" data-i18n="contact.eyebrow">联系</h2>
-						<h2 class="text-3xl md:text-4xl font-bold" data-i18n="contact.title">联系小麦团队</h2>
+						<h2 class="text-4xl font-bold" data-i18n="contact.title">联系小麦团队</h2>
 					</div>
 					<p class="mb-8 text-muted-foreground lg:w-5/6" data-i18n="contact.description">
 						无论你是希望申请试点、共创课程，还是反馈产品体验，都可以直接与小麦团队取得联系。</p>
@@ -2028,7 +2187,7 @@
 					</div>
 				</div>
 
-				<div class="card bg-muted/60 dark:bg-card rounded-[24px]">
+				<div class="card bg-muted/60 dark:bg-card rounded-lg">
 					<div class="card-header text-primary text-2xl"></div>
 					<div class="card-content">
 						<form class="grid gap-4" data-contact-form>
@@ -2076,7 +2235,7 @@
 									placeholder="告诉我们你的课程场景、试点需求或最想解决的问题。"></textarea>
 							</div>
 
-							<div class="alert alert-destructive hidden rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3"
+							<div class="alert alert-destructive hidden rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3"
 								data-contact-alert>
 								<div class="flex gap-3">
 									<i data-lucide="alert-circle" class="w-4 h-4 mt-0.5" aria-hidden="true"></i>
@@ -2100,7 +2259,7 @@
 		<section id="faq" class="container md:w-[700px] py-24 sm:py-32">
 			<div class="text-center mb-8">
 				<h2 class="text-lg text-primary text-center mb-2 tracking-wider" data-i18n="faq.eyebrow">常见问题</h2>
-				<h2 class="text-3xl md:text-4xl text-center font-bold" data-i18n="faq.title">先回答你最可能问的 5 个问题</h2>
+				<h2 class="text-4xl text-center font-bold" data-i18n="faq.title">先回答你最可能问的 5 个问题</h2>
 			</div>
 
 			<div class="AccordionRoot">
@@ -2165,7 +2324,7 @@
 
 
 		<footer id="footer" class="container py-24 pb-16 sm:py-32 sm:pb-24">
-			<div class="p-10 bg-muted/50 dark:bg-card border rounded-[32px]">
+			<div class="p-10 bg-muted/50 dark:bg-card border rounded-xl">
 				<div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-x-12 gap-y-8">
 					<div class="col-span-full xl:col-span-2">
 						<a href="#hero" class="flex font-bold items-center">
@@ -2244,7 +2403,8 @@
 
 				<div class="separator my-6"></div>
 				<section>
-					<h3 data-i18n="footer.copyright">© 2026 小麦 XiaoMai。面向职教场景的 AI 教学视频智能体。</h3>
+					<h3 class="text-sm text-muted-foreground" data-i18n="footer.copyright">© 2026 小麦 XiaoMai。面向职教场景的 AI
+						教学视频智能体。</h3>
 				</section>
 			</div>
 		</footer>
@@ -2458,7 +2618,7 @@
 		const hasStyleControls = Boolean(document.querySelector("[data-style-button]"));
 		const state = {
 			locale: localStorage.getItem("xiaomai-locale") || "zh-CN",
-			theme: localStorage.getItem("xiaomai-theme") || "dark",
+			theme: localStorage.getItem("xiaomai-theme") || "light",
 			style: hasStyleControls ? (localStorage.getItem("xiaomai-style") || "patient") : "brand",
 			activeTeacher: null,
 		};
