@@ -29,6 +29,19 @@ def _coerce_task_type(task_type: str | None, *, default_task_type: TaskType) -> 
     return default_task_type.value
 
 
+def _require_task_type(task_type: object, *, expected_task_type: TaskType | None = None) -> TaskType:
+    try:
+        normalized_task_type = TaskType(str(task_type))
+    except ValueError as exc:
+        raise ValueError(f"unsupported task_type: {task_type}") from exc
+
+    if expected_task_type is not None and normalized_task_type != expected_task_type:
+        raise ValueError(
+            f"unexpected task_type: {normalized_task_type.value}, expected {expected_task_type.value}"
+        )
+    return normalized_task_type
+
+
 def _coerce_status(status: TaskStatus | str | None) -> TaskStatus | None:
     if status is None or isinstance(status, TaskStatus):
         return status
@@ -136,10 +149,16 @@ TASK_METADATA_RUOYI_MAPPER = RuoYiMapper(
 )
 
 
-def snapshot_from_ruoyi_row(row: dict[str, Any]) -> TaskMetadataSnapshot:
+def snapshot_from_ruoyi_row(
+    row: dict[str, Any],
+    *,
+    expected_task_type: TaskType | None = None
+) -> TaskMetadataSnapshot:
     normalized = TASK_METADATA_RUOYI_MAPPER.from_ruoyi(row)
     normalized.pop("id", None)
-    normalized["table_name"] = TASK_TABLE_BY_TYPE[normalized["task_type"]]
+    task_type = _require_task_type(normalized.get("task_type"), expected_task_type=expected_task_type)
+    normalized["task_type"] = task_type.value
+    normalized["table_name"] = TASK_TABLE_BY_TYPE[task_type.value]
     return TaskMetadataSnapshot.model_validate(normalized)
 
 

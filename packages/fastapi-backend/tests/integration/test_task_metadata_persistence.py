@@ -26,6 +26,12 @@ def _build_client_factory(handler):
     return factory
 
 
+def _create_client(monkeypatch: pytest.MonkeyPatch, handler) -> TestClient:
+    monkeypatch.setattr(video_routes, "service", VideoService(client_factory=_build_client_factory(handler)))
+    monkeypatch.setattr(classroom_routes, "service", ClassroomService(client_factory=_build_client_factory(handler)))
+    return TestClient(create_app())
+
+
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     state = {
@@ -89,9 +95,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    monkeypatch.setattr(video_routes, "service", VideoService(client_factory=_build_client_factory(handler)))
-    monkeypatch.setattr(classroom_routes, "service", ClassroomService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+    return _create_client(monkeypatch, handler)
 
 
 def test_task_metadata_routes_persist_query_and_replay_with_ruoyi_time_format(client: TestClient) -> None:
@@ -241,3 +245,43 @@ def test_video_task_filters_use_exact_session_match_and_single_sided_time_window
     assert updated_to_response.status_code == 200
     assert updated_to_response.json()["total"] == 1
     assert updated_to_response.json()["rows"][0]["task_id"] == "video_route_010"
+
+
+def test_task_metadata_routes_return_invalid_response_envelope_for_unknown_task_type(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/video/task/list":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "rows": [
+                        {
+                            "id": 1,
+                            "taskId": "video_bad",
+                            "userId": "student_bad",
+                            "taskType": "unknown-domain",
+                            "taskState": "completed",
+                            "summary": "坏数据",
+                            "createTime": "2026-03-29 12:00:00",
+                            "updateTime": "2026-03-29 12:05:00"
+                        }
+                    ],
+                    "total": 1
+                }
+            )
+        raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
+
+    with _create_client(monkeypatch, handler) as client:
+        list_response = client.get("/api/v1/video/tasks")
+        detail_response = client.get("/api/v1/video/tasks/video_bad")
+
+    assert list_response.status_code == 502
+    assert list_response.json()["data"]["error_code"] == "RUOYI_INVALID_RESPONSE"
+    assert list_response.json()["data"]["details"]["reason"] == "unsupported task_type: unknown-domain"
+
+    assert detail_response.status_code == 502
+    assert detail_response.json()["data"]["error_code"] == "RUOYI_INVALID_RESPONSE"
+    assert detail_response.json()["data"]["details"]["reason"] == "unsupported task_type: unknown-domain"

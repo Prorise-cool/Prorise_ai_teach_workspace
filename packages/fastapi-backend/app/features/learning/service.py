@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+from typing import Mapping
 
+from app.core.errors import IntegrationError
 from app.features.learning.schemas import (
     LONG_TERM_TABLE_BY_RESULT_TYPE,
     LearningBootstrapResponse,
@@ -13,6 +15,10 @@ from app.shared.ruoyi_client import RuoYiClient
 
 
 class LearningService:
+    _RESOURCE = "learning-result"
+    _OPERATION = "persist-batch"
+    _ENDPOINT = "/internal/xiaomai/learning/results"
+
     def __init__(self, client_factory=None) -> None:
         self._client_factory = client_factory or RuoYiClient.from_settings
 
@@ -46,9 +52,9 @@ class LearningService:
         preview = await self.prepare_persistence_preview(request)
         async with self._client_factory() as client:
             result = await client.post_single(
-                "/internal/xiaomai/learning/results",
-                resource="learning-result",
-                operation="persist-batch",
+                self._ENDPOINT,
+                resource=self._RESOURCE,
+                operation=self._OPERATION,
                 retry_enabled=False,
                 json_body={
                     "userId": preview.user_id,
@@ -59,15 +65,17 @@ class LearningService:
                 }
             )
         data = result.data
+        records = self._require_record_items(data)
+        table_summary = self._require_table_summary(data)
         response_user_id = self._first_present(data, "userId", "user_id", default=preview.user_id)
         return LearningPersistenceResponse.model_validate(
             {
                 "user_id": response_user_id,
                 "records": [
                     self._from_ruoyi_record(item, default_user_id=response_user_id)
-                    for item in data.get("records", [])
+                    for item in records
                 ],
-                "table_summary": self._first_present(data, "tableSummary", "table_summary", default=self.table_catalog()),
+                "table_summary": table_summary,
                 "traceability_rule": self._first_present(
                     data,
                     "traceabilityRule",
@@ -183,3 +191,36 @@ class LearningService:
             if key in payload and payload[key] is not None:
                 return payload[key]
         return default
+
+    def _require_record_items(self, payload: Mapping[str, object]) -> list[dict[str, object]]:
+        records = self._first_present(payload, "records", default=[])
+        if not isinstance(records, list):
+            raise self._invalid_response_error("records is not a list")
+
+        normalized_records: list[dict[str, object]] = []
+        for index, item in enumerate(records):
+            if not isinstance(item, Mapping):
+                raise self._invalid_response_error(f"records[{index}] is not an object")
+            normalized_records.append(dict(item))
+        return normalized_records
+
+    def _require_table_summary(self, payload: Mapping[str, object]) -> dict[str, str]:
+        table_summary = self._first_present(payload, "tableSummary", "table_summary", default=self.table_catalog())
+        if not isinstance(table_summary, Mapping):
+            raise self._invalid_response_error("tableSummary is not an object")
+        return {str(key): str(value) for key, value in table_summary.items()}
+
+    def _invalid_response_error(self, reason: str) -> IntegrationError:
+        return IntegrationError(
+            service="ruoyi",
+            resource=self._RESOURCE,
+            operation=self._OPERATION,
+            code="RUOYI_INVALID_RESPONSE",
+            message="RuoYi 响应格式异常",
+            status_code=502,
+            retryable=False,
+            details={
+                "endpoint": self._ENDPOINT,
+                "reason": reason,
+            }
+        )

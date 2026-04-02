@@ -2,7 +2,9 @@ import asyncio
 import json
 
 import httpx
+import pytest
 
+from app.core.errors import IntegrationError
 from app.features.companion.long_term_records import (
     AnchorContext,
     AnchorKind,
@@ -225,3 +227,83 @@ def test_knowledge_chat_service_persists_reference_missing_without_losing_scope(
     assert fetched is not None
     assert fetched.retrieval_scope.anchor_ref == "chapter-2:paragraph-4"
     assert fetched.source_summary == "仅命中章节标题，未命中原文段落"
+
+
+def test_companion_service_rejects_malformed_success_payload() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/internal/xiaomai/companion/turns/turn_bad":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "turnId": "turn_bad",
+                        "sessionId": "session-bad",
+                        "userId": "student-bad",
+                        "contextType": "video",
+                        "questionText": "bad payload",
+                        "answerSummary": "bad payload",
+                        "persistenceStatus": "complete_success",
+                        "createdAt": "2026-03-29 15:00:00"
+                    }
+                }
+            )
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    def client_factory() -> RuoYiClient:
+        return RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+        )
+
+    service = CompanionService(client_factory=client_factory)
+
+    with pytest.raises(IntegrationError) as exc_info:
+        asyncio.run(service.get_turn("turn_bad"))
+
+    assert exc_info.value.code == "RUOYI_INVALID_RESPONSE"
+    assert "'anchor'" in exc_info.value.details["reason"]
+
+
+def test_knowledge_service_rejects_malformed_success_payload() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/internal/xiaomai/knowledge/chat-logs/chat_bad":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "chatLogId": "chat_bad",
+                        "sessionId": "session-bad",
+                        "userId": "student-bad",
+                        "contextType": "document",
+                        "questionText": "bad payload",
+                        "answerSummary": "bad payload",
+                        "persistenceStatus": "complete_success",
+                        "createdAt": "2026-03-29 15:05:00"
+                    }
+                }
+            )
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    def client_factory() -> RuoYiClient:
+        return RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+        )
+
+    service = KnowledgeService(client_factory=client_factory)
+
+    with pytest.raises(IntegrationError) as exc_info:
+        asyncio.run(service.get_chat_log("chat_bad"))
+
+    assert exc_info.value.code == "RUOYI_INVALID_RESPONSE"
+    assert "'retrievalScope'" in exc_info.value.details["reason"]

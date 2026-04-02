@@ -6,7 +6,7 @@ from typing import Any, Mapping
 
 from app.infra.redis_client import RuntimeStore
 from app.providers.protocols import validate_provider_id
-from app.shared.task_framework.status import TaskErrorCode
+from app.shared.task_framework.status import TaskErrorCode, coerce_task_error_code
 
 
 @dataclass(slots=True, frozen=True)
@@ -90,7 +90,10 @@ class ProviderHealthStore:
             metadata={
                 "source": source,
                 "failureCount": 1 if previous is None else previous.failure_count + 1,
-                "errorCode": TaskErrorCode(error_code).value,
+                "errorCode": coerce_task_error_code(
+                    error_code,
+                    fallback=TaskErrorCode.PROVIDER_UNAVAILABLE
+                ).value,
                 **dict(metadata or {}),
             },
         )

@@ -141,6 +141,35 @@ def test_ruoyi_client_unwraps_page_response_and_applies_mapper() -> None:
     _run(client.aclose())
 
 
+def test_ruoyi_client_rejects_single_response_when_data_is_not_object() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "查询成功",
+                "data": []
+            }
+        )
+
+    client = _build_client(handler, retry_attempts=0)
+
+    with pytest.raises(IntegrationError) as exc_info:
+        _run(
+            client.get_single(
+                "/api/v1/video/tasks/1001",
+                resource="video-task",
+                operation="query"
+            )
+        )
+
+    error = exc_info.value
+    assert error.code == "RUOYI_INVALID_RESPONSE"
+    assert error.details["reason"] == "data is not an object"
+
+    _run(client.aclose())
+
+
 @pytest.mark.parametrize(
     ("status_code", "json_payload", "expected_error_code", "expected_retryable", "expected_response_status"),
     [

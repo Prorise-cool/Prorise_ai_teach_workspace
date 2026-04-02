@@ -5,6 +5,7 @@ from app.features.video.schemas import (
     VideoTaskMetadataPreviewResponse,
     VideoTaskMetadataSnapshot,
 )
+from app.core.errors import IntegrationError
 from app.features.video.task_metadata import (
     TASK_METADATA_RUOYI_MAPPER,
     TaskType,
@@ -18,6 +19,7 @@ from datetime import datetime
 
 class VideoService:
     _REPLAY_PAGE_SIZE = 100
+    _RESOURCE = "video-task"
 
     def __init__(self, repository=None, client_factory=None) -> None:
         self._repository = repository
@@ -29,13 +31,21 @@ class VideoService:
     async def persist_task(self, request: VideoTaskMetadataCreateRequest) -> VideoTaskMetadataPreviewResponse:
         async with self._client_factory() as client:
             existing_row = await self._query_existing_row(client, request.task_id)
-            existing_snapshot = snapshot_from_ruoyi_row(existing_row) if existing_row is not None else None
+            existing_snapshot = (
+                self._snapshot_from_ruoyi_row(
+                    existing_row,
+                    operation="query-by-task-id",
+                    endpoint="/video/task/list"
+                )
+                if existing_row is not None
+                else None
+            )
             snapshot = self._build_snapshot(request, existing_snapshot)
             ruoyi_payload = snapshot.to_ruoyi_payload()
             if existing_row is None:
                 await client.post_single(
                     "/video/task",
-                    resource="video-task",
+                    resource=self._RESOURCE,
                     operation="create",
                     json_body=ruoyi_payload,
                     retry_enabled=False
@@ -43,7 +53,7 @@ class VideoService:
             else:
                 await client.put_single(
                     "/video/task",
-                    resource="video-task",
+                    resource=self._RESOURCE,
                     operation="update",
                     json_body={"id": existing_row["id"], **ruoyi_payload},
                     retry_enabled=False
@@ -57,7 +67,15 @@ class VideoService:
     async def get_task(self, task_id: str) -> VideoTaskMetadataSnapshot | None:
         async with self._client_factory() as client:
             row = await self._query_existing_row(client, task_id)
-        return snapshot_from_ruoyi_row(row) if row is not None else None
+        return (
+            self._snapshot_from_ruoyi_row(
+                row,
+                operation="query-by-task-id",
+                endpoint="/video/task/list"
+            )
+            if row is not None
+            else None
+        )
 
     async def list_tasks(
         self,
@@ -73,7 +91,7 @@ class VideoService:
         async with self._client_factory() as client:
             result = await client.get_page(
                 "/video/task/list",
-                resource="video-task",
+                resource=self._RESOURCE,
                 operation="page",
                 params={
                     "taskState": status.value if status is not None else None,
@@ -87,7 +105,7 @@ class VideoService:
                 mapper=TASK_METADATA_RUOYI_MAPPER
             )
         rows = [
-            VideoTaskMetadataSnapshot.model_validate({**row, "table_name": "xm_video_task"})
+            self._snapshot_from_ruoyi_row(row, operation="page", endpoint="/video/task/list")
             for row in result.rows
         ]
         return VideoTaskMetadataPageResponse(rows=rows, total=result.total)
@@ -126,12 +144,36 @@ class VideoService:
     async def _query_existing_row(self, client: RuoYiClient, task_id: str) -> dict | None:
         result = await client.get_page(
             "/video/task/list",
-            resource="video-task",
+            resource=self._RESOURCE,
             operation="query-by-task-id",
             params={"taskId": task_id, "pageNum": 1, "pageSize": 1}
         )
         rows = result.raw.get("rows", [])
         return rows[0] if rows else None
+
+    def _snapshot_from_ruoyi_row(
+        self,
+        row: dict,
+        *,
+        operation: str,
+        endpoint: str
+    ) -> VideoTaskMetadataSnapshot:
+        try:
+            return snapshot_from_ruoyi_row(row, expected_task_type=TaskType.VIDEO)
+        except ValueError as exc:
+            raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
+
+    def _invalid_response_error(self, *, operation: str, endpoint: str, reason: str) -> IntegrationError:
+        return IntegrationError(
+            service="ruoyi",
+            resource=self._RESOURCE,
+            operation=operation,
+            code="RUOYI_INVALID_RESPONSE",
+            message="RuoYi 响应格式异常",
+            status_code=502,
+            retryable=False,
+            details={"endpoint": endpoint, "reason": reason}
+        )
 
     @staticmethod
     def _format_query_datetime(value: datetime | None) -> str | None:
