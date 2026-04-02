@@ -1,3 +1,6 @@
+/**
+ * 文件说明：验证认证 adapter 的契约映射与真实接口请求格式。
+ */
 import {
   AuthAdapterError,
   createAuthError,
@@ -8,7 +11,10 @@ import {
 import { ApiClientError } from '@/services/api/client';
 import { createAuthService, normalizeReturnTo } from '@/services/auth';
 import { authMockFixtures } from '@/services/mock/fixtures/auth';
-import { DEFAULT_AUTH_RETURN_TO } from '@/types/auth';
+import {
+  AUTH_DEFAULT_USER_TYPE,
+  DEFAULT_AUTH_RETURN_TO
+} from '@/types/auth';
 
 type AuthEnvelope<T> = {
   code: number;
@@ -19,13 +25,18 @@ type AuthEnvelope<T> = {
 type RecordedRequest = {
   url?: string;
   method?: string;
-  data?: {
-    tenantId?: string;
-    grantType?: string;
-  };
-  headers?: Headers;
+  data?: Record<string, unknown>;
+  headers?: Headers | Record<string, string>;
+  encrypt?: boolean;
 };
 
+/**
+ * 生成测试用的 ApiClientError。
+ *
+ * @param status - HTTP 状态码。
+ * @param payload - 错误 payload。
+ * @returns API Client 错误实例。
+ */
 function createApiClientError<T>(status: number, payload: AuthEnvelope<T>) {
   return new ApiClientError(status, payload.msg, payload, {
     status,
@@ -55,6 +66,28 @@ describe('auth adapter contract helpers', () => {
       { key: 'video:task:add' },
       { key: 'classroom:session:add' }
     ]);
+  });
+
+  it('normalizes nullable token fields from RuoYi password login responses', () => {
+    const token = mapRuoyiLoginToken({
+      access_token: 'real-access-token',
+      refresh_token: null,
+      expire_in: 604800,
+      refresh_expire_in: null,
+      client_id: 'e5cd7e4891bf95d1d19206ce24a7b32e',
+      openid: null,
+      scope: undefined
+    });
+
+    expect(token).toMatchObject({
+      accessToken: 'real-access-token',
+      refreshToken: null,
+      expiresIn: 604800,
+      refreshExpiresIn: null,
+      clientId: 'e5cd7e4891bf95d1d19206ce24a7b32e',
+      openId: null,
+      scopes: []
+    });
   });
 
   it('sanitizes returnTo values to app-internal non-login routes only', () => {
@@ -110,7 +143,7 @@ describe('real adapter integration', () => {
         data: {
           code: 200,
           msg: '登录成功',
-          data: authMockFixtures.student.tokenPayload
+          data: authMockFixtures.admin.tokenPayload
         }
       })
       .mockResolvedValueOnce({
@@ -118,7 +151,7 @@ describe('real adapter integration', () => {
         data: {
           code: 200,
           msg: '获取成功',
-          data: authMockFixtures.student.userInfoPayload
+          data: authMockFixtures.admin.userInfoPayload
         }
       });
 
@@ -131,17 +164,19 @@ describe('real adapter integration', () => {
     );
 
     const session = await service.login({
-      username: 'student_demo',
-      password: 'Passw0rd!'
+      username: 'admin',
+      password: 'admin123'
     });
 
     const requestCalls = request.mock.calls as unknown[][];
     const firstRequest = requestCalls[0]?.[0] as RecordedRequest | undefined;
     const secondRequest = requestCalls[1]?.[0] as RecordedRequest | undefined;
+    const secondRequestHeaders = secondRequest?.headers as Headers | undefined;
 
     expect(firstRequest).toMatchObject({
       url: '/auth/login',
-      method: 'post'
+      method: 'post',
+      encrypt: true
     });
     expect(firstRequest?.data).toMatchObject({
       tenantId: '000000',
@@ -151,11 +186,185 @@ describe('real adapter integration', () => {
       url: '/system/user/getInfo',
       method: 'get'
     });
-    expect(secondRequest?.headers).toBeInstanceOf(Headers);
-    expect(secondRequest?.headers?.get('Authorization')).toBe(
-      'Bearer mock-auth-student-access-token'
+    expect(secondRequestHeaders).toBeInstanceOf(Headers);
+    expect(secondRequestHeaders?.get('Authorization')).toBe(
+      'Bearer mock-auth-admin-access-token'
     );
-    expect(session.user.nickname).toBe('小麦同学');
+    expect(session.user.nickname).toBe('平台管理员');
+  });
+
+  it('submits register payloads to the shared auth register endpoint', async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      data: {
+        code: 200,
+        msg: '注册成功',
+        data: null
+      }
+    });
+    const adapter = createRealAuthAdapter({
+      client: {
+        request
+      } as never
+    });
+
+    await expect(
+      adapter.register({
+        username: 'new_student',
+        password: 'Passw0rd!',
+        confirmPassword: 'Passw0rd!',
+        code: 'A1B2',
+        uuid: 'captcha-uuid',
+        clientId: 'demo-client'
+      })
+    ).resolves.toBeUndefined();
+
+    const registerRequest = request.mock.calls[0]?.[0] as RecordedRequest | undefined;
+
+    expect(registerRequest).toMatchObject({
+      url: '/auth/register',
+      method: 'post',
+      encrypt: true
+    });
+    expect(registerRequest?.data).toMatchObject({
+      username: 'new_student',
+      password: 'Passw0rd!',
+      confirmPassword: 'Passw0rd!',
+      tenantId: '000000',
+      grantType: 'password',
+      userType: AUTH_DEFAULT_USER_TYPE,
+      clientId: 'demo-client',
+      code: 'A1B2',
+      uuid: 'captcha-uuid'
+    });
+  });
+
+  it('sends social callback payloads through the shared login endpoint', async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          code: 200,
+          msg: '登录成功',
+          data: authMockFixtures.social.tokenPayload
+        }
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          code: 200,
+          msg: '获取成功',
+          data: authMockFixtures.social.userInfoPayload
+        }
+      });
+
+    const service = createAuthService(
+      createRealAuthAdapter({
+        client: {
+          request
+        } as never
+      })
+    );
+
+    await service.login({
+      grantType: 'social',
+      source: 'github',
+      socialCode: 'oauth-code',
+      socialState: 'oauth-state'
+    });
+
+    const firstRequest = request.mock.calls[0]?.[0] as RecordedRequest | undefined;
+
+    expect(firstRequest?.data).toMatchObject({
+      tenantId: '000000',
+      grantType: 'social',
+      source: 'github',
+      socialCode: 'oauth-code'
+    });
+    expect(firstRequest?.encrypt).toBe(true);
+  });
+
+  it('requests the social auth binding url with tenant and domain params', async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      data: 'https://oauth.example.com/github'
+    });
+    const adapter = createRealAuthAdapter({
+      client: {
+        request
+      } as never
+    });
+
+    const url = await adapter.getSocialAuthUrl({
+      source: 'github',
+      tenantId: '000000',
+      domain: 'localhost:4173'
+    });
+
+    expect(url).toBe('https://oauth.example.com/github');
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'get',
+        url: '/auth/binding/github?tenantId=000000&domain=localhost%3A4173'
+      })
+    );
+  });
+
+  it('loads captcha metadata from the dedicated auth code endpoint', async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      data: {
+        code: 200,
+        msg: '获取成功',
+        data: {
+          captchaEnabled: true,
+          uuid: 'captcha-uuid',
+          img: 'captcha-image-base64'
+        }
+      }
+    });
+    const adapter = createRealAuthAdapter({
+      client: {
+        request
+      } as never
+    });
+
+    await expect(adapter.getCaptcha()).resolves.toMatchObject({
+      captchaEnabled: true,
+      uuid: 'captcha-uuid',
+      imageBase64: 'captcha-image-base64'
+    });
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/auth/code',
+        method: 'get'
+      })
+    );
+  });
+
+  it('loads the backend register toggle from the config endpoint', async () => {
+    const request = vi.fn().mockResolvedValue({
+      status: 200,
+      data: {
+        code: 200,
+        msg: '获取成功',
+        data: true
+      }
+    });
+    const adapter = createRealAuthAdapter({
+      client: {
+        request
+      } as never
+    });
+
+    await expect(adapter.getRegisterEnabled('tenant-demo')).resolves.toBe(true);
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/auth/register/enabled?tenantId=tenant-demo',
+        method: 'get'
+      })
+    );
   });
 
   it('normalizes fetch client errors into contract-safe auth errors', async () => {

@@ -14,6 +14,12 @@ export type RuntimeBootstrapResult = {
   mockReady: boolean;
 };
 
+/**
+ * 初始化前端运行时依赖，并在需要时拉起 mock 基础设施。
+ *
+ * @param options - 运行时初始化参数。
+ * @returns 当前运行模式与 mock 初始化结果。
+ */
 export async function initializeAppRuntime(
   options: RuntimeBootstrapOptions = {}
 ): Promise<RuntimeBootstrapResult> {
