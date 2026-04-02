@@ -6,9 +6,12 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const AUTH_SESSION_STORAGE_KEY: typeof import('../stores/auth-session-store').AUTH_SESSION_STORAGE_KEY
   const Link: typeof import('react-router-dom').Link
   const NavLink: typeof import('react-router-dom').NavLink
   const Outlet: typeof import('react-router-dom').Outlet
+  const resetAuthSessionStore: typeof import('../stores/auth-session-store').resetAuthSessionStore
+  const useAuthSessionStore: typeof import('../stores/auth-session-store').useAuthSessionStore
   const useEffect: typeof import('react').useEffect
   const useLocation: typeof import('react-router-dom').useLocation
   const useMemo: typeof import('react').useMemo

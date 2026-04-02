@@ -1,3 +1,7 @@
+/**
+ * 文件说明：student-web 浏览器入口。
+ * 负责挂载全局样式并把根应用渲染到 DOM。
+ */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 

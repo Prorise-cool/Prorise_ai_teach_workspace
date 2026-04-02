@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-03-31 15:12:00 +0800
+last_updated: 2026-04-02 12:53:13 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -51,8 +51,8 @@ development_status:
   0-6-story-交付门禁与并行开发-dor-dod-冻结: done
   epic-0-retrospective: optional
   epic-1: in-progress
-  1-1-统一认证契约会话-payload-与-mock-基线: done
-  1-2-独立认证页中的注册登录与回跳: ready-for-dev
+  1-1-统一认证契约会话-payload-与-mock-基线: review
+  1-2-独立认证页中的注册登录与回跳: done
   1-3-登出401-处理与受保护访问一致性: ready-for-dev
   1-4-首页双入口理解与非阻塞推荐提示: ready-for-dev
   1-5-输入壳层中的老师风格最小选择配置: ready-for-dev
@@ -133,7 +133,7 @@ development_status:
   9-2-学习中心结果回看与入口整合: backlog
   9-3-历史记录与收藏管理: backlog
   9-4-个人资料与设置管理: backlog
-  9-5-i18n-架构预留与关键静态文案资源化: backlog
+  9-5-i18n-与亮暗色基线扩展到学习中心与个人域: backlog
   epic-9-retrospective: optional
   epic-10: done
   10-1-长期业务数据边界业务表清单与字段基线冻结: done

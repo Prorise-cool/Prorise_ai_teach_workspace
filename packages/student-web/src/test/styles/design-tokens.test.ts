@@ -1,5 +1,6 @@
 import {
   agentAccentTokens,
+  authPageTokens,
   colorTokens,
   motionTokens,
   radiusTokens,
@@ -21,5 +22,12 @@ describe('design tokens', () => {
     expect(motionTokens.duration.base).toBe('300ms');
     expect(typographyTokens.size.h1).toBe('48px');
     expect(shadowTokens.light.card).toContain('rgba');
+  });
+
+  it('exposes auth page layout and palette tokens for page-level reuse', () => {
+    expect(authPageTokens.layout.containerMaxWidth).toBe('1080px');
+    expect(authPageTokens.layout.panelPaddingX).toBe('70px');
+    expect(authPageTokens.scene.character3).toBe('#f5c547');
+    expect(authPageTokens.shadow.light.container).toContain('72px');
   });
 });

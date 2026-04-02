@@ -1,5 +1,5 @@
 ## Epic 9: 学习中心聚合、个人管理与长期回看
-用户可以在学习中心聚合查看历史、收藏、测验结果与推荐内容，并管理个人资料与平台设置。  
+用户可以在学习中心聚合查看历史、收藏、测验结果与推荐内容，并管理个人资料与平台设置，同时把 i18n 与亮 / 暗色基础能力继续铺到长期消费层页面。  
 **FRs covered:** `FR-UM-003`、`FR-UI-005`、`FR-UI-007`、`FR-UI-008`、`FR-LA-006`、`FR-LR-001~004`  
 **NFRs covered:** `NFR-UX-005`、`NFR-UX-003`、`NFR-PF-001`  
 **Primary Story Types:** `Contract Story`、`Frontend Story`、`Backend Story`、`Integration Story`
@@ -13,7 +13,7 @@ Epic 9 负责长期沉淀的“前台消费层”。
 - Evidence 回看；
 - checkpoint / quiz / wrongbook / recommendation / path 回看；
 - 个人资料；
-- 设置与 i18n 预留。  
+- 设置以及 i18n / 亮暗色基础能力的持续落地。  
 
 它不负责：
 - 长期数据如何落库；
@@ -31,6 +31,7 @@ Epic 9 负责长期沉淀的“前台消费层”。
 - 详情打开入口
 - 收藏 / 取消收藏 / 删除
 - i18n 资源接入规则
+- 亮 / 暗色主题一致性规则
 
 ### Out of Scope
 - RuoYi 业务表本身的建表
@@ -60,6 +61,7 @@ Epic 9 负责长期沉淀的“前台消费层”。
 - `/history`、`/favorites` 可分页查看与管理；
 - `/profile` 与 `/settings` 不混入学习结果；
 - i18n 关键静态文案进入资源管理；
+- `/learning`、`/history`、`/favorites`、`/profile`、`/settings` 在 light / dark 下保持一致语义和基本可用性；
 - 页面可在 mock / real 下保持一致状态机。  
 
 ### Parallel Delivery Rule
@@ -72,7 +74,7 @@ Story `9.2`、`9.3`、`9.4` 可在 mock 数据集下并行推进。
 - Story 9.2: 学习中心结果回看与入口整合  
 - Story 9.3: 历史记录与收藏管理  
 - Story 9.4: 个人资料与设置管理  
-- Story 9.5: i18n 架构预留与关键静态文案资源化  
+- Story 9.5: i18n 与亮暗色基线扩展到学习中心与个人域  
 
 ### Story 9.1: 学习中心聚合契约、分页结构与 mock 数据集
 **Story Type:** `Contract Story`  
@@ -196,31 +198,32 @@ So that 我可以维护自己的身份信息和使用习惯，而不把学习结
 - 主题 / 语言 / 通知 / 退出登录项
 - 保存反馈
 
-### Story 9.5: i18n 架构预留与关键静态文案资源化
+### Story 9.5: i18n 与亮暗色基线扩展到学习中心与个人域
 **Story Type:** `Integration Story`  
 As a 前端团队，  
-I want 为未来中英双语切换预留架构能力，  
-So that MVP 虽默认中文，但不会因后期国际化而大规模返工。  
+I want 把 i18n 文案资源化与 light / dark 主题基线继续扩展到学习中心、个人资料和设置页面，  
+So that 这些长期消费层页面不会成为后续国际化和主题体系的漏网区域。  
 
 **Acceptance Criteria:**
-**Given** 前端为未来多语言做架构预留  
+**Given** 学习中心域和个人域页面进入开发或重构  
 **When** 页面定义关键静态文案  
 **Then** 所有关键静态文本进入 i18n 资源管理而不是硬编码在组件内部  
 **And** MVP 默认中文体验保持不变  
 
-**Given** 当前阶段暂不要求完整双语上线  
-**When** 前端接入 i18n 框架  
-**Then** 页面结构、组件 props 与状态文案组织方式已适配未来扩展  
-**And** 不要求本阶段完成所有动态内容翻译  
+**Given** 页面接入统一 light / dark 主题体系  
+**When** 用户查看列表、详情入口、资料表单、设置项和反馈状态  
+**Then** 关键布局、文本对比度、表单、卡片、弹层与反馈状态在亮色 / 暗色下保持一致语义与基本可用性  
+**And** 不允许通过写死颜色绕过统一 token 体系  
 
 **Given** 学习中心、个人资料、设置等页面逐步接入资源化文案  
 **When** 团队检查页面代码  
 **Then** 关键导航、标题、CTA、状态文案具备资源键而非散落硬编码  
-**And** 后续补充英文资源时不需要大面积改动组件结构  
+**And** 后续补充英文资源或扩展主题变量时不需要大面积改动组件结构  
 
 **Deliverables:**
 - i18n 接入基线
-- 关键文案资源化
+- 学习中心域与个人域关键文案资源化
+- 学习中心域与个人域 light / dark 主题一致性
 - 资源键命名规范
 - MVP 默认中文策略说明
 

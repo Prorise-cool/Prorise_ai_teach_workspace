@@ -1,4 +1,25 @@
-export type ApiRequestMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+/**
+ * 文件说明：封装 student-web 统一的 Fetch API Client。
+ * 负责请求超时、错误归一化和 JSON / 非 JSON 响应解析。
+ */
+import {
+  decryptBase64,
+  decryptWithAes,
+  decryptWithRsa,
+  encryptBase64,
+  encryptWithAes,
+  encryptWithRsa,
+  generateAesKey,
+  getRequestEncryptHeaderFlag,
+  isRequestEncryptionEnabled,
+} from "@/services/api/request-crypto";
+import {
+  readRecord,
+  readStringProperty,
+  parseJsonText,
+} from "@/lib/type-guards";
+
+export type ApiRequestMethod = "get" | "post" | "put" | "patch" | "delete";
 
 export type ApiRequestConfig = {
   url: string;
@@ -7,6 +28,7 @@ export type ApiRequestConfig = {
   headers?: HeadersInit;
   credentials?: RequestCredentials;
   signal?: AbortSignal;
+  encrypt?: boolean;
 };
 
 export type ApiClientResponse<T> = {
@@ -20,13 +42,13 @@ export interface ApiClient {
 }
 
 export class ApiClientError extends Error {
-  name = 'ApiClientError' as const;
+  name = "ApiClientError" as const;
 
   constructor(
     public status: number,
     message: string,
     public data?: unknown,
-    public response?: ApiClientResponse<unknown>
+    public response?: ApiClientResponse<unknown>,
   ) {
     super(message);
     Object.setPrototypeOf(this, new.target.prototype);
@@ -41,24 +63,79 @@ type CreateApiClientOptions = {
 
 const DEFAULT_TIMEOUT = 15000;
 
+function resolveRequestLocale() {
+  if (typeof document !== "undefined") {
+    const documentLanguage = document.documentElement.lang?.trim();
+
+    if (documentLanguage) {
+      return documentLanguage;
+    }
+  }
+
+  return import.meta.env.VITE_APP_DEFAULT_LOCALE;
+}
+
+function appendDefaultHeaders(headers: Headers) {
+  const clientId = import.meta.env.VITE_APP_CLIENT_ID?.trim();
+
+  if (clientId) {
+    headers.set("Clientid", clientId);
+  }
+
+  headers.set("Content-Language", resolveRequestLocale().replace("-", "_"));
+}
+
+function shouldEncryptRequest(
+  method: ApiRequestMethod,
+  encrypt: boolean | undefined,
+) {
+  return (
+    encrypt === true &&
+    isRequestEncryptionEnabled() &&
+    (method === "post" || method === "put" || method === "patch")
+  );
+}
+
+function createEncryptedRequestBody(data: unknown) {
+  const aesKey = generateAesKey();
+  const encryptedKey = encryptWithRsa(encryptBase64(aesKey));
+  const plainPayload =
+    typeof data === "string" ? data : JSON.stringify(data ?? null);
+
+  return {
+    headerName: getRequestEncryptHeaderFlag(),
+    headerValue: encryptedKey,
+    body: encryptWithAes(plainPayload, aesKey),
+  };
+}
+
+/**
+ * 判断请求体是否应按 JSON 序列化发送。
+ *
+ * @param value - 待发送的请求体。
+ * @returns 是否可以安全序列化为 JSON。
+ */
 function isJsonSerializableBody(value: unknown) {
   if (value === null || value === undefined) {
     return false;
   }
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return false;
   }
 
-  if (typeof FormData !== 'undefined' && value instanceof FormData) {
+  if (typeof FormData !== "undefined" && value instanceof FormData) {
     return false;
   }
 
-  if (typeof URLSearchParams !== 'undefined' && value instanceof URLSearchParams) {
+  if (
+    typeof URLSearchParams !== "undefined" &&
+    value instanceof URLSearchParams
+  ) {
     return false;
   }
 
-  if (typeof Blob !== 'undefined' && value instanceof Blob) {
+  if (typeof Blob !== "undefined" && value instanceof Blob) {
     return false;
   }
 
@@ -66,36 +143,76 @@ function isJsonSerializableBody(value: unknown) {
     return false;
   }
 
-  if (typeof ReadableStream !== 'undefined' && value instanceof ReadableStream) {
+  if (
+    typeof ReadableStream !== "undefined" &&
+    value instanceof ReadableStream
+  ) {
     return false;
   }
 
   return true;
 }
 
+/**
+ * 从后端错误负载中提取更适合展示的错误消息。
+ *
+ * @param data - 错误响应体。
+ * @param fallbackMessage - 默认兜底文案。
+ * @returns 解析后的错误消息。
+ */
 function parseErrorMessage(data: unknown, fallbackMessage: string) {
-  if (
-    typeof data === 'object' &&
-    data !== null &&
-    'msg' in data &&
-    typeof (data as { msg?: unknown }).msg === 'string' &&
-    (data as { msg: string }).msg.trim().length > 0
-  ) {
-    return (data as { msg: string }).msg;
+  const errorRecord = readRecord(data);
+  const errorMessage = errorRecord
+    ? readStringProperty(errorRecord, "msg")
+    : undefined;
+
+  if (errorMessage && errorMessage.trim().length > 0) {
+    return errorMessage;
   }
 
   return fallbackMessage;
 }
 
+/**
+ * 根据响应头自动解析 JSON、文本或空响应体。
+ *
+ * @param response - Fetch 响应对象。
+ * @returns 解析后的响应体。
+ */
 async function parseResponseBody(response: Response) {
   if (response.status === 204 || response.status === 205) {
     return null;
   }
 
-  const contentType = response.headers.get('content-type') ?? '';
+  const encryptedKey = response.headers.get(getRequestEncryptHeaderFlag());
 
-  if (contentType.includes('application/json')) {
-    return response.json() as Promise<unknown>;
+  if (isRequestEncryptionEnabled() && encryptedKey) {
+    const encryptedText = await response.text();
+
+    if (encryptedText.length === 0) {
+      return null;
+    }
+
+    const decryptedAesKey = decryptBase64(decryptWithRsa(encryptedKey));
+    const decryptedPayload = decryptWithAes(encryptedText, decryptedAesKey);
+
+    if (decryptedPayload.length === 0) {
+      return null;
+    }
+
+    return parseJsonText(decryptedPayload);
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const rawJsonText = await response.text();
+
+    if (rawJsonText.length === 0) {
+      return null;
+    }
+
+    return parseJsonText(rawJsonText);
   }
 
   const text = await response.text();
@@ -105,12 +222,19 @@ async function parseResponseBody(response: Response) {
   }
 
   try {
-    return JSON.parse(text) as unknown;
+    return parseJsonText(text);
   } catch {
     return text;
   }
 }
 
+/**
+ * 结合可选 `baseURL` 解析最终请求地址。
+ *
+ * @param baseURL - 客户端基础地址。
+ * @param url - 调用方传入的相对或绝对地址。
+ * @returns 最终请求 URL。
+ */
 function resolveRequestUrl(baseURL: string | undefined, url: string) {
   if (!baseURL) {
     return url;
@@ -119,6 +243,13 @@ function resolveRequestUrl(baseURL: string | undefined, url: string) {
   return new URL(url, baseURL).toString();
 }
 
+/**
+ * 创建带超时控制的请求信号，并桥接外部中断信号。
+ *
+ * @param timeout - 请求超时时间，单位毫秒。
+ * @param signal - 外部传入的中断信号。
+ * @returns 组合后的请求信号与清理函数。
+ */
 function createRequestSignal(timeout: number, signal?: AbortSignal) {
   const controller = new AbortController();
   const relayAbort = () => controller.abort(signal?.reason);
@@ -127,12 +258,12 @@ function createRequestSignal(timeout: number, signal?: AbortSignal) {
     if (signal.aborted) {
       controller.abort(signal.reason);
     } else {
-      signal.addEventListener('abort', relayAbort, { once: true });
+      signal.addEventListener("abort", relayAbort, { once: true });
     }
   }
 
   const timeoutId = setTimeout(() => {
-    controller.abort(new Error('Request timeout'));
+    controller.abort(new Error("Request timeout"));
   }, timeout);
 
   return {
@@ -141,42 +272,72 @@ function createRequestSignal(timeout: number, signal?: AbortSignal) {
       clearTimeout(timeoutId);
 
       if (signal) {
-        signal.removeEventListener('abort', relayAbort);
+        signal.removeEventListener("abort", relayAbort);
       }
-    }
+    },
   };
 }
 
+/**
+ * 判断异常是否为统一 API Client 抛出的错误类型。
+ *
+ * @param error - 待判断的异常对象。
+ * @returns 是否为 `ApiClientError`。
+ */
 export function isApiClientError(error: unknown): error is ApiClientError {
   return error instanceof ApiClientError;
 }
 
+/**
+ * 创建统一的 Fetch API Client，并封装超时、错误归一化与响应解析。
+ *
+ * @param options - Client 初始化参数。
+ * @param options.baseURL - 请求基础地址。
+ * @param options.credentials - 默认凭证模式。
+ * @param options.timeout - 默认超时时间。
+ * @returns 可复用的 API Client 实例。
+ */
 export function createApiClient({
   baseURL = import.meta.env.VITE_RUOYI_BASE_URL,
-  credentials = 'include',
-  timeout = DEFAULT_TIMEOUT
+  credentials = "include",
+  timeout = DEFAULT_TIMEOUT,
 }: CreateApiClientOptions = {}): ApiClient {
   return {
     async request<T>({
       url,
-      method = 'get',
+      method = "get",
       data,
       headers,
       credentials: requestCredentials,
-      signal
+      signal,
+      encrypt,
     }: ApiRequestConfig) {
       const requestHeaders = new Headers(headers);
-      const { signal: requestSignal, cleanup } = createRequestSignal(timeout, signal);
+      const { signal: requestSignal, cleanup } = createRequestSignal(
+        timeout,
+        signal,
+      );
       const init: RequestInit = {
         method: method.toUpperCase(),
         credentials: requestCredentials ?? credentials,
         headers: requestHeaders,
-        signal: requestSignal
+        signal: requestSignal,
       };
 
+      appendDefaultHeaders(requestHeaders);
+
       if (data !== undefined) {
-        if (isJsonSerializableBody(data)) {
-          requestHeaders.set('Content-Type', 'application/json');
+        if (shouldEncryptRequest(method, encrypt)) {
+          const encryptedRequest = createEncryptedRequestBody(data);
+
+          requestHeaders.set("Content-Type", "application/json");
+          requestHeaders.set(
+            encryptedRequest.headerName,
+            encryptedRequest.headerValue,
+          );
+          init.body = encryptedRequest.body;
+        } else if (isJsonSerializableBody(data)) {
+          requestHeaders.set("Content-Type", "application/json");
           init.body = JSON.stringify(data);
         } else {
           init.body = data as BodyInit;
@@ -189,15 +350,15 @@ export function createApiClient({
         const result: ApiClientResponse<T> = {
           status: response.status,
           data: parsedBody as T,
-          headers: response.headers
+          headers: response.headers,
         };
 
         if (!response.ok) {
           throw new ApiClientError(
             response.status,
-            parseErrorMessage(parsedBody, response.statusText || '请求失败'),
+            parseErrorMessage(parsedBody, response.statusText || "请求失败"),
             parsedBody,
-            result as ApiClientResponse<unknown>
+            result as ApiClientResponse<unknown>,
           );
         }
 
@@ -207,19 +368,19 @@ export function createApiClient({
           throw error;
         }
 
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw new ApiClientError(408, '请求超时');
+        if (error instanceof Error && error.name === "AbortError") {
+          throw new ApiClientError(408, "请求超时");
         }
 
         if (error instanceof Error) {
           throw new ApiClientError(500, error.message);
         }
 
-        throw new ApiClientError(500, '网络请求失败');
+        throw new ApiClientError(500, "网络请求失败");
       } finally {
         cleanup();
       }
-    }
+    },
   };
 }
 

@@ -7,58 +7,82 @@ export const TASK_UNAUTHORIZED_STATUS = 401;
 export const TASK_FORBIDDEN_STATUS = 403;
 
 export const TASK_STATUS_VALUES = [
-  'pending',
-  'processing',
-  'completed',
-  'failed',
-  'cancelled'
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
 ] as const;
 
 export type TaskLifecycleStatus = (typeof TASK_STATUS_VALUES)[number];
 
 export const TASK_TERMINAL_STATUS_VALUES = [
-  'completed',
-  'failed',
-  'cancelled'
+  "completed",
+  "failed",
+  "cancelled",
 ] as const;
 
 export const TASK_ERROR_CODE_VALUES = [
-  'TASK_INVALID_INPUT',
-  'TASK_PROVIDER_UNAVAILABLE',
-  'TASK_PROVIDER_TIMEOUT',
-  'TASK_PROVIDER_ALL_FAILED',
-  'TASK_CANCELLED',
-  'TASK_UNHANDLED_EXCEPTION'
+  "TASK_INVALID_INPUT",
+  "TASK_PROVIDER_UNAVAILABLE",
+  "TASK_PROVIDER_TIMEOUT",
+  "TASK_PROVIDER_ALL_FAILED",
+  "TASK_CANCELLED",
+  "TASK_UNHANDLED_EXCEPTION",
 ] as const;
 
 export type TaskErrorCode = (typeof TASK_ERROR_CODE_VALUES)[number];
 
 export const TASK_EVENT_NAME_VALUES = [
-  'connected',
-  'progress',
-  'provider_switch',
-  'completed',
-  'failed',
-  'heartbeat',
-  'snapshot'
+  "connected",
+  "progress",
+  "provider_switch",
+  "completed",
+  "failed",
+  "heartbeat",
+  "snapshot",
 ] as const;
 
 export type TaskEventName = (typeof TASK_EVENT_NAME_VALUES)[number];
 
 export type TaskMockScenario =
-  | 'default'
-  | 'empty'
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'snapshot'
-  | 'provider_switch'
-  | 'unauthorized'
-  | 'forbidden';
+  | "default"
+  | "empty"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "snapshot"
+  | "provider_switch"
+  | "unauthorized"
+  | "forbidden";
 
-export const TASK_EVENT_ID_SEPARATOR = ':evt:';
+export const TASK_MOCK_SCENARIO_VALUES = [
+  "default",
+  "empty",
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+  "snapshot",
+  "provider_switch",
+  "unauthorized",
+  "forbidden",
+] as const satisfies ReadonlyArray<TaskMockScenario>;
+
+/**
+ * 判断值是否为受支持的任务 mock 场景。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `TaskMockScenario`。
+ */
+export function isTaskMockScenario(value: unknown): value is TaskMockScenario {
+  return TASK_MOCK_SCENARIO_VALUES.some((scenario) => scenario === value);
+}
+
+export const TASK_EVENT_ID_SEPARATOR = ":evt:";
 
 export interface TaskRuntimeState {
   taskId: string;

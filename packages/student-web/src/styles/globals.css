@@ -1,3 +1,7 @@
+/**
+ * 文件说明：student-web 全局样式入口。
+ * 负责注入 Tailwind、主题变量桥接和应用级基础元素样式。
+ */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./theme.css";

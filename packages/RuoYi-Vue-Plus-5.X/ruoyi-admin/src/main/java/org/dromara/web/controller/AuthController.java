@@ -197,6 +197,17 @@ public class AuthController {
     }
 
     /**
+     * 查询当前租户是否开启用户注册
+     *
+     * @param tenantId 租户id
+     * @return true 开启，false 关闭
+     */
+    @GetMapping("/register/enabled")
+    public R<Boolean> registerEnabled(@RequestParam String tenantId) {
+        return R.ok(configService.selectRegisterEnabled(tenantId));
+    }
+
+    /**
      * 登录页面租户下拉框
      *
      * @return 租户列表
