@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, cast
+import asyncio
+from time import monotonic
+from typing import Any, AsyncIterator, cast
 
 from fastapi import APIRouter, Header, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from app.core.logging import format_trace_timestamp
-from app.core.sse import encode_sse_event
+from app.core.sse import TaskProgressEvent, encode_sse_event
 from app.infra.redis_client import RuntimeStore
 from app.schemas.common import (
     ErrorResponseEnvelope,
@@ -17,6 +19,9 @@ from app.schemas.common import (
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+SSE_POLL_INTERVAL_SECONDS = 0.05
+SSE_HEARTBEAT_INTERVAL_SECONDS = 15.0
+TERMINAL_TASK_STATUSES = {"completed", "failed", "cancelled"}
 
 
 def _get_runtime_store(request: Request) -> RuntimeStore:
@@ -38,6 +43,38 @@ def _not_found_response(task_id: str) -> JSONResponse:
 
 def _as_context(payload: object) -> dict[str, Any]:
     return dict(payload) if isinstance(payload, dict) else {}
+
+
+def _is_terminal_status(status: object) -> bool:
+    return str(status or "").lower() in TERMINAL_TASK_STATUSES
+
+
+def _build_ephemeral_task_event(
+    *,
+    event: str,
+    task_id: str,
+    state: dict[str, object] | None,
+    message: str
+) -> TaskProgressEvent:
+    current_state = state or {}
+    context = _as_context(current_state.get("context"))
+    raw_stage = context.get("stage")
+    raw_result = context.get("result")
+
+    return TaskProgressEvent(
+        event=event,
+        task_id=task_id,
+        task_type=str(current_state.get("taskType") or "unknown"),
+        status=str(current_state.get("status") or "pending"),
+        progress=int(current_state.get("progress") or 0),
+        message=message,
+        timestamp=format_trace_timestamp(),
+        request_id=str(current_state["requestId"]) if current_state.get("requestId") is not None else None,
+        error_code=str(current_state["errorCode"]) if current_state.get("errorCode") is not None else None,
+        context=context,
+        stage=raw_stage if isinstance(raw_stage, str) else None,
+        result=raw_result if isinstance(raw_result, dict) else None,
+    )
 
 
 def _build_snapshot_payload(
@@ -63,6 +100,91 @@ def _build_snapshot_payload(
         resume_from=last_event_id,
         last_event_id=last_event_id
     )
+
+
+async def stream_task_events(
+    *,
+    task_id: str,
+    request: Request,
+    runtime_store: RuntimeStore,
+    recovery_state: Any,
+    latest_event_id: str | None
+) -> AsyncIterator[str]:
+    current_snapshot = recovery_state.snapshot
+    latest_seen_event_id = latest_event_id
+    last_stream_write_at = monotonic()
+
+    yield encode_sse_event(
+        _build_ephemeral_task_event(
+            event="connected",
+            task_id=task_id,
+            state=current_snapshot,
+            message="SSE 通道已建立"
+        ),
+        ensure_identity=False
+    )
+
+    for event in recovery_state.events:
+        yield encode_sse_event(event)
+        latest_seen_event_id = event.id or latest_seen_event_id
+        current_snapshot = {
+            "taskType": event.task_type,
+            "status": event.status,
+            "progress": event.progress,
+            "message": event.message,
+            "requestId": event.request_id,
+            "errorCode": event.error_code,
+            "context": event.context,
+            "updatedAt": event.timestamp,
+        }
+        last_stream_write_at = monotonic()
+
+    if _is_terminal_status((current_snapshot or {}).get("status")):
+        return
+
+    while not await request.is_disconnected():
+        await asyncio.sleep(SSE_POLL_INTERVAL_SECONDS)
+        live_state = runtime_store.load_task_recovery_state(
+            task_id,
+            after_event_id=latest_seen_event_id
+        )
+        if live_state.snapshot is not None:
+            current_snapshot = live_state.snapshot
+
+        if live_state.events:
+            for event in live_state.events:
+                yield encode_sse_event(event)
+                latest_seen_event_id = event.id or latest_seen_event_id
+                current_snapshot = {
+                    "taskType": event.task_type,
+                    "status": event.status,
+                    "progress": event.progress,
+                    "message": event.message,
+                    "requestId": event.request_id,
+                    "errorCode": event.error_code,
+                    "context": event.context,
+                    "updatedAt": event.timestamp,
+                }
+                last_stream_write_at = monotonic()
+
+            if _is_terminal_status(live_state.events[-1].status):
+                return
+            continue
+
+        if _is_terminal_status((current_snapshot or {}).get("status")):
+            return
+
+        if monotonic() - last_stream_write_at >= SSE_HEARTBEAT_INTERVAL_SECONDS:
+            yield encode_sse_event(
+                _build_ephemeral_task_event(
+                    event="heartbeat",
+                    task_id=task_id,
+                    state=current_snapshot,
+                    message="SSE 心跳保持"
+                ),
+                ensure_identity=False
+            )
+            last_stream_write_at = monotonic()
 
 
 @router.get(
@@ -141,7 +263,6 @@ async def get_task_events(
         return _not_found_response(task_id)
 
     latest_event_id = runtime_store.load_task_recovery_state(task_id).latest_event_id
-    payload = "".join(encode_sse_event(event) for event in recovery_state.events)
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
@@ -151,4 +272,14 @@ async def get_task_events(
     if latest_event_id is not None:
         headers["X-Task-Last-Event-ID"] = latest_event_id
 
-    return Response(content=payload, media_type="text/event-stream", headers=headers)
+    return StreamingResponse(
+        stream_task_events(
+            task_id=task_id,
+            request=request,
+            runtime_store=runtime_store,
+            recovery_state=recovery_state,
+            latest_event_id=latest_event_id
+        ),
+        media_type="text/event-stream",
+        headers=headers
+    )

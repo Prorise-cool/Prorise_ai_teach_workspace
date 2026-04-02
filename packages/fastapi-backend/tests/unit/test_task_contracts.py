@@ -224,6 +224,7 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
         "provider_switch",
         "completed",
         "failed",
+        "cancelled",
         "heartbeat",
         "snapshot"
     ]

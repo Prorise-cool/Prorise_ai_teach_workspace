@@ -20,6 +20,13 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     list_route = payload["paths"]["/api/v1/contracts/tasks"]["get"]
     learning_preview_route = payload["paths"]["/api/v1/learning/persistence-preview"]["post"]
     learning_persist_route = payload["paths"]["/api/v1/learning/persistence"]["post"]
+    feature_bootstrap_paths = {
+        "/api/v1/video/bootstrap": "video",
+        "/api/v1/classroom/bootstrap": "classroom",
+        "/api/v1/companion/bootstrap": "companion",
+        "/api/v1/knowledge/bootstrap": "knowledge",
+        "/api/v1/learning/bootstrap": "learning",
+    }
 
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["taskId"] == "video_20260329161500_ab12cd34"
@@ -34,6 +41,13 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     assert learning_persist_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["requestId"] == "req_20260329_list"
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["rows"][0]["timestamp"] == "2026-03-29T16:15:00Z"
+
+    for path, feature in feature_bootstrap_paths.items():
+        bootstrap_route = payload["paths"][path]["get"]
+        assert bootstrap_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/FeatureBootstrapResponseEnvelope"
+        assert bootstrap_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["feature"] == feature
+        assert bootstrap_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "scaffolded"
+        assert bootstrap_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["mode"] == "epic-0"
 
 
 def test_shared_contract_schema_assets_exist_and_match_response_shape() -> None:

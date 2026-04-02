@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from app.core.logging import EMPTY_TRACE_VALUE, bind_trace_context, get_logger, reset_trace_context
+from app.core.sse import TaskProgressEvent
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
@@ -141,6 +142,7 @@ class TaskScheduler:
             error_code=EMPTY_TRACE_VALUE
         )
         try:
+            task.bind_runtime_event_emitter(self.publish_runtime_event)
             try:
                 if emit_queued_snapshot:
                     self._emit_snapshot(
@@ -183,6 +185,7 @@ class TaskScheduler:
             )
             return result
         finally:
+            task.bind_runtime_event_emitter(None)
             reset_trace_context(tokens)
 
     def enqueue_task(self, *, task_type: str, context: TaskContext) -> TaskDispatchReceipt:
@@ -211,7 +214,14 @@ class TaskScheduler:
             raise
 
         if self.runtime_store is not None:
-            self.runtime_store.set_message_mapping(message_id, context.task_id)
+            try:
+                self.runtime_store.set_message_mapping(message_id, context.task_id)
+            except Exception:
+                logger.exception(
+                    "Task message mapping persistence failed task_type=%s message_id=%s",
+                    task_type,
+                    message_id
+                )
 
         logger.info("Task message enqueued task_type=%s message_id=%s", task_type, message_id)
         return TaskDispatchReceipt(
@@ -236,6 +246,22 @@ class TaskScheduler:
             result = TaskResult.failed(message="任务执行失败", error_code=error_code)
 
         return self._normalize_result(result, fallback_error_code=error_code)
+
+    def publish_runtime_event(self, event: TaskProgressEvent) -> TaskProgressEvent:
+        normalized_event = event
+
+        if self.runtime_store is not None:
+            normalized_event = self.runtime_store.append_task_event(event.task_id, normalized_event)
+
+        if self.event_publisher is not None:
+            self.event_publisher.publish(normalized_event)
+            logger.info(
+                "Task runtime event published task_type=%s event=%s",
+                normalized_event.task_type,
+                normalized_event.event
+            )
+
+        return normalized_event
 
     def _emit_snapshot(
         self,
@@ -354,4 +380,6 @@ class TaskScheduler:
             return "completed"
         if status == TaskStatus.FAILED:
             return "failed"
+        if status == TaskStatus.CANCELLED:
+            return "cancelled"
         return "progress"

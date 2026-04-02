@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.classroom.schemas import (
     ClassroomTaskMetadataCreateRequest,
     ClassroomTaskMetadataPageResponse,
@@ -9,15 +10,27 @@ from app.features.classroom.schemas import (
     ClassroomTaskMetadataSnapshot,
 )
 from app.features.classroom.service import ClassroomService
+from app.schemas.common import build_success_envelope
+from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus
 
 router = APIRouter(prefix="/classroom", tags=["classroom"])
 service = ClassroomService()
 
 
-@router.get("/bootstrap")
-async def classroom_bootstrap() -> dict[str, str]:
-    return (await service.bootstrap_status()).model_dump()
+@router.get(
+    "/bootstrap",
+    response_model=FeatureBootstrapResponseEnvelope,
+    responses={
+        200: {
+            "description": "课堂功能域 bootstrap 基线",
+            "content": {"application/json": {"example": build_feature_bootstrap_example("classroom")}}
+        }
+    }
+)
+async def classroom_bootstrap() -> dict[str, object]:
+    payload = await service.bootstrap_status()
+    return build_success_envelope(payload)
 
 
 @router.post("/tasks", response_model=ClassroomTaskMetadataPreviewResponse)

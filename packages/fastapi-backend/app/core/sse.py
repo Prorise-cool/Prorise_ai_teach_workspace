@@ -13,6 +13,7 @@ TaskEventName = Literal[
     "provider_switch",
     "completed",
     "failed",
+    "cancelled",
     "heartbeat",
     "snapshot"
 ]
@@ -94,8 +95,16 @@ def ensure_sse_event_identity(
     )
 
 
-def encode_sse_event(payload: TaskProgressEvent) -> str:
-    normalized = ensure_sse_event_identity(payload, fallback_sequence=payload.sequence)
-    body = normalized.model_dump_json(by_alias=True)
+def encode_sse_event(payload: TaskProgressEvent, *, ensure_identity: bool = True) -> str:
+    normalized = (
+        ensure_sse_event_identity(payload, fallback_sequence=payload.sequence)
+        if ensure_identity
+        else payload
+    )
+    body = normalized.model_dump_json(by_alias=True, exclude_none=not ensure_identity)
+    lines = [f"event: {normalized.event}", f"data: {body}"]
 
-    return f"id: {normalized.id}\nevent: {normalized.event}\ndata: {body}\n\n"
+    if normalized.id is not None:
+        lines.insert(0, f"id: {normalized.id}")
+
+    return "\n".join(lines) + "\n\n"

@@ -42,6 +42,30 @@ class ExplodingTask(OrderedTask):
         return await super().handle_error(exc)
 
 
+class RichPayloadTask(OrderedTask):
+    async def run(self) -> TaskResult:
+        self.calls.append("run")
+        return TaskResult.completed(
+            "任务执行完成",
+            progress=100,
+            context={
+                "stage": "completed",
+                "result": {"videoId": "asset_001", "provider": "backup-chat"},
+            },
+        )
+
+
+class CancelledTask(OrderedTask):
+    async def run(self) -> TaskResult:
+        self.calls.append("run")
+        return TaskResult(
+            status=TaskStatus.CANCELLED,
+            message="任务已取消",
+            progress=35,
+            context={"stage": "cancelled"},
+        )
+
+
 def test_scheduler_preserves_context_and_lifecycle_order() -> None:
     publisher = InMemoryTaskEventPublisher()
     recorder = InMemoryTaskRuntimeRecorder()
@@ -166,3 +190,83 @@ def test_scheduler_persists_snapshot_and_event_cache_into_runtime_store() -> Non
     assert [event.sequence for event in events] == [1, 2]
     assert 0 < runtime_store.ttl(build_task_runtime_key(context.task_id))
     assert 0 < runtime_store.ttl(build_task_events_key(context.task_id))
+
+
+def test_scheduler_promotes_stage_and_result_to_top_level_sse_fields() -> None:
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    scheduler = TaskScheduler(runtime_store=runtime_store)
+    context = create_task_context(
+        prefix="video",
+        task_type="video",
+        user_id="student-6",
+        request_id="gateway_request_1006",
+        source_module="video",
+    )
+
+    result = asyncio.run(scheduler.dispatch(RichPayloadTask(context)))
+    completed_event = runtime_store.get_task_events(context.task_id)[-1]
+
+    assert result.status == TaskStatus.COMPLETED
+    assert completed_event.event == "completed"
+    assert completed_event.stage == "completed"
+    assert completed_event.result == {
+        "videoId": "asset_001",
+        "provider": "backup-chat",
+    }
+    assert completed_event.context == {
+        "stage": "completed",
+        "result": {"videoId": "asset_001", "provider": "backup-chat"},
+    }
+
+
+def test_scheduler_emits_cancelled_as_terminal_event() -> None:
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    scheduler = TaskScheduler(runtime_store=runtime_store)
+    context = create_task_context(
+        prefix="video",
+        task_type="video",
+        user_id="student-7",
+        request_id="gateway_request_1007",
+        source_module="video",
+    )
+
+    result = asyncio.run(scheduler.dispatch(CancelledTask(context)))
+    terminal_event = runtime_store.get_task_events(context.task_id)[-1]
+
+    assert result.status == TaskStatus.CANCELLED
+    assert terminal_event.event == "cancelled"
+    assert terminal_event.status == TaskStatus.CANCELLED
+
+
+def test_scheduler_returns_receipt_when_message_mapping_write_fails_after_dispatch() -> None:
+    register_calls: list[tuple[str, str]] = []
+
+    class FailingMappingRuntimeStore(RuntimeStore):
+        def set_message_mapping(self, message_id: str, task_id: str) -> None:
+            register_calls.append((message_id, task_id))
+            raise RuntimeError("mapping down")
+
+    runtime_store = FailingMappingRuntimeStore(
+        backend="memory-runtime-store",
+        redis_url="redis://memory",
+    )
+    scheduler = TaskScheduler(
+        runtime_store=runtime_store,
+        queue_dispatcher=lambda task_type, payload: "msg_queued_001",
+    )
+    context = create_task_context(
+        prefix="video",
+        task_type="demo",
+        user_id="student-8",
+        request_id="gateway_request_1008",
+        source_module="video",
+    )
+
+    from app.shared.task_framework.scheduler import register_task
+
+    register_task("demo", lambda task_context: DemoTask(task_context))
+    receipt = scheduler.enqueue_task(task_type="demo", context=context)
+
+    assert receipt.message_id == "msg_queued_001"
+    assert receipt.task_id == context.task_id
+    assert register_calls == [("msg_queued_001", context.task_id)]

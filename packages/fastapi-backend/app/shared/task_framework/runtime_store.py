@@ -25,6 +25,10 @@ def build_task_event(
     snapshot: TaskRuntimeSnapshot,
     context: dict[str, object] | None = None
 ) -> TaskProgressEvent:
+    event_context = dict(context or {})
+    raw_stage = event_context.get("stage")
+    raw_result = event_context.get("result")
+
     return TaskProgressEvent(
         event=event,
         task_id=snapshot.task_id,
@@ -34,5 +38,7 @@ def build_task_event(
         message=snapshot.message,
         request_id=snapshot.request_id,
         error_code=snapshot.error_code,
-        context=context or {}
+        context=event_context,
+        stage=raw_stage if isinstance(raw_stage, str) else None,
+        result=raw_result if isinstance(raw_result, dict) else None
     )
