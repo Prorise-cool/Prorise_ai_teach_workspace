@@ -6,7 +6,7 @@
 **Story types expected:** `Infrastructure Story`、`Contract Story`
 
 ### Epic 1: 用户接入、统一入口与启动配置
-用户可以完成登录、理解双入口差异、进入正确的学习起点，并把老师风格作为会话启动配置带入后续流程。  
+用户可以完成登录，以首页课堂直达入口进入默认学习起点，并通过顶栏导航进入其他有效入口，同时把老师风格作为会话启动配置带入后续流程。  
 **FRs covered:** `FR-UM-001`、`FR-UM-002`、`FR-UM-004`、`FR-UI-R01`、`FR-UI-001`、`FR-CS-002`  
 **NFRs covered:** `NFR-SE-002`、`NFR-UX-001`、`NFR-UX-003`
 
@@ -54,4 +54,3 @@
 系统将视频、课堂、Companion、Evidence、Learning Coach 与学习中心所需的长期业务数据统一承接到 RuoYi 业务表 / MySQL / COS，并提供可查询、可回写、可审计边界。  
 **FRs covered:** `FR-LR-005`，并间接支撑 `FR-CP-005`、`FR-KQ-006`、`FR-LA-005`、`FR-LA-006`  
 **NFRs covered:** `NFR-AR-001`、`NFR-AR-002`、`NFR-CO-001`
-

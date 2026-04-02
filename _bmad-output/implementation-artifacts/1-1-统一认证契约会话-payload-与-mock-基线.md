@@ -8,7 +8,7 @@ Status: done
 
 As a 前后端协作团队，
 I want 冻结统一认证契约、会话 payload 和 mock handler，
-so that 登录链路、受保护路由和首页入口可以并行开发而不互相等待。
+so that 登录链路、受保护路由和首页主入口 / 顶栏导航可以并行开发而不互相等待。
 
 ## Acceptance Criteria
 
@@ -53,7 +53,7 @@ so that 登录链路、受保护路由和首页入口可以并行开发而不互
 ### Business Context
 
 - Epic 1 是“进入系统”的统一起点，本 Story 是整个 Epic 的前置契约 Story。
-- 该 Story 完成后，`/login`、首页双入口、输入壳层和受保护路由都应能在 mock 模式下并行开发。
+- 该 Story 完成后，`/login`、首页主入口、顶栏导航、输入壳层和受保护路由都应能在 mock 模式下并行开发。
 - 当前版本不要求真实视频或课堂引擎完成，重点是认证契约稳定、mock 可复用、前后端可并行。
 
 ### Technical Guardrails
