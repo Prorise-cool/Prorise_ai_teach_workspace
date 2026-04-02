@@ -4,8 +4,59 @@ from dramatiq import Worker
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
+from app.providers.factory import ProviderFactory
+from app.providers.protocols import ProviderCapability, ProviderResult, ProviderRuntimeConfig
+from app.providers.registry import ProviderRegistry
+from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.demo_task import DemoTask
 from app.shared.task_framework.scheduler import create_task_context
+
+
+class TimeoutLLMProvider:
+    def __init__(self, config: ProviderRuntimeConfig) -> None:
+        self.config = config
+        self.provider_id = config.provider_id
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        raise TimeoutError(f"{self.provider_id} timed out while handling {prompt}")
+
+
+class BackupLLMProvider:
+    def __init__(self, config: ProviderRuntimeConfig) -> None:
+        self.config = config
+        self.provider_id = config.provider_id
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        return ProviderResult(provider=self.provider_id, content=f"backup:{prompt}")
+
+
+def _build_provider_factory() -> ProviderFactory:
+    registry = ProviderRegistry()
+    registry.register(ProviderCapability.LLM, "timeout-chat", TimeoutLLMProvider, default_priority=1)
+    registry.register(ProviderCapability.LLM, "backup-chat", BackupLLMProvider, default_priority=2)
+    return ProviderFactory(registry)
+
+
+class ProviderSwitchDemoTask(BaseTask):
+    async def run(self) -> TaskResult:
+        provider_result = await _build_provider_factory().generate_with_failover(
+            [{"provider": "timeout-chat", "priority": 1}, {"provider": "backup-chat", "priority": 2}],
+            "lesson",
+            emit_switch=self.create_provider_switch_emitter(
+                progress=45,
+                stage="provider_failover",
+            ),
+        )
+        return TaskResult.completed(
+            message="Demo task 执行完成",
+            context={
+                "stage": "completed",
+                "result": {
+                    "provider": provider_result.provider,
+                    "content": provider_result.content,
+                },
+            },
+        )
 
 
 def _load_stub_runtime(monkeypatch):
@@ -138,3 +189,57 @@ def test_multiple_task_types_can_share_the_same_queue_runtime(monkeypatch) -> No
         worker.stop()
         worker_module.runtime_store.clear()
         get_settings.cache_clear()
+
+
+def test_provider_switch_events_are_published_into_runtime_stream(monkeypatch) -> None:
+    worker_module, main_module = _load_stub_runtime(monkeypatch)
+    worker_module.register_task(
+        "demo-provider-switch",
+        lambda context: ProviderSwitchDemoTask(context),
+    )
+    worker = Worker(worker_module.broker, worker_timeout=100)
+    worker.start()
+
+    try:
+        with TestClient(main_module.create_app()) as client:
+            scheduler = client.app.state.task_scheduler
+            context = create_task_context(
+                prefix="video",
+                task_type="demo-provider-switch",
+                user_id="student-5",
+                request_id="gateway_request_demo_005",
+                source_module="video",
+            )
+
+            scheduler.enqueue_task(task_type="demo-provider-switch", context=context)
+
+            worker_module.broker.join(worker_module.task_actor.queue_name)
+            worker.join()
+
+            events = client.app.state.runtime_store.get_task_events(context.task_id)
+            event_names = [event.event for event in events]
+
+            assert event_names == ["progress", "provider_switch", "completed"]
+            assert events[1].from_ == "timeout-chat"
+            assert events[1].to == "backup-chat"
+            assert events[1].stage == "provider_failover"
+            assert events[2].result == {
+                "provider": "backup-chat",
+                "content": "backup:lesson",
+            }
+
+            response = client.get(
+                f"/api/v1/tasks/{context.task_id}/events",
+                headers={"Last-Event-ID": events[0].id or ""},
+            )
+
+        worker_module.runtime_store.clear()
+
+    finally:
+        worker.stop()
+        get_settings.cache_clear()
+
+    assert response.status_code == 200
+    assert "event: provider_switch" in response.text
+    assert '"from":"timeout-chat"' in response.text
+    assert '"to":"backup-chat"' in response.text

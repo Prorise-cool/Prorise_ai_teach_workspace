@@ -1,9 +1,18 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from inspect import isawaitable
+from typing import TYPE_CHECKING, Any, Callable
 
 from app.core.logging import get_logger
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import TaskErrorCode, TaskStatus
+
+if TYPE_CHECKING:
+    from app.core.sse import TaskProgressEvent
+    from app.providers.failover import ProviderSwitch
+
+
+TaskRuntimeEventEmitter = Callable[["TaskProgressEvent"], Any]
 
 
 @dataclass(slots=True)
@@ -61,6 +70,7 @@ class BaseTask(ABC):
         self.context = context
         self.logger = get_logger(f"app.tasks.{context.task_type}")
         self._lifecycle_state = TaskLifecycleState()
+        self._runtime_event_emitter: TaskRuntimeEventEmitter | None = None
 
     async def prepare(self) -> None:
         return None
@@ -80,6 +90,51 @@ class BaseTask(ABC):
 
     async def finalize(self, result: TaskResult) -> TaskResult:
         return result
+
+    def bind_runtime_event_emitter(self, emitter: TaskRuntimeEventEmitter | None) -> None:
+        self._runtime_event_emitter = emitter
+
+    async def emit_runtime_event(self, event: "TaskProgressEvent") -> "TaskProgressEvent | None":
+        if self._runtime_event_emitter is None:
+            return None
+
+        maybe_result = self._runtime_event_emitter(event)
+        if isawaitable(maybe_result):
+            return await maybe_result
+        return maybe_result
+
+    def create_provider_switch_emitter(
+        self,
+        *,
+        status: TaskStatus | str = TaskStatus.PROCESSING,
+        progress: int = 0,
+        message: str = "主 Provider 不可用，已切换备用 Provider",
+        stage: str | None = "provider_failover",
+        extra_context: dict[str, object] | None = None
+    ) -> Callable[["ProviderSwitch"], Any]:
+        async def emit_switch(switch: "ProviderSwitch") -> "TaskProgressEvent | None":
+            normalized_status = status.value if isinstance(status, TaskStatus) else str(status)
+            merged_context = dict(switch.metadata)
+            merged_context.update(extra_context or {})
+            event = switch.to_sse_event(
+                task_id=self.context.task_id,
+                task_type=self.context.task_type,
+                status=normalized_status,
+                progress=progress,
+                message=message,
+                request_id=self.context.request_id,
+            )
+            if stage is not None:
+                merged_context.setdefault("stage", stage)
+            event = event.model_copy(
+                update={
+                    "context": merged_context,
+                    "stage": stage,
+                }
+            )
+            return await self.emit_runtime_event(event)
+
+        return emit_switch
 
     async def _execute_prepare(self) -> None:
         if self._lifecycle_state.prepared:
