@@ -3,7 +3,9 @@ import json
 from datetime import datetime
 
 import httpx
+import pytest
 
+from app.core.errors import IntegrationError
 from app.features.classroom.schemas import ClassroomTaskMetadataCreateRequest
 from app.features.classroom.service import ClassroomService
 from app.features.video.schemas import VideoTaskMetadataCreateRequest
@@ -136,6 +138,22 @@ def test_snapshot_from_ruoyi_row_restores_video_task_shape() -> None:
     assert snapshot.status == TaskStatus.COMPLETED
 
 
+def test_snapshot_from_ruoyi_row_rejects_unknown_task_type() -> None:
+    with pytest.raises(ValueError, match="unsupported task_type"):
+        snapshot_from_ruoyi_row(
+            {
+                "id": 9,
+                "taskId": "video_bad",
+                "userId": "student_bad",
+                "taskType": "unknown-domain",
+                "taskState": "completed",
+                "summary": "坏数据",
+                "createTime": "2026-03-29 12:00:00",
+                "updateTime": "2026-03-29 12:05:00"
+            }
+        )
+
+
 def test_classroom_service_upserts_to_ruoyi() -> None:
     calls: list[tuple[str, str, dict | None]] = []
     stored_rows: list[dict] = []
@@ -259,3 +277,45 @@ def test_video_service_replay_session_fetches_all_pages() -> None:
         ("/video/task/list", 1, 100),
         ("/video/task/list", 2, 100)
     ]
+
+
+def test_video_service_rejects_unknown_task_type_from_ruoyi() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "ok",
+                "rows": [
+                    {
+                        "id": 1,
+                        "taskId": "video_bad",
+                        "userId": "student_bad",
+                        "taskType": "unknown-domain",
+                        "taskState": "completed",
+                        "summary": "坏数据",
+                        "createTime": "2026-03-29 12:00:00",
+                        "updateTime": "2026-03-29 12:05:00"
+                    }
+                ],
+                "total": 1
+            }
+        )
+
+    def client_factory() -> RuoYiClient:
+        return RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0
+        )
+
+    service = VideoService(client_factory=client_factory)
+
+    with pytest.raises(IntegrationError) as exc_info:
+        asyncio.run(service.list_tasks())
+
+    assert exc_info.value.code == "RUOYI_INVALID_RESPONSE"
+    assert exc_info.value.details["reason"] == "unsupported task_type: unknown-domain"

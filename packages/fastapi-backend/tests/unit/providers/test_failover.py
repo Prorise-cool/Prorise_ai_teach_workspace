@@ -68,6 +68,12 @@ class InvalidInputLLMProvider:
         raise ValueError(f"invalid prompt payload: {prompt}")
 
 
+class ExternalCodeProviderError(ProviderError):
+    def __init__(self, message: str, *, error_code: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
 class TimeController:
     def __init__(self) -> None:
         self.current = 5_000.0
@@ -246,6 +252,40 @@ def test_classify_provider_error_marks_authentication_failures_as_non_retryable(
     assert classification.error_code.value == "TASK_INVALID_INPUT"
     assert classification.retryable is False
     assert classification.mark_unhealthy is False
+
+
+def test_classify_provider_error_coerces_unknown_provider_error_code() -> None:
+    classification = classify_provider_error(
+        ExternalCodeProviderError("upstream bad gateway", error_code="OPENAI_BAD_GATEWAY")
+    )
+
+    assert classification.error_code.value == "TASK_UNHANDLED_EXCEPTION"
+    assert classification.retryable is False
+    assert classification.mark_unhealthy is False
+
+
+def test_health_store_and_failover_tolerate_unknown_error_code() -> None:
+    factory = _build_factory()
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    failover_service = factory.create_failover_service(runtime_store)
+
+    snapshot = failover_service._health_store.mark_failure(
+        "primary-chat",
+        reason="external-timeout",
+        error_code="RUOYI_TIMEOUT",
+        source="test",
+    )
+
+    result = asyncio.run(
+        factory.generate_with_failover(
+            [{"provider": "primary-chat", "priority": 1}, {"provider": "backup-chat", "priority": 2}],
+            "lesson",
+            runtime_store=runtime_store,
+        )
+    )
+
+    assert snapshot.error_code == "TASK_PROVIDER_UNAVAILABLE"
+    assert result.provider == "backup-chat"
 
 
 def test_failover_does_not_reprobe_last_cached_unhealthy_provider_until_ttl_expires() -> None:

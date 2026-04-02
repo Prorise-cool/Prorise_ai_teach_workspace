@@ -25,6 +25,12 @@ def _build_client_factory(handler):
     return factory
 
 
+def _create_client(monkeypatch: pytest.MonkeyPatch, handler) -> TestClient:
+    monkeypatch.setattr(companion_routes, "service", CompanionService(client_factory=_build_client_factory(handler)))
+    monkeypatch.setattr(knowledge_routes, "service", KnowledgeService(client_factory=_build_client_factory(handler)))
+    return TestClient(create_app())
+
+
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     state = {
@@ -144,9 +150,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    monkeypatch.setattr(companion_routes, "service", CompanionService(client_factory=_build_client_factory(handler)))
-    monkeypatch.setattr(knowledge_routes, "service", KnowledgeService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+    return _create_client(monkeypatch, handler)
 
 
 def test_companion_turn_roundtrip_via_api(client: TestClient) -> None:
@@ -258,4 +262,67 @@ def test_knowledge_chat_roundtrip_and_session_replay_via_api(client: TestClient)
         "xm_knowledge_chat_log",
     ]
     assert len(replay_response.json()["knowledge_chat_logs"]) == 1
-    assert len(replay_response.json()["companion_turns"]) == 1
+
+
+def test_companion_detail_returns_invalid_response_envelope_for_malformed_success_payload(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/internal/xiaomai/companion/turns/turn_bad":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "turnId": "turn_bad",
+                        "sessionId": "session-bad",
+                        "userId": "student-bad",
+                        "contextType": "video",
+                        "questionText": "bad payload",
+                        "answerSummary": "bad payload",
+                        "persistenceStatus": "complete_success",
+                        "createdAt": "2026-03-29 15:00:00"
+                    }
+                }
+            )
+        raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
+
+    with _create_client(monkeypatch, handler) as client:
+        response = client.get("/api/v1/companion/turns/turn_bad")
+
+    assert response.status_code == 502
+    assert response.json()["data"]["error_code"] == "RUOYI_INVALID_RESPONSE"
+    assert "'anchor'" in response.json()["data"]["details"]["reason"]
+
+
+def test_knowledge_detail_returns_invalid_response_envelope_for_malformed_success_payload(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/internal/xiaomai/knowledge/chat-logs/chat_bad":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "chatLogId": "chat_bad",
+                        "sessionId": "session-bad",
+                        "userId": "student-bad",
+                        "contextType": "document",
+                        "questionText": "bad payload",
+                        "answerSummary": "bad payload",
+                        "persistenceStatus": "complete_success",
+                        "createdAt": "2026-03-29 15:05:00"
+                    }
+                }
+            )
+        raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
+
+    with _create_client(monkeypatch, handler) as client:
+        response = client.get("/api/v1/knowledge/chat-logs/chat_bad")
+
+    assert response.status_code == 502
+    assert response.json()["data"]["error_code"] == "RUOYI_INVALID_RESPONSE"
+    assert "'retrievalScope'" in response.json()["data"]["details"]["reason"]

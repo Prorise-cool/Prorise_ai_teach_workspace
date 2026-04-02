@@ -69,3 +69,18 @@ def is_terminal_status(status: TaskStatus | str) -> bool:
 def is_retryable_error(code: TaskErrorCode | str) -> bool:
     normalized_code = TaskErrorCode(code)
     return TASK_ERROR_RETRYABLE[normalized_code]
+
+
+def coerce_task_error_code(
+    code: TaskErrorCode | str | None,
+    *,
+    fallback: TaskErrorCode = TaskErrorCode.UNHANDLED_EXCEPTION
+) -> TaskErrorCode:
+    if code is None:
+        return fallback
+    if isinstance(code, TaskErrorCode):
+        return code
+    try:
+        return TaskErrorCode(str(code))
+    except ValueError:
+        return fallback

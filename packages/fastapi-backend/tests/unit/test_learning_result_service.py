@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 import json
 
 import httpx
+import pytest
 
+from app.core.errors import IntegrationError
 from app.features.learning.schemas import (
     LearningPersistenceRequest,
     LearningResultInput,
@@ -240,3 +242,51 @@ def test_learning_service_uses_batch_user_id_when_ruoyi_record_omits_user_id() -
     assert payload.records[0].user_id == "student-301"
     assert payload.records[0].table_name == "xm_learning_path"
     assert payload.records[0].version_no == 3
+
+
+@pytest.mark.parametrize(
+    ("data_payload", "expected_reason"),
+    [
+        ({"userId": "student-401", "records": "oops"}, "records is not a list"),
+        ({"userId": "student-401", "records": ["oops"]}, "records[0] is not an object"),
+    ]
+)
+def test_learning_service_rejects_malformed_success_payload(
+    data_payload: dict[str, object],
+    expected_reason: str
+) -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"code": 200, "msg": "ok", "data": data_payload},
+        )
+
+    def client_factory() -> RuoYiClient:
+        return RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+        )
+
+    service = LearningService(client_factory=client_factory)
+    request = LearningPersistenceRequest(
+        user_id="student-401",
+        records=[
+            LearningResultInput(
+                result_type=LearningResultType.QUIZ,
+                source_type=LearningSourceType.VIDEO,
+                source_session_id="session-401",
+                source_task_id="task-401",
+                analysis_summary="bad payload",
+                status=LearningResultStatus.COMPLETED,
+            )
+        ],
+    )
+
+    with pytest.raises(IntegrationError) as exc_info:
+        asyncio.run(service.persist_results(request))
+
+    assert exc_info.value.code == "RUOYI_INVALID_RESPONSE"
+    assert exc_info.value.details["reason"] == expected_reason

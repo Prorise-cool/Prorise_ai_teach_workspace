@@ -252,16 +252,13 @@ class RuoYiClient:
             retry_enabled=retry_enabled
         )
 
-        if "data" not in payload:
-            raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=path,
-                payload=payload,
-                reason="missing data field"
-            )
-
-        data = payload["data"]
+        data = self._require_mapping_field(
+            payload,
+            field_name="data",
+            resource=resource,
+            operation=operation,
+            endpoint=path
+        )
         if mapper is not None and isinstance(data, Mapping):
             data = mapper.from_ruoyi(data)
 
@@ -551,6 +548,36 @@ class RuoYiClient:
                 upstream_message=str(payload.get("msg")) if payload else None
             )
         )
+
+    def _require_mapping_field(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        field_name: str,
+        resource: str,
+        operation: str,
+        endpoint: str
+    ) -> dict[str, Any]:
+        if field_name not in payload:
+            raise self._invalid_response_error(
+                resource=resource,
+                operation=operation,
+                endpoint=endpoint,
+                payload=payload,
+                reason=f"missing {field_name} field"
+            )
+
+        value = payload[field_name]
+        if not isinstance(value, Mapping):
+            raise self._invalid_response_error(
+                resource=resource,
+                operation=operation,
+                endpoint=endpoint,
+                payload=payload,
+                reason=f"{field_name} is not an object"
+            )
+
+        return dict(value)
 
     def _build_integration_error(
         self,

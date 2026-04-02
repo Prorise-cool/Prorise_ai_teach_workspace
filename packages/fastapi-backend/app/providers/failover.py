@@ -17,7 +17,7 @@ from app.providers.protocols import (
     ProviderResult,
     TTSProvider,
 )
-from app.shared.task_framework.status import TaskErrorCode
+from app.shared.task_framework.status import TaskErrorCode, coerce_task_error_code
 
 ProviderT = TypeVar("ProviderT", LLMProvider, TTSProvider)
 ProviderCall = Callable[[ProviderT], Awaitable[ProviderResult]]
@@ -157,8 +157,9 @@ class ProviderFailoverService:
         for index, provider in enumerate(provider_chain):
             cached = self._health_store.get(provider.provider_id)
             if cached is not None and not cached.is_healthy:
-                error_code = TaskErrorCode(
-                    cached.error_code or TaskErrorCode.PROVIDER_UNAVAILABLE
+                error_code = coerce_task_error_code(
+                    cached.error_code,
+                    fallback=TaskErrorCode.PROVIDER_UNAVAILABLE
                 )
                 if error_code in RETRYABLE_ERROR_CODES:
                     reason = cached.reason or "cached-unhealthy"
@@ -290,8 +291,9 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
         )
     if isinstance(exc, ProviderError):
         return ProviderErrorClassification(
-            error_code=TaskErrorCode(
-                getattr(exc, "error_code", TaskErrorCode.UNHANDLED_EXCEPTION)
+            error_code=coerce_task_error_code(
+                getattr(exc, "error_code", None),
+                fallback=TaskErrorCode.UNHANDLED_EXCEPTION
             ),
             reason=message,
             retryable=False,
