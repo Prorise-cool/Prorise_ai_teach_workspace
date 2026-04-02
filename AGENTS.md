@@ -38,6 +38,69 @@
 - `app/` 只做 Provider、Router、Layout 和页面装配；业务实现优先沉淀到 `features/`，共享能力沉淀到 `components/`、`lib/`、`services/`、`stores/`。
 - 还原设计稿时必须结合当前业务语义落地，视觉尽量一比一复现，但实现层必须遵守组件复用、令牌复用、状态分层和可维护性约束。
 
+
+**Frontend 最佳实践**
+
+### 1. 设计令牌（Design Tokens）—— Tailwind v4 @theme 单源真理
+- **唯一权威来源**：`src/styles/theme.css` 中使用 `@theme` 指令定义**所有**设计令牌（颜色、间距、排版、圆角、阴影、动效、断点等）。这是 Tailwind v4 官方推荐的单源真理，所有 `--xm-*` CSS Variables 必须在此生成。
+- **原始令牌 vs 语义令牌**（shadcn/ui + Tailwind v4 最佳实践）：
+  - 原始令牌（如 `--color-blue-500`、`--space-4`）仅在 `src/styles/tokens/*` 中定义。
+  - 语义令牌（如 `--background`、`--foreground`、`--primary`、`--card`、`--muted`、`--radius`）必须在 `@theme` 中暴露，供所有组件使用。
+  - 新增任何视觉值**必须**先在 `@theme` 中定义语义令牌，再生成 CSS Variables。**严禁**先硬编码后提炼。
+- **暗黑模式与主题化**：在 `theme.css` 的 `:root` 和 `.dark`（或 `data-theme="dark"`）中覆盖语义令牌。所有组件**只能**使用语义类（`bg-background text-foreground`），禁止写死亮/暗色值。
+- **禁止**：任意值（arbitrary values 如 `bg-[#123456]`、`p-[17px]`）、内联 `style={}` 对象（除非动态 CSS var 如 `style={{ '--dynamic-var': value }}`）、重复硬编码。
+
+### 2. 样式文件分层与作用域（严格隔离）
+- `src/styles/theme.css` **仅**负责 `@import "tailwindcss";` + `@theme { ... }` + 全局 `:root`/`.dark` 令牌桥接。**禁止**任何页面/组件/特性私有样式。
+- 特性私有样式必须放在 `src/features/<feature>/styles/*.css`，并**严格 scoped** 在 feature 根选择器下（e.g. `.home-page { --local-*: ... }`）。
+- `src/styles/globals.css` 仅引入 Tailwind base、tokens 生成的 CSS Variables 和必要 reset。**禁止**组件/页面级样式。
+- 所有自定义 CSS **必须**使用 `var(--xm-*)`，不得出现裸露的 `#hex`、`16px` 等。
+
+### 3. 类名处理规范 —— 强制使用 `cn()` + tailwind-merge + clsx
+- **必须**在 `src/lib/utils.ts`（或同等位置）定义并全局使用 `cn` 工具函数：
+  ```ts
+  import { type ClassValue, clsx } from "clsx"
+  import { twMerge } from "tailwind-merge"
+  export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)) }
+  ```
+- **所有** className（包括 CVA、Radix/Base UI、Motion 组件）**必须**通过 `cn()` 合并。**禁止**直接拼接字符串或模板字面量。
+- 这符合 tailwind-merge + clsx 官方最佳实践：自动处理条件类、去重、解决冲突（后声明的胜出）。
+
+### 4. 组件变体与复用 —— 强制 CVA（class-variance-authority）
+- **所有**可变体组件（Button、Card、Dialog 内容等）**必须**使用 CVA 定义 base + variants + compoundVariants + defaultVariants。
+- 全局推荐 `defineConfig` 配置 CVA + twMerge（官方最佳实践），确保冲突自动解决。
+- **优先级**（新增样式前必须遵守）：
+  1. 复用 `components/` 中已存在的 CVA 组件。
+  2. 复用 `@theme` 中的语义令牌。
+  3. 仅在以上无法满足时，才在 feature 局部 CSS 中新增 scoped 语义令牌。
+- 任何可抽成通用组件的 UI 片段**禁止**堆页面专属实现，必须抽到 `components/` 并用 CVA + `cn()`。
+
+### 5. Radix UI Primitives + @base-ui/react 样式最佳实践
+- **Radix UI**：使用 `data-[state=open/closed/checked/disabled]` 属性选择器（官方推荐）。示例：`data-[state=open]:animate-in`、`[&[data-state=open]>svg]:rotate-180`。
+- Radix 暴露的 CSS Variables（如 `--radix-accordion-content-height`、`--radix-select-trigger-width`）**必须**在动画/布局中使用。
+- **@base-ui/react**：通过 `className` prop（支持函数形式 `(state) => ...`）或 data 属性（如 `[data-checked]`）应用 Tailwind 类。支持 `style` prop 但仅限动态 CSS var。
+- 两者均为 **unstyled**，所有样式通过 Tailwind + CVA + `cn()` 实现。**禁止**覆盖 Radix 默认样式（使用 CSS layers 确保 Tailwind 优先）。
+
+### 6. Motion（v12，前 Framer Motion）动画最佳实践
+- 静态样式用 Tailwind 类（`className`），动态动画用 Motion props（`whileHover`、`animate`、`variants`、`layout` 等）。
+- **禁止**同时使用 CSS `transition-*` 与 Motion 相同属性（会导致冲突/卡顿）。
+- 复杂动画、弹簧物理、手势、布局动画**必须**使用 Motion。
+- 性能：为频繁变换的元素添加 `will-change: transform`（或 Motion 自动处理）。
+- 简单 hover/fade 等优先 Tailwind `animate-*` + `cn()`（轻量）。
+
+### 7. lucide-react 图标规范
+- 所有图标**必须**通过 `<LucideIcon className={cn("...")} />` 使用 Tailwind 类控制 `size`、`color`、`stroke-width` 等。
+- **禁止**使用图标的 `size`/`color` prop（除非动态），统一走语义令牌（`text-foreground`、`w-4 h-4` 等）。
+- 确保图标与设计令牌完全一致。
+
+### 8. 其他样式强制约束（全库通用）
+- **a11y**：所有交互元素必须使用语义令牌提供足够对比度；focus 状态统一使用 `--xm-focus-ring` 等令牌；颜色不得作为唯一信息载体。
+- **动画**：所有动效令牌必须来自 `@theme` 中的 `--animate-*` / `--ease-*` / `--duration-*`。
+- **Storybook**：所有新组件/样式必须在 Storybook 中验证 light/dark 一致性，并关联对应令牌。
+- **文件头**：非 mock/test 的样式相关文件必须包含规范化注释，说明负责的令牌/组件范围。
+- **小麦前端风格**：坚持单一品牌风格。Agent 风格仅作为局部点缀，禁止页面级主题切换覆盖主令牌。
+
+
 ### 认证与运行态验证补充规则
 
 - 凡是涉及登录态、注册开关、路由守卫、`returnTo` 回跳、`zustand persist/localStorage`、验证码、第三方登录入口这类“运行态 + 持久化 + 导航”耦合场景，默认不得只用 mock、`MemoryRouter` 或文本断言宣布完成；进入联调、自测或修 bug 时，必须补一轮真实浏览器验证。
