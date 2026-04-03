@@ -1,78 +1,104 @@
 /**
- * 文件说明：验证 Story 1.3 首页中的受保护探针与登出动作。
+ * 文件说明：验证 Story 1.4 公开首页的主 CTA、公开导航与未登录回跳行为。
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
+import { appI18n } from '@/app/i18n';
+import { AppShell } from '@/app/layouts/app-shell';
 import { AppProvider } from '@/app/provider/app-provider';
+import { RequireAuthRoute } from '@/features/auth/components/require-auth-route';
+import { LoginPage } from '@/features/auth/pages/login-page';
 import { HomePage } from '@/features/home/home-page';
-import {
-  createAuthConsistencyService,
-  type AuthConsistencyService
-} from '@/services/auth-consistency';
+import { LandingPage } from '@/features/home/landing-page';
 import { createMockAuthAdapter } from '@/services/api/adapters';
-import { createAuthService, type AuthService } from '@/services/auth';
-import {
-  resetAuthSessionStore,
-  useAuthSessionStore
-} from '@/stores/auth-session-store';
+import { createAuthService } from '@/services/auth';
+import { resetAuthSessionStore } from '@/stores/auth-session-store';
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
 
-function createServiceStub(overrides: Partial<AuthService> = {}): AuthService {
-  return {
-    ...mockAuthService,
-    ...overrides
-  };
-}
-
-function createConsistencyServiceStub(
-  overrides: Partial<AuthConsistencyService> = {}
-): AuthConsistencyService {
-  return {
-    ...createAuthConsistencyService({
-      request: vi.fn()
-    } as never),
-    ...overrides
-  };
+/**
+ * 构造 Story 1.4 的最小路由树，用于验证公开首页与入口跳转链路。
+ *
+ * @param initialEntries - 初始路由位置。
+ * @returns 供测试驱动的内存路由实例。
+ */
+function createEntryRouter(initialEntries: string[] = ['/']) {
+  return createMemoryRouter(
+    [
+      {
+        path: '/',
+        element: <AppShell />,
+        children: [
+          {
+            index: true,
+            element: <HomePage />
+          },
+          {
+            path: 'landing',
+            element: <LandingPage />
+          },
+          {
+            element: <RequireAuthRoute service={mockAuthService} />,
+            children: [
+              {
+                path: 'classroom/input',
+                element: <div>Classroom Input</div>
+              },
+              {
+                path: 'video/input',
+                element: <div>Video Input</div>
+              }
+            ]
+          },
+          {
+            path: 'login',
+            element: <LoginPage service={mockAuthService} />
+          }
+        ]
+      }
+    ],
+    {
+      initialEntries
+    }
+  );
 }
 
 describe('HomePage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetAuthSessionStore();
     window.localStorage.clear();
     window.sessionStorage.clear();
+    document.documentElement.dataset.theme = 'light';
+    await appI18n.changeLanguage('zh-CN');
   });
 
-  it('renders the protected probe result after a successful consistency check', async () => {
-    const session = await mockAuthService.login({
-      username: 'admin',
-      password: 'admin123'
-    });
+  it('renders the public hero CTA and removes the old auth-consistency console copy', () => {
+    const router = createEntryRouter();
 
-    useAuthSessionStore.getState().setSession(session);
-    const consistencyService = createConsistencyServiceStub({
-      getSessionProbe: vi.fn().mockResolvedValue({
-        userId: '1',
-        username: 'admin',
-        roles: ['admin'],
-        permissions: ['video:task:add', 'classroom:session:add'],
-        onlineTtlSeconds: 7200,
-        requestId: 'req_home_probe_001'
-      })
-    });
-    const router = createMemoryRouter(
-      [
-        {
-          path: '/',
-          element: <HomePage consistencyService={consistencyService} />
-        }
-      ],
-      {
-        initialEntries: ['/']
-      }
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
     );
+
+    expect(screen.getByText('XMAI')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /VIRTUAL\s*CLASSROOM/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Start Learning')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'EN' })[0]).toBeInTheDocument();
+    expect(
+      screen.queryByText('登录态与受保护访问已经接到真实校验链路')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '验证受保护访问' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('redirects unauthenticated users to /login with returnTo after the hero CTA is clicked', async () => {
+    const router = createEntryRouter();
     const user = userEvent.setup();
 
     render(
@@ -81,57 +107,57 @@ describe('HomePage', () => {
       </AppProvider>
     );
 
-    await user.click(
-      screen.getByRole('button', { name: '验证受保护访问' })
-    );
-
-    expect(await screen.findByText('req_home_probe_001')).toBeInTheDocument();
-    expect(screen.getByText('7200')).toBeInTheDocument();
-  });
-
-  it('clears the local session and returns to /login after logout', async () => {
-    const session = await mockAuthService.login({
-      username: 'admin',
-      password: 'admin123'
-    });
-
-    useAuthSessionStore.getState().setSession(session);
-    const logout = vi.fn().mockResolvedValue(undefined);
-    const router = createMemoryRouter(
-      [
-        {
-          path: '/',
-          element: (
-            <HomePage
-              consistencyService={createConsistencyServiceStub()}
-              service={createServiceStub({ logout })}
-            />
-          )
-        },
-        {
-          path: '/login',
-          element: <div>Login route</div>
-        }
-      ],
-      {
-        initialEntries: ['/']
-      }
-    );
-    const user = userEvent.setup();
-
-    render(
-      <AppProvider>
-        <RouterProvider router={router} />
-      </AppProvider>
-    );
-
-    await user.click(screen.getByRole('button', { name: '退出登录' }));
+    await user.click(screen.getByRole('link', { name: /Start Learning/i }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/login');
     });
 
-    expect(logout).toHaveBeenCalledWith(session.accessToken);
-    expect(useAuthSessionStore.getState().session).toBeNull();
+    expect(router.state.location.search).toBe(
+      '?returnTo=%2Fclassroom%2Finput'
+    );
+    expect(
+      await screen.findByRole('heading', { name: '欢迎回来' })
+    ).toBeInTheDocument();
+  });
+
+  it('opens the public landing page when users choose a top-nav showcase link', async () => {
+    const router = createEntryRouter();
+    const user = userEvent.setup();
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    await user.click(screen.getAllByRole('link', { name: '产品亮点' })[0]);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/landing');
+      expect(router.state.location.hash).toBe('#features');
+    });
+
+    expect(
+      await screen.findByText('真正体现产品差异的关键能力')
+    ).toBeInTheDocument();
+  });
+
+  it('switches locale from the home top navigation', async () => {
+    const router = createEntryRouter();
+    const user = userEvent.setup();
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    await user.click(screen.getAllByRole('button', { name: 'EN' })[0]);
+
+    expect((await screen.findAllByText('About')).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: '中' })[0]).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(router.state.location.search).toBe('');
   });
 });

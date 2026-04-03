@@ -99,11 +99,15 @@ describe('LoginPage', () => {
   });
 
   it('supports keyboard navigation on the login page', async () => {
-    const { user } = renderAuthRoute();
+    const { container, user } = renderAuthRoute();
 
     expect(
       screen.getByRole('heading', { name: '欢迎回来' })
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText('使用账号密码登录，继续你刚才的学习流程。')
+    ).not.toBeInTheDocument();
+    expect(container.querySelector('.xm-auth-brand-logo')).not.toBeNull();
 
     await user.tab();
     expect(screen.getByRole('link', { name: '返回首页' })).toHaveFocus();
@@ -115,18 +119,14 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('账号')).toHaveFocus();
   });
 
-  it('offers a clear cancel-return action when a pending returnTo exists', async () => {
-    const { user } = renderAuthRoute({
+  it('keeps returnTo internal and does not expose the target path on the login page', async () => {
+    renderAuthRoute({
       initialEntries: [`/login?${AUTH_RETURN_TO_KEY}=/video/input`]
     });
 
-    expect(screen.getByText('/video/input')).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole('button', { name: '取消回跳，返回首页' })
-    );
-
-    expect(await screen.findByText('Home route')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '返回首页' })).toBeInTheDocument();
+    expect(screen.queryByText('/video/input')).not.toBeInTheDocument();
+    expect(screen.queryByText('登录后将返回')).not.toBeInTheDocument();
   });
 
   it('updates auth copy when the locale changes', async () => {
@@ -142,6 +142,22 @@ describe('LoginPage', () => {
     expect(screen.getByRole('link', { name: 'Back home' })).toBeInTheDocument();
     expect(screen.getByLabelText('Account')).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en-US');
+  });
+
+  it('only shows login required messages after the user submits the form', async () => {
+    const { user } = renderAuthRoute();
+
+    await user.click(screen.getByLabelText('账号'));
+    await user.tab();
+    await user.tab();
+
+    expect(screen.queryByText('请输入账号')).toBeNull();
+    expect(screen.queryByText('请输入密码')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: '登录' }));
+
+    expect(await screen.findByText('请输入账号')).toBeInTheDocument();
+    expect(screen.getByText('请输入密码')).toBeInTheDocument();
   });
 
   it('logs in with admin credentials and redirects to the query returnTo target', async () => {
@@ -198,11 +214,6 @@ describe('LoginPage', () => {
     useAuthSessionStore.getState().setSession(session);
     const { router } = renderAuthRoute();
 
-    expect((await screen.findAllByText('你已登录')).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('正在返回首页，避免你重复进入登录页。').length
-    ).toBeGreaterThan(0);
-
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/');
     });
@@ -238,6 +249,31 @@ describe('LoginPage', () => {
 
     expect(screen.getByLabelText('用户名')).toBeInTheDocument();
     expect(screen.getByLabelText('确认密码')).toBeInTheDocument();
+  });
+
+  it('only shows register required messages after the user submits the form', async () => {
+    const { user } = renderAuthRoute({
+      service: createServiceStub({
+        getRegisterEnabled: vi.fn().mockResolvedValue(true)
+      })
+    });
+
+    await user.click(await screen.findByRole('button', { name: '注册' }));
+    await user.click(screen.getByLabelText('用户名'));
+    await user.tab();
+    await user.tab();
+
+    expect(screen.queryByText('请输入用户名')).toBeNull();
+    expect(screen.queryByText('请输入密码')).toBeNull();
+
+    const registerButtons = screen.getAllByRole('button', { name: '注册' });
+    const registerSubmitButton = registerButtons[registerButtons.length - 1];
+
+    await user.click(registerSubmitButton);
+
+    expect(await screen.findByText('请输入用户名')).toBeInTheDocument();
+    expect(screen.getByText('请输入密码')).toBeInTheDocument();
+    expect(screen.getByText('请再次输入密码')).toBeInTheDocument();
   });
 
   it('returns to the login view and shows a success message after registration', async () => {

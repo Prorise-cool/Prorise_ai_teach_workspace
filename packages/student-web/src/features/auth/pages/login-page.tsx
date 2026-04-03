@@ -14,7 +14,7 @@ import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect';
 import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
 import { authService, type AuthService } from '@/services/auth';
-import { FeedbackStateCard, useFeedback } from '@/shared/feedback';
+import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 import {
   AUTH_DEFAULT_TENANT_ID,
@@ -41,7 +41,7 @@ export function LoginPage({
 }: LoginPageProps) {
   const { t } = useAppTranslation();
   const authPageCopy = useAuthPageCopy();
-  const { notify, showSpotlight } = useFeedback();
+  const { notify } = useFeedback();
   const [activeView, setActiveView] = useState<AuthView>('login');
   const [registerEnabled, setRegisterEnabled] = useState(false);
   const [registerSucceeded, setRegisterSucceeded] = useState(false);
@@ -67,8 +67,6 @@ export function LoginPage({
   
   const {
     returnTo,
-    hasPendingReturnTo,
-    cancelReturnTo,
     redirectAfterAuth
   } = useAuthRedirect();
 
@@ -99,24 +97,21 @@ export function LoginPage({
 
     if (redirectFeedbackShownRef.current !== authRedirectReason) {
       const isFreshLogin = authRedirectReason === 'login-success';
-
-      showSpotlight({
+      notify({
         tone: isFreshLogin ? 'success' : 'info',
         title: isFreshLogin
           ? t('auth.feedback.loginSuccessTitle')
           : t('auth.feedback.alreadySignedInTitle'),
         description: isFreshLogin
           ? t('auth.feedback.loginSuccessMessage')
-          : t('auth.feedback.alreadySignedInMessage'),
-        loading: true,
-        durationMs: 1200
+          : t('auth.feedback.alreadySignedInMessage')
       });
 
       redirectFeedbackShownRef.current = authRedirectReason;
     }
 
     void redirectAfterAuth();
-  }, [authRedirectReason, redirectAfterAuth, session?.accessToken, showSpotlight, t]);
+  }, [authRedirectReason, notify, redirectAfterAuth, session?.accessToken, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,42 +183,8 @@ export function LoginPage({
   const viewTitle = isRegisterView
     ? authPageCopy.registerTitle
     : authPageCopy.loginTitle;
-  const viewSubtitle = isRegisterView
-    ? authPageCopy.registerSubtitle
-    : authPageCopy.loginSubtitle;
-  const isFreshLoginRedirect = authRedirectReason === 'login-success';
-
   if (session?.accessToken) {
-    return (
-      <main className="xm-auth-page">
-        <div className="xm-auth-container">
-          <AuthScene phase={scenePhase} />
-
-          <section className="xm-auth-right-panel">
-            <div className="xm-auth-brand-header">
-              <div className="xm-auth-brand-icon" />
-              <span>{authPageCopy.brand}</span>
-            </div>
-
-            <FeedbackStateCard
-              className="mx-auto my-auto w-full max-w-[420px]"
-              tone={isFreshLoginRedirect ? 'success' : 'info'}
-              title={
-                isFreshLoginRedirect
-                  ? t('auth.feedback.loginSuccessTitle')
-                  : t('auth.feedback.alreadySignedInTitle')
-              }
-              description={
-                isFreshLoginRedirect
-                  ? t('auth.feedback.loginSuccessMessage')
-                  : t('auth.feedback.alreadySignedInMessage')
-              }
-              loading
-            />
-          </section>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   return (
@@ -233,25 +194,20 @@ export function LoginPage({
 
         <section className="xm-auth-right-panel">
           <div className="xm-auth-brand-header">
-            <div className="xm-auth-brand-icon" />
+            <span className="xm-auth-brand-icon" aria-hidden="true">
+              <img
+                src="/entry/logo.png"
+                alt=""
+                className="xm-auth-brand-logo"
+              />
+            </span>
             <span>{authPageCopy.brand}</span>
           </div>
 
-          {hasPendingReturnTo ? (
-            <button
-              type="button"
-              className="xm-auth-back-link"
-              onClick={cancelReturnTo}
-            >
-              <ArrowLeft size={16} />
-              <span>{authPageCopy.cancelReturnTo}</span>
-            </button>
-          ) : (
-            <Link className="xm-auth-back-link" to="/">
-              <ArrowLeft size={16} />
-              <span>{authPageCopy.backHome}</span>
-            </Link>
-          )}
+          <Link className="xm-auth-back-link" to="/">
+            <ArrowLeft size={16} />
+            <span>{authPageCopy.backHome}</span>
+          </Link>
 
           <div className="xm-auth-toolbar">
             <button
@@ -271,17 +227,6 @@ export function LoginPage({
           <h1 className="xm-auth-view-title">
             {viewTitle}
           </h1>
-
-          {hasPendingReturnTo ? (
-            <div className="xm-auth-return-banner">
-              <span>{authPageCopy.pendingReturnTo}</span>
-              <strong>{returnTo}</strong>
-            </div>
-          ) : (
-            <p className="xm-auth-view-subtitle">
-              {viewSubtitle}
-            </p>
-          )}
 
           {registerSucceeded ? (
             <div className="xm-auth-return-banner" role="status">

@@ -82,7 +82,8 @@ export function LoginForm({
       ...loginFormDefaultValues,
       username: initialUsername ?? loginFormDefaultValues.username
     },
-    mode: 'onBlur'
+    mode: 'onSubmit',
+    reValidateMode: 'onChange'
   });
 
   const refreshCaptcha = useCallback(async () => {
