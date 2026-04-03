@@ -48,6 +48,19 @@ async function loadSocialCallbackRoute() {
   };
 }
 
+/**
+ * 按需加载权限不足页，确保认证异常分支独立分包。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadForbiddenRoute() {
+  const { ForbiddenPage } = await import('@/features/auth/pages/forbidden-page');
+
+  return {
+    Component: ForbiddenPage
+  };
+}
+
 export const appRouter = createBrowserRouter([
   {
     path: '/',
@@ -69,6 +82,10 @@ export const appRouter = createBrowserRouter([
       {
         path: 'login/social-callback',
         lazy: loadSocialCallbackRoute
+      },
+      {
+        path: 'forbidden',
+        lazy: loadForbiddenRoute
       }
     ]
   }

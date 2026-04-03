@@ -36,7 +36,15 @@ export const zhCnResources = {
       registerSuccess: '注册成功，请使用新账号登录',
       captchaRefresh: '刷新验证码',
       captchaUnavailable: '暂无验证码',
-      captchaLoading: '验证码加载中...'
+      captchaLoading: '验证码加载中...',
+      logoutAction: '退出登录',
+      logoutSubmitting: '退出中...',
+      retrySessionCheck: '重新校验登录态',
+      forbiddenBadge: '权限不足',
+      forbiddenContextLabel: '当前拒绝访问的目标：',
+      forbiddenCurrentUser: '当前账号：',
+      backToPrevious: '返回上一页',
+      switchAccount: '退出并切换账号'
     },
     field: {
       common: {
@@ -90,6 +98,16 @@ export const zhCnResources = {
       registerStateFallbackMessage: '目前先保留登录入口，你稍后可以刷新重试。',
       authRequiredTitle: '请先登录',
       authRequiredMessage: '当前页面需要登录后才能进入，正在带你回到登录页。',
+      sessionExpiredTitle: '登录态已失效',
+      sessionExpiredMessage: '系统已清理本地会话，正在带你重新登录。',
+      permissionDeniedTitle: '当前账号无权限访问',
+      permissionDeniedMessage: '你已登录，但当前账号不具备访问该资源的权限。',
+      sessionCheckingTitle: '正在校验登录态',
+      sessionCheckingMessage: '正在向后端确认当前会话，请稍候。',
+      sessionCheckFailedTitle: '登录态校验失败',
+      sessionCheckFailedMessage: '暂时无法确认当前会话，请重试或重新登录。',
+      logoutSuccessTitle: '已退出登录',
+      logoutSuccessMessage: '当前会话已清理，你可以重新登录。',
       socialProcessing: '正在完成第三方登录，请稍后...',
       socialMissingParams: '缺少必要的第三方登录参数，请返回登录页重试。',
       socialSuccessRedirect: '登录成功，正在返回原页面...',
@@ -120,9 +138,30 @@ export const zhCnResources = {
     }
   },
   home: {
-    scaffoldLabel: '学生端脚手架',
-    title: '小麦学生端模板已就绪',
+    sessionBadge: '认证一致性',
+    title: '登录态与受保护访问已经接到真实校验链路',
     description:
-      '当前已补齐工程骨架、样式令牌、主题变量与依赖配置。业务页面、组件和接口适配层将在后续 Epic 中继续向上搭建。'
+      '当前页面用于验证前端、FastAPI 与 RuoYi 对同一会话的判断是否一致，并提供统一的登出与权限不足体验入口。',
+    currentSessionTitle: '当前会话',
+    currentUserLabel: '显示昵称',
+    currentAccountLabel: '登录账号',
+    currentRolesLabel: '角色列表',
+    currentPermissionsLabel: '权限列表',
+    actionsTitle: '一致性操作',
+    actionsDescription:
+      '你可以在这里验证 FastAPI 受保护探针、体验权限不足反馈，并随时从当前账号退出。',
+    sessionProbeTitle: 'FastAPI 受保护探针结果',
+    sessionProbeHint:
+      '点击“验证受保护访问”后，会向 FastAPI 发送带 Token 的真实请求，并展示 Redis 在线态与权限上下文。',
+    sessionProbeAction: '验证受保护访问',
+    sessionProbeLoading: '校验中...',
+    permissionProbeAction: '验证权限不足反馈',
+    sessionProbeSuccessTitle: '受保护访问校验成功',
+    sessionProbeSuccessMessage: '前端、FastAPI 与 RuoYi 对当前会话判断一致。',
+    sessionProbeUserIdLabel: '用户 ID',
+    sessionProbeTtlLabel: '在线态 TTL（秒）',
+    sessionProbeRequestIdLabel: '请求追踪 ID',
+    sessionProbePermissionsLabel: '后端权限快照',
+    sessionProbeErrorFallback: '受保护访问校验失败，请稍后重试。'
   }
 } as const;

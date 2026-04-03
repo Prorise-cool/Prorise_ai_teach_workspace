@@ -7,6 +7,7 @@ import {
   type ApiRequestConfig,
   isApiClientError
 } from '@/services/api/client';
+import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
 import {
   getMockTaskDetailEnvelope,
   getMockTaskListEnvelope,
@@ -27,7 +28,7 @@ import {
 } from './base-adapter';
 
 const fastapiClient = createApiClient({
-  baseURL: import.meta.env.VITE_FASTAPI_BASE_URL
+  baseURL: resolveFastapiBaseUrl()
 });
 
 export class TaskAdapterError extends Error {

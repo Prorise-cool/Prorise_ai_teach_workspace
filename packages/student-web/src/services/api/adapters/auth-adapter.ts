@@ -380,6 +380,7 @@ async function requestRuoyiEnvelope<T>(
   try {
     const response = await client.request<RuoyiEnvelope<T>>({
       ...config,
+      authFailureMode: "manual",
       headers: mergeRequestHeaders(config.headers, accessToken),
     });
 
@@ -404,6 +405,7 @@ async function requestSocialAuthUrl(
     const response = await client.request<unknown>({
       url: createSocialBindingRequestUrl(input),
       method: "get",
+      authFailureMode: "manual",
     });
 
     return unwrapSocialAuthUrl(response.data, response.status);
@@ -417,6 +419,7 @@ async function requestCaptcha(client: ApiClient) {
     const response = await client.request<RuoyiEnvelope<RuoyiCaptchaPayload>>({
       url: "/auth/code",
       method: "get",
+      authFailureMode: "manual",
     });
 
     return mapRuoyiCaptchaPayload(
@@ -435,6 +438,7 @@ async function requestRegisterEnabled(
     const response = await client.request<RuoyiEnvelope<boolean>>({
       url: `/auth/register/enabled?tenantId=${encodeURIComponent(tenantId)}`,
       method: "get",
+      authFailureMode: "manual",
     });
     const registerValue = unwrapRuoyiEnvelope(response.data, response.status);
 
