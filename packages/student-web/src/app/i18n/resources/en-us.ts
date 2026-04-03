@@ -38,7 +38,15 @@ export const enUsResources = {
       registerSuccess: 'Registration succeeded. Please sign in with your new account.',
       captchaRefresh: 'Refresh captcha',
       captchaUnavailable: 'Captcha unavailable',
-      captchaLoading: 'Loading captcha...'
+      captchaLoading: 'Loading captcha...',
+      logoutAction: 'Sign out',
+      logoutSubmitting: 'Signing out...',
+      retrySessionCheck: 'Retry session check',
+      forbiddenBadge: 'Permission denied',
+      forbiddenContextLabel: 'Blocked target:',
+      forbiddenCurrentUser: 'Current account:',
+      backToPrevious: 'Go back',
+      switchAccount: 'Sign out and switch account'
     },
     field: {
       common: {
@@ -92,6 +100,16 @@ export const enUsResources = {
       registerStateFallbackMessage: 'The page will stay in sign-in mode for now. Please refresh and try again later.',
       authRequiredTitle: 'Sign in required',
       authRequiredMessage: 'This page requires a signed-in account. Taking you to the sign-in page now.',
+      sessionExpiredTitle: 'Session expired',
+      sessionExpiredMessage: 'The local session has been cleared. Redirecting you to sign in again.',
+      permissionDeniedTitle: 'This account cannot access the resource',
+      permissionDeniedMessage: 'You are signed in, but the current account does not have permission to access this resource.',
+      sessionCheckingTitle: 'Checking session',
+      sessionCheckingMessage: 'Confirming the current session with the backend. Please wait.',
+      sessionCheckFailedTitle: 'Session verification failed',
+      sessionCheckFailedMessage: 'The current session could not be verified. Retry or sign in again.',
+      logoutSuccessTitle: 'Signed out',
+      logoutSuccessMessage: 'The current session has been cleared. You can sign in again.',
       socialProcessing: 'Finishing social sign-in. Please wait...',
       socialMissingParams:
         'Required social sign-in parameters are missing. Please return to the sign-in page and try again.',
@@ -123,9 +141,30 @@ export const enUsResources = {
     }
   },
   home: {
-    scaffoldLabel: 'Student Web Scaffold',
-    title: 'XiaoMai student web scaffold is ready',
+    sessionBadge: 'Auth consistency',
+    title: 'Session and protected-access checks now use the real validation chain',
     description:
-      'The project skeleton, theme tokens, and dependency baseline are now in place. Business pages, components, and API adapters will continue to be built in upcoming epics.'
+      'This page verifies whether the frontend, FastAPI, and RuoYi agree on the same session, while also exposing unified sign-out and permission-denied flows.',
+    currentSessionTitle: 'Current session',
+    currentUserLabel: 'Display name',
+    currentAccountLabel: 'Account',
+    currentRolesLabel: 'Roles',
+    currentPermissionsLabel: 'Permissions',
+    actionsTitle: 'Consistency actions',
+    actionsDescription:
+      'Use these actions to verify protected FastAPI access, experience the permission-denied flow, and sign out from the current account.',
+    sessionProbeTitle: 'FastAPI protected probe result',
+    sessionProbeHint:
+      'Select "Verify protected access" to send a real token-bearing request to FastAPI and inspect the Redis online session plus permission context.',
+    sessionProbeAction: 'Verify protected access',
+    sessionProbeLoading: 'Checking...',
+    permissionProbeAction: 'Verify permission-denied flow',
+    sessionProbeSuccessTitle: 'Protected access verified',
+    sessionProbeSuccessMessage: 'The frontend, FastAPI, and RuoYi agree on the current session.',
+    sessionProbeUserIdLabel: 'User ID',
+    sessionProbeTtlLabel: 'Online TTL (seconds)',
+    sessionProbeRequestIdLabel: 'Request trace ID',
+    sessionProbePermissionsLabel: 'Backend permission snapshot',
+    sessionProbeErrorFallback: 'The protected access check failed. Please try again later.'
   }
 } as const;

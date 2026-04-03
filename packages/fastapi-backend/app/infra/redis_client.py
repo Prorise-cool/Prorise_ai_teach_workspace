@@ -29,6 +29,42 @@ from app.shared.task_framework.key_builder import (
 from app.shared.task_framework.runtime_store import TaskRuntimeRecoveryState
 from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus, map_internal_status
 
+ONLINE_TOKEN_KEY_PREFIX = "online_tokens:"
+
+
+def build_online_token_key(token_value: str, tenant_id: str | None = None) -> str:
+    if tenant_id:
+        return f"{tenant_id}:{ONLINE_TOKEN_KEY_PREFIX}{token_value}"
+    return f"{ONLINE_TOKEN_KEY_PREFIX}{token_value}"
+
+
+def build_online_token_key_candidates(
+    token_value: str,
+    tenant_id: str | None = None
+) -> tuple[str, ...]:
+    candidates: list[str] = []
+    for key in (
+        build_online_token_key(token_value, tenant_id=tenant_id),
+        build_online_token_key(token_value),
+    ):
+        if key not in candidates:
+            candidates.append(key)
+    return tuple(candidates)
+
+
+def normalize_online_token_payload(payload: object) -> dict[str, object] | None:
+    if isinstance(payload, dict):
+        return dict(payload)
+
+    if (
+        isinstance(payload, list)
+        and len(payload) == 2
+        and isinstance(payload[1], dict)
+    ):
+        return dict(payload[1])
+
+    return None
+
 
 class RuntimeStorageScope(StrEnum):
     RUNTIME = "runtime"
@@ -98,6 +134,69 @@ class RuntimeStore:
         with self._lock:
             self.storage.clear()
             self.expirations.clear()
+
+    def get_online_token_record(
+        self,
+        token_value: str,
+        *,
+        tenant_id: str | None = None
+    ) -> dict[str, object] | None:
+        for key in build_online_token_key_candidates(token_value, tenant_id=tenant_id):
+            payload = self.get_runtime_value(key)
+            normalized = normalize_online_token_payload(payload)
+            if normalized is not None:
+                return normalized
+        return None
+
+    def set_online_token_record(
+        self,
+        token_value: str,
+        payload: dict[str, object],
+        *,
+        tenant_id: str | None = None,
+        ttl_seconds: int
+    ) -> None:
+        if ttl_seconds <= 0:
+            raise ValueError("在线态写入必须显式设置正数 TTL")
+
+        key = build_online_token_key(token_value, tenant_id=tenant_id)
+
+        if self.client is not None:
+            self.client.set(key, json.dumps(payload), ex=ttl_seconds)
+            return
+
+        with self._lock:
+            self.storage[key] = json.loads(json.dumps(payload))
+            self.expirations[key] = self._now() + ttl_seconds
+
+    def delete_online_token_record(
+        self,
+        token_value: str,
+        *,
+        tenant_id: str | None = None
+    ) -> None:
+        keys = build_online_token_key_candidates(token_value, tenant_id=tenant_id)
+
+        if self.client is not None:
+            self.client.delete(*keys)
+            return
+
+        with self._lock:
+            for key in keys:
+                self.storage.pop(key, None)
+                self.expirations.pop(key, None)
+
+    def get_online_token_ttl(
+        self,
+        token_value: str,
+        *,
+        tenant_id: str | None = None
+    ) -> int:
+        for key in build_online_token_key_candidates(token_value, tenant_id=tenant_id):
+            ttl = self.ttl(key)
+            if ttl >= -1:
+                return ttl
+        return -2
 
     def set_task_state(
         self,

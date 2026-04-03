@@ -4,6 +4,8 @@
  */
 import { Outlet } from 'react-router-dom';
 
+import { AuthRuntimeBridge } from '@/features/auth/components/auth-runtime-bridge';
+
 /**
  * 渲染应用公共壳层，并为业务页面提供统一背景与文本色。
  *
@@ -12,6 +14,7 @@ import { Outlet } from 'react-router-dom';
 export function AppShell() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <AuthRuntimeBridge />
       <Outlet />
     </div>
   );
