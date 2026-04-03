@@ -8,6 +8,9 @@ export const AUTH_SUCCESS_CODE = 200;
 /** 统一认证页面路由。 */
 export const AUTH_LOGIN_PATH = "/login";
 
+/** 权限不足提示页面路由。 */
+export const AUTH_FORBIDDEN_PATH = "/forbidden";
+
 /** 未登录或会话失效状态码。 */
 export const AUTH_UNAUTHORIZED_STATUS = 401;
 

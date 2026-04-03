@@ -62,6 +62,32 @@ class TaskSnapshotResponseEnvelope(BaseModel):
     data: TaskSnapshotPayload
 
 
+class SessionProbePayload(BaseModel):
+    user_id: str = Field(alias="userId")
+    username: str
+    roles: list[str]
+    permissions: list[str]
+    online_ttl_seconds: int | None = Field(default=None, alias="onlineTtlSeconds")
+    request_id: str | None = Field(default=None, alias="requestId")
+
+
+class SessionProbeResponseEnvelope(BaseModel):
+    code: int = Field(default=200)
+    msg: str = Field(default="查询成功")
+    data: SessionProbePayload
+
+
+class PermissionProbePayload(SessionProbePayload):
+    required_permission: str = Field(alias="requiredPermission")
+    granted: bool = True
+
+
+class PermissionProbeResponseEnvelope(BaseModel):
+    code: int = Field(default=200)
+    msg: str = Field(default="查询成功")
+    data: PermissionProbePayload
+
+
 def build_success_envelope(data: BaseModel, msg: str = "查询成功") -> dict[str, object]:
     return {
         "code": 200,

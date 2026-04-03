@@ -1,7 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Query
 
+from app.core.errors import AppError
+from app.core.security import AccessContext, get_access_context
 from app.schemas.common import (
     ErrorResponseEnvelope,
+    PermissionProbePayload,
+    PermissionProbeResponseEnvelope,
+    SessionProbePayload,
+    SessionProbeResponseEnvelope,
     TaskSnapshotPayload,
     TaskSnapshotResponseEnvelope,
     build_success_envelope
@@ -127,3 +133,77 @@ async def get_task_list_contract() -> dict[str, object]:
         )
     ]
     return build_page_envelope(rows, total=2, request_id="req_20260329_list")
+
+
+@router.get(
+    "/session-probe",
+    response_model=SessionProbeResponseEnvelope,
+    responses={
+        401: {
+            "model": ErrorResponseEnvelope,
+            "description": "未登录或会话过期",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}}
+        },
+        403: {
+            "model": ErrorResponseEnvelope,
+            "description": "已登录但无权限",
+            "content": {"application/json": {"example": FORBIDDEN_ERROR_EXAMPLE}}
+        }
+    }
+)
+async def get_session_probe(
+    access_context: AccessContext = Depends(get_access_context)
+) -> dict[str, object]:
+    payload = SessionProbePayload(
+        userId=access_context.user_id,
+        username=access_context.username,
+        roles=list(access_context.roles),
+        permissions=list(access_context.permissions),
+        onlineTtlSeconds=access_context.online_ttl_seconds,
+        requestId=access_context.request_id,
+    )
+    return build_success_envelope(payload)
+
+
+@router.get(
+    "/permission-probe",
+    response_model=PermissionProbeResponseEnvelope,
+    responses={
+        401: {
+            "model": ErrorResponseEnvelope,
+            "description": "未登录或会话过期",
+            "content": {"application/json": {"example": UNAUTHORIZED_ERROR_EXAMPLE}}
+        },
+        403: {
+            "model": ErrorResponseEnvelope,
+            "description": "已登录但无权限",
+            "content": {"application/json": {"example": FORBIDDEN_ERROR_EXAMPLE}}
+        }
+    }
+)
+async def get_permission_probe(
+    permission: str = Query(..., min_length=1),
+    access_context: AccessContext = Depends(get_access_context)
+) -> dict[str, object]:
+    if permission not in access_context.permissions:
+        raise AppError(
+            code="AUTH_PERMISSION_DENIED",
+            message=f"当前账号缺少权限：{permission}",
+            status_code=403,
+            details={
+                "required_permission": permission,
+                "request_id": access_context.request_id,
+            },
+        )
+
+    payload = PermissionProbePayload(
+        userId=access_context.user_id,
+        username=access_context.username,
+        roles=list(access_context.roles),
+        permissions=list(access_context.permissions),
+        onlineTtlSeconds=access_context.online_ttl_seconds,
+        requestId=access_context.request_id,
+        requiredPermission=permission,
+        granted=True,
+    )
+    return build_success_envelope(payload)

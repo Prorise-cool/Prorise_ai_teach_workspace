@@ -14,10 +14,15 @@ import {
   isRequestEncryptionEnabled,
 } from "@/services/api/request-crypto";
 import {
+  readNumberProperty,
   readRecord,
   readStringProperty,
   parseJsonText,
 } from "@/lib/type-guards";
+import {
+  emitAuthFailure,
+  isAuthFailureStatus
+} from "@/services/api/auth-failure";
 
 export type ApiRequestMethod = "get" | "post" | "put" | "patch" | "delete";
 
@@ -29,6 +34,7 @@ export type ApiRequestConfig = {
   credentials?: RequestCredentials;
   signal?: AbortSignal;
   encrypt?: boolean;
+  authFailureMode?: "auto" | "manual";
 };
 
 export type ApiClientResponse<T> = {
@@ -62,6 +68,28 @@ type CreateApiClientOptions = {
 };
 
 const DEFAULT_TIMEOUT = 15000;
+const DEFAULT_RUOYI_BASE_URL = "http://127.0.0.1:8080";
+
+/**
+ * 解析 RuoYi 服务基准地址。
+ * 开发环境优先走同源代理，避免浏览器直连双后端时触发跨域预检问题。
+ *
+ * @param configuredBaseUrl - 显式传入的后端基准地址。
+ * @param isDev - 当前是否为开发环境。
+ * @returns 可用的 RuoYi 基准地址。
+ */
+export function resolveRuoyiBaseUrl(
+  configuredBaseUrl = import.meta.env.VITE_RUOYI_BASE_URL,
+  isDev = import.meta.env.DEV
+) {
+  const normalizedBaseUrl = configuredBaseUrl?.trim();
+
+  if (normalizedBaseUrl) {
+    return normalizedBaseUrl;
+  }
+
+  return isDev ? "" : DEFAULT_RUOYI_BASE_URL;
+}
 
 function resolveRequestLocale() {
   if (typeof document !== "undefined") {
@@ -298,7 +326,7 @@ export function isApiClientError(error: unknown): error is ApiClientError {
  * @returns 可复用的 API Client 实例。
  */
 export function createApiClient({
-  baseURL = import.meta.env.VITE_RUOYI_BASE_URL,
+  baseURL = resolveRuoyiBaseUrl(),
   credentials = "include",
   timeout = DEFAULT_TIMEOUT,
 }: CreateApiClientOptions = {}): ApiClient {
@@ -311,8 +339,10 @@ export function createApiClient({
       credentials: requestCredentials,
       signal,
       encrypt,
+      authFailureMode = "auto",
     }: ApiRequestConfig) {
       const requestHeaders = new Headers(headers);
+      const requestUrl = resolveRequestUrl(baseURL, url);
       const { signal: requestSignal, cleanup } = createRequestSignal(
         timeout,
         signal,
@@ -345,7 +375,7 @@ export function createApiClient({
       }
 
       try {
-        const response = await fetch(resolveRequestUrl(baseURL, url), init);
+        const response = await fetch(requestUrl, init);
         const parsedBody = await parseResponseBody(response);
         const result: ApiClientResponse<T> = {
           status: response.status,
@@ -354,9 +384,33 @@ export function createApiClient({
         };
 
         if (!response.ok) {
+          const errorMessage = parseErrorMessage(
+            parsedBody,
+            response.statusText || "请求失败",
+          );
+
+          if (
+            authFailureMode !== "manual" &&
+            isAuthFailureStatus(response.status)
+          ) {
+            const payload = readRecord(parsedBody);
+            const responseCode = payload
+              ? readNumberProperty(payload, "code")
+              : undefined;
+
+            emitAuthFailure({
+              status: response.status,
+              message: errorMessage,
+              requestUrl,
+              responseCode:
+                responseCode !== undefined ? String(responseCode) : null,
+              occurredAt: Date.now(),
+            });
+          }
+
           throw new ApiClientError(
             response.status,
-            parseErrorMessage(parsedBody, response.statusText || "请求失败"),
+            errorMessage,
             parsedBody,
             result as ApiClientResponse<unknown>,
           );
