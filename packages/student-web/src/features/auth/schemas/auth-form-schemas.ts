@@ -45,6 +45,7 @@ export function createRegisterFormSchema(t: TFunction) {
         .max(30, t('auth.validation.register.usernameTooLong')),
       password: z
         .string()
+        .min(1, t('auth.validation.register.passwordRequired'))
         .min(5, t('auth.validation.register.passwordTooShort'))
         .max(30, t('auth.validation.register.passwordTooLong')),
       confirmPassword: z

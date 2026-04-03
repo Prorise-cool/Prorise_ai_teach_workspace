@@ -75,7 +75,8 @@ export function RegisterForm({
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(createRegisterFormSchema(t)),
     defaultValues: registerFormDefaultValues,
-    mode: 'onBlur'
+    mode: 'onSubmit',
+    reValidateMode: 'onChange'
   });
 
   const refreshCaptcha = useCallback(async () => {

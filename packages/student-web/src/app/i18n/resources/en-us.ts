@@ -2,6 +2,8 @@
  * 文件说明：student-web 英文资源样例。
  * 当前只覆盖已接入 i18n 的最小页面范围，用于验证资源扩展能力。
  */
+import { enUsEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+
 export const enUsResources = {
   auth: {
     page: {
@@ -131,6 +133,7 @@ export const enUsResources = {
         usernameRequired: 'Please enter a username',
         usernameTooShort: 'Username must be at least 2 characters',
         usernameTooLong: 'Username must be 30 characters or fewer',
+        passwordRequired: 'Please enter your password',
         passwordTooShort: 'Password must be at least 5 characters',
         passwordTooLong: 'Password must be 30 characters or fewer',
         confirmPasswordRequired: 'Please confirm your password',
@@ -166,5 +169,6 @@ export const enUsResources = {
     sessionProbeRequestIdLabel: 'Request trace ID',
     sessionProbePermissionsLabel: 'Backend permission snapshot',
     sessionProbeErrorFallback: 'The protected access check failed. Please try again later.'
-  }
+  },
+  ...enUsEntryPageResources
 } as const;

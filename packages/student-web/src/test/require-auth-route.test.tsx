@@ -1,5 +1,5 @@
 /**
- * 文件说明：验证受保护路由在未登录时回到登录页，并保留回跳地址。
+ * 文件说明：验证受保护路由在 Story 1.4 入口链路中的回跳与鉴权守卫。
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
@@ -31,7 +31,7 @@ describe('RequireAuthRoute', () => {
     window.sessionStorage.clear();
   });
 
-  it('redirects unauthenticated users to /login', async () => {
+  it('redirects unauthenticated users to /login and preserves the original classroom target', async () => {
     const router = createMemoryRouter(
       [
         {
@@ -39,8 +39,8 @@ describe('RequireAuthRoute', () => {
           element: <RequireAuthRoute service={mockAuthService} />,
           children: [
             {
-              index: true,
-              element: <div>Protected home</div>
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
             }
           ]
         },
@@ -54,7 +54,7 @@ describe('RequireAuthRoute', () => {
         }
       ],
       {
-        initialEntries: ['/']
+        initialEntries: ['/classroom/input?mode=quick']
       }
     );
 
@@ -70,7 +70,12 @@ describe('RequireAuthRoute', () => {
       expect(router.state.location.pathname).toBe('/login');
     });
 
-    expect(screen.queryByText('Protected home')).not.toBeInTheDocument();
+    expect(router.state.location.search).toBe(
+      '?returnTo=%2Fclassroom%2Finput%3Fmode%3Dquick'
+    );
+    expect(
+      screen.queryByText('Protected classroom input')
+    ).not.toBeInTheDocument();
   });
 
   it('renders protected content when a session already exists', async () => {
@@ -88,8 +93,8 @@ describe('RequireAuthRoute', () => {
           element: <RequireAuthRoute service={mockAuthService} />,
           children: [
             {
-              index: true,
-              element: <div>Protected home</div>
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
             }
           ]
         },
@@ -103,7 +108,7 @@ describe('RequireAuthRoute', () => {
         }
       ],
       {
-        initialEntries: ['/']
+        initialEntries: ['/classroom/input']
       }
     );
 
@@ -113,8 +118,10 @@ describe('RequireAuthRoute', () => {
       </AppProvider>
     );
 
-    expect(await screen.findByText('Protected home')).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/');
+    expect(
+      await screen.findByText('Protected classroom input')
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/classroom/input');
   });
 
   it('redirects expired persisted sessions back to /login', async () => {
@@ -142,8 +149,8 @@ describe('RequireAuthRoute', () => {
           ),
           children: [
             {
-              index: true,
-              element: <div>Protected home</div>
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
             }
           ]
         },
@@ -157,7 +164,7 @@ describe('RequireAuthRoute', () => {
         }
       ],
       {
-        initialEntries: ['/']
+        initialEntries: ['/classroom/input']
       }
     );
 
@@ -172,7 +179,12 @@ describe('RequireAuthRoute', () => {
     });
 
     expect(useAuthSessionStore.getState().session).toBeNull();
-    expect(screen.queryByText('Protected home')).not.toBeInTheDocument();
+    expect(router.state.location.search).toBe(
+      '?returnTo=%2Fclassroom%2Finput'
+    );
+    expect(
+      screen.queryByText('Protected classroom input')
+    ).not.toBeInTheDocument();
   });
 
   it('routes authenticated but forbidden sessions to /forbidden', async () => {
@@ -200,8 +212,8 @@ describe('RequireAuthRoute', () => {
           ),
           children: [
             {
-              index: true,
-              element: <div>Protected home</div>
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
             }
           ]
         },
@@ -215,7 +227,7 @@ describe('RequireAuthRoute', () => {
         }
       ],
       {
-        initialEntries: ['/']
+        initialEntries: ['/classroom/input']
       }
     );
 
