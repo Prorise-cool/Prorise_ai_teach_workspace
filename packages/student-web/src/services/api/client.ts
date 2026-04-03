@@ -18,6 +18,7 @@ import {
   readStringProperty,
   parseJsonText,
 } from "@/lib/type-guards";
+import { resetAuthSessionStore } from "@/stores/auth-session-store";
 
 export type ApiRequestMethod = "get" | "post" | "put" | "patch" | "delete";
 
@@ -354,6 +355,10 @@ export function createApiClient({
         };
 
         if (!response.ok) {
+          if (response.status === 401) {
+            resetAuthSessionStore();
+          }
+
           throw new ApiClientError(
             response.status,
             parseErrorMessage(parsedBody, response.statusText || "请求失败"),
