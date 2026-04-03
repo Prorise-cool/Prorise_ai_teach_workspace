@@ -188,6 +188,6 @@ references/manim-to-video-claw/*.egg-info/
 
 # Claude Code workflow config
 .ccw/
-
+.cursor/
 # Reference projects (external examples)
 references/
