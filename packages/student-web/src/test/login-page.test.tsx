@@ -99,7 +99,7 @@ describe('LoginPage', () => {
   });
 
   it('supports keyboard navigation on the login page', async () => {
-    const { container, user } = renderAuthRoute();
+    const { user } = renderAuthRoute();
 
     expect(
       screen.getByRole('heading', { name: '欢迎回来' })
@@ -107,7 +107,7 @@ describe('LoginPage', () => {
     expect(
       screen.queryByText('使用账号密码登录，继续你刚才的学习流程。')
     ).not.toBeInTheDocument();
-    expect(container.querySelector('.xm-auth-brand-logo')).not.toBeNull();
+    expect(screen.getByText('小麦 XiaoMai')).toBeInTheDocument();
 
     await user.tab();
     expect(screen.getByRole('link', { name: '返回首页' })).toHaveFocus();
@@ -119,7 +119,7 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('账号')).toHaveFocus();
   });
 
-  it('keeps returnTo internal and does not expose the target path on the login page', async () => {
+  it('keeps returnTo internal and does not expose the target path on the login page', () => {
     renderAuthRoute({
       initialEntries: [`/login?${AUTH_RETURN_TO_KEY}=/video/input`]
     });
@@ -234,7 +234,7 @@ describe('LoginPage', () => {
     });
 
     expect(
-      screen.queryByRole('button', { name: '注册' })
+      screen.queryByRole('tab', { name: '注册' })
     ).not.toBeInTheDocument();
   });
 
@@ -245,7 +245,7 @@ describe('LoginPage', () => {
       })
     });
 
-    await user.click(await screen.findByRole('button', { name: '注册' }));
+    await user.click(await screen.findByRole('tab', { name: '注册' }));
 
     expect(screen.getByLabelText('用户名')).toBeInTheDocument();
     expect(screen.getByLabelText('确认密码')).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('LoginPage', () => {
       })
     });
 
-    await user.click(await screen.findByRole('button', { name: '注册' }));
+    await user.click(await screen.findByRole('tab', { name: '注册' }));
     await user.click(screen.getByLabelText('用户名'));
     await user.tab();
     await user.tab();
@@ -285,7 +285,7 @@ describe('LoginPage', () => {
       })
     });
 
-    await user.click(await screen.findByRole('button', { name: '注册' }));
+    await user.click(await screen.findByRole('tab', { name: '注册' }));
     await user.type(screen.getByLabelText('用户名'), 'new_student');
     await user.type(screen.getByLabelText('密码'), 'Passw0rd!');
     await user.type(screen.getByLabelText('确认密码'), 'Passw0rd!');

@@ -1,0 +1,10 @@
+/**
+ * 文件说明：公开首页与营销落地页样式入口。
+ * 负责组合 Home / Landing 的 SCSS partials，不再把全部视觉定义塞进单文件。
+ */
+@use './partials/entry-page-base';
+@use './partials/entry-home';
+@use './partials/landing-page';
+@use './partials/landing-components';
+@use './partials/entry-page-animations';
+@use './partials/entry-page-responsive';

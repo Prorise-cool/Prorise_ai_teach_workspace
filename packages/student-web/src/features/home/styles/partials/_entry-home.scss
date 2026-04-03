@@ -1,0 +1,202 @@
+/**
+ * 文件说明：公开首页 Home 页样式。
+ * 负责 Hero、角色插画、底部波浪 CTA 等页面级复杂效果。
+ */
+.xm-entry-home {
+	position: relative;
+	min-height: 100vh;
+	overflow: hidden;
+	background:
+		radial-gradient(circle at 50% 35%,
+			color-mix(in srgb, var(--xm-color-primary) 28%, transparent),
+			transparent 38%),
+		linear-gradient(180deg,
+			var(--xm-color-background-elevated) 0%,
+			var(--xm-color-background) 100%);
+
+	&__glow {
+		position: absolute;
+		top: 45%;
+		left: 50%;
+		z-index: 0;
+		width: 600px;
+		height: 600px;
+		transform: translate(-50%, -50%);
+		border-radius: 9999px;
+		background: color-mix(in srgb, var(--xm-color-primary) 78%, transparent);
+		filter: blur(120px);
+		opacity: 0.42;
+		pointer-events: none;
+	}
+
+	&__content {
+		position: relative;
+		z-index: 20;
+		min-height: 100vh;
+		padding: 120px 6% 280px;
+	}
+
+	&__nav {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		z-index: 50;
+		width: 100%;
+		padding: 2rem 6% 0;
+		transform: translateX(-50%);
+	}
+
+	&__hero {
+		display: flex;
+		min-height: calc(100vh - 400px);
+		width: 100%;
+		max-width: 1440px;
+		margin-inline: auto;
+		align-items: center;
+		justify-content: space-between;
+		gap: 40px;
+	}
+
+	&__title {
+		color: var(--xm-color-text-primary);
+		font-size: clamp(4rem, 6.6vw, 96px);
+		font-weight: 900;
+		line-height: 1;
+		letter-spacing: -0.04em;
+		white-space: nowrap;
+	}
+
+	&__subtitle {
+		display: flex;
+		flex-direction: column;
+		color: var(--xm-color-text-primary);
+		font-size: clamp(1.8rem, 2.7vw, 40px);
+		font-weight: 900;
+		line-height: 1.08;
+	}
+
+	&__anim-left {
+		display: flex;
+		flex-direction: column;
+		gap: var(--xm-spacing-2);
+		text-align: center;
+		opacity: 0;
+		animation: xm-entry-home-fade-left 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+		animation-delay: 0.08s;
+	}
+
+	&__anim-right {
+		display: flex;
+		width: 100%;
+		max-width: 400px;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--xm-spacing-6);
+		text-align: center;
+		opacity: 0;
+		animation: xm-entry-home-fade-right 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+		animation-delay: 0.16s;
+	}
+
+	&__description {
+		color: var(--xm-color-text-secondary);
+		font-size: 14px;
+		line-height: 1.5;
+	}
+
+	&__role {
+		position: absolute;
+		bottom: -12vh;
+		left: 50%;
+		z-index: 30;
+		width: clamp(700px, 105vw, 1500px);
+		max-width: none;
+		transform: translateX(-52%);
+		object-fit: contain;
+		pointer-events: none;
+	}
+
+	&__wave-shell {
+		position: absolute;
+		inset: auto 0 0;
+		z-index: 40;
+		height: clamp(200px, 26vh, 320px);
+		pointer-events: none;
+	}
+
+	&__wave-bg {
+		width: 100%;
+		height: 100%;
+	}
+
+	&__wave-cta {
+		position: absolute;
+		top: 46.5%;
+		left: 50%;
+		z-index: 50;
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: center;
+		gap: clamp(24px, 4vw, 60px);
+		transform: translate(-50%, -33%);
+		pointer-events: auto;
+	}
+
+	&__wave-label {
+		width: 180px;
+		color: color-mix(in srgb,
+				var(--xm-color-text-secondary) 72%,
+				var(--xm-color-primary-foreground) 28%);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.3em;
+	}
+
+	&__wave-button {
+		display: inline-flex;
+		width: 108px;
+		height: 108px;
+		flex: 0 0 108px;
+		align-items: center;
+		justify-content: center;
+		border: 0;
+		border-radius: 9999px;
+		background: var(--xm-color-primary);
+		padding: 0;
+		line-height: 0;
+		cursor: pointer;
+		transition:
+			transform var(--xm-duration-base) var(--xm-easing-standard),
+			filter var(--xm-duration-fast) var(--xm-easing-standard);
+
+		&:hover {
+			filter: brightness(1.05);
+			transform: scale(1.05);
+		}
+
+		&:active {
+			transform: scale(0.96);
+		}
+
+		&-inner {
+			display: inline-flex;
+			width: 64px;
+			height: 64px;
+			flex: 0 0 64px;
+			align-items: center;
+			justify-content: center;
+			border-radius: 9999px;
+			background: var(--xm-color-surface);
+			box-shadow: 0 8px 24px color-mix(in srgb, var(--xm-color-background) 18%, transparent);
+		}
+	}
+
+	&__wave-icon {
+		width: 28px;
+		height: 28px;
+		flex-shrink: 0;
+		color: var(--xm-color-primary);
+		transform: translateX(1px);
+	}
+}

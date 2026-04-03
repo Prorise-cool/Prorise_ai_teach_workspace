@@ -2,10 +2,12 @@
  * 文件说明：受保护路由守卫。
  * 未登录访问业务页时统一跳转到登录页；本地存在会话时继续做一次真实校验。
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Button } from '@/components/ui/button';
 import { isAuthError } from '@/services/api/adapters';
 import { AUTH_RETURN_TO_KEY, normalizeReturnTo } from '@/services/auth';
 import { authService, type AuthService } from '@/services/auth';
@@ -36,6 +38,12 @@ function resolveGuardReturnTo(
   );
 }
 
+function resolveLoginSearch(returnTo: string) {
+  return returnTo === DEFAULT_AUTH_RETURN_TO
+    ? ''
+    : `?${AUTH_RETURN_TO_KEY}=${encodeURIComponent(returnTo)}`;
+}
+
 /**
  * 守卫受保护页面。
  *
@@ -47,17 +55,15 @@ export function RequireAuthRoute({
   service = authService
 }: RequireAuthRouteProps) {
   const { t } = useAppTranslation();
-  const { notify } = useFeedback();
+  const { notify, showLoadingBar, hideLoadingBar } = useFeedback();
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthSessionStore(state => state.session);
   const setSession = useAuthSessionStore(state => state.setSession);
   const clearSession = useAuthSessionStore(state => state.clearSession);
-  const [validationState, setValidationState] =
-    useState<SessionValidationState>('checking');
-  const [validationErrorMessage, setValidationErrorMessage] = useState('');
-  const [validationAttempt, setValidationAttempt] = useState(0);
   const hasRedirectedRef = useRef(false);
+  const handledQueryErrorAtRef = useRef(0);
+  const loadingBarIdRef = useRef<string | null>(null);
   const { isLoggingOut, logout } = useAuthSessionActions({ service });
 
   const returnTo = useMemo(
@@ -69,9 +75,34 @@ export function RequireAuthRoute({
       ),
     [location.hash, location.pathname, location.search]
   );
+  const accessToken = session?.accessToken;
+  const validationQuery = useQuery({
+    queryKey: ['auth', 'current-user', accessToken],
+    enabled: Boolean(accessToken),
+    retry: false,
+    queryFn: async () => service.getCurrentUser(accessToken)
+  });
+
+  const validationState: SessionValidationState =
+    accessToken && validationQuery.isSuccess
+      ? 'ready'
+      : accessToken && validationQuery.isError
+        ? 'error'
+        : 'checking';
+  const validationErrorMessage = validationQuery.isError
+    ? getAuthFeedbackMessage(
+        validationQuery.error,
+        t('auth.feedback.sessionCheckFailedMessage')
+      )
+    : '';
+  const isRedirectingAuthError =
+    validationQuery.isError &&
+    isAuthError(validationQuery.error) &&
+    (validationQuery.error.status === 401 ||
+      validationQuery.error.status === 403);
 
   useEffect(() => {
-    if (session?.accessToken || hasRedirectedRef.current) {
+    if (accessToken || hasRedirectedRef.current) {
       return;
     }
 
@@ -82,15 +113,10 @@ export function RequireAuthRoute({
       description: t('auth.feedback.authRequiredMessage')
     });
 
-    const search =
-      returnTo === DEFAULT_AUTH_RETURN_TO
-        ? ''
-        : `?${AUTH_RETURN_TO_KEY}=${encodeURIComponent(returnTo)}`;
-
     void navigate(
       {
         pathname: AUTH_LOGIN_PATH,
-        search
+        search: resolveLoginSearch(returnTo)
       },
       {
         replace: true,
@@ -99,127 +125,130 @@ export function RequireAuthRoute({
         }
       }
     );
-  }, [navigate, notify, returnTo, session?.accessToken, t]);
+  }, [accessToken, navigate, notify, returnTo, t]);
 
   useEffect(() => {
-    const accessToken = session?.accessToken;
+    const shouldShowLoadingBar =
+      Boolean(session?.accessToken) && validationState === 'checking';
 
-    if (!accessToken) {
+    if (shouldShowLoadingBar) {
+      if (loadingBarIdRef.current === null) {
+        loadingBarIdRef.current = showLoadingBar();
+      }
+
       return;
     }
 
-    let cancelled = false;
+    if (loadingBarIdRef.current !== null) {
+      hideLoadingBar(loadingBarIdRef.current);
+      loadingBarIdRef.current = null;
+    }
+  }, [
+    hideLoadingBar,
+    session?.accessToken,
+    showLoadingBar,
+    validationState
+  ]);
 
-    async function validateCurrentSession() {
-      setValidationState('checking');
-      setValidationErrorMessage('');
-
-      try {
-        const user = await service.getCurrentUser(accessToken);
-
-        if (cancelled) {
-          return;
-        }
-
-        const currentSession = useAuthSessionStore.getState().session;
-
-        if (!currentSession?.accessToken) {
-          return;
-        }
-
-        setSession({
-          ...currentSession,
-          user
-        });
-        setValidationState('ready');
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        if (isAuthError(error) && error.status === 401) {
-          clearSession();
-          notify({
-            tone: 'warning',
-            title: t('auth.feedback.authRequiredTitle'),
-            description: t('auth.feedback.authRequiredMessage')
-          });
-
-          void navigate(
-            {
-              pathname: AUTH_LOGIN_PATH,
-              search:
-                returnTo === DEFAULT_AUTH_RETURN_TO
-                  ? ''
-                  : `?${AUTH_RETURN_TO_KEY}=${encodeURIComponent(returnTo)}`
-            },
-            {
-              replace: true,
-              state: {
-                returnTo
-              }
-            }
-          );
-
-          return;
-        }
-
-        if (isAuthError(error) && error.status === 403) {
-          notify({
-            tone: 'warning',
-            title: t('auth.feedback.permissionDeniedTitle'),
-            description: getAuthFeedbackMessage(
-              error,
-              t('auth.feedback.permissionDeniedMessage')
-            )
-          });
-
-          void navigate(AUTH_FORBIDDEN_PATH, {
-            replace: true,
-            state: {
-              from: returnTo,
-              message: getAuthFeedbackMessage(
-                error,
-                t('auth.feedback.permissionDeniedMessage')
-              )
-            }
-          });
-
-          return;
-        }
-
-        setValidationState('error');
-        setValidationErrorMessage(
-          getAuthFeedbackMessage(
-            error,
-            t('auth.feedback.sessionCheckFailedMessage')
-          )
-        );
+  useEffect(() => {
+    return () => {
+      if (loadingBarIdRef.current !== null) {
+        hideLoadingBar(loadingBarIdRef.current);
+        loadingBarIdRef.current = null;
       }
+    };
+  }, [hideLoadingBar]);
+
+  useEffect(() => {
+    if (!accessToken || !validationQuery.data) {
+      return;
     }
 
-    void validateCurrentSession();
+    const currentSession = useAuthSessionStore.getState().session;
 
-    return () => {
-      cancelled = true;
-    };
+    if (!currentSession?.accessToken) {
+      return;
+    }
+
+    setSession({
+      ...currentSession,
+      user: validationQuery.data
+    });
+  }, [accessToken, setSession, validationQuery.data]);
+
+  useEffect(() => {
+    if (
+      !accessToken ||
+      !validationQuery.isError ||
+      validationQuery.errorUpdatedAt === handledQueryErrorAtRef.current
+    ) {
+      return;
+    }
+
+    handledQueryErrorAtRef.current = validationQuery.errorUpdatedAt;
+
+    if (isAuthError(validationQuery.error) && validationQuery.error.status === 401) {
+      clearSession();
+      notify({
+        tone: 'warning',
+        title: t('auth.feedback.authRequiredTitle'),
+        description: t('auth.feedback.authRequiredMessage')
+      });
+
+      void navigate(
+        {
+          pathname: AUTH_LOGIN_PATH,
+          search: resolveLoginSearch(returnTo)
+        },
+        {
+          replace: true,
+          state: {
+            returnTo
+          }
+        }
+      );
+
+      return;
+    }
+
+    if (isAuthError(validationQuery.error) && validationQuery.error.status === 403) {
+      notify({
+        tone: 'warning',
+        title: t('auth.feedback.permissionDeniedTitle'),
+        description: getAuthFeedbackMessage(
+          validationQuery.error,
+          t('auth.feedback.permissionDeniedMessage')
+        )
+      });
+
+      void navigate(AUTH_FORBIDDEN_PATH, {
+        replace: true,
+        state: {
+          from: returnTo,
+          message: getAuthFeedbackMessage(
+            validationQuery.error,
+            t('auth.feedback.permissionDeniedMessage')
+          )
+        }
+      });
+    }
   }, [
+    accessToken,
     clearSession,
     navigate,
     notify,
     returnTo,
-    service,
-    session?.accessToken,
-    setSession,
     t,
-    validationAttempt
+    validationQuery.error,
+    validationQuery.errorUpdatedAt,
+    validationQuery.isError
   ]);
 
   if (session?.accessToken && validationState === 'ready') {
     return <Outlet />;
   }
 
-  if (session?.accessToken && validationState === 'error') {
+  if (session?.accessToken && validationState === 'error' && !isRedirectingAuthError) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-6 py-16">
         <div className="flex w-full max-w-xl flex-col gap-5">
@@ -230,19 +259,19 @@ export function RequireAuthRoute({
           />
 
           <div className="flex flex-wrap gap-3">
-            <button
+            <Button
               type="button"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-90"
+              disabled={validationQuery.isFetching}
               onClick={() => {
-                setValidationAttempt(current => current + 1);
+                void validationQuery.refetch();
               }}
             >
               {t('auth.page.retrySessionCheck')}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
-              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
+              variant="outline"
               onClick={() => {
                 void logout();
               }}
@@ -251,29 +280,24 @@ export function RequireAuthRoute({
               {isLoggingOut
                 ? t('auth.page.logoutSubmitting')
                 : t('auth.page.logoutAction')}
-            </button>
+            </Button>
           </div>
         </div>
       </main>
     );
   }
 
+  if (session?.accessToken && validationState === 'checking') {
+    return (
+      <main className="min-h-screen w-full" aria-busy="true">
+        <p className="sr-only">{t('auth.feedback.sessionCheckingMessage')}</p>
+      </main>
+    );
+  }
+
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-6 py-16">
-      <FeedbackStateCard
-        tone={session?.accessToken ? 'info' : 'warning'}
-        title={
-          session?.accessToken
-            ? t('auth.feedback.sessionCheckingTitle')
-            : t('auth.feedback.authRequiredTitle')
-        }
-        description={
-          session?.accessToken
-            ? t('auth.feedback.sessionCheckingMessage')
-            : t('auth.feedback.authRequiredMessage')
-        }
-        loading
-      />
+    <main className="min-h-screen w-full" aria-busy="true">
+      <p className="sr-only">{t('auth.feedback.authRequiredMessage')}</p>
     </main>
   );
 }

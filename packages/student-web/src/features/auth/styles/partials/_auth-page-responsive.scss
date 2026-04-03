@@ -1,0 +1,68 @@
+/**
+ * 文件说明：认证页响应式覆写。
+ * 负责移动端布局回落，不改动桌面端语义变量。
+ */
+@media (max-width: 850px) {
+  .xm-auth-page {
+    padding: 0;
+  }
+
+  .xm-auth {
+    &-container {
+      height: 100vh;
+      flex-direction: column;
+      border-radius: 0;
+    }
+
+    &-left-panel {
+      flex: none;
+      min-width: 100%;
+      height: var(--xm-auth-mobile-scene-height);
+      padding: var(--xm-spacing-5);
+    }
+
+    &-glow {
+      width: var(--xm-auth-mobile-scene-glow-size);
+      height: var(--xm-auth-mobile-scene-glow-size);
+    }
+
+    &-hero-text {
+      bottom: var(--xm-auth-mobile-hero-bottom);
+
+      h2 {
+        font-size: var(--xm-auth-mobile-hero-title-size);
+      }
+    }
+
+    &-characters {
+      transform: scale(var(--xm-auth-mobile-scene-scale))
+        translateY(var(--xm-auth-mobile-scene-offset-y));
+      transform-origin: bottom center;
+    }
+
+    &-right-panel {
+      z-index: 2;
+      flex: 1;
+      margin-top: var(--xm-auth-mobile-panel-offset);
+      border-radius: var(--xm-radius-xl) var(--xm-radius-xl) 0 0;
+      background: var(--xm-color-surface);
+      padding:
+        var(--xm-auth-mobile-panel-padding-y)
+        var(--xm-auth-mobile-panel-padding-x);
+    }
+
+    &-toolbar {
+      top: var(--xm-auth-mobile-toolbar-top);
+      right: var(--xm-auth-mobile-toolbar-right);
+    }
+
+    &-view-title {
+      font-size: var(--xm-auth-mobile-title-size);
+    }
+
+    &-form-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+}

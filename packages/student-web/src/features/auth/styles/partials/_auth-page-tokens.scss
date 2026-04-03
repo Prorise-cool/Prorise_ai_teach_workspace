@@ -1,0 +1,158 @@
+/**
+ * 文件说明：认证页局部语义变量。
+ * 仅在 `.xm-auth-page` 作用域内桥接页面独有的布局、色彩与动效令牌。
+ */
+.xm-auth-page {
+  --xm-auth-page-glow: color-mix(in srgb, var(--xm-color-primary) 18%, transparent);
+  --xm-auth-page-grid-line: color-mix(
+    in srgb,
+    var(--xm-color-text-primary) 4%,
+    transparent
+  );
+  --xm-auth-container-max-width: 920px;
+  --xm-auth-container-min-height: 540px;
+  --xm-auth-container-shadow: 0 24px 56px
+    color-mix(in srgb, var(--xm-color-text-primary) 12%, transparent);
+  --xm-auth-scene-min-width: 328px;
+  --xm-auth-scene-padding: 28px;
+  --xm-auth-scene-panel-start: color-mix(in srgb, var(--xm-color-surface) 84%, transparent);
+  --xm-auth-scene-panel-end: color-mix(
+    in srgb,
+    var(--xm-color-background) 92%,
+    transparent
+  );
+  --xm-auth-scene-glow-size: 280px;
+  --xm-auth-scene-glow-surface: color-mix(in srgb, var(--xm-color-primary) 12%, transparent);
+  --xm-auth-scene-canvas-width: 252px;
+  --xm-auth-scene-canvas-height: 210px;
+  --xm-auth-scene-offset-y: -20px;
+  --xm-auth-scene-eye-surface: var(--xm-color-surface);
+  --xm-auth-scene-pupil-surface: var(--xm-color-text-primary);
+  --xm-auth-scene-mouth-surface: var(--xm-color-text-primary);
+  --xm-auth-scene-mouth-strong-surface: var(--xm-color-secondary-foreground);
+  --xm-auth-scene-char-1-color: var(--xm-color-brand-600);
+  --xm-auth-scene-char-2-color: color-mix(
+    in srgb,
+    var(--xm-color-surface) 68%,
+    var(--xm-color-background)
+  );
+  --xm-auth-scene-char-3-color: var(--xm-color-primary);
+  --xm-auth-scene-char-4-color: color-mix(
+    in srgb,
+    var(--xm-color-text-secondary) 78%,
+    var(--xm-color-background)
+  );
+  --xm-auth-scene-character-transition: 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --xm-auth-scene-face-transition: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --xm-auth-wake-motion: 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --xm-auth-hero-bottom: 34px;
+  --xm-auth-hero-title-size: 22px;
+  --xm-auth-hero-letter-spacing: 0.5px;
+  --xm-auth-panel-padding-top: 28px;
+  --xm-auth-panel-padding-x: 40px;
+  --xm-auth-panel-padding-bottom: 28px;
+  --xm-auth-panel-surface: color-mix(in srgb, var(--xm-color-surface) 78%, transparent);
+  --xm-auth-toolbar-top: 24px;
+  --xm-auth-toolbar-right: 28px;
+  --xm-auth-icon-button-size: 40px;
+  --xm-auth-icon-button-surface: color-mix(
+    in srgb,
+    var(--xm-color-surface) 74%,
+    transparent
+  );
+  --xm-auth-brand-icon-size: 34px;
+  --xm-auth-brand-icon-shadow: 0 6px 16px
+    color-mix(in srgb, var(--xm-color-text-primary) 12%, transparent);
+  --xm-auth-title-size: 26px;
+  --xm-auth-tab-font-size: 15px;
+  --xm-auth-tabs-margin-bottom: 18px;
+  --xm-auth-form-reveal: 0.4s ease;
+  --xm-auth-form-reveal-offset: 10px;
+  --xm-auth-callout-padding-inline: 14px;
+  --xm-auth-callout-radius: 14px;
+  --xm-auth-meta-font-size: 13px;
+  --xm-auth-primary-button-offset: 4px;
+  --xm-auth-social-button-size: 40px;
+  --xm-auth-input-surface: color-mix(
+    in srgb,
+    var(--xm-color-background-elevated) 74%,
+    var(--xm-color-surface)
+  );
+  --xm-auth-input-focus-ring: color-mix(in srgb, var(--xm-color-ring) 24%, transparent);
+  --xm-auth-return-banner-surface: color-mix(
+    in srgb,
+    var(--xm-color-primary) 10%,
+    var(--xm-color-surface)
+  );
+  --xm-auth-form-error-border: color-mix(in srgb, var(--xm-color-error) 24%, transparent);
+  --xm-auth-form-error-surface: color-mix(
+    in srgb,
+    var(--xm-color-error) 8%,
+    var(--xm-color-surface)
+  );
+  --xm-auth-primary-hover: var(--xm-color-brand-500);
+  --xm-auth-mobile-scene-height: 35vh;
+  --xm-auth-mobile-panel-offset: -14px;
+  --xm-auth-mobile-panel-padding-y: 30px;
+  --xm-auth-mobile-panel-padding-x: 24px;
+  --xm-auth-mobile-toolbar-top: 18px;
+  --xm-auth-mobile-toolbar-right: 18px;
+  --xm-auth-mobile-title-size: 26px;
+  --xm-auth-mobile-hero-bottom: 25px;
+  --xm-auth-mobile-hero-title-size: 20px;
+  --xm-auth-mobile-scene-glow-size: 250px;
+  --xm-auth-mobile-scene-offset-y: 10px;
+  --xm-auth-mobile-scene-scale: 0.65;
+
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xm-spacing-5);
+  background-color: var(--xm-color-background);
+  background-image:
+    radial-gradient(circle at 50% 0%, var(--xm-auth-page-glow), transparent 38%),
+    linear-gradient(to right, var(--xm-auth-page-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--xm-auth-page-grid-line) 1px, transparent 1px);
+  background-size:
+    auto,
+    var(--xm-spacing-8) var(--xm-spacing-8),
+    var(--xm-spacing-8) var(--xm-spacing-8);
+  color: var(--xm-color-text-primary);
+  transition:
+    background-color var(--xm-duration-slow) var(--xm-easing-standard),
+    color var(--xm-duration-base) var(--xm-easing-standard);
+}
+
+:root[data-theme='dark'] .xm-auth-page {
+  --xm-auth-page-glow: color-mix(in srgb, var(--xm-color-primary) 8%, transparent);
+  --xm-auth-page-grid-line: color-mix(in srgb, var(--xm-color-surface) 3%, transparent);
+  --xm-auth-container-shadow: 0 24px 56px
+    color-mix(in srgb, var(--xm-color-background) 76%, transparent);
+  --xm-auth-scene-panel-start: color-mix(in srgb, var(--xm-color-surface) 96%, transparent);
+  --xm-auth-scene-panel-end: color-mix(
+    in srgb,
+    var(--xm-color-background) 98%,
+    transparent
+  );
+  --xm-auth-scene-glow-surface: color-mix(in srgb, var(--xm-color-primary) 12%, transparent);
+  --xm-auth-panel-surface: color-mix(in srgb, var(--xm-color-surface) 88%, transparent);
+  --xm-auth-icon-button-surface: color-mix(
+    in srgb,
+    var(--xm-color-surface) 92%,
+    transparent
+  );
+  --xm-auth-brand-icon-shadow: 0 6px 16px
+    color-mix(in srgb, var(--xm-color-background) 42%, transparent);
+  --xm-auth-return-banner-surface: color-mix(
+    in srgb,
+    var(--xm-color-primary) 14%,
+    var(--xm-color-surface)
+  );
+  --xm-auth-form-error-border: color-mix(in srgb, var(--xm-color-error) 28%, transparent);
+  --xm-auth-form-error-surface: color-mix(
+    in srgb,
+    var(--xm-color-error) 12%,
+    var(--xm-color-surface)
+  );
+}

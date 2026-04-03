@@ -1,0 +1,9 @@
+/**
+ * 文件说明：认证页样式入口。
+ * 负责组合认证页的 feature scoped SCSS 分层，不再在单文件中堆叠全部样式。
+ */
+@use './partials/auth-page-tokens';
+@use './partials/auth-page-scene';
+@use './partials/auth-page-shell';
+@use './partials/auth-page-form';
+@use './partials/auth-page-responsive';

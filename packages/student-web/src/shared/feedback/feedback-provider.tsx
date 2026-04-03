@@ -2,20 +2,15 @@
  * 文件说明：应用级通用反馈 Provider。
  * 统一承接全局 Toast 与 Spotlight 状态管理，并向页面暴露反馈 API。
  */
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PropsWithChildren
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
+import { Toaster, toast } from 'sonner';
 
 import { FeedbackContext } from './feedback-context';
-import { FeedbackViewport } from './feedback-viewport';
+import { resolveFeedbackLiveRole } from './feedback-live-role';
+import { FeedbackGlyph } from './feedback-primitives';
+import { FeedbackStateCard } from './feedback-state-card';
 import type {
   FeedbackApi,
-  FeedbackNotice,
   FeedbackNoticeInput,
   FeedbackSpotlight,
   FeedbackSpotlightInput
@@ -23,10 +18,11 @@ import type {
 
 import './feedback.css';
 
-const NOTICE_EXIT_DURATION_MS = 180;
 const DEFAULT_NOTICE_DURATION_MS = 3200;
 const DEFAULT_LOADING_NOTICE_DURATION_MS = 2200;
 const DEFAULT_SPOTLIGHT_DURATION_MS = 1400;
+const LOADING_BAR_DELAY_MS = 160;
+const LOADING_BAR_MIN_VISIBLE_MS = 280;
 
 let feedbackSequence = 0;
 
@@ -36,7 +32,7 @@ function createFeedbackId(prefix: string) {
   return `${prefix}-${feedbackSequence}`;
 }
 
-function normalizeNotice(input: FeedbackNoticeInput): FeedbackNotice {
+function normalizeNotice(input: FeedbackNoticeInput) {
   return {
     id: createFeedbackId('feedback-notice'),
     tone: input.tone ?? 'info',
@@ -45,8 +41,7 @@ function normalizeNotice(input: FeedbackNoticeInput): FeedbackNotice {
     durationMs:
       input.durationMs ??
       (input.loading ? DEFAULT_LOADING_NOTICE_DURATION_MS : DEFAULT_NOTICE_DURATION_MS),
-    loading: input.loading ?? false,
-    phase: 'entered'
+    loading: input.loading ?? false
   };
 }
 
@@ -66,77 +61,172 @@ function normalizeSpotlight(input: FeedbackSpotlightInput): FeedbackSpotlight {
  * 统一承接全局 Toast 与过渡态 Spotlight，优先给路由跳转、异步初始化和关键成功态使用。
  */
 export function FeedbackProvider({ children }: PropsWithChildren) {
-  const [notices, setNotices] = useState<FeedbackNotice[]>([]);
   const [spotlight, setSpotlight] = useState<FeedbackSpotlight | null>(null);
-  const dismissTimersRef = useRef<Map<string, number>>(new Map());
-  const removalTimersRef = useRef<Map<string, number>>(new Map());
+  const [loadingBarVisible, setLoadingBarVisible] = useState(false);
   const spotlightTimerRef = useRef<number | null>(null);
+  const loadingBarDelayTimerRef = useRef<number | null>(null);
+  const loadingBarHideTimerRef = useRef<number | null>(null);
+  const loadingBarVisibleAtRef = useRef<number | null>(null);
+  const loadingBarIdsRef = useRef(new Set<string>());
 
-  const clearNoticeTimer = useCallback(
-    (timers: Map<string, number>, id: string) => {
-      const timerId = timers.get(id);
+  /**
+   * 清理顶部进度条相关定时器，避免展示状态残留。
+   */
+  const clearLoadingBarTimers = useCallback(() => {
+    if (loadingBarDelayTimerRef.current !== null) {
+      window.clearTimeout(loadingBarDelayTimerRef.current);
+      loadingBarDelayTimerRef.current = null;
+    }
 
-      if (timerId === undefined) {
-        return;
-      }
-
-      window.clearTimeout(timerId);
-      timers.delete(id);
-    },
-    []
-  );
-
-  const removeNoticeImmediately = useCallback(
-    (id: string) => {
-      clearNoticeTimer(dismissTimersRef.current, id);
-      clearNoticeTimer(removalTimersRef.current, id);
-      setNotices(currentNotices =>
-        currentNotices.filter(notice => notice.id !== id)
-      );
-    },
-    [clearNoticeTimer]
-  );
+    if (loadingBarHideTimerRef.current !== null) {
+      window.clearTimeout(loadingBarHideTimerRef.current);
+      loadingBarHideTimerRef.current = null;
+    }
+  }, []);
 
   const dismissNotice = useCallback(
     (id: string) => {
-      clearNoticeTimer(dismissTimersRef.current, id);
-
-      setNotices(currentNotices =>
-        currentNotices.map(notice =>
-          notice.id === id ? { ...notice, phase: 'leaving' } : notice
-        )
-      );
-
-      if (removalTimersRef.current.has(id)) {
-        return;
-      }
-
-      const removalTimer = window.setTimeout(() => {
-        removeNoticeImmediately(id);
-      }, NOTICE_EXIT_DURATION_MS);
-
-      removalTimersRef.current.set(id, removalTimer);
+      toast.dismiss(id);
     },
-    [clearNoticeTimer, removeNoticeImmediately]
+    []
   );
 
   const notify = useCallback(
     (input: FeedbackNoticeInput) => {
       const nextNotice = normalizeNotice(input);
 
-      setNotices(currentNotices => [...currentNotices, nextNotice]);
+      toast.custom(
+        () => (
+          <article
+            className={`xm-feedback-toast is-${nextNotice.tone}`}
+            role={resolveFeedbackLiveRole(nextNotice.tone)}
+          >
+            <span className="xm-feedback-toast-icon-shell" aria-hidden="true">
+              <FeedbackGlyph
+                tone={nextNotice.tone}
+                loading={nextNotice.loading}
+              />
+            </span>
 
-      if (nextNotice.durationMs > 0) {
-        const dismissTimer = window.setTimeout(() => {
-          dismissNotice(nextNotice.id);
-        }, nextNotice.durationMs);
+            <div className="xm-feedback-toast-copy">
+              <strong className="xm-feedback-toast-title">
+                {nextNotice.title}
+              </strong>
 
-        dismissTimersRef.current.set(nextNotice.id, dismissTimer);
-      }
+              {nextNotice.description ? (
+                <p className="xm-feedback-toast-description">
+                  {nextNotice.description}
+                </p>
+              ) : null}
+            </div>
+          </article>
+        ),
+        {
+          id: nextNotice.id,
+          duration: nextNotice.durationMs
+        }
+      );
 
       return nextNotice.id;
     },
-    [dismissNotice]
+    []
+  );
+
+  /**
+   * 在不闪烁的前提下隐藏顶部加载条。
+   */
+  const scheduleLoadingBarHide = useCallback(() => {
+    if (loadingBarIdsRef.current.size > 0) {
+      return;
+    }
+
+    if (loadingBarDelayTimerRef.current !== null) {
+      window.clearTimeout(loadingBarDelayTimerRef.current);
+      loadingBarDelayTimerRef.current = null;
+    }
+
+    if (!loadingBarVisible) {
+      return;
+    }
+
+    if (loadingBarHideTimerRef.current !== null) {
+      window.clearTimeout(loadingBarHideTimerRef.current);
+      loadingBarHideTimerRef.current = null;
+    }
+
+    const elapsed =
+      loadingBarVisibleAtRef.current === null
+        ? LOADING_BAR_MIN_VISIBLE_MS
+        : Date.now() - loadingBarVisibleAtRef.current;
+    const remaining = Math.max(LOADING_BAR_MIN_VISIBLE_MS - elapsed, 0);
+
+    if (remaining === 0) {
+      loadingBarVisibleAtRef.current = null;
+      setLoadingBarVisible(false);
+      return;
+    }
+
+    loadingBarHideTimerRef.current = window.setTimeout(() => {
+      loadingBarHideTimerRef.current = null;
+
+      if (loadingBarIdsRef.current.size > 0) {
+        return;
+      }
+
+      loadingBarVisibleAtRef.current = null;
+      setLoadingBarVisible(false);
+    }, remaining);
+  }, [loadingBarVisible]);
+
+  /**
+   * 显示带最小时长保护的顶部进度条，避免瞬时加载闪烁。
+   *
+   * @returns 当前加载条句柄，供调用方在完成后关闭。
+   */
+  const showLoadingBar = useCallback(() => {
+    const loadingBarId = createFeedbackId('feedback-loading-bar');
+
+    loadingBarIdsRef.current.add(loadingBarId);
+
+    if (loadingBarHideTimerRef.current !== null) {
+      window.clearTimeout(loadingBarHideTimerRef.current);
+      loadingBarHideTimerRef.current = null;
+    }
+
+    if (loadingBarVisible || loadingBarDelayTimerRef.current !== null) {
+      return loadingBarId;
+    }
+
+    loadingBarDelayTimerRef.current = window.setTimeout(() => {
+      loadingBarDelayTimerRef.current = null;
+
+      if (loadingBarIdsRef.current.size === 0) {
+        return;
+      }
+
+      loadingBarVisibleAtRef.current = Date.now();
+      setLoadingBarVisible(true);
+    }, LOADING_BAR_DELAY_MS);
+
+    return loadingBarId;
+  }, [loadingBarVisible]);
+
+  /**
+   * 关闭顶部进度条；若未传句柄则强制清空所有挂起加载。
+   *
+   * @param id - 可选加载句柄。
+   */
+  const hideLoadingBar = useCallback(
+    (id?: string) => {
+      if (typeof id === 'string') {
+        loadingBarIdsRef.current.delete(id);
+      } else {
+        loadingBarIdsRef.current.clear();
+      }
+
+      scheduleLoadingBarHide();
+    },
+    [scheduleLoadingBarHide]
   );
 
   const hideSpotlight = useCallback(() => {
@@ -146,18 +236,6 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
     }
 
     setSpotlight(null);
-  }, []);
-
-  const clearAllNoticeTimers = useCallback(() => {
-    dismissTimersRef.current.forEach(timerId => {
-      window.clearTimeout(timerId);
-    });
-    dismissTimersRef.current.clear();
-
-    removalTimersRef.current.forEach(timerId => {
-      window.clearTimeout(timerId);
-    });
-    removalTimersRef.current.clear();
   }, []);
 
   const showSpotlight = useCallback(
@@ -183,25 +261,66 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     return () => {
-      clearAllNoticeTimers();
       hideSpotlight();
+      clearLoadingBarTimers();
+      loadingBarIdsRef.current.clear();
+      loadingBarVisibleAtRef.current = null;
+      setLoadingBarVisible(false);
     };
-  }, [clearAllNoticeTimers, hideSpotlight]);
+  }, [clearLoadingBarTimers, hideSpotlight]);
 
   const feedbackApi = useMemo<FeedbackApi>(
     () => ({
       notify,
       dismissNotice,
       showSpotlight,
-      hideSpotlight
+      hideSpotlight,
+      showLoadingBar,
+      hideLoadingBar
     }),
-    [dismissNotice, hideSpotlight, notify, showSpotlight]
+    [
+      dismissNotice,
+      hideLoadingBar,
+      hideSpotlight,
+      notify,
+      showLoadingBar,
+      showSpotlight
+    ]
   );
 
   return (
     <FeedbackContext.Provider value={feedbackApi}>
       {children}
-      <FeedbackViewport notices={notices} spotlight={spotlight} />
+      {loadingBarVisible ? (
+        <div
+          className="xm-feedback-loading-bar"
+          role="progressbar"
+          aria-label="全局加载中"
+          aria-valuetext="全局加载中"
+        >
+          <span className="xm-feedback-loading-bar-track" />
+        </div>
+      ) : null}
+      <Toaster
+        position="bottom-right"
+        expand={false}
+        closeButton={false}
+        visibleToasts={4}
+        toastOptions={{
+          unstyled: true,
+          className: 'xm-feedback-sonner-toast'
+        }}
+      />
+      {spotlight ? (
+        <div className="xm-feedback-spotlight" aria-live="polite">
+          <FeedbackStateCard
+            tone={spotlight.tone}
+            title={spotlight.title}
+            description={spotlight.description}
+            loading={spotlight.loading}
+          />
+        </div>
+      ) : null}
     </FeedbackContext.Provider>
   );
 }

@@ -2,7 +2,8 @@
  * 文件说明：公开营销落地页。
  * 负责展示品牌价值、试点方案与联系入口，不承担鉴权逻辑。
  */
-import type { FormEvent, MouseEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import useEmblaCarousel from 'embla-carousel-react';
 import {
   ArrowRight,
   Blocks,
@@ -35,15 +36,36 @@ import {
   X
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { MouseEvent } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link, useLocation } from 'react-router-dom';
 
 import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  createLandingContactFormSchema,
+  type LandingContactFormValues
+} from '@/features/home/schemas/landing-contact-form-schema';
 import { cn } from '@/lib/utils';
 import type { ThemeMode } from '@/shared/hooks/use-theme-mode';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 
-import '@/features/home/styles/entry-pages.css';
+import '@/features/home/styles/entry-pages.scss';
 
 type LandingNavLink = {
   href: string;
@@ -106,14 +128,6 @@ type LandingFooterGroup = {
   items: string[];
 };
 
-type ContactFormState = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  subject: string;
-  message: string;
-};
-
 type ContactInfo = {
   locationTitle: string;
   locationValue: string;
@@ -164,7 +178,7 @@ type LandingTestimonialsCarouselProps = {
  * @returns 可直接打开邮箱客户端的 mailto 字符串。
  */
 function buildMailToLink(
-  state: ContactFormState,
+  state: LandingContactFormValues,
   subjectFallback: string,
   targetEmail: string
 ) {
@@ -216,6 +230,16 @@ function resolveSlidesPerView(viewportWidth: number) {
   }
 
   return 1;
+}
+
+function resolveCarouselFallbackSnapCount(reviewCount: number) {
+  const viewportWidth =
+    typeof window === 'undefined' ? 1280 : window.innerWidth;
+
+  return Math.max(
+    reviewCount - resolveSlidesPerView(viewportWidth) + 1,
+    1
+  );
 }
 
 /**
@@ -313,213 +337,225 @@ function LandingTopNav({
   }
 
   return (
-    <header className="sticky top-0 z-40 px-5 pt-5 md:px-8">
-      <nav className="xm-landing-glass-nav mx-auto flex w-[94%] max-w-screen-xl items-center justify-between gap-4 rounded-full border px-2 py-2 md:w-[82%] lg:w-[76%]">
-        <button
-          type="button"
-          className="flex items-center gap-3 px-3 py-2 text-left text-lg font-bold"
-          onClick={() => {
-            onNavigateSection('#hero');
-          }}
-        >
-          <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
-            <img
-              src="/entry/logo.png"
-              alt=""
-              aria-hidden="true"
-              className="h-full w-full object-contain"
-            />
-          </span>
-          <span>{brandLabel}</span>
-        </button>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          <div className="relative group">
-            <button
-              type="button"
-              className="inline-flex items-center rounded-full px-4 py-2 text-base transition hover:bg-muted/70"
-            >
-              <span>{featureLabel}</span>
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </button>
-
-            <div className="xm-landing-nav__flyout">
-              <div className="grid w-[620px] grid-cols-2 gap-5 p-4">
-                <div className="overflow-hidden rounded-[var(--xm-radius-lg)] border border-border/60 bg-card">
-                  <img
-                    src="/entry/demo-img.jpg"
-                    alt=""
-                    aria-hidden="true"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-
-                <ul className="flex flex-col gap-2">
-                  {featurePreview.map(item => (
-                    <li
-                      key={item.title}
-                      className="rounded-[var(--xm-radius-lg)] p-4 text-sm transition-colors hover:bg-muted/70"
-                    >
-                      <p className="mb-1 font-semibold leading-none text-foreground">
-                        {item.title}
-                      </p>
-                      <p className="line-clamp-2 text-muted-foreground">
-                        {item.description}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {links.map(link => (
-            <button
-              type="button"
-              key={link.href}
-              className="inline-flex items-center rounded-full px-4 py-2 text-base transition hover:bg-muted/70"
-              onClick={() => {
-                handleSectionNavigation(link.href);
-              }}
-            >
-              {link.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="hidden items-center gap-2 lg:flex">
+    <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+      <header className="sticky top-0 z-40 px-5 pt-5 md:px-8">
+        <nav className="xm-landing-glass-nav mx-auto flex w-[94%] max-w-screen-xl items-center justify-between gap-4 rounded-full border px-2 py-2 md:w-[82%] lg:w-[76%]">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-muted/70"
-            aria-label={themeLabel}
-            onClick={onToggleTheme}
-          >
-            {themeMode === 'dark' ? (
-              <SunMedium className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="inline-flex min-w-10 items-center justify-center rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-muted/70"
-            aria-label={localeLabel}
-            onClick={handleLocaleClick}
-          >
-            <Languages className="mr-1 h-4 w-4" />
-            <span>{localeLabel}</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 pr-2 lg:hidden">
-          <button
-            type="button"
-            className="inline-flex min-w-10 items-center justify-center rounded-full px-3 py-2 text-sm font-semibold transition hover:bg-muted/70"
-            aria-label={localeLabel}
-            onClick={handleLocaleClick}
-          >
-            {localeLabel}
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-muted/70"
-            aria-label={openMenuLabel}
+            className="flex items-center gap-3 px-3 py-2 text-left text-lg font-bold"
             onClick={() => {
-              setMobileMenuOpen(true);
+              onNavigateSection('#hero');
             }}
           >
-            <Menu className="h-5 w-5" />
+            <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+              <img
+                src="/entry/logo.png"
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span>{brandLabel}</span>
           </button>
-        </div>
-      </nav>
 
-      <div
-        className={cn(
-          'xm-landing-nav__sheet-overlay',
-          mobileMenuOpen ? 'xm-landing-nav__sheet-overlay--open' : null
-        )}
-        aria-hidden={!mobileMenuOpen}
-        role="presentation"
-        onClick={closeMobileMenu}
-      >
-        <div
-          className="xm-landing-nav__sheet-panel flex flex-col justify-between p-6"
-          onClick={event => {
-            event.stopPropagation();
-          }}
-        >
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <button
+          <div className="hidden items-center gap-2 lg:flex">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-full px-4 py-2 text-base hover:bg-muted/70"
+                >
+                  <span>{featureLabel}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent
+                className="xm-landing-nav__flyout w-[620px] max-w-[calc(100vw-32px)] p-4"
+                align="center"
+                sideOffset={14}
+              >
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="overflow-hidden rounded-[var(--xm-radius-lg)] border border-border/60 bg-card">
+                    <img
+                      src="/entry/demo-img.jpg"
+                      alt=""
+                      aria-hidden="true"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+
+                  <ul className="flex flex-col gap-2">
+                    {featurePreview.map(item => (
+                      <li
+                        key={item.title}
+                        className="rounded-[var(--xm-radius-lg)] p-4 text-sm transition-colors hover:bg-muted/70"
+                      >
+                        <p className="mb-1 font-semibold leading-none text-foreground">
+                          {item.title}
+                        </p>
+                        <p className="line-clamp-2 text-muted-foreground">
+                          {item.description}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {links.map(link => (
+              <Button
                 type="button"
-                className="flex items-center gap-3 font-semibold"
+                key={link.href}
+                variant="ghost"
+                className="rounded-full px-4 py-2 text-base hover:bg-muted/70"
                 onClick={() => {
-                  handleSectionNavigation('#hero');
+                  handleSectionNavigation(link.href);
                 }}
               >
-                <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
-                  <img
-                    src="/entry/logo.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="h-full w-full object-contain"
-                  />
-                </span>
-                <span>{brandLabel}</span>
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-muted/70"
-                aria-label={closeLabel}
-                onClick={closeMobileMenu}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              {links.map(link => (
-                <button
-                  type="button"
-                  key={link.href}
-                  className="inline-flex items-center rounded-[var(--xm-radius-lg)] px-4 py-3 text-left text-base transition hover:bg-muted/70"
-                  onClick={() => {
-                    handleSectionNavigation(link.href);
-                  }}
-                >
-                  {link.label}
-                </button>
-              ))}
-            </div>
+                {link.label}
+              </Button>
+            ))}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="h-px w-full bg-border" />
-
-            <button
+          <div className="hidden items-center gap-2 lg:flex">
+            <Button
               type="button"
-              className="inline-flex items-center justify-start rounded-[var(--xm-radius-lg)] px-4 py-3 transition hover:bg-muted/70"
+              variant="ghost"
+              size="icon"
+              className="rounded-full hover:bg-muted/70"
               aria-label={themeLabel}
               onClick={onToggleTheme}
             >
               {themeMode === 'dark' ? (
-                <>
-                  <SunMedium className="mr-2 h-5 w-5" />
-                  <span>Light</span>
-                </>
+                <SunMedium className="h-5 w-5" />
               ) : (
-                <>
-                  <Moon className="mr-2 h-5 w-5" />
-                  <span>Dark</span>
-                </>
+                <Moon className="h-5 w-5" />
               )}
-            </button>
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-w-10 rounded-full px-3 py-2 text-sm font-semibold hover:bg-muted/70"
+              aria-label={localeLabel}
+              onClick={handleLocaleClick}
+            >
+              <Languages className="h-4 w-4" />
+              <span>{localeLabel}</span>
+            </Button>
           </div>
-        </div>
-      </div>
-    </header>
+
+          <div className="flex items-center gap-2 pr-2 lg:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-w-10 rounded-full px-3 py-2 text-sm font-semibold hover:bg-muted/70"
+              aria-label={localeLabel}
+              onClick={handleLocaleClick}
+            >
+              {localeLabel}
+            </Button>
+
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-full hover:bg-muted/70"
+                aria-label={openMenuLabel}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+          </div>
+        </nav>
+
+        <DialogContent
+          aria-describedby={undefined}
+          className="xm-landing-nav__sheet-panel left-0 top-0 h-full w-[min(75vw,320px)] max-w-[320px] p-6 lg:hidden"
+        >
+          <div className="flex h-full flex-col justify-between">
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <DialogTitle className="sr-only">{brandLabel}</DialogTitle>
+
+                <button
+                  type="button"
+                  className="flex items-center gap-3 font-semibold"
+                  onClick={() => {
+                    handleSectionNavigation('#hero');
+                  }}
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full">
+                    <img
+                      src="/entry/logo.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="h-full w-full object-contain"
+                    />
+                  </span>
+                  <span>{brandLabel}</span>
+                </button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full hover:bg-muted/70"
+                  aria-label={closeLabel}
+                  onClick={closeMobileMenu}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {links.map(link => (
+                  <Button
+                    type="button"
+                    key={link.href}
+                    variant="ghost"
+                    className="justify-start rounded-[var(--xm-radius-lg)] px-4 py-3 text-left text-base hover:bg-muted/70"
+                    onClick={() => {
+                      handleSectionNavigation(link.href);
+                    }}
+                  >
+                    {link.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="h-px w-full bg-border" />
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="justify-start rounded-[var(--xm-radius-lg)] px-4 py-3 hover:bg-muted/70"
+                aria-label={themeLabel}
+                onClick={onToggleTheme}
+              >
+                {themeMode === 'dark' ? (
+                  <>
+                    <SunMedium className="h-5 w-5" />
+                    <span>Light</span>
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-5 w-5" />
+                    <span>Dark</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </header>
+    </Dialog>
   );
 }
 
@@ -534,39 +570,49 @@ function LandingTestimonialsCarousel({
   previousLabel,
   nextLabel
 }: LandingTestimonialsCarouselProps) {
-  const [slidesPerView, setSlidesPerView] = useState(() =>
-    resolveSlidesPerView(
-      typeof window === 'undefined' ? 1280 : window.innerWidth
-    )
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps'
+  });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [snapCount, setSnapCount] = useState(() =>
+    resolveCarouselFallbackSnapCount(reviews.length)
   );
-  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    function handleResize() {
-      setSlidesPerView(resolveSlidesPerView(window.innerWidth));
+    if (!emblaApi) {
+      return;
     }
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
+    const carouselApi = emblaApi;
+
+    function syncCarouselState() {
+      setSelectedIndex(carouselApi.selectedScrollSnap());
+      setSnapCount(
+        Math.max(
+          carouselApi.scrollSnapList().length,
+          resolveCarouselFallbackSnapCount(reviews.length)
+        )
+      );
+    }
+
+    syncCarouselState();
+    carouselApi.on('select', syncCarouselState);
+    carouselApi.on('reInit', syncCarouselState);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      carouselApi.off('select', syncCarouselState);
+      carouselApi.off('reInit', syncCarouselState);
     };
-  }, []);
+  }, [emblaApi, reviews.length]);
 
-  const maxIndex = Math.max(reviews.length - slidesPerView, 0);
-  const currentIndex = Math.min(activeIndex, maxIndex);
+  const canScrollPrev = selectedIndex > 0;
+  const canScrollNext = selectedIndex < snapCount - 1;
 
   return (
     <div className="relative mx-auto w-[88%] sm:w-[90%] lg:max-w-screen-xl">
-      <div className="xm-landing-carousel-viewport">
-        <div
-          className="xm-landing-carousel-track"
-          data-testid="landing-carousel-track"
-          style={{
-            transform: `translateX(-${currentIndex * (100 / slidesPerView)}%)`
-          }}
-        >
+      <div className="xm-landing-carousel-viewport" ref={emblaRef}>
+        <div className="xm-landing-carousel-track" data-testid="landing-carousel-track">
           {reviews.map(review => (
             <div
               key={`${review.name}-${review.role}`}
@@ -617,11 +663,13 @@ function LandingTestimonialsCarousel({
         type="button"
         className="xm-landing-carousel-btn xm-landing-carousel-btn--prev"
         aria-label={previousLabel}
-        disabled={currentIndex === 0}
+        disabled={!canScrollPrev}
         onClick={() => {
-          setActiveIndex(nextIndex =>
-            Math.max(Math.min(nextIndex, maxIndex) - 1, 0)
-          );
+          if (emblaApi) {
+            emblaApi.scrollPrev();
+          }
+
+          setSelectedIndex(currentIndex => Math.max(currentIndex - 1, 0));
         }}
       >
         <ChevronLeft className="h-4 w-4" />
@@ -630,10 +678,14 @@ function LandingTestimonialsCarousel({
         type="button"
         className="xm-landing-carousel-btn xm-landing-carousel-btn--next"
         aria-label={nextLabel}
-        disabled={currentIndex >= maxIndex}
+        disabled={!canScrollNext}
         onClick={() => {
-          setActiveIndex(nextIndex =>
-            Math.min(Math.min(nextIndex, maxIndex) + 1, maxIndex)
+          if (emblaApi) {
+            emblaApi.scrollNext();
+          }
+
+          setSelectedIndex(currentIndex =>
+            Math.min(currentIndex + 1, snapCount - 1)
           );
         }}
       >
@@ -689,15 +741,33 @@ export function LandingPage() {
   const contactInfo = t('landing.contact.info', {
     returnObjects: true
   }) as ContactInfo;
+  const contactSubjectOptions = t('landing.contact.form.subjectOptions', {
+    returnObjects: true
+  }) as string[];
+  const defaultContactSubject = contactSubjectOptions[0] ?? '';
+  const contactFormSchema = useMemo(() => createLandingContactFormSchema(t), [t]);
 
   const [activeFaqIndex, setActiveFaqIndex] = useState(0);
-  const [formErrorVisible, setFormErrorVisible] = useState(false);
-  const [formState, setFormState] = useState<ContactFormState>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    subject: t('landing.contact.form.subjectOptions.0'),
-    message: ''
+  const {
+    control,
+    register,
+    handleSubmit,
+    setValue,
+    formState: {
+      errors: contactFormErrors,
+      submitCount: contactSubmitCount
+    }
+  } = useForm<LandingContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      subject: defaultContactSubject,
+      message: ''
+    },
+    mode: 'onSubmit',
+    reValidateMode: 'onChange'
   });
 
   const duplicateSponsors = useMemo(
@@ -729,33 +799,39 @@ export function LandingPage() {
     };
   }, [location.hash]);
 
-  function handleContactChange<Key extends keyof ContactFormState>(
-    key: Key,
-    value: ContactFormState[Key]
-  ) {
-    setFormState(currentState => ({
-      ...currentState,
-      [key]: value
-    }));
-  }
+  const currentContactSubject = useWatch({
+    control,
+    name: 'subject'
+  });
+  const showContactFormError =
+    contactSubmitCount > 0 && Object.keys(contactFormErrors).length > 0;
 
-  function handleContactSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!formState.firstName.trim() || !formState.email.trim() || !formState.message.trim()) {
-      setFormErrorVisible(true);
+  useEffect(() => {
+    if (contactSubjectOptions.includes(currentContactSubject)) {
       return;
     }
 
-    setFormErrorVisible(false);
+    setValue('subject', defaultContactSubject, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false
+    });
+  }, [
+    contactSubjectOptions,
+    currentContactSubject,
+    defaultContactSubject,
+    setValue
+  ]);
+
+  const submitContactForm = handleSubmit(values => {
     window.location.assign(
       buildMailToLink(
-        formState,
+        values,
         t('landing.contact.form.subject'),
         contactInfo.mailValue
       )
     );
-  }
+  });
 
   return (
     <main className="xm-landing-page pb-16">
@@ -1167,96 +1243,114 @@ export function LandingPage() {
           </div>
 
           <div className="rounded-[var(--xm-radius-lg)] border border-border bg-muted/60 p-6">
-            <form className="grid gap-4" onSubmit={handleContactSubmit}>
+            <form
+              className="grid gap-4"
+              noValidate
+              onSubmit={event => {
+                void submitContactForm(event);
+              }}
+            >
               <div className="flex flex-col gap-4 md:flex-row">
                 <div className="flex w-full flex-col gap-1.5">
-                  <label className="text-sm font-medium" htmlFor="contact-first-name">
+                  <Label
+                    className="text-sm font-medium"
+                    htmlFor="contact-first-name"
+                  >
                     {t('landing.contact.form.firstName')}
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="contact-first-name"
-                    type="text"
-                    className="xm-landing-field"
                     placeholder={t('landing.contact.form.firstNamePlaceholder')}
-                    value={formState.firstName}
-                    onChange={event => {
-                      handleContactChange('firstName', event.target.value);
-                    }}
+                    aria-invalid={Boolean(contactFormErrors.firstName)}
+                    {...register('firstName')}
                   />
+
+                  {contactFormErrors.firstName?.message ? (
+                    <p className="text-sm text-destructive">
+                      {contactFormErrors.firstName.message}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex w-full flex-col gap-1.5">
-                  <label className="text-sm font-medium" htmlFor="contact-last-name">
+                  <Label
+                    className="text-sm font-medium"
+                    htmlFor="contact-last-name"
+                  >
                     {t('landing.contact.form.lastName')}
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="contact-last-name"
-                    type="text"
-                    className="xm-landing-field"
                     placeholder={t('landing.contact.form.lastNamePlaceholder')}
-                    value={formState.lastName}
-                    onChange={event => {
-                      handleContactChange('lastName', event.target.value);
-                    }}
+                    {...register('lastName')}
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor="contact-email">
+                <Label className="text-sm font-medium" htmlFor="contact-email">
                   {t('landing.contact.form.email')}
-                </label>
-                <input
+                </Label>
+                <Input
                   id="contact-email"
                   type="email"
-                  className="xm-landing-field"
                   placeholder={t('landing.contact.form.emailPlaceholder')}
-                  value={formState.email}
-                  onChange={event => {
-                    handleContactChange('email', event.target.value);
-                  }}
+                  aria-invalid={Boolean(contactFormErrors.email)}
+                  {...register('email')}
                 />
+
+                {contactFormErrors.email?.message ? (
+                  <p className="text-sm text-destructive">
+                    {contactFormErrors.email.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor="contact-subject">
+                <Label className="text-sm font-medium" htmlFor="contact-subject">
                   {t('landing.contact.form.subject')}
-                </label>
+                </Label>
                 <select
                   id="contact-subject"
                   className="xm-landing-field"
-                  value={formState.subject}
-                  onChange={event => {
-                    handleContactChange('subject', event.target.value);
-                  }}
+                  aria-invalid={Boolean(contactFormErrors.subject)}
+                  {...register('subject')}
                 >
-                  {(t('landing.contact.form.subjectOptions', {
-                    returnObjects: true
-                  }) as string[]).map(option => (
+                  {contactSubjectOptions.map(option => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
                 </select>
+
+                {contactFormErrors.subject?.message ? (
+                  <p className="text-sm text-destructive">
+                    {contactFormErrors.subject.message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" htmlFor="contact-message">
+                <Label className="text-sm font-medium" htmlFor="contact-message">
                   {t('landing.contact.form.message')}
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   id="contact-message"
                   rows={5}
-                  className="xm-landing-field min-h-[120px] resize-y"
+                  className="min-h-[120px] resize-y"
                   placeholder={t('landing.contact.form.messagePlaceholder')}
-                  value={formState.message}
-                  onChange={event => {
-                    handleContactChange('message', event.target.value);
-                  }}
+                  aria-invalid={Boolean(contactFormErrors.message)}
+                  {...register('message')}
                 />
+
+                {contactFormErrors.message?.message ? (
+                  <p className="text-sm text-destructive">
+                    {contactFormErrors.message.message}
+                  </p>
+                ) : null}
               </div>
 
-              {formErrorVisible ? (
+              {showContactFormError ? (
                 <div className="xm-landing-contact-alert rounded-[var(--xm-radius-lg)] border border-destructive/40 px-4 py-3">
                   <div className="font-semibold text-destructive">
                     {t('landing.contact.form.errorTitle')}
@@ -1267,12 +1361,13 @@ export function LandingPage() {
                 </div>
               ) : null}
 
-              <button
+              <Button
                 type="submit"
-                className="mt-4 inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:brightness-105"
+                size="lg"
+                className="mt-4"
               >
                 {t('landing.contact.form.button')}
-              </button>
+              </Button>
             </form>
           </div>
         </div>

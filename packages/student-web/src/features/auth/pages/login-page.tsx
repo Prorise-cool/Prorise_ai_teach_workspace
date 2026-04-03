@@ -7,6 +7,8 @@ import { ArrowLeft, MoonStar, SunMedium } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuthScene } from '@/features/auth/components/auth-scene';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { RegisterForm } from '@/features/auth/components/register-form';
@@ -21,7 +23,7 @@ import {
   type AuthSession
 } from '@/types/auth';
 
-import '@/features/auth/styles/login-page.css';
+import '@/features/auth/styles/login-page.scss';
 
 type LoginPageProps = {
   service?: AuthService;
@@ -210,8 +212,10 @@ export function LoginPage({
           </Link>
 
           <div className="xm-auth-toolbar">
-            <button
+            <Button
               type="button"
+              variant="surface"
+              size="icon"
               className="xm-auth-icon-btn"
               aria-label={authPageCopy.themeToggle}
               onClick={toggleThemeMode}
@@ -221,7 +225,7 @@ export function LoginPage({
               ) : (
                 <MoonStar size={18} />
               )}
-            </button>
+            </Button>
           </div>
 
           <h1 className="xm-auth-view-title">
@@ -235,33 +239,50 @@ export function LoginPage({
           ) : null}
 
           {registerEnabled ? (
-            <div className="xm-auth-tabs">
-              <button
-                type="button"
-                className={`xm-auth-tab${!isRegisterView ? ' is-active' : ''}`}
-                aria-pressed={!isRegisterView}
-                onClick={switchToLogin}
-              >
-                {authPageCopy.loginTab}
-              </button>
-              <button
-                type="button"
-                className={`xm-auth-tab${isRegisterView ? ' is-active' : ''}`}
-                aria-pressed={isRegisterView}
-                onClick={switchToRegister}
-              >
-                {authPageCopy.registerTab}
-              </button>
-            </div>
-          ) : null}
+            <Tabs
+              value={activeView}
+              onValueChange={nextValue => {
+                if (nextValue === 'register') {
+                  switchToRegister();
+                  return;
+                }
 
-          {isRegisterView ? (
-            <RegisterForm
-              service={service}
-              onRegistered={handleRegistered}
-              onSwitchToLogin={switchToLogin}
-              onSceneZoneChange={handleSceneZoneChange}
-            />
+                switchToLogin();
+              }}
+            >
+              <TabsList
+                className="xm-auth-tabs"
+                aria-label={`${authPageCopy.loginTab}/${authPageCopy.registerTab}`}
+              >
+                <TabsTrigger className="xm-auth-tab" value="login">
+                  {authPageCopy.loginTab}
+                </TabsTrigger>
+                <TabsTrigger className="xm-auth-tab" value="register">
+                  {authPageCopy.registerTab}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="login">
+                <LoginForm
+                  service={service}
+                  returnTo={returnTo}
+                  canRegister={registerEnabled}
+                  initialUsername={prefilledLoginUsername}
+                  onAuthenticated={handleAuthenticated}
+                  onSwitchToRegister={switchToRegister}
+                  onSceneZoneChange={handleSceneZoneChange}
+                />
+              </TabsContent>
+
+              <TabsContent value="register">
+                <RegisterForm
+                  service={service}
+                  onRegistered={handleRegistered}
+                  onSwitchToLogin={switchToLogin}
+                  onSceneZoneChange={handleSceneZoneChange}
+                />
+              </TabsContent>
+            </Tabs>
           ) : (
             <LoginForm
               service={service}

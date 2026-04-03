@@ -1,194 +1,226 @@
 /**
  * 文件说明：应用级反馈组件样式。
- * 统一承接顶部 Toast 与居中 Spotlight，风格对齐设计稿的实体化反馈状态。
+ * 统一承接右侧通知卡片、侧边提示面板与顶部全局进度条。
  */
 
-.xm-feedback-toast-stack {
+.xm-feedback-loading-bar {
   position: fixed;
-  top: 24px;
-  left: 50%;
-  z-index: 1100;
-  display: flex;
-  width: min(420px, calc(100vw - 32px));
-  flex-direction: column;
-  gap: 12px;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  z-index: 1200;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.xm-feedback-loading-bar-track {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--xm-color-primary) 12%, transparent) 0%,
+    var(--xm-color-primary) 45%,
+    color-mix(in srgb, var(--xm-color-primary) 58%, #fff) 100%
+  );
+  box-shadow: 0 0 20px color-mix(in srgb, var(--xm-color-primary) 38%, transparent);
+  animation: xm-feedback-loading-slide 1.05s var(--xm-easing-standard) infinite;
+}
+
+.xm-feedback-sonner-toast {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .xm-feedback-toast,
 .xm-feedback-state-card {
-  --xm-feedback-bg: var(--xm-color-surface);
+  --xm-feedback-bg: #ffffff;
   --xm-feedback-border: var(--xm-color-border);
   --xm-feedback-text: var(--xm-color-text-primary);
   --xm-feedback-muted: var(--xm-color-text-secondary);
-  --xm-feedback-icon: var(--xm-color-primary);
+  --xm-feedback-accent: var(--xm-color-primary);
   --xm-feedback-orb: color-mix(
     in srgb,
-    var(--xm-feedback-icon) 12%,
+    var(--xm-feedback-accent) 10%,
     transparent
   );
   --xm-feedback-orb-border: color-mix(
     in srgb,
-    var(--xm-feedback-icon) 22%,
+    var(--xm-feedback-accent) 18%,
     transparent
   );
+  --xm-feedback-shadow: 0 18px 42px color-mix(in srgb, #16110f 14%, transparent);
 }
 
 .xm-feedback-toast.is-success,
 .xm-feedback-state-card.is-success {
-  --xm-feedback-bg: #f6ffed;
-  --xm-feedback-border: #b7eb8f;
-  --xm-feedback-text: var(--xm-color-text-primary);
-  --xm-feedback-muted: var(--xm-color-text-secondary);
-  --xm-feedback-icon: var(--xm-color-success);
+  --xm-feedback-accent: var(--xm-color-success);
 }
 
 :root[data-theme='dark'] .xm-feedback-toast.is-success,
 :root[data-theme='dark'] .xm-feedback-state-card.is-success {
-  --xm-feedback-bg: #1a2e1b;
-  --xm-feedback-border: #2b4c2d;
-  --xm-feedback-text: #f5ede1;
-  --xm-feedback-muted: #d8e8cf;
-  --xm-feedback-icon: #73d13d;
+  --xm-feedback-accent: #73d13d;
 }
 
 .xm-feedback-toast.is-warning,
 .xm-feedback-state-card.is-warning {
-  --xm-feedback-bg: #fffbe6;
-  --xm-feedback-border: #ffe58f;
-  --xm-feedback-text: var(--xm-color-text-primary);
-  --xm-feedback-muted: var(--xm-color-text-secondary);
-  --xm-feedback-icon: var(--xm-color-warning);
+  --xm-feedback-accent: var(--xm-color-warning);
 }
 
 :root[data-theme='dark'] .xm-feedback-toast.is-warning,
 :root[data-theme='dark'] .xm-feedback-state-card.is-warning {
-  --xm-feedback-bg: #2b2111;
-  --xm-feedback-border: #593815;
-  --xm-feedback-text: #f5ede1;
-  --xm-feedback-muted: #e2cda1;
-  --xm-feedback-icon: #faad14;
+  --xm-feedback-accent: #faad14;
 }
 
 .xm-feedback-toast.is-error,
 .xm-feedback-state-card.is-error {
-  --xm-feedback-bg: #fff1f0;
-  --xm-feedback-border: #ffccc7;
-  --xm-feedback-text: var(--xm-color-text-primary);
-  --xm-feedback-muted: var(--xm-color-text-secondary);
-  --xm-feedback-icon: var(--xm-color-error);
+  --xm-feedback-accent: var(--xm-color-error);
 }
 
 :root[data-theme='dark'] .xm-feedback-toast.is-error,
 :root[data-theme='dark'] .xm-feedback-state-card.is-error {
-  --xm-feedback-bg: #3a1c1c;
-  --xm-feedback-border: #5c2323;
-  --xm-feedback-text: #f5ede1;
-  --xm-feedback-muted: #efc0c0;
-  --xm-feedback-icon: #ff7875;
+  --xm-feedback-accent: #ff7875;
 }
 
 .xm-feedback-toast.is-info,
 .xm-feedback-state-card.is-info {
-  --xm-feedback-bg: var(--xm-color-text-primary);
-  --xm-feedback-border: transparent;
-  --xm-feedback-text: #fff8ed;
-  --xm-feedback-muted: color-mix(in srgb, #fff8ed 82%, transparent);
-  --xm-feedback-icon: var(--xm-color-primary);
+  --xm-feedback-accent: var(--xm-color-primary);
 }
 
 :root[data-theme='dark'] .xm-feedback-toast.is-info,
 :root[data-theme='dark'] .xm-feedback-state-card.is-info {
-  --xm-feedback-bg: #1f1a18;
-  --xm-feedback-border: var(--xm-color-border);
-  --xm-feedback-text: var(--xm-color-text-primary);
-  --xm-feedback-muted: var(--xm-color-text-secondary);
-  --xm-feedback-icon: var(--xm-color-primary);
+  --xm-feedback-accent: var(--xm-color-primary);
 }
 
+:root[data-theme='dark'] .xm-feedback-toast,
+:root[data-theme='dark'] .xm-feedback-state-card {
+  --xm-feedback-bg: #211b19;
+  --xm-feedback-border: color-mix(in srgb, var(--xm-color-border) 88%, transparent);
+  --xm-feedback-text: #f6eee5;
+  --xm-feedback-muted: color-mix(in srgb, #f6eee5 72%, transparent);
+  --xm-feedback-shadow: 0 18px 42px color-mix(in srgb, #000 34%, transparent);
+}
+
+/* ==========================================
+ * 方案 1: 现代侧边带 (Modern Edge Toast)
+ * ========================================== */
 .xm-feedback-toast {
+  position: relative;
+  width: min(380px, calc(100vw - 32px));
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: flex-start; /* 顶部对齐以适应换行 */
+  gap: 12px;               /* 紧凑间距 */
+  overflow: hidden;
   border: 1px solid var(--xm-feedback-border);
-  border-radius: 20px;
+  border-radius: 12px;     /* 标准圆角 */
   background: var(--xm-feedback-bg);
-  box-shadow: var(--xm-shadow-dialog);
+  box-shadow: var(--xm-feedback-shadow);
   color: var(--xm-feedback-text);
-  padding: 14px 16px;
+  padding: 16px 16px 16px 20px;
   pointer-events: auto;
-  animation: xm-feedback-toast-enter 220ms var(--xm-easing-emphasized) forwards;
+  animation: xm-feedback-toast-enter 240ms var(--xm-easing-emphasized) forwards;
 }
 
-.xm-feedback-toast.is-leaving {
-  animation: xm-feedback-toast-leave 180ms ease forwards;
+.xm-feedback-toast::before {
+  content: '';
+  position: absolute;
+  top: 0;      /* 贯穿全高 */
+  bottom: 0;
+  left: 0;
+  width: 6px;  /* 侧边带宽度 */
+  background: var(--xm-feedback-accent);
+}
+
+.xm-feedback-toast-icon-shell {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--xm-feedback-accent);
+  margin-top: 2px; /* 微调：使其与右侧标题第一行文本对齐 */
 }
 
 .xm-feedback-toast-copy {
   min-width: 0;
+  flex: 1;
 }
 
 .xm-feedback-toast-title {
   display: block;
   font-size: 14px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 800;
+  line-height: 1.4;
+  margin: 0;
 }
 
 .xm-feedback-toast-description {
-  margin: 4px 0 0;
+  margin: 4px 0 0 0;
   color: var(--xm-feedback-muted);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .xm-feedback-glyph {
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  color: var(--xm-feedback-icon);
+  width: 18px;
+  height: 18px;
+  color: currentColor;
 }
 
 .xm-feedback-glyph.is-loading {
   animation: xm-feedback-spin 1s linear infinite;
 }
 
+/* ==========================================
+ * Spotlight / State Card
+ * ========================================== */
 .xm-feedback-spotlight {
   position: fixed;
-  inset: 0;
+  top: 80px;
+  right: 24px;
   z-index: 1090;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--xm-color-background) 76%, transparent);
-  backdrop-filter: blur(8px);
+  width: min(420px, calc(100vw - 32px));
+  align-items: flex-start;
+  justify-content: flex-end;
   pointer-events: none;
 }
 
 .xm-feedback-state-card {
-  width: min(420px, 100%);
+  position: relative;
+  width: min(400px, 100%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-start;
+  gap: 16px;
+  overflow: hidden;
   border: 1px solid var(--xm-feedback-border);
-  border-radius: 28px;
+  border-radius: 24px;
   background: var(--xm-feedback-bg);
-  box-shadow: var(--xm-shadow-dialog);
+  box-shadow: var(--xm-feedback-shadow);
   color: var(--xm-feedback-text);
-  padding: 32px 28px;
-  text-align: center;
+  padding: 22px 22px 20px;
   animation: xm-feedback-spotlight-enter 260ms var(--xm-easing-emphasized)
     forwards;
+}
+
+.xm-feedback-state-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--xm-feedback-accent);
 }
 
 .xm-feedback-state-orb {
   position: relative;
   display: inline-flex;
-  width: 88px;
-  height: 88px;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
@@ -198,44 +230,43 @@
 
 .xm-feedback-state-orb-ring {
   position: absolute;
-  inset: 10px;
-  border: 1px dashed color-mix(in srgb, var(--xm-feedback-icon) 28%, transparent);
+  inset: 7px;
+  border: 1px dashed color-mix(in srgb, var(--xm-feedback-accent) 28%, transparent);
   border-radius: 999px;
 }
 
 .xm-feedback-state-glyph {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
 }
 
 .xm-feedback-state-copy {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .xm-feedback-state-title {
   margin: 0;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 
 .xm-feedback-state-description {
   margin: 0;
-  max-width: 28ch;
   color: var(--xm-feedback-muted);
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .xm-feedback-state-dots {
   display: inline-flex;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .xm-feedback-state-dots span {
@@ -257,36 +288,34 @@
 @keyframes xm-feedback-toast-enter {
   from {
     opacity: 0;
-    transform: translateY(-14px) scale(0.96);
+    transform: translate3d(22px, 0, 0) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes xm-feedback-toast-leave {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.96);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes xm-feedback-spotlight-enter {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translate3d(26px, 0, 0) scale(0.98);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes xm-feedback-loading-slide {
+  0% {
+    transform: translateX(-130%);
+  }
+
+  100% {
+    transform: translateX(360%);
   }
 }
 
@@ -315,22 +344,24 @@
 }
 
 @media (max-width: 640px) {
-  .xm-feedback-toast-stack {
-    top: 16px;
-    width: min(100vw - 20px, 420px);
+  .xm-feedback-spotlight {
+    top: 72px;
+    right: 12px;
+    width: min(100vw - 24px, 420px);
   }
 
   .xm-feedback-toast {
-    border-radius: 18px;
-    padding: 13px 14px;
+    width: min(100vw - 24px, 380px);
+    border-radius: 12px; /* 方案 1 圆角 */
+    padding: 16px 16px 16px 18px;
   }
 
   .xm-feedback-state-card {
     border-radius: 24px;
-    padding: 28px 22px;
+    padding: 20px 18px 18px;
   }
 
   .xm-feedback-state-title {
-    font-size: 22px;
+    font-size: 17px;
   }
 }

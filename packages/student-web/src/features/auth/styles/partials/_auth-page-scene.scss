@@ -1,0 +1,343 @@
+/**
+ * 文件说明：认证页左侧插画与动效场景。
+ * 仅负责角色造型、眨眼、窥视与醒来动画，不承接表单样式。
+ */
+@keyframes xm-auth-blink {
+  0%,
+  4%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  2% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes xm-auth-wake-up {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+  }
+
+  20% {
+    transform: scaleY(1.15) scaleX(0.9);
+  }
+
+  40% {
+    transform: scaleY(0.9) scaleX(1.1);
+  }
+
+  60% {
+    transform: scaleY(1.08) scaleX(0.95);
+  }
+
+  80% {
+    transform: scaleY(0.95) scaleX(1.05);
+  }
+}
+
+.xm-auth {
+  &-left-panel {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-width: var(--xm-auth-scene-min-width);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-right: 1px solid var(--xm-color-border);
+    padding: var(--xm-auth-scene-padding);
+    background: linear-gradient(
+      180deg,
+      var(--xm-auth-scene-panel-start) 0%,
+      var(--xm-auth-scene-panel-end) 100%
+    );
+  }
+
+  &-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 0;
+    width: var(--xm-auth-scene-glow-size);
+    height: var(--xm-auth-scene-glow-size);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+      circle,
+      var(--xm-auth-scene-glow-surface) 0%,
+      transparent 70%
+    );
+  }
+
+  &-characters {
+    position: relative;
+    z-index: 1;
+    width: var(--xm-auth-scene-canvas-width);
+    height: var(--xm-auth-scene-canvas-height);
+    transform: translateY(var(--xm-auth-scene-offset-y));
+
+    &.is-peeking {
+      .xm-auth-eyes,
+      .xm-auth-mouth {
+        transform: translateX(12px) translateY(-4px);
+      }
+
+      .xm-auth-char-1 {
+        transform: skewX(-6deg) scaleY(1.03);
+      }
+
+      .xm-auth-char-2 {
+        transform: skewX(-10deg) scaleY(1.06);
+      }
+
+      .xm-auth-char-3 {
+        transform: skewX(-4deg) scaleY(1.01);
+      }
+
+      .xm-auth-char-4 {
+        transform: skewX(-8deg) scaleY(1.04);
+      }
+    }
+
+    &.is-hidden,
+    &.is-sleeping {
+      .xm-auth-eye {
+        margin-top: 6px;
+        height: 12px;
+        border-bottom: 3px solid var(--xm-auth-scene-pupil-surface);
+        border-radius: 50%;
+        background: transparent;
+        animation: none;
+      }
+
+      .xm-auth-char-4 .xm-auth-eye {
+        border-bottom-color: var(--xm-auth-scene-mouth-strong-surface);
+      }
+
+      .xm-auth-pupil {
+        opacity: 0;
+      }
+    }
+
+    &.is-hidden {
+      .xm-auth-char-1 {
+        transform: scaleY(0.92) scaleX(1.05);
+      }
+
+      .xm-auth-char-2 {
+        transform: scaleY(0.88) scaleX(1.08);
+      }
+
+      .xm-auth-char-3 {
+        transform: scaleY(0.96) scaleX(1.02);
+      }
+
+      .xm-auth-char-4 {
+        transform: scaleY(0.9) scaleX(1.06);
+      }
+    }
+
+    &.is-sleeping {
+      .xm-auth-character {
+        transform: translateY(6px) scaleY(0.96);
+        transition: all var(--xm-duration-slow) var(--xm-easing-standard);
+      }
+    }
+
+    &.is-waking {
+      .xm-auth-character {
+        animation: xm-auth-wake-up var(--xm-auth-wake-motion);
+      }
+    }
+  }
+
+  &-character {
+    position: absolute;
+    bottom: 0;
+    transform-origin: bottom center;
+    transition:
+      transform var(--xm-auth-scene-character-transition),
+      left var(--xm-auth-scene-character-transition);
+  }
+
+  &-eyes,
+  &-mouth {
+    transition:
+      transform var(--xm-auth-scene-face-transition),
+      opacity var(--xm-duration-fast) var(--xm-easing-standard);
+  }
+
+  &-eyes {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &-eye {
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--xm-auth-scene-eye-surface);
+    transition: all var(--xm-duration-fast) var(--xm-easing-standard);
+  }
+
+  &-pupil {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    background: var(--xm-auth-scene-pupil-surface);
+    transform: translate(-50%, -50%);
+    transition:
+      transform var(--xm-duration-fast) var(--xm-easing-standard),
+      opacity var(--xm-duration-fast) var(--xm-easing-standard);
+  }
+
+  &-mouth {
+    margin-inline: auto;
+    border-radius: var(--xm-radius-sm);
+    background: var(--xm-auth-scene-mouth-surface);
+  }
+
+  &-char-1 {
+    left: 0;
+    z-index: 2;
+    width: 100px;
+    height: 160px;
+    border-radius: 50px 50px 0 0;
+    background: var(--xm-auth-scene-char-1-color);
+
+    .xm-auth-eyes {
+      gap: 10px;
+      margin-top: 40px;
+    }
+
+    .xm-auth-eye {
+      width: 16px;
+      height: 16px;
+      animation: xm-auth-blink 4.2s infinite 0.5s;
+    }
+
+    .xm-auth-pupil {
+      width: 8px;
+      height: 8px;
+    }
+
+    .xm-auth-mouth {
+      width: 16px;
+      height: 4px;
+      margin-top: 12px;
+    }
+  }
+
+  &-char-2 {
+    left: 70px;
+    z-index: 3;
+    width: 110px;
+    height: 110px;
+    border-radius: 55px 55px 0 0;
+    background: var(--xm-auth-scene-char-2-color);
+
+    .xm-auth-eyes {
+      gap: 14px;
+      margin-top: 40px;
+    }
+
+    .xm-auth-eye {
+      width: 22px;
+      height: 22px;
+      animation: xm-auth-blink 5.1s infinite 1.2s;
+    }
+
+    .xm-auth-pupil {
+      width: 10px;
+      height: 10px;
+    }
+
+    .xm-auth-mouth {
+      width: 20px;
+      height: 4px;
+      margin-top: 12px;
+    }
+  }
+
+  &-char-3 {
+    left: 150px;
+    z-index: 1;
+    width: 90px;
+    height: 210px;
+    border-radius: 45px 45px 0 0;
+    background: var(--xm-auth-scene-char-3-color);
+
+    .xm-auth-eyes {
+      gap: 8px;
+      margin-top: 50px;
+    }
+
+    .xm-auth-eye {
+      width: 14px;
+      height: 14px;
+      animation: xm-auth-blink 3.8s infinite 2.1s;
+    }
+
+    .xm-auth-pupil {
+      width: 6px;
+      height: 6px;
+    }
+
+    .xm-auth-mouth {
+      width: 14px;
+      height: 4px;
+      margin-top: 10px;
+    }
+  }
+
+  &-char-4 {
+    left: 210px;
+    z-index: 4;
+    width: 100px;
+    height: 130px;
+    border-radius: 50px 50px 0 0;
+    background: var(--xm-auth-scene-char-4-color);
+
+    .xm-auth-eyes {
+      gap: 12px;
+      margin-top: 40px;
+    }
+
+    .xm-auth-eye {
+      width: 18px;
+      height: 18px;
+      animation: xm-auth-blink 4.7s infinite 0.8s;
+    }
+
+    .xm-auth-pupil {
+      width: 8px;
+      height: 8px;
+    }
+
+    .xm-auth-mouth {
+      width: 16px;
+      height: 4px;
+      margin-top: 12px;
+      background: var(--xm-auth-scene-mouth-strong-surface);
+    }
+  }
+
+  &-hero-text {
+    position: absolute;
+    bottom: var(--xm-auth-hero-bottom);
+    z-index: 2;
+    text-align: center;
+
+    h2 {
+      margin: 0;
+      font-size: var(--xm-auth-hero-title-size);
+      font-weight: var(--xm-font-weight-semibold);
+      line-height: 1.4;
+      letter-spacing: var(--xm-auth-hero-letter-spacing);
+    }
+  }
+}

@@ -485,6 +485,13 @@ export const zhCnEntryPageResources = {
         messagePlaceholder: '告诉我们你的课程场景、试点需求或最想解决的问题。',
         errorTitle: '表单不完整',
         errorDescription: '请至少填写名字、邮箱和留言内容后再发送。',
+        validation: {
+          firstNameRequired: '请填写名字',
+          emailRequired: '请填写邮箱',
+          emailInvalid: '请输入有效的邮箱地址',
+          subjectRequired: '请选择咨询主题',
+          messageRequired: '请填写留言内容'
+        },
         button: '发送留言'
       }
     },
@@ -1032,6 +1039,13 @@ export const enUsEntryPageResources = {
         errorTitle: 'Incomplete form',
         errorDescription:
           'Please provide at least your name, email, and a message before sending.',
+        validation: {
+          firstNameRequired: 'Please enter your name',
+          emailRequired: 'Please enter your email',
+          emailInvalid: 'Please enter a valid email address',
+          subjectRequired: 'Please choose a topic',
+          messageRequired: 'Please enter a message'
+        },
         button: 'Send message'
       }
     },
