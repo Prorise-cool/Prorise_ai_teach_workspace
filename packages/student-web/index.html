@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5c547" />
     <title>小麦学生端</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (() => {
+        try {
+          const storedTheme = window.localStorage.getItem('xiaomai-theme');
+
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            document.documentElement.dataset.theme = storedTheme;
+            document.documentElement.style.colorScheme = storedTheme;
+          }
+        } catch {
+          // 忽略浏览器禁用本地存储等初始化异常。
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

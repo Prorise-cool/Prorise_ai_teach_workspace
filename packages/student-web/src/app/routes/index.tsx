@@ -21,6 +21,19 @@ async function loadHomeRoute() {
 }
 
 /**
+ * 按需加载公开落地页，确保营销页独立分包。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadLandingRoute() {
+  const { LandingPage } = await import('@/features/home/landing-page');
+
+  return {
+    Component: LandingPage
+  };
+}
+
+/**
  * 按需加载认证页路由模块，确保登录页单独分包。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -61,17 +74,57 @@ async function loadForbiddenRoute() {
   };
 }
 
+/**
+ * 按需加载课堂输入页，确保受保护工作区独立分包。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadClassroomInputRoute() {
+  const { ClassroomInputPage } = await import(
+    '@/features/classroom/classroom-input-page'
+  );
+
+  return {
+    Component: ClassroomInputPage
+  };
+}
+
+/**
+ * 按需加载视频输入页，确保其他入口按路由切分。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadVideoInputRoute() {
+  const { VideoInputPage } = await import('@/features/video/video-input-page');
+
+  return {
+    Component: VideoInputPage
+  };
+}
+
 export const appRouter = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
     children: [
       {
+        index: true,
+        lazy: loadHomeRoute
+      },
+      {
+        path: 'landing',
+        lazy: loadLandingRoute
+      },
+      {
         element: <RequireAuthRoute />,
         children: [
           {
-            index: true,
-            lazy: loadHomeRoute
+            path: 'classroom/input',
+            lazy: loadClassroomInputRoute
+          },
+          {
+            path: 'video/input',
+            lazy: loadVideoInputRoute
           }
         ]
       },

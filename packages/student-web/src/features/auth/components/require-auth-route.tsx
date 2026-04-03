@@ -105,8 +105,6 @@ export function RequireAuthRoute({
     const accessToken = session?.accessToken;
 
     if (!accessToken) {
-      setValidationState('checking');
-      setValidationErrorMessage('');
       return;
     }
 

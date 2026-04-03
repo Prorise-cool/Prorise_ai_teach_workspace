@@ -2,6 +2,8 @@
  * 文件说明：student-web 默认中文资源。
  * 当前先承接认证页与首页占位页文案，后续页面继续按相同结构扩展。
  */
+import { zhCnEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+
 export const zhCnResources = {
   auth: {
     page: {
@@ -128,6 +130,7 @@ export const zhCnResources = {
         usernameRequired: '请输入用户名',
         usernameTooShort: '用户名至少需要 2 位',
         usernameTooLong: '用户名长度不能超过 30 个字符',
+        passwordRequired: '请输入密码',
         passwordTooShort: '密码至少需要 5 位',
         passwordTooLong: '密码长度不能超过 30 个字符',
         confirmPasswordRequired: '请再次输入密码',
@@ -163,5 +166,6 @@ export const zhCnResources = {
     sessionProbeRequestIdLabel: '请求追踪 ID',
     sessionProbePermissionsLabel: '后端权限快照',
     sessionProbeErrorFallback: '受保护访问校验失败，请稍后重试。'
-  }
+  },
+  ...zhCnEntryPageResources
 } as const;

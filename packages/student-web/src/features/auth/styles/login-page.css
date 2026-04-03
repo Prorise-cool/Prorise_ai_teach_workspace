@@ -39,7 +39,7 @@
   --xm-auth-toolbar-right: 28px;
   --xm-auth-icon-button-size: 40px;
   --xm-auth-icon-button-surface: rgba(255, 255, 255, 0.74);
-  --xm-auth-brand-icon-size: 24px;
+  --xm-auth-brand-icon-size: 40px;
   --xm-auth-brand-icon-shadow: 0 6px 16px rgba(59, 23, 1, 0.12);
   --xm-auth-title-size: 30px;
   --xm-auth-tab-font-size: 15px;
@@ -538,11 +538,18 @@
 }
 
 .xm-auth-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: var(--xm-auth-brand-icon-size);
   height: var(--xm-auth-brand-icon-size);
-  border-radius: var(--xm-radius-md);
-  background: var(--xm-color-text-primary);
-  box-shadow: var(--xm-auth-brand-icon-shadow);
+  overflow: hidden;
+}
+
+.xm-auth-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .xm-auth-back-link {
