@@ -1,0 +1,85 @@
+/**
+ * 文件说明：公开入口页响应式覆写。
+ * 负责 Home / Landing 共用的断点级回落规则。
+ */
+@media (max-width: 1023px) {
+  .xm-entry-home {
+    &__content {
+      padding-bottom: 240px;
+    }
+
+    &__hero {
+      min-height: auto;
+      flex-direction: column;
+      justify-content: flex-start;
+      text-align: center;
+    }
+
+    &__title {
+      white-space: normal;
+    }
+
+    &__role {
+      bottom: -6vh;
+      width: clamp(620px, 140vw, 1100px);
+    }
+
+    &__wave-label {
+      display: none;
+    }
+
+    &__wave-button {
+      width: 88px;
+      height: 88px;
+      flex-basis: 88px;
+
+      &-inner {
+        width: 56px;
+        height: 56px;
+        flex-basis: 56px;
+      }
+    }
+  }
+
+  .xm-landing-carousel-btn {
+    &--prev {
+      left: -8px;
+    }
+
+    &--next {
+      right: -8px;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .xm-entry-home__content {
+    padding-top: 96px;
+    padding-inline: 20px;
+  }
+
+  .xm-entry-home__wave-shell {
+    height: 220px;
+  }
+
+  .xm-entry-home__role {
+    bottom: -1vh;
+    width: clamp(560px, 160vw, 920px);
+  }
+
+  .xm-landing-community-icon {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+@media (min-width: 768px) {
+  .xm-entry-home__anim-left,
+  .xm-entry-home__anim-right {
+    text-align: left;
+  }
+
+  .xm-entry-home__anim-right {
+    align-items: flex-start;
+  }
+}

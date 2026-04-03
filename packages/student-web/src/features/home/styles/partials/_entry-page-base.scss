@@ -1,0 +1,9 @@
+/**
+ * 文件说明：公开入口页共享基础变量。
+ * 仅声明 Home / Landing 共用字体与页级基线，不承载组件细节。
+ */
+.xm-entry-home,
+.xm-landing-page {
+  --xm-entry-font-family: 'Inter', 'Noto Sans SC', var(--xm-font-family-sans);
+  font-family: var(--xm-entry-font-family);
+}

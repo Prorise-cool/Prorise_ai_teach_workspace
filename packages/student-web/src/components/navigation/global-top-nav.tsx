@@ -9,10 +9,19 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { appI18n } from '@/app/i18n';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
 import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
+import { cn } from '@/lib/utils';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
+
+import '@/components/navigation/global-top-nav.scss';
 
 type GlobalTopNavLink = {
   href: string;
@@ -88,10 +97,8 @@ export function GlobalTopNav({
       ? 'text-[14px] font-medium text-[color:var(--xm-color-text-primary)] transition hover:text-primary'
       : 'text-sm font-medium text-foreground transition hover:text-primary';
 
-  const actionButtonClassName =
-    variant === 'home'
-      ? 'rounded-full bg-[color:var(--xm-color-surface-glass)] text-[color:var(--xm-color-text-primary)] shadow-sm hover:bg-[color:var(--xm-color-surface)]'
-      : 'rounded-full bg-primary text-primary-foreground shadow-sm hover:brightness-105';
+  const actionButtonVariant: 'home' | 'default' =
+    variant === 'home' ? 'home' : 'default';
 
   const accountAction = {
     label: session?.accessToken
@@ -146,7 +153,7 @@ export function GlobalTopNav({
   }
 
   return (
-    <>
+    <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
       <nav
         className={cn(
           'pointer-events-auto mx-auto flex w-full max-w-[1440px] items-center justify-between gap-6 rounded-full px-5 py-4 md:px-8',
@@ -165,12 +172,11 @@ export function GlobalTopNav({
           )}
         >
           {showBrandIcon ? (
-            <span className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-background/80">
+            <span className="xm-global-top-nav__brand-icon" aria-hidden="true">
               <img
                 src="/entry/logo.png"
                 alt=""
-                aria-hidden="true"
-                className="h-full w-full object-contain"
+                className="xm-global-top-nav__brand-logo"
               />
             </span>
           ) : null}
@@ -183,20 +189,24 @@ export function GlobalTopNav({
 
         <div className="flex items-center gap-2 md:gap-3">
           {showLocaleToggle ? (
-            <button
+            <Button
               type="button"
-              className="inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-border/80 bg-background/70 px-3 text-sm font-semibold text-foreground transition hover:bg-muted"
+              variant="outline"
+              size="sm"
+              className="min-w-10 border-border/80 bg-background/70 px-3"
               aria-label={t('entryNav.localeToggle')}
               onClick={handleLocaleToggle}
             >
               <Languages className="mr-1 h-4 w-4" />
               <span>{t('entryNav.localeToggle')}</span>
-            </button>
+            </Button>
           ) : null}
 
-          <button
+          <Button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/70 text-foreground shadow-sm transition hover:bg-muted"
+            variant="outline"
+            size="icon"
+            className="border-border/80 bg-background/70"
             aria-label={t('entryNav.themeToggle')}
             onClick={toggleThemeMode}
           >
@@ -205,24 +215,23 @@ export function GlobalTopNav({
             ) : (
               <Moon className="h-4 w-4" />
             )}
-          </button>
+          </Button>
 
           {showAuthAction ? (
             <>
-              <Link
-                to={accountAction.to}
-                className={cn(
-                  'hidden h-10 items-center justify-center rounded-full px-5 text-sm font-semibold transition md:inline-flex',
-                  actionButtonClassName
-                )}
+              <Button
+                asChild
+                variant={actionButtonVariant}
+                className="hidden md:inline-flex"
               >
-                {accountAction.label}
-              </Link>
+                <Link to={accountAction.to}>{accountAction.label}</Link>
+              </Button>
 
               {session?.accessToken ? (
-                <button
+                <Button
                   type="button"
-                  className="hidden h-10 items-center justify-center rounded-full border border-border/80 px-4 text-sm font-medium text-foreground transition hover:bg-muted md:inline-flex"
+                  variant="outline"
+                  className="hidden border-border/80 md:inline-flex"
                   disabled={isLoggingOut}
                   onClick={() => {
                     void logout();
@@ -230,99 +239,94 @@ export function GlobalTopNav({
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('entryNav.signOut')}
-                </button>
+                </Button>
               ) : null}
             </>
           ) : null}
 
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/70 text-foreground shadow-sm transition hover:bg-muted md:hidden"
-            aria-label={mobileMenuOpen ? t('common.close') : t('common.openMenu')}
-            onClick={() => {
-              setMobileMenuOpen(currentOpen => !currentOpen);
-            }}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-4 w-4" />
-            ) : (
-              <Menu className="h-4 w-4" />
-            )}
-          </button>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="border-border/80 bg-background/70 md:hidden"
+              aria-label={mobileMenuOpen ? t('common.close') : t('common.openMenu')}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <Menu className="h-4 w-4" />
+              )}
+            </Button>
+          </DialogTrigger>
         </div>
       </nav>
 
-      <div
-        className={cn(
-          'fixed inset-0 z-50 bg-black/36 backdrop-blur-sm transition md:hidden',
-          mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
-        )}
+      <DialogContent
+        aria-describedby={undefined}
+        className="right-4 top-4 w-[min(88vw,360px)] rounded-[var(--xm-radius-xl)] border border-border/70 bg-[color:var(--xm-color-surface-glass)] p-5 shadow-[var(--xm-shadow-dialog)] backdrop-blur-[var(--xm-blur-surface)] md:hidden"
       >
-        <div
-          className={cn(
-            'absolute right-4 top-4 w-[min(88vw,360px)] rounded-[var(--xm-radius-xl)] border border-border/70 bg-[color:var(--xm-color-surface-glass)] p-5 shadow-[var(--xm-shadow-dialog)] backdrop-blur-[var(--xm-blur-surface)] transition',
-            mobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
-          )}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <span className="font-semibold text-foreground">{brandLabel}</span>
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-background/70"
-              aria-label={t('common.close')}
-              onClick={closeMobileMenu}
+        <div className="mb-4 flex items-center justify-between">
+          <DialogTitle className="font-semibold">{brandLabel}</DialogTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-9 border-border/80 bg-background/70"
+            aria-label={t('common.close')}
+            onClick={closeMobileMenu}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {links.map(link => renderNavLink(link, true))}
+
+          {showAuthAction ? (
+            <Button
+              asChild
+              variant={actionButtonVariant}
+              className="mt-2"
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            {links.map(link => renderNavLink(link, true))}
-
-            {showAuthAction ? (
-              <Link
-                to={accountAction.to}
-                className={cn(
-                  'mt-2 inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold',
-                  actionButtonClassName
-                )}
-                onClick={closeMobileMenu}
-              >
+              <Link to={accountAction.to} onClick={closeMobileMenu}>
                 {accountAction.label}
               </Link>
-            ) : null}
+            </Button>
+          ) : null}
 
-            {session?.accessToken ? (
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-full border border-border/80 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
-                disabled={isLoggingOut}
-                onClick={() => {
-                  closeMobileMenu();
-                  void logout();
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                {t('entryNav.signOut')}
-              </button>
-            ) : null}
+          {session?.accessToken ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-border/80"
+              disabled={isLoggingOut}
+              onClick={() => {
+                closeMobileMenu();
+                void logout();
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {t('entryNav.signOut')}
+            </Button>
+          ) : null}
 
-            {showLocaleToggle ? (
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-full border border-border/80 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
-                onClick={event => {
-                  closeMobileMenu();
-                  handleLocaleToggle(event);
-                }}
-              >
-                <Languages className="mr-2 h-4 w-4" />
-                {t('entryNav.localeToggle')}
-              </button>
-            ) : null}
-          </div>
+          {showLocaleToggle ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="border-border/80"
+              onClick={event => {
+                closeMobileMenu();
+                handleLocaleToggle(event);
+              }}
+            >
+              <Languages className="mr-2 h-4 w-4" />
+              {t('entryNav.localeToggle')}
+            </Button>
+          ) : null}
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -5,6 +5,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
 import { FeedbackStateCard } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
@@ -59,67 +62,65 @@ export function ForbiddenPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-6 py-16">
-      <section className="xm-surface-card flex w-full max-w-3xl flex-col gap-6 rounded-[var(--xm-radius-xl)] p-8">
-        <span className="xm-floating-pill inline-flex w-fit px-3 py-1 text-sm font-medium">
-          {t('auth.page.forbiddenBadge')}
-        </span>
+      <Card className="xm-surface-card w-full max-w-3xl">
+        <CardContent className="flex flex-col gap-6 p-8">
+          <Badge variant="floating" className="w-fit">
+            {t('auth.page.forbiddenBadge')}
+          </Badge>
 
-        <FeedbackStateCard
-          tone="warning"
-          title={t('auth.feedback.permissionDeniedTitle')}
-          description={message}
-        />
+          <FeedbackStateCard
+            tone="warning"
+            title={t('auth.feedback.permissionDeniedTitle')}
+            description={message}
+          />
 
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{t('auth.page.forbiddenContextLabel')}</p>
-          <strong className="block text-foreground">{returnTo}</strong>
-          {session?.user.nickname ? (
-            <p>
-              {t('auth.page.forbiddenCurrentUser')}
-              <strong className="ml-1 text-foreground">
-                {session.user.nickname}
-              </strong>
-            </p>
-          ) : null}
-        </div>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>{t('auth.page.forbiddenContextLabel')}</p>
+            <strong className="block text-foreground">{returnTo}</strong>
+            {session?.user.nickname ? (
+              <p>
+                {t('auth.page.forbiddenCurrentUser')}
+                <strong className="ml-1 text-foreground">
+                  {session.user.nickname}
+                </strong>
+              </p>
+            ) : null}
+          </div>
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-90"
-            onClick={() => {
-              void navigate(returnTo, {
-                replace: true,
-                state: null
-              });
-            }}
-          >
-            {t('auth.page.backToPrevious')}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              onClick={() => {
+                void navigate(returnTo, {
+                  replace: true,
+                  state: null
+                });
+              }}
+            >
+              {t('auth.page.backToPrevious')}
+            </Button>
 
-          <Link
-            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-            to={DEFAULT_AUTH_RETURN_TO}
-          >
-            {t('auth.page.backHome')}
-          </Link>
+            <Button asChild variant="outline">
+              <Link to={DEFAULT_AUTH_RETURN_TO}>{t('auth.page.backHome')}</Link>
+            </Button>
 
-          <button
-            type="button"
-            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-            onClick={() => {
-              void logout({
-                redirectTo: AUTH_LOGIN_PATH
-              });
-            }}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut
-              ? t('auth.page.logoutSubmitting')
-              : t('auth.page.switchAccount')}
-          </button>
-        </div>
-      </section>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void logout({
+                  redirectTo: AUTH_LOGIN_PATH
+                });
+              }}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut
+                ? t('auth.page.logoutSubmitting')
+                : t('auth.page.switchAccount')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </main>
   );
 }

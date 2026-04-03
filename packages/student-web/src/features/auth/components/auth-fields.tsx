@@ -8,8 +8,10 @@ import type { UseFormRegisterReturn } from 'react-hook-form';
 import { Eye, EyeOff, LoaderCircle, Shield } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { AuthInteractionZone } from '@/features/auth/components/auth-scene';
+import { cn } from '@/lib/utils';
 
 type BaseFieldProps = {
   id: string;
@@ -78,11 +80,13 @@ export function AuthField({
         )}
       >
         <span className="xm-auth-prefix">{icon}</span>
-        <input
+        <Input
           id={id}
           ref={element => assignInputRef(registration.ref, element)}
           name={registration.name}
+          variant="bare"
           type={type}
+          className="xm-auth-input-field"
           placeholder={placeholder}
           autoComplete={autoComplete}
           inputMode={inputMode}
@@ -158,13 +162,15 @@ export function AuthPasswordField({
       </label>
       <div className={cn('xm-auth-input-wrapper', error && 'has-error')}>
         <span className="xm-auth-prefix">{icon}</span>
-        <input
+        <Input
           id={id}
           ref={element => {
             inputRef.current = element;
             assignInputRef(registration.ref, element);
           }}
           name={registration.name}
+          variant="bare"
+          className="xm-auth-input-field"
           type={visible ? 'text' : 'password'}
           placeholder={placeholder}
           autoComplete={autoComplete}
@@ -182,8 +188,10 @@ export function AuthPasswordField({
             onSceneZoneChange?.(visible ? 'account' : 'sensitive');
           }}
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           className="xm-auth-input-icon-btn"
           aria-label={
             visible
@@ -204,7 +212,7 @@ export function AuthPasswordField({
           }}
         >
           {visible ? <Eye size={18} /> : <EyeOff size={18} />}
-        </button>
+        </Button>
       </div>
       {error ? (
         <p id={errorId} className="xm-auth-field-error" role="alert">
@@ -249,8 +257,9 @@ export function AuthCaptchaField({
       disabled={disabled}
       onSceneZoneChange={onSceneZoneChange}
       trailing={
-        <button
+        <Button
           type="button"
+          variant="ghost"
           className="xm-auth-captcha-trigger"
           aria-label={refreshLabel}
           disabled={disabled}
@@ -267,7 +276,7 @@ export function AuthCaptchaField({
           ) : (
             <span className="xm-auth-captcha-fallback">{unavailableLabel}</span>
           )}
-        </button>
+        </Button>
       }
     />
   );

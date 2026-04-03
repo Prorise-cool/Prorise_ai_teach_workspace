@@ -27,7 +27,7 @@ import {
 	isAuthSocialSource,
 } from "@/types/auth";
 
-import "@/features/auth/styles/login-page.css";
+import '@/features/auth/styles/login-page.scss';
 
 type SocialCallbackPageProps = {
   service?: AuthService;

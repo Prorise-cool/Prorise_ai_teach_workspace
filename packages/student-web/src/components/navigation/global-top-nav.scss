@@ -1,0 +1,31 @@
+/**
+ * 文件说明：全局顶栏的共享局部样式。
+ * 负责公开入口页复用的玻璃导航外观，不承接布局与交互状态逻辑。
+ */
+.xm-landing-glass-nav {
+  background: color-mix(in srgb, var(--xm-color-surface) 72%, transparent);
+  backdrop-filter: blur(24px);
+  box-shadow: inset 0 0 5px color-mix(in srgb, var(--xm-color-surface) 14%, transparent);
+
+  :root[data-theme='light'] & {
+    box-shadow: inset 0 0 5px color-mix(in srgb, var(--xm-color-text-primary) 8%, transparent);
+  }
+}
+
+.xm-global-top-nav {
+  &__brand-icon {
+    display: inline-flex;
+    height: 40px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  &__brand-logo {
+    display: block;
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+  }
+}

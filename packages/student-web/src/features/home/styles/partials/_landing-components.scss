@@ -1,0 +1,235 @@
+/**
+ * 文件说明：营销落地页局部组件样式。
+ * 负责导航 flyout、跑马灯、轮播、联系表单与 FAQ 等局部结构。
+ */
+.xm-landing-nav {
+  &__flyout {
+    border: 1px solid var(--xm-color-border);
+    border-radius: var(--xm-radius-lg);
+    background: var(--xm-color-surface);
+    box-shadow: var(--xm-shadow-lg);
+    transform-origin: var(--radix-popover-content-transform-origin);
+  }
+
+  &__sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--xm-color-background) 50%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--xm-duration-base) var(--xm-easing-standard);
+
+    &--open {
+      opacity: 1;
+      pointer-events: auto;
+
+      .xm-landing-nav__sheet-panel {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  &__sheet-panel {
+    border-radius: 0 var(--xm-radius-lg) var(--xm-radius-lg) 0;
+    background: var(--xm-color-surface);
+    box-shadow: var(--xm-shadow-lg);
+  }
+}
+
+.xm-landing {
+  &-marquee {
+    position: relative;
+    overflow: hidden;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      z-index: 2;
+      width: 100px;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    &::before {
+      left: 0;
+      background: linear-gradient(to right, var(--xm-color-background), transparent);
+    }
+
+    &::after {
+      right: 0;
+      background: linear-gradient(to left, var(--xm-color-background), transparent);
+    }
+  }
+
+  &-marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 48px;
+    animation: xm-landing-marquee 20s linear infinite;
+
+    &:hover {
+      animation-play-state: paused;
+    }
+  }
+
+  &-sponsor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+  }
+
+  &-benefit-card {
+    transition:
+      background-color var(--xm-duration-fast) var(--xm-easing-standard),
+      transform var(--xm-duration-fast) var(--xm-easing-standard);
+
+    &:hover {
+      transform: translateY(-2px);
+
+      .xm-landing-benefit-card__index {
+        color: color-mix(in srgb, var(--xm-color-text-secondary) 30%, transparent);
+      }
+    }
+
+    &__index {
+      color: color-mix(in srgb, var(--xm-color-text-secondary) 20%, transparent);
+      transition: color var(--xm-duration-fast) var(--xm-easing-standard);
+    }
+  }
+
+  &-carousel {
+    &-viewport {
+      overflow: hidden;
+    }
+
+    &-track {
+      display: flex;
+      transition: transform var(--xm-duration-base) var(--xm-easing-standard);
+      will-change: transform;
+    }
+
+    &-slide {
+      flex: 0 0 100%;
+      padding: 0 8px;
+    }
+
+    &-btn {
+      position: absolute;
+      top: 50%;
+      z-index: 5;
+      display: flex;
+      width: 40px;
+      height: 40px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--xm-color-border);
+      border-radius: 9999px;
+      background: var(--xm-color-background);
+      color: var(--xm-color-text-primary);
+      transform: translateY(-50%);
+      transition:
+        background-color var(--xm-duration-fast) var(--xm-easing-standard),
+        opacity var(--xm-duration-fast) var(--xm-easing-standard);
+
+      &:hover {
+        background: var(--xm-color-accent);
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+
+      &--prev {
+        left: -20px;
+      }
+
+      &--next {
+        right: -20px;
+      }
+    }
+  }
+
+  &-avatar-shell {
+    display: inline-flex;
+    width: 48px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 90%, transparent);
+    border-radius: 9999px;
+    background: var(--xm-color-surface);
+  }
+
+  &-community-icon {
+    display: inline-flex;
+    width: 80px;
+    height: 80px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--xm-color-primary);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &-contact-alert {
+    background: color-mix(in srgb, var(--xm-color-error) 10%, transparent);
+  }
+
+  &-field {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--xm-color-border);
+    border-radius: var(--xm-radius-md);
+    background: transparent;
+    color: var(--xm-color-text-primary);
+    font-size: 14px;
+    outline: none;
+
+    &:focus {
+      border-color: var(--xm-color-primary);
+      box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--xm-color-primary) 20%, transparent),
+        var(--xm-shadow-md);
+    }
+
+    &::placeholder {
+      color: var(--xm-color-text-muted);
+    }
+
+    option {
+      color: var(--xm-color-text-primary);
+      background: var(--xm-color-surface);
+    }
+  }
+
+  &-accordion-content {
+    overflow: hidden;
+    transition: max-height var(--xm-duration-base) var(--xm-easing-standard);
+  }
+}
+
+@media (min-width: 768px) {
+  .xm-landing-carousel {
+    &-slide {
+      flex: 0 0 50%;
+    }
+  }
+}
+
+@media (min-width: 1024px) {
+  .xm-landing-carousel {
+    &-slide {
+      flex: 0 0 33.333%;
+    }
+  }
+}

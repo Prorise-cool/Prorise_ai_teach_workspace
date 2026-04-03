@@ -8,16 +8,6 @@ export type FeedbackNoticeInput = {
   loading?: boolean;
 };
 
-export type FeedbackNotice = {
-  id: string;
-  tone: FeedbackTone;
-  title: string;
-  description?: string;
-  durationMs: number;
-  loading: boolean;
-  phase: 'entered' | 'leaving';
-};
-
 export type FeedbackSpotlightInput = FeedbackNoticeInput;
 
 export type FeedbackSpotlight = {
@@ -34,4 +24,6 @@ export type FeedbackApi = {
   dismissNotice: (id: string) => void;
   showSpotlight: (input: FeedbackSpotlightInput) => string;
   hideSpotlight: () => void;
+  showLoadingBar: () => string;
+  hideLoadingBar: (id?: string) => void;
 };

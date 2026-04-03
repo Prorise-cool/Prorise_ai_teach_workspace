@@ -1,0 +1,11 @@
+/**
+ * 文件说明：视频入口占位页局部样式。
+ * 负责页面根容器与卡片层级的 feature scoped 微调。
+ */
+.xm-video-input-page {
+  &__shell,
+  &__card {
+    position: relative;
+    z-index: 1;
+  }
+}

@@ -1,0 +1,89 @@
+/**
+ * 文件说明：营销落地页页面级背景与结构样式。
+ * 负责固定光斑、Hero 舞台与页级滚动定位。
+ */
+.xm-landing-page {
+  position: relative;
+  min-height: 100vh;
+
+  section[id] {
+    scroll-margin-top: 132px;
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    position: fixed;
+    z-index: 0;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 9999px;
+    filter: blur(110px);
+    opacity: 0.18;
+    pointer-events: none;
+    animation: xm-landing-pulse-glow 3.6s ease-in-out infinite alternate;
+  }
+
+  &::before {
+    top: -8rem;
+    left: -4rem;
+    background: color-mix(in srgb, var(--xm-color-primary) 72%, transparent);
+  }
+
+  &::after {
+    right: -6rem;
+    bottom: 10rem;
+    background: color-mix(in srgb, var(--xm-color-primary) 36%, transparent);
+  }
+
+  > :where(section, footer) {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.xm-landing {
+  &-glass-surface {
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 86%, transparent);
+    background: color-mix(in srgb, var(--xm-color-surface) 78%, transparent);
+    backdrop-filter: blur(24px);
+
+    :root[data-theme='dark'] & {
+      background: color-mix(in srgb, var(--xm-color-surface) 84%, transparent);
+    }
+  }
+
+  &-hero-gradient {
+    background-image: linear-gradient(
+      120deg,
+      var(--xm-color-primary),
+      var(--xm-color-text-primary)
+    );
+  }
+
+  &-style-ring {
+    background: color-mix(in srgb, var(--xm-color-primary) 14%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--xm-color-primary) 8%, transparent);
+  }
+
+  &-hero-shell {
+    &::before {
+      content: '';
+      position: absolute;
+      top: -1.5rem;
+      right: 2.5rem;
+      z-index: -1;
+      width: 88%;
+      height: 80%;
+      border-radius: 9999px;
+      background: color-mix(in srgb, var(--xm-color-primary) 24%, transparent);
+      filter: blur(48px);
+      animation: xm-landing-image-shadow 2s linear infinite alternate;
+    }
+  }
+
+  &-hero-image {
+    box-shadow: 0 20px 45px color-mix(in srgb, var(--xm-color-text-primary) 18%, transparent);
+    animation: xm-landing-image-border 2s linear infinite alternate;
+  }
+}

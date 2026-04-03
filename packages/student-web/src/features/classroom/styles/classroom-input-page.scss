@@ -1,0 +1,11 @@
+/**
+ * 文件说明：课堂入口占位页局部样式。
+ * 负责网格区块与探针区域的 feature scoped 层级定义。
+ */
+.xm-classroom-input-page {
+  &__grid,
+  &__probe {
+    position: relative;
+    z-index: 1;
+  }
+}

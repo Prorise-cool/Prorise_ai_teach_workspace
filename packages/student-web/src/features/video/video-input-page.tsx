@@ -6,8 +6,11 @@ import { Link } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
-import '@/features/home/styles/entry-pages.css';
+import '@/features/video/styles/video-input-page.scss';
 
 type EntryNavLink = {
   href: string;
@@ -26,7 +29,7 @@ export function VideoInputPage() {
   }) as EntryNavLink[];
 
   return (
-    <main className="min-h-screen px-5 pb-12 pt-5 md:px-8">
+    <main className="xm-video-input-page min-h-screen px-5 pb-12 pt-5 md:px-8">
       <GlobalTopNav
         links={navLinks}
         showAuthAction
@@ -35,34 +38,30 @@ export function VideoInputPage() {
         className="xm-landing-glass-nav"
       />
 
-      <section className="mx-auto mt-10 max-w-[980px]">
-        <div className="xm-surface-card rounded-[var(--xm-radius-xl)] p-10 text-center">
-          <span className="xm-floating-pill inline-flex px-3 py-1 text-sm font-medium">
-            {t('entryRoutes.video.badge')}
-          </span>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
-            {t('entryRoutes.video.title')}
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            {t('entryRoutes.video.description')}
-          </p>
+      <section className="xm-video-input-page__shell mx-auto mt-10 max-w-[980px]">
+        <Card className="xm-video-input-page__card xm-surface-card text-center">
+          <CardContent className="p-10">
+            <Badge variant="floating">
+              {t('entryRoutes.video.badge')}
+            </Badge>
+            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
+              {t('entryRoutes.video.title')}
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              {t('entryRoutes.video.description')}
+            </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link
-              to="/"
-              className="rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition hover:opacity-90"
-            >
-              {t('entryRoutes.video.primaryAction')}
-            </Link>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Button asChild>
+                <Link to="/">{t('entryRoutes.video.primaryAction')}</Link>
+              </Button>
 
-            <Link
-              to="/landing"
-              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:bg-muted"
-            >
-              {t('entryRoutes.video.secondaryAction')}
-            </Link>
-          </div>
-        </div>
+              <Button asChild variant="outline">
+                <Link to="/landing">{t('entryRoutes.video.secondaryAction')}</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
     </main>
   );

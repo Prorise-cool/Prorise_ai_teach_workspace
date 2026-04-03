@@ -10,9 +10,12 @@ import {
   UserRound
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import {
   AuthCaptchaField,
   AuthField,
@@ -66,6 +69,7 @@ export function RegisterForm({
     captchaEnabled: false
   });
   const {
+    control,
     register,
     handleSubmit,
     setError,
@@ -218,17 +222,31 @@ export function RegisterForm({
         />
       ) : null}
 
-      <label className="xm-auth-checkbox-label">
-        <input type="checkbox" {...register('agreeToTerms')} />
-        <span>{authPageCopy.agreement}</span>
-      </label>
+      <Controller
+        name="agreeToTerms"
+        control={control}
+        render={({ field }) => (
+          <Label className="xm-auth-checkbox-label">
+            <Checkbox
+              name={field.name}
+              checked={field.value}
+              disabled={isSubmitting || captchaLoading}
+              onBlur={field.onBlur}
+              onCheckedChange={checked => {
+                field.onChange(checked === true);
+              }}
+            />
+            <span>{authPageCopy.agreement}</span>
+          </Label>
+        )}
+      />
       {errors.agreeToTerms?.message ? (
         <p className="xm-auth-field-error" role="alert">
           {errors.agreeToTerms.message}
         </p>
       ) : null}
 
-      <button
+      <Button
         className="xm-auth-primary-btn"
         type="submit"
         disabled={isSubmitting || captchaLoading}
@@ -241,17 +259,18 @@ export function RegisterForm({
         ) : (
           authPageCopy.registerSubmit
         )}
-      </button>
+      </Button>
 
       <p className="xm-auth-helper-text">
         {authPageCopy.switchToLoginPrefix}{' '}
-        <button
+        <Button
           type="button"
+          variant="link"
           className="xm-auth-inline-link"
           onClick={onSwitchToLogin}
         >
           {authPageCopy.switchToLoginAction}
-        </button>
+        </Button>
       </p>
     </form>
   );

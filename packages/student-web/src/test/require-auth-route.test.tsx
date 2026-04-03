@@ -1,8 +1,9 @@
 /**
  * 文件说明：验证受保护路由在 Story 1.4 入口链路中的回跳与鉴权守卫。
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { afterEach, vi } from 'vitest';
 
 import { AppProvider } from '@/app/provider/app-provider';
 import { RequireAuthRoute } from '@/features/auth/components/require-auth-route';
@@ -25,6 +26,10 @@ function createServiceStub(overrides: Partial<AuthService> = {}): AuthService {
 }
 
 describe('RequireAuthRoute', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     resetAuthSessionStore();
     window.localStorage.clear();
@@ -122,6 +127,88 @@ describe('RequireAuthRoute', () => {
       await screen.findByText('Protected classroom input')
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/classroom/input');
+  });
+
+  it('uses the top loading bar instead of a centered loading card while validating sessions', async () => {
+    vi.useFakeTimers();
+
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+
+    let resolveCurrentUser:
+      | ((value: typeof session.user) => void)
+      | undefined;
+    const pendingCurrentUser = new Promise<typeof session.user>(resolve => {
+      resolveCurrentUser = resolve;
+    });
+
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/',
+          element: (
+            <RequireAuthRoute
+              service={createServiceStub({
+                getCurrentUser: vi.fn().mockReturnValue(pendingCurrentUser)
+              })}
+            />
+          ),
+          children: [
+            {
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
+            }
+          ]
+        },
+        {
+          path: '/login',
+          element: <LoginPage service={mockAuthService} />
+        },
+        {
+          path: '/forbidden',
+          element: <ForbiddenPage />
+        }
+      ],
+      {
+        initialEntries: ['/classroom/input']
+      }
+    );
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    expect(screen.queryByText('正在校验会话')).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(180);
+    });
+
+    expect(
+      screen.getByRole('progressbar', { name: '全局加载中' })
+    ).toBeInTheDocument();
+
+    vi.useRealTimers();
+
+    if (resolveCurrentUser) {
+      resolveCurrentUser(session.user);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText('Protected classroom input')).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('progressbar', { name: '全局加载中' })
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('redirects expired persisted sessions back to /login', async () => {
