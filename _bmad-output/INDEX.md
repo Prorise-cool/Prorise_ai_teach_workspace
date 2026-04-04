@@ -14,7 +14,15 @@
 
 ### implementation-artifacts/
 
-- 当前目录存在，但目前没有可用条目。
+- [索引](./implementation-artifacts/index.md) - Story 实施文档索引
+- Epic 1 Story 文档：
+  - [Story 1.1: 统一认证契约、会话 payload 与 mock 基线](./implementation-artifacts/1-1-统一认证契约会话-payload-与-mock-基线.md)
+  - [Story 1.2: 独立认证页中的注册登录与回跳](./implementation-artifacts/1-2-独立认证页中的注册登录与回跳.md)
+  - [Story 1.3: 登出、401 处理与受保护访问一致性](./implementation-artifacts/1-3-登出401-处理与受保护访问一致性.md)
+  - [Story 1.4: 首页课堂直达入口与顶栏导航分发](./implementation-artifacts/1-4-首页课堂直达入口与顶栏导航分发.md)
+  - [Story 1.5: 用户配置系统（个人简介与学习偏好）](./implementation-artifacts/1-5-用户配置系统（个人简介与学习偏好）.md)
+  - [Story 1.6: 角色边界与入口级权限可见性](./implementation-artifacts/1-6-角色边界与入口级权限可见性.md)
+  - [Story 1.7: 营销落地页与 home 首页分流](./implementation-artifacts/1-7-营销落地页与-home-首页分流.md)
 
 ### planning-artifacts/
 

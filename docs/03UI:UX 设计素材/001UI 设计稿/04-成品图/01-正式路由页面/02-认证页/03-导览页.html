@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 XiaoMai - 导览体验</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
+	<!-- 引入 Remix Icon -->
+	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+	
+	<style>
+		:root {
+			--bg-main: #f5ede1;
+			--bg-panel: #ffffff;
+			--bg-input: #fbf6ef;
+			--border-color: #e6dcc8;
+			--text-main: #3b1701;
+			--text-muted: #6b4421;
+			--brand-yellow: #f5c547;
+		}
+
+		html.dark {
+			--bg-main: #110e0d;
+			--bg-panel: #1f1a18;
+			--bg-input: #181412;
+			--border-color: #302824;
+			--text-main: #f5ede1;
+			--text-muted: #a89f91;
+			--brand-yellow: #f5c547;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+			font-family: 'Inter', 'Noto Sans SC', sans-serif;
+		}
+
+		body {
+			min-height: 100vh;
+			display: flex;
+			background-color: var(--bg-panel);
+			color: var(--text-main);
+			overflow-x: hidden;
+		}
+
+		.top-nav {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			padding: 30px 40px;
+			display: flex;
+			align-items: center;
+			z-index: 10;
+		}
+
+		.back-btn {
+			width: 40px;
+			height: 40px;
+			border: none;
+			background: transparent;
+			color: var(--text-main);
+			font-size: 24px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50%;
+			transition: background 0.2s;
+		}
+		
+		.back-btn:hover {
+			background: var(--bg-input);
+		}
+
+		.steps-progress {
+			position: absolute;
+			top: 40px;
+			left: 50%;
+			transform: translateX(-50%);
+			display: flex;
+			gap: 8px;
+			z-index: 10;
+		}
+
+		.progress-dot {
+			width: 32px;
+			height: 4px;
+			background: var(--border-color);
+			border-radius: 2px;
+			transition: background 0.3s ease;
+		}
+
+		.progress-dot.active {
+			background: var(--text-main);
+		}
+
+		.container {
+			flex: 1;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 80px 40px;
+			width: 100%;
+			max-width: 1200px;
+			margin: 0 auto;
+			gap: 80px;
+		}
+
+		.content-left {
+			flex: 1;
+			max-width: 420px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.tour-info {
+			min-height: 160px;
+			animation: fadeIn 0.4s ease;
+		}
+
+		.title {
+			font-size: 36px;
+			font-weight: 700;
+			margin-bottom: 20px;
+			line-height: 1.3;
+		}
+
+		.subtitle {
+			font-size: 16px;
+			color: var(--text-muted);
+			margin-bottom: 48px;
+			line-height: 1.6;
+		}
+
+		.actions {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+			width: 100%;
+			max-width: 320px;
+		}
+
+		.btn-primary {
+			width: 100%;
+			height: 48px;
+			background: var(--text-main);
+			color: var(--bg-panel);
+			border: none;
+			border-radius: 9999px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.1s, opacity 0.2s;
+		}
+
+		html.dark .btn-primary {
+			background: var(--text-main);
+			color: var(--bg-panel);
+		}
+
+		.btn-primary:active {
+			transform: scale(0.98);
+		}
+
+		.btn-skip {
+			background: none;
+			border: none;
+			color: var(--text-muted);
+			font-size: 15px;
+			font-weight: 600;
+			cursor: pointer;
+			padding: 8px;
+			transition: color 0.2s;
+		}
+		
+		.btn-skip:hover {
+			color: var(--text-main);
+		}
+
+		/* Right Side Demo Area */
+		.content-right {
+			flex: 1.2;
+			max-width: 500px;
+			width: 100%;
+		}
+
+		.demo-card {
+			width: 100%;
+			aspect-ratio: 1 / 1;
+			background: var(--bg-main);
+			border-radius: 32px;
+			border: 1px solid var(--border-color);
+			position: relative;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 20px 40px rgba(59, 23, 1, 0.05);
+			overflow: hidden;
+		}
+
+		.gif-placeholder {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			/* default background if no gif is provided */
+			background: rgba(0, 0, 0, 0.02);
+		}
+
+		.placeholder-text {
+			position: absolute;
+			color: var(--text-muted);
+			font-size: 14px;
+			font-weight: 600;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12px;
+			pointer-events: none;
+		}
+
+		.placeholder-text i {
+			font-size: 32px;
+			opacity: 0.5;
+		}
+
+		@keyframes fadeIn {
+			from { opacity: 0; transform: translateX(-10px); }
+			to { opacity: 1; transform: translateX(0); }
+		}
+
+		@media (max-width: 850px) {
+			.container {
+				flex-direction: column;
+				text-align: center;
+				padding: 100px 24px 40px;
+				gap: 40px;
+			}
+			.content-left {
+				align-items: center;
+			}
+			.actions {
+				margin: 0 auto;
+			}
+			.tour-info {
+				min-height: 120px;
+			}
+		}
+	</style>
+	<script>
+		(function () {
+			const savedTheme = localStorage.getItem('xiaomai-theme') || 'light';
+			document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+			document.documentElement.classList.toggle('light', savedTheme !== 'dark');
+		})();
+	</script>
+</head>
+
+<body>
+	<div class="top-nav">
+		<button class="back-btn" onclick="prevStep()" id="backBtn" style="visibility: hidden;">
+			<i class="ri-arrow-left-s-line"></i>
+		</button>
+	</div>
+
+	<div class="steps-progress">
+		<div class="progress-dot active" id="dot-1"></div>
+		<div class="progress-dot" id="dot-2"></div>
+		<div class="progress-dot" id="dot-3"></div>
+	</div>
+
+	<div class="container">
+		<div class="content-left">
+			<div class="tour-info" id="tour-info">
+				<h1 class="title" id="tour-title">学习计划生成</h1>
+				<p class="subtitle" id="tour-subtitle">一键生成你的专属学习大纲，合理规划学习路径，轻松攻克目标。</p>
+			</div>
+			
+			<div class="actions">
+				<button class="btn-primary" onclick="nextStep()" id="nextBtn">继续</button>
+				<button class="btn-skip" onclick="finishTour()">跳过导览</button>
+			</div>
+		</div>
+
+		<div class="content-right">
+			<div class="demo-card">
+				<!-- 用户可以在这里替换真实的 src="xxx.gif" -->
+				<img class="gif-placeholder" id="demo-img" src="" alt="">
+				<div class="placeholder-text" id="demo-overlay">
+					<i class="ri-image-add-line"></i>
+					<span id="demo-overlay-text">此处放置 GIF 1: 学习计划</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// 导览步骤数据
+		const steps = [
+			{
+				title: "学习计划生成",
+				subtitle: "一键生成你的专属学习大纲，合理规划学习路径，轻松攻克每一项目标。",
+				overlayText: "此处放置 GIF 1: 学习计划\n(img src 可由开发替换)",
+				imgSrc: "" // 如果有真实路径可以填在这，如 "../assets/gif1.gif"
+			},
+			{
+				title: "沉浸式课堂输入",
+				subtitle: "与 AI 老师在虚拟课堂中实时语音文字互动，打破传统枯燥的听课体验。",
+				overlayText: "此处放置 GIF 2: 课堂输入\n(img src 可由开发替换)",
+				imgSrc: ""
+			},
+			{
+				title: "一键视频生成",
+				subtitle: "将学到的知识或笔记瞬间转化为生动有趣的短视频，分享从未如此简单。",
+				overlayText: "此处放置 GIF 3: 视频生成\n(img src 可由开发替换)",
+				imgSrc: ""
+			}
+		];
+
+		let currentStep = 0;
+
+		function updateView() {
+			const infoContainer = document.getElementById('tour-info');
+			// 移除旧动画重置
+			infoContainer.style.animation = 'none';
+			infoContainer.offsetHeight; // 触发回流
+			infoContainer.style.animation = 'fadeIn 0.4s ease';
+
+			document.getElementById('tour-title').innerText = steps[currentStep].title;
+			document.getElementById('tour-subtitle').innerText = steps[currentStep].subtitle;
+			
+			// 替换右侧 GIF 图与占位文字
+			const imgEl = document.getElementById('demo-img');
+			const overlayEl = document.getElementById('demo-overlay');
+			
+			imgEl.src = steps[currentStep].imgSrc;
+			// 若 src 为空，强制显示 overlay 文本
+			if (!steps[currentStep].imgSrc) {
+				overlayEl.style.display = 'flex';
+				document.getElementById('demo-overlay-text').innerText = steps[currentStep].overlayText;
+			} else {
+				overlayEl.style.display = 'none';
+			}
+
+			// 更新进度条
+			for (let i = 0; i < steps.length; i++) {
+				document.getElementById(`dot-${i+1}`).classList.toggle('active', i === currentStep);
+			}
+
+			// 更新按钮状态
+			document.getElementById('backBtn').style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+			const nextBtn = document.getElementById('nextBtn');
+			if (currentStep === steps.length - 1) {
+				nextBtn.innerText = "进入小麦";
+			} else {
+				nextBtn.innerText = "继续";
+			}
+		}
+
+		function nextStep() {
+			if (currentStep < steps.length - 1) {
+				currentStep++;
+				updateView();
+			} else {
+				finishTour();
+			}
+		}
+
+		function prevStep() {
+			if (currentStep > 0) {
+				currentStep--;
+				updateView();
+			}
+		}
+
+		function finishTour() {
+			alert('导览结束，正式进入小麦主产品界面！');
+			// window.location.href = '/home'; // 真实场景替换为首页路由
+		}
+
+		// 初始化
+		updateView();
+	</script>
+</body>
+</html>
