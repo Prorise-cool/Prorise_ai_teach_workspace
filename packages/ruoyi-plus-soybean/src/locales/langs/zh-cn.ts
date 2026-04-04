@@ -297,6 +297,8 @@ const local: App.I18n.Schema = {
     exception_500: '500',
     tool: '系统工具',
     tool_gen: '代码生成',
+    xiaomai: '学生管理',
+    'xiaomai_user-profile': '用户配置',
     about: '关于'
   },
   menu: {

@@ -301,6 +301,8 @@ const local: App.I18n.Schema = {
     exception_500: '500',
     tool: 'System Tools',
     tool_gen: 'Code Generation',
+    xiaomai: 'Student Management',
+    'xiaomai_user-profile': 'User Profile',
     about: 'About'
   },
   menu: {

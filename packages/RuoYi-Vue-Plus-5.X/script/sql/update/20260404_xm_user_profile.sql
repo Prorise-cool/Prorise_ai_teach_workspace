@@ -10,6 +10,7 @@ SET @dict_data_base := IFNULL((SELECT MAX(dict_code) FROM sys_dict_data), 0);
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS `xm_user_profile` (
     `id`               bigint(20)      NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `tenant_id`        varchar(20)     NOT NULL DEFAULT '000000' COMMENT '租户编号',
     `user_id`          bigint(20)      NOT NULL COMMENT '用户ID（关联sys_user.user_id）',
     `avatar_url`       varchar(500)    DEFAULT NULL COMMENT '头像URL',
     `bio`              varchar(500)    DEFAULT NULL COMMENT '个人简介（200字限制）',
