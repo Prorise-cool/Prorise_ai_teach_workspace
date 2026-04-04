@@ -1,18 +1,18 @@
 /** Default theme settings */
 export const themeSettings: App.Theme.ThemeSetting = {
-  themeScheme: 'auto',
+  themeScheme: 'dark',
   grayscale: false,
   colourWeakness: false,
   recommendColor: false,
-  themeColor: '#0E42D2',
-  themeRadius: 6,
+  themeColor: '#eab308',
+  themeRadius: 8,
   otherColor: {
-    info: '#0E42D2',
-    success: '#009A29',
-    warning: '#D25F00',
-    error: '#CB2634'
+    info: '#2080f0',
+    success: '#52c41a',
+    warning: '#faad14',
+    error: '#f5222d'
   },
-  isInfoFollowPrimary: true,
+  isInfoFollowPrimary: false,
   layout: {
     mode: 'vertical',
     scrollMode: 'content'
@@ -39,12 +39,12 @@ export const themeSettings: App.Theme.ThemeSetting = {
     cache: true,
     height: 44,
     mode: 'chrome',
-    closeTabByMiddleClick: true
+    closeTabByMiddleClick: false
   },
   fixedHeaderAndTab: true,
   sider: {
     inverted: false,
-    width: 230,
+    width: 220,
     collapsedWidth: 64,
     mixWidth: 90,
     mixCollapsedWidth: 64,
@@ -59,8 +59,8 @@ export const themeSettings: App.Theme.ThemeSetting = {
   },
   watermark: {
     visible: import.meta.env.VITE_WATERMARK === 'Y',
-    text: 'RuoYi-Plus-Soybean',
-    enableUserName: true,
+    text: 'Xiao-Mai',
+    enableUserName: false,
     enableTime: false,
     timeFormat: 'YYYY-MM-DD HH:mm'
   },
@@ -70,7 +70,7 @@ export const themeSettings: App.Theme.ThemeSetting = {
     singleColumn: false,
     singleLine: true,
     size: 'small',
-    striped: false
+    striped: true
   },
   tokens: {
     light: {

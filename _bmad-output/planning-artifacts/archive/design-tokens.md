@@ -34,12 +34,6 @@
 *   **Error (错误)**: `#f82834` (`$error`)
 *   **Error Dark (深色错误)**: `#bf0004` (`$error-dark`)
 
-### 4. 智能体/讲师风格色 (Agent Colors)
-*   **Agent Efficient (高效/干练)**: `#6D5DF4` (`$agent-efficient`)
-*   **Agent Humorous (风趣/幽默)**: `#FFB020` (`$agent-humorous`)
-*   **Agent Patient (温和/耐心)**: `#00C48C` (`$agent-patient`)
-*   **Agent Serious (严肃/严谨)**: `#0091FF` (`$agent-serious`)
-
 
 ## 二、排版系统 (Typography)
 

@@ -1,6 +1,6 @@
 const local: App.I18n.Schema = {
   system: {
-    title: 'RuoYi Plus Soybean',
+    title: 'Xiao-Mai',
     updateTitle: 'System Version Update Notification',
     updateContent: 'A new version of the system has been detected. Do you want to refresh the page immediately?',
     updateConfirm: 'Refresh immediately',
@@ -120,9 +120,9 @@ const local: App.I18n.Schema = {
           name: 'Default Preset',
           desc: 'Default theme preset with balanced settings'
         },
-        soybean: {
-          name: 'Soybean',
-          desc: 'Default theme preset of SoybeanAdmin'
+        xiaomai: {
+          name: 'Xiao-Mai',
+          desc: 'Xiao-Mai default preset - Dark mode with golden brand color'
         },
         dark: {
           name: 'Dark Preset',
@@ -465,11 +465,11 @@ const local: App.I18n.Schema = {
       projectNews: {
         title: 'Project News',
         moreNews: 'More News',
-        desc1: 'Soybean created the open source project soybean-admin on May 28, 2021!',
-        desc2: 'Yanbowe submitted a bug to soybean-admin, the multi-tab bar will not adapt.',
-        desc3: 'Soybean is ready to do sufficient preparation for the release of soybean-admin!',
-        desc4: 'Soybean is busy writing project documentation for soybean-admin!',
-        desc5: 'Soybean just wrote some of the workbench pages casually, and it was enough to see!'
+        desc1: 'Xiao-Mai team created the open source project Xiao-Mai on May 28, 2021!',
+        desc2: 'Yanbowe submitted a bug to Xiao-Mai, the multi-tab bar will not adapt.',
+        desc3: 'Xiao-Mai team is ready to do sufficient preparation for the release of Xiao-Mai!',
+        desc4: 'Xiao-Mai team is busy writing project documentation for Xiao-Mai!',
+        desc5: 'Xiao-Mai team just wrote some of the workbench pages casually, and it was enough to see!'
       },
       creativity: 'Creativity'
     },
@@ -1212,7 +1212,7 @@ const local: App.I18n.Schema = {
     },
     about: {
       title: 'About',
-      introduction: `RuoYi-Plus-Soybean is a modern, enterprise-level multi-tenant management system. It combines the powerful backend capabilities of RuoYi-Vue-Plus with the modern frontend features of Soybean Admin, providing developers with a complete enterprise management solution.`,
+      introduction: `Xiao-Mai is a modern, enterprise-level multi-tenant management system. It combines the powerful backend capabilities of RuoYi-Vue-Plus with modern frontend features, providing developers with a complete enterprise management solution.`,
       projectInfo: {
         title: 'Project Info',
         version: 'Version',
