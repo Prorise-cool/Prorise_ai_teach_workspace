@@ -6,7 +6,7 @@
 **Story types expected:** `Infrastructure Story`、`Contract Story`
 
 ### Epic 1: 用户接入、统一入口与启动配置
-用户可以完成登录，以首页课堂直达入口进入默认学习起点，并通过顶栏导航进入其他有效入口，同时把老师风格作为会话启动配置带入后续流程。  
+用户可以完成登录，以首页课堂直达入口进入默认学习起点，并通过顶栏导航进入其他有效入口，同时把用户配置带入后续流程，以便系统智能分配合适的 AI agents。  
 **FRs covered:** `FR-UM-001`、`FR-UM-002`、`FR-UM-004`、`FR-UI-R01`、`FR-UI-001`、`FR-CS-002`  
 **NFRs covered:** `NFR-SE-002`、`NFR-UX-001`、`NFR-UX-003`
 

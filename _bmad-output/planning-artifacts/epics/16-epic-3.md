@@ -81,7 +81,7 @@ So that 输入页、创建接口和等待页可以围绕同一任务起点并行
 **Given** 视频域进入实施阶段  
 **When** 视频任务创建契约首次发布  
 **Then** 至少明确创建请求字段、成功响应字段、校验失败响应、权限失败响应与任务初始化状态  
-**And** 前端不需要猜测 `taskId`、`inputType`、`agentStyle`、`sourcePayload` 等字段含义  
+**And** 前端不需要猜测 `taskId`、`inputType`、`userProfile`、`sourcePayload` 等字段含义  
 
 **Given** 前端在 mock 模式下开发  
 **When** 用户从输入页创建视频任务  
@@ -200,7 +200,7 @@ So that 我不会在任务已经开始执行时还停留在输入页失去进度
 **Given** 用户成功创建视频任务  
 **When** 前端收到创建成功响应  
 **Then** 页面自动跳转到 `/video/:id/generating` 或等效等待页  
-**And** 当前任务 ID、输入摘要与风格选择可在等待页被正确识别  
+**And** 当前任务 ID、输入摘要与用户配置可在等待页被正确识别  
 
 **Given** 用户在 mock 模式下开发或演示  
 **When** 创建动作成功  
