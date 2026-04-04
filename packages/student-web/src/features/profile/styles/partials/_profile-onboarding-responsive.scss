@@ -1,0 +1,72 @@
+/**
+ * 文件说明：用户配置引导页响应式布局。
+ * 负责在平板与移动端收紧 intro / preferences / tour 的间距与栅格。
+ */
+@media (max-width: 960px) {
+  .xm-profile-onboarding {
+    &__intro-shell,
+    &__tour-content {
+      flex-direction: column;
+    }
+
+    &__intro-shell {
+      .xm-auth-left-panel {
+        min-height: 320px;
+        min-width: 100%;
+      }
+    }
+
+    &__intro-panel {
+      padding: 32px 24px 36px;
+    }
+
+    &__tour-shell {
+      padding: 28px 24px 32px;
+    }
+
+    &__tour-progress {
+      top: 32px;
+    }
+
+    &__tour-content {
+      gap: 36px;
+      min-height: auto;
+      padding-top: 40px;
+    }
+
+    &__tour-copy {
+      flex-basis: auto;
+      width: 100%;
+    }
+
+    &__tour-card {
+      min-height: 360px;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .xm-profile-onboarding {
+    &--intro,
+    &--preferences,
+    &--tour {
+      padding: 12px;
+    }
+
+    &__surface,
+    &__tour-shell {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    &__personality-list,
+    &__stack-actions,
+    &__stack-actions--tour {
+      width: 100%;
+    }
+
+    &__teacher-tags {
+      justify-content: flex-start;
+    }
+  }
+}

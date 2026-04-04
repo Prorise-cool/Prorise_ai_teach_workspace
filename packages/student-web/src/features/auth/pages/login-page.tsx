@@ -4,7 +4,7 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, MoonStar, SunMedium } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { LoginForm } from '@/features/auth/components/login-form';
 import { RegisterForm } from '@/features/auth/components/register-form';
 import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state';
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect';
+import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
 import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
 import { authService, type AuthService } from '@/services/auth';
 import { useFeedback } from '@/shared/feedback';
@@ -44,6 +45,7 @@ export function LoginPage({
   const { t } = useAppTranslation();
   const authPageCopy = useAuthPageCopy();
   const { notify } = useFeedback();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<AuthView>('login');
   const [registerEnabled, setRegisterEnabled] = useState(false);
   const [registerSucceeded, setRegisterSucceeded] = useState(false);
@@ -68,8 +70,7 @@ export function LoginPage({
   } = useAuthPageUiState();
   
   const {
-    returnTo,
-    redirectAfterAuth
+    returnTo
   } = useAuthRedirect();
 
   /**
@@ -93,27 +94,59 @@ export function LoginPage({
   }, [session?.accessToken]);
 
   useLayoutEffect(() => {
+    let isActive = true;
+
     if (!session?.accessToken) {
-      return;
+      return undefined;
     }
 
-    if (redirectFeedbackShownRef.current !== authRedirectReason) {
-      const isFreshLogin = authRedirectReason === 'login-success';
-      notify({
-        tone: isFreshLogin ? 'success' : 'info',
-        title: isFreshLogin
-          ? t('auth.feedback.loginSuccessTitle')
-          : t('auth.feedback.alreadySignedInTitle'),
-        description: isFreshLogin
-          ? t('auth.feedback.loginSuccessMessage')
-          : t('auth.feedback.alreadySignedInMessage')
+    const activeSession = session;
+
+    async function redirectAfterSessionReady() {
+      if (redirectFeedbackShownRef.current !== authRedirectReason) {
+        const isFreshLogin = authRedirectReason === 'login-success';
+        notify({
+          tone: isFreshLogin ? 'success' : 'info',
+          title: isFreshLogin
+            ? t('auth.feedback.loginSuccessTitle')
+            : t('auth.feedback.alreadySignedInTitle'),
+          description: isFreshLogin
+            ? t('auth.feedback.loginSuccessMessage')
+            : t('auth.feedback.alreadySignedInMessage')
+        });
+
+        redirectFeedbackShownRef.current = authRedirectReason;
+      }
+
+      const nextPath = await resolvePostAuthDestination({
+        userId: activeSession.user.id,
+        accessToken: activeSession.accessToken,
+        returnTo
       });
 
-      redirectFeedbackShownRef.current = authRedirectReason;
+      if (!isActive) {
+        return;
+      }
+
+      void navigate(nextPath, {
+        replace: true,
+        state: null
+      });
     }
 
-    void redirectAfterAuth();
-  }, [authRedirectReason, notify, redirectAfterAuth, session?.accessToken, t]);
+    void redirectAfterSessionReady();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    authRedirectReason,
+    navigate,
+    notify,
+    returnTo,
+    session,
+    t
+  ]);
 
   useEffect(() => {
     let cancelled = false;
