@@ -160,18 +160,22 @@ def test_sse_broker_assigns_sequential_identity_and_supports_replay_after_event_
 
 def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
     completed_payload = _load_json("mocks/tasks/sse.completed.json")
+    cancelled_payload = _load_json("mocks/tasks/sse.cancelled.json")
     failed_payload = _load_json("mocks/tasks/sse.failed.json")
     provider_switch_payload = _load_json("mocks/tasks/sse.provider-switch.json")
     provider_switch_runtime_payload = _load_json("mocks/tasks/provider-switch.json")
     provider_health_cache_payload = _load_json("mocks/tasks/provider-health-cache.json")
     snapshot_payload = _load_json("mocks/tasks/sse.snapshot.json")
     polling_snapshot_payload = _load_json("mocks/tasks/task-status.polling.json")
+    cancelled_sequence_payload = _load_json("mocks/tasks/sse.sequence.cancelled.json")
     failed_sequence_payload = _load_json("mocks/tasks/sse.sequence.failed.json")
     runtime_progress_payload = _load_json("mocks/tasks/task-events.progress.json")
     event_schema = _load_json("contracts/tasks/sse-event.schema.json")
+    task_progress_schema = _load_json("contracts/tasks/task-progress-event.schema.json")
 
     for payload in (
         completed_payload,
+        cancelled_payload,
         failed_payload,
         provider_switch_payload,
         snapshot_payload
@@ -185,15 +189,23 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
         model = TaskProgressEvent.model_validate(payload)
         assert model.sequence == index
 
+    for index, payload in enumerate(cancelled_sequence_payload, start=1):
+        model = TaskProgressEvent.model_validate(payload)
+        assert model.sequence == index
+        assert model.event in {"connected", "progress", "cancelled"}
+
     for index, payload in enumerate(runtime_progress_payload, start=1):
         model = TaskProgressEvent.model_validate(payload)
         assert model.event == "progress"
         assert model.sequence == index
 
+    cancelled_model = TaskProgressEvent.model_validate(cancelled_payload)
     provider_switch_model = TaskProgressEvent.model_validate(provider_switch_payload)
     runtime_provider_switch_model = TaskProgressEvent.model_validate(provider_switch_runtime_payload)
     snapshot_model = TaskProgressEvent.model_validate(snapshot_payload)
 
+    assert cancelled_model.event == "cancelled"
+    assert cancelled_model.error_code == TaskErrorCode.CANCELLED
     assert provider_switch_model.event == "provider_switch"
     assert provider_switch_model.from_ == "gemini-2_5-flash"
     assert provider_switch_model.to == "claude-3_7-sonnet"
@@ -228,3 +240,4 @@ def test_task_contract_assets_can_be_consumed_by_backend_models() -> None:
         "heartbeat",
         "snapshot"
     ]
+    assert task_progress_schema["properties"]["event"]["enum"] == event_schema["properties"]["event"]["enum"]
