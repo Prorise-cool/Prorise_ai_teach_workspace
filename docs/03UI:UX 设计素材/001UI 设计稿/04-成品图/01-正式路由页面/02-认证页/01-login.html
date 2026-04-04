@@ -1279,9 +1279,9 @@
 
 			<!-- ================= 视图3：完善信息 ================= -->
 			<div class="view-section" id="view-profile">
-				<span class="skip-link" onclick="switchView('view-login')">跳过</span>
-				<h1 class="view-title" style="font-size: 28px;">完善个人信息</h1>
-				<p class="view-subtitle">让小麦推荐更适合你的学习内容与老师风格。</p>
+				<span class="skip-link" onclick="window.location.href='03-导览页.html'">跳过</span>
+				<h1 class="view-title" style="font-size: 28px;">个人信息简介</h1>
+				<p class="view-subtitle">简单介绍一下你自己，让我们更好地认识你。</p>
 
 				<div class="avatar-upload interact-avatar">
 					<div class="avatar-circle">
@@ -1293,35 +1293,35 @@
 					<span style="font-size: 13px; color: var(--text-muted);">点击上传头像</span>
 				</div>
 
-				<div class="form-group">
-					<label class="form-label">昵称</label>
-					<div class="input-wrapper">
-						<input type="text" placeholder="输入你的昵称" class="interact-account">
+				<div class="form-group" style="margin-bottom: 24px;">
+					<label class="form-label">个人简介</label>
+					<div class="input-wrapper" style="height: auto; padding: 12px 16px;">
+						<textarea placeholder="例如：我是一名大二学生，最近在准备英语六级考试..." class="interact-account" id="user-bio-input" style="width: 100%; height: 80px; background: transparent; border: none; resize: none; color: var(--text-main); font-size: 14px; outline: none;"></textarea>
 					</div>
 				</div>
 
-				<div class="form-group">
-					<label class="form-label">所在院校 (选填)</label>
-					<div class="input-wrapper">
-						<input type="text" placeholder="搜索学校名称...">
-						<i class="ri-search-line" style="color: var(--text-muted); font-size: 20px;"></i>
-					</div>
+				<div class="helper-text" style="text-align: left; margin-bottom: 24px; padding-top: 0;">
+					* 大模型会分析您的用户简介，为您个性化推荐内容。
 				</div>
 
-				<label class="form-label">你的身份</label>
-				<div class="role-selector">
-					<button class="role-btn active interact-role">学生</button>
-					<button class="role-btn interact-role">教师</button>
-					<button class="role-btn interact-role">自学者</button>
-				</div>
-
-				<button class="btn-primary" onclick="alert('完成配置，进入系统！')">进入小麦</button>
+				<button class="btn-primary" onclick="checkRedirect()">下一步</button>
 			</div>
 
 		</div>
 	</div>
 
 	<script>
+		// ================= 模拟路由跳转逻辑 =================
+		function checkRedirect() {
+			const bioInput = document.getElementById('user-bio-input').value.trim();
+			// 如果没填个人简介，进入信息收集页作为补充；如果填写了，直接进入导览页
+			if (bioInput) {
+				window.location.href = '03-导览页.html';
+			} else {
+				window.location.href = '02-信息收集页.html';
+			}
+		}
+
 		const charactersWrapper = document.getElementById('characters');
 		let isAnimatingJump = false;
 		let idleTimer; // 用于睡眠彩蛋

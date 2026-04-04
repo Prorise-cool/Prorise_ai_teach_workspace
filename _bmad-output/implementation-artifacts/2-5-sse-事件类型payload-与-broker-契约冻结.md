@@ -12,14 +12,14 @@ so that 所有等待页、结果页和任务型接口都能消费一致的实时
 
 ## Acceptance Criteria
 
-1. 统一 SSE 契约至少包含 `connected`、`progress`、`provider_switch`、`completed`、`failed`、`heartbeat`、`snapshot` 七类事件，且每类事件的触发时机与字段语义被明确写入契约资产。
+1. 统一 SSE 契约至少包含 `connected`、`progress`、`provider_switch`、`completed`、`failed`、`cancelled`、`heartbeat`、`snapshot` 八类事件，且每类事件的触发时机与字段语义被明确写入契约资产。
 2. 前端在 mock 模式下消费任务事件时，只需围绕统一 payload 字段进行状态判断，不需要为视频、课堂、文档解析分别维护不同的 SSE 解析器。
 3. 后端写入 broker 的事件至少稳定包含事件类型、任务 ID、任务类型、状态、进度、消息、时间戳与事件 ID；失败事件可附带统一错误码，Provider 切换事件可附带 `from`、`to` 与 `reason`。
 
 ## Tasks / Subtasks
 
 - [x] 冻结事件目录与 payload schema（AC: 1, 3）
-  - [x] 为七类事件定义触发条件、必填字段、可选字段与示例数据。
+  - [x] 为八类事件定义触发条件、必填字段、可选字段与示例数据。
   - [x] 明确 `id` / `Last-Event-ID` 与 `snapshot` 的公共语义。
 - [x] 冻结 broker 事件写入约定（AC: 1, 3）
   - [x] 定义 broker 内部事件对象、序列化口径与事件顺序保证。
@@ -60,6 +60,7 @@ so that 所有等待页、结果页和任务型接口都能消费一致的实时
 - SSE 只承担实时推送，不承担长期审计历史；恢复所需 `snapshot` 也只能表达“当前最小状态”，不能演变成历史记录替代品。
 - 事件契约必须包含 `id` 与顺序语义，否则 `Story 2.6` 无法可靠实现 `Last-Event-ID` 恢复。
 - `provider_switch` 事件需要在契约层明确，而不能等到 Failover 实现时再临时决定字段。
+- `student-web` 已装 `eventsource-parser`，SSE transport 应优先复用该依赖承接协议解析，不再长期维护无说明的手写 SSE 文本拆分实现。
 
 ### Suggested File Targets
 
@@ -69,8 +70,10 @@ so that 所有等待页、结果页和任务型接口都能消费一致的实时
 - `mocks/tasks/sse.connected.json`
 - `mocks/tasks/sse.progress.json`
 - `mocks/tasks/sse.failed.json`
+- `mocks/tasks/sse.cancelled.json`
 - `mocks/tasks/sse.snapshot.json`
 - `mocks/tasks/sse.provider-switch.json`
+- `mocks/tasks/sse.sequence.cancelled.json`
 - `packages/student-web/src/services/sse/index.ts`
 - `packages/student-web/src/types/task.ts`
 - `packages/fastapi-backend/app/core/sse.py`
@@ -112,9 +115,14 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- 已冻结七类 SSE 事件目录、`id` / `sequence` 规则与 `Last-Event-ID` 预留口径，补齐契约文档与 schema。
+- 已冻结八类 SSE 事件目录、`id` / `sequence` 规则与 `Last-Event-ID` 预留口径，补齐契约文档与 schema。
 - 已让后端 `TaskProgressEvent` 与 `InMemorySseBroker` 统一补齐事件身份、校验关键字段，并支持按 `after_event_id` 回放。
 - 已补齐共享 mock 事件与前端统一 parser，确保前后端围绕同一组事件 JSON 做解析与测试。
+
+### Post-Review Alignment Fixes
+
+- 补齐了 `cancelled` 作为公开 SSE 终态事件的契约定义，清除规划、schema、mock 与实现之间的目录漂移。
+- 明确 `student-web` 的 SSE transport 应优先消费已装的 `eventsource-parser`，避免长期重复造轮子。
 
 ### File List
 

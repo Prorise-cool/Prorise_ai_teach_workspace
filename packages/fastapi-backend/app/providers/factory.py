@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Provider 工厂与默认注册入口。"""
+
 import json
 import os
 from dataclasses import dataclass
@@ -25,6 +27,8 @@ TTS_CHAIN_ENV = "FASTAPI_TTS_PROVIDER_CHAIN"
 
 @dataclass(slots=True, frozen=True)
 class ProviderAssembly:
+    """按能力分类装配后的 Provider 链集合。"""
+
     llm: tuple[LLMProvider, ...]
     tts: tuple[TTSProvider, ...]
 
@@ -195,6 +199,7 @@ class ProviderFactory:
 
 
 def build_default_registry() -> ProviderRegistry:
+    """构造默认 Provider 注册表。"""
     from app.providers.llm.factory import register_llm_providers
     from app.providers.tts.factory import register_tts_providers
 
@@ -206,6 +211,7 @@ def build_default_registry() -> ProviderRegistry:
 
 @lru_cache
 def get_provider_factory() -> ProviderFactory:
+    """返回缓存的默认 ProviderFactory 实例。"""
     return ProviderFactory(build_default_registry())
 
 

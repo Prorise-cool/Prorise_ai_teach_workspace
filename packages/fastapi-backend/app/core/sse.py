@@ -1,3 +1,5 @@
+"""统一任务 SSE 事件模型与编码工具。"""
+
 import re
 from typing import Literal
 
@@ -23,10 +25,12 @@ SSE_EVENT_ID_PATTERN = re.compile(r"^(?P<task_id>.+):evt:(?P<sequence>\d{6})$")
 
 
 def build_sse_event_id(task_id: str, sequence: int) -> str:
+    """按统一规则拼装 SSE 事件 ID。"""
     return f"{task_id}{SSE_EVENT_ID_SEPARATOR}{sequence:06d}"
 
 
 def parse_sse_event_id(event_id: str) -> tuple[str, int] | None:
+    """从 SSE 事件 ID 中解析任务 ID 与序列号。"""
     matched = SSE_EVENT_ID_PATTERN.fullmatch(event_id)
 
     if matched is None:
@@ -36,6 +40,8 @@ def parse_sse_event_id(event_id: str) -> tuple[str, int] | None:
 
 
 class TaskProgressEvent(TaskContractPayload):
+    """统一任务进度事件，对应对外 SSE 与 broker 契约。"""
+
     id: str | None = None
     sequence: int | None = Field(default=None, ge=1)
     event: TaskEventName
@@ -72,6 +78,7 @@ def ensure_sse_event_identity(
     *,
     fallback_sequence: int | None = None
 ) -> TaskProgressEvent:
+    """确保事件同时具备合法的 `id` 与 `sequence`。"""
     parsed_identity = parse_sse_event_id(payload.id) if payload.id else None
     sequence = payload.sequence or fallback_sequence
 
@@ -96,6 +103,7 @@ def ensure_sse_event_identity(
 
 
 def encode_sse_event(payload: TaskProgressEvent, *, ensure_identity: bool = True) -> str:
+    """把结构化事件编码为标准 SSE 文本。"""
     normalized = (
         ensure_sse_event_identity(payload, fallback_sequence=payload.sequence)
         if ensure_identity

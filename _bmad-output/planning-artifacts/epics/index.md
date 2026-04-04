@@ -35,6 +35,8 @@
 
 13. [Epic 0: 工程底座与并行开发轨道](./13-epic-0.md)
 14. [Epic 1: 用户接入、统一入口与启动配置](./14-epic-1.md)
+    - ⭐ [OpenMAIC 对齐基线](./epic-1-openmaic-alignment-baseline.md) - 用户配置与智能匹配系统设计基线
+    - ⭐ [实施基线与执行计划](./epic-1-implementation-baseline.md) - 数据库、后端、前端详细实施步骤
 15. [Epic 2: 统一任务框架、SSE 与 Provider 基础设施](./15-epic-2.md)
 16. [Epic 3: 单题视频输入与任务创建](./16-epic-3.md)
 17. [Epic 4: 单题视频生成、结果消费与失败恢复](./17-epic-4.md)

@@ -21,7 +21,7 @@
 11. [10. Learning Coach Layer（学习教练层）](./11-10-learning-coach-layer学习教练层.md)
 12. [11. Frontend-Backend Interaction Boundary（前端与双后端交互边界）](./12-11-frontend-backend-interaction-boundary前端与双后端交互边界.md)
 13. [12. Unified Waiting Experience（统一等待体验设计）](./13-12-unified-waiting-experience统一等待体验设计.md)
-14. [13. Agent Style Data Specification（Agent 风格数据规范）](./14-13-agent-style-data-specificationagent-风格数据规范.md)
+14. [13. User Profile Data Specification（用户配置数据规范）](./14-13-user-profile-data-specification用户配置数据规范.md)
 15. [14. Future Considerations（未来考虑）](./15-14-future-considerations未来考虑.md)
 16. [附录 A: UI 线框图索引](./16-附录-a-ui-线框图索引.md)
 17. [附录 B: SSE 事件类型完整列表](./17-附录-b-sse-事件类型完整列表.md)

@@ -338,78 +338,30 @@
 			<div
 				class="relative w-full rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md transition-shadow duration-300 focus-within:shadow-lg flex flex-col min-h-[280px]">
 
-				<!-- 顶栏：老师风格选择器 & 模式提示 (纯实底) -->
-				<div
-					class="relative z-30 flex items-center justify-between px-4 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] rounded-t-2xl">
+					<!-- 顶栏：智能匹配提示 (纯实底) -->
+					<div
+						class="relative z-30 flex items-center justify-between px-4 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] rounded-t-2xl">
 
-					<!-- AI 老师选择区 -->
-					<div class="flex items-center gap-2 relative">
-						<span
-							class="text-[11px] font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark hidden md:block">主讲老师</span>
-						<button id="teacherDropdownBtn"
-							class="flex items-center gap-2.5 cursor-pointer rounded-lg px-3 py-1.5 btn-transition border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark hover:bg-bg-light dark:hover:bg-[#201c19] shadow-sm">
-							<div class="flex items-center gap-1.5 shrink-0">
-								<div
-									class="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-bordercolor-light dark:border-bordercolor-dark">
-									<img id="selectedTeacherAvatar" src="https://i.pravatar.cc/150?img=58"
-										alt="AI Teacher" class="w-full h-full object-cover">
-								</div>
-								<span
-									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark truncate"
-									id="selectedTeacherName">严谨教授</span>
+						<!-- 智能师生匹配提示 -->
+						<div class="flex items-center gap-2">
+							<div class="w-7 h-7 rounded-lg bg-brand flex items-center justify-center shadow-sm">
+								<i data-lucide="sparkles" class="w-4 h-4 text-[#3b1701]"></i>
 							</div>
-							<i data-lucide="chevron-down"
-								class="size-3.5 text-text-secondary dark:text-text-secondary-dark"></i>
-						</button>
-
-						<!-- 下拉菜单 (纯实体) -->
-						<div id="teacherDropdownMenu"
-							class="absolute left-16 md:left-24 top-[calc(100%+0.5rem)] w-56 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-lg opacity-0 scale-95 -translate-y-2 pointer-events-none transition-all duration-200 origin-top-left p-1.5 z-50">
-							<div
-								class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark border-b border-bordercolor-light dark:border-bordercolor-dark mb-1">
-								选择辅导风格</div>
-							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition text-left"
-								onclick="selectTeacher(this, '32', '严谨教授')">
-								<div class="w-3 h-3 rounded-full bg-agent-serious"></div>
-								<div class="flex flex-col">
-									<span
-										class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">严谨教授</span>
-									<span
-										class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">知识树构建，系统性强</span>
-								</div>
-							</button>
-							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition text-left"
-								onclick="selectTeacher(this, '58', '风趣老师')">
-								<div class="w-3 h-3 rounded-full bg-agent-humorous"></div>
-								<div class="flex flex-col">
-									<span
-										class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">风趣老师</span>
-									<span
-										class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">通俗易懂，适合入门导学</span>
-								</div>
-							</button>
-							<button
-								class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition text-left"
-								onclick="selectTeacher(this, '47', '温和导师')">
-								<div class="w-3 h-3 rounded-full bg-agent-patient"></div>
-								<div class="flex flex-col">
-									<span
-										class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">温和导师</span>
-									<span
-										class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">步骤详尽，适合难点攻克</span>
-								</div>
-							</button>
+							<div class="flex flex-col">
+								<span
+									class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark">智能师生匹配</span>
+								<span
+									class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">根据您的配置自动适配 AI 老师</span>
+							</div>
 						</div>
-					</div>
 
-					<!-- 模式提示 -->
-					<span
-						class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark hidden md:flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2.5 py-1 rounded-md border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
-						<i data-lucide="users" class="w-3.5 h-3.5"></i> 支持多 Agent 讨论模式
-					</span>
-				</div>
+						<!-- 模式提示 -->
+						<span
+							class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark hidden md:flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2.5 py-1 rounded-md border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+							<i data-lucide="users" class="w-3.5 h-3.5"></i> 支持多 Agent 讨论模式
+						</span>
+					</div>
+							</button>
 
 				<!-- 核心文本输入区 -->
 				<div class="p-6 flex-1 relative z-20 flex flex-col gap-4">
@@ -740,19 +692,13 @@
 			});
 			menu.addEventListener('click', (e) => e.stopPropagation());
 		}
-		setupDropdown('teacherDropdownBtn', 'teacherDropdownMenu');
-
+		// 老师下拉菜单已移除
+	// 老师下拉菜单已移除，改用智能师生匹配
 		document.addEventListener('click', () => {
 			document.querySelectorAll('.dropdown-open').forEach(menu => {
 				menu.classList.remove('dropdown-open');
 			});
 		});
-
-		function selectTeacher(btnElement, avatarId, teacherName) {
-			document.getElementById('selectedTeacherAvatar').src = `https://i.pravatar.cc/150?img=${avatarId}`;
-			document.getElementById('selectedTeacherName').innerText = teacherName;
-			document.getElementById('teacherDropdownMenu').classList.remove('dropdown-open');
-		}
 
 		// 7. 瀑布流渲染 (与上一版严格对齐的纯实体卡片)
 		const feedContainer = document.getElementById('feedContainer');
@@ -762,12 +708,12 @@
 		const loadingIcon = loadMoreBtn.querySelector('.loading-icon');
 
 		const mockTemplates = [
-			{ title: "C语言指针基础与内存模型深度解析", author: "干练讲师", short: "效", bg: "bg-agent-efficient", likes: "1.2k 看过", aspect: "aspect-video" },
-			{ title: "PLC 顺序功能图 (SFC) 编程入门实战", author: "严谨教授", short: "严", bg: "bg-agent-serious", likes: "856 看过", aspect: "aspect-[3/4]" },
-			{ title: "机械制图：三视图投影规律与空间想象构建", author: "温和导师", short: "温", bg: "bg-agent-patient", likes: "2.3k 看过", aspect: "aspect-[4/3]" },
-			{ title: "10分钟系统掌握微积分链式法则", author: "干练讲师", short: "效", bg: "bg-agent-efficient", likes: "3.1k 看过", aspect: "aspect-[21/9]" },
-			{ title: "财务会计：借贷记账法的底层逻辑与生活化解析", author: "风趣老师", short: "幽", bg: "bg-agent-humorous", likes: "1.8k 看过", aspect: "aspect-square" },
-			{ title: "新能源汽车电池管理系统 (BMS) 工作机制详解", author: "严谨教授", short: "严", bg: "bg-agent-serious", likes: "920 看过", aspect: "aspect-[3/5]" }
+			{ title: "C语言指针基础与内存模型深度解析", tag: "编程基础", likes: "1.2k 看过", aspect: "aspect-video" },
+			{ title: "PLC 顺序功能图 (SFC) 编程入门实战", tag: "工控自动化", likes: "856 看过", aspect: "aspect-[3/4]" },
+			{ title: "机械制图：三视图投影规律与空间想象构建", tag: "工程制图", likes: "2.3k 看过", aspect: "aspect-[4/3]" },
+			{ title: "10分钟系统掌握微积分链式法则", tag: "高等数学", likes: "3.1k 看过", aspect: "aspect-[21/9]" },
+			{ title: "财务会计：借贷记账法的底层逻辑与生活化解析", tag: "财务管理", likes: "1.8k 看过", aspect: "aspect-square" },
+			{ title: "新能源汽车电池管理系统 (BMS) 工作机制详解", tag: "汽车电子", likes: "920 看过", aspect: "aspect-[3/5]" }
 		];
 
 		function generateCardHTML(index) {
@@ -793,10 +739,7 @@
                             </div>
                             <h3 class="font-black text-[16px] tracking-tight leading-snug mb-4 text-text-primary dark:text-text-primary-dark line-clamp-2 group-hover:text-brand-dark dark:group-hover:text-brand btn-transition">${tpl.title}</h3>
                             <div class="flex justify-between items-center pt-4 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-5 h-5 rounded-full ${tpl.bg} text-white flex items-center justify-center text-[10px] font-bold shadow-sm">${tpl.short}</div>
-                                    <span class="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark">${tpl.author}</span>
-                                </div>
+                                <span class="text-[11px] font-bold bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark px-2 py-1 rounded-md">${tpl.tag}</span>
                                 <span class="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1"><i data-lucide="eye" class="w-3.5 h-3.5"></i> ${tpl.likes}</span>
                             </div>
                         </div>
