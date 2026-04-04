@@ -20,9 +20,11 @@ Story `2.1`、`2.5` 与 `2.6` 的统一任务 / SSE Mock 资产。
 - `sse.provider-switch.json`
 - `sse.completed.json`
 - `sse.failed.json`
+- `sse.cancelled.json`
 - `sse.heartbeat.json`
 - `sse.snapshot.json`
 - `sse.sequence.completed.json`
+- `sse.sequence.cancelled.json`
 - `sse.sequence.failed.json`
 - `sse.sequence.snapshot.json`
 - `sse.sequence.provider-switch.json`

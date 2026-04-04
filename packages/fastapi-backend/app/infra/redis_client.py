@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Redis 运行态访问层，负责任务状态、事件缓存与短期在线态读写。"""
+
 import json
 import math
 import time
@@ -33,6 +35,7 @@ ONLINE_TOKEN_KEY_PREFIX = "online_tokens:"
 
 
 def build_online_token_key(token_value: str, tenant_id: str | None = None) -> str:
+    """构造在线 token 运行态 key。"""
     if tenant_id:
         return f"{tenant_id}:{ONLINE_TOKEN_KEY_PREFIX}{token_value}"
     return f"{ONLINE_TOKEN_KEY_PREFIX}{token_value}"
@@ -73,6 +76,8 @@ class RuntimeStorageScope(StrEnum):
 
 @dataclass(slots=True)
 class RuntimeStore:
+    """统一运行态存储抽象，禁止承担长期业务持久化。"""
+
     backend: str
     redis_url: str
     client: Redis | None = None

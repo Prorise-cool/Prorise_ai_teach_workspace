@@ -8,7 +8,7 @@
 |------|------|------|------|
 | `id` | `string` | 是 | 事件唯一 ID，格式 `{taskId}:evt:{sequence}` |
 | `sequence` | `integer` | 是 | 同一 `taskId` 下从 `1` 开始严格递增 |
-| `event` | `string` | 是 | 事件类型，固定为七类枚举之一 |
+| `event` | `string` | 是 | 事件类型，固定为八类枚举之一 |
 | `taskId` | `string` | 是 | 任务唯一 ID |
 | `taskType` | `string` | 是 | 任务类型，例如 `video`、`classroom` |
 | `status` | `string` | 是 | 对外五态之一 |
@@ -24,7 +24,7 @@
 | `result` | `object \| null` | 否 | `completed` 的最小结果摘要 |
 | `resumeFrom` | `string \| null` | 条件必填 | `snapshot` 对应的最近已稳定事件 ID |
 
-## 七类事件
+## 八类事件
 
 ### `connected`
 
@@ -52,6 +52,12 @@
 
 - 触发时机：任务失败收敛。
 - 约束：`errorCode` 必须为统一错误码且不得为空。
+
+### `cancelled`
+
+- 触发时机：任务被用户或系统显式取消并完成收敛。
+- 约束：属于终态事件；若存在取消原因，应通过 `message` 与统一错误码 `TASK_CANCELLED` 表达。
+- 注意：`progress` 表示取消前最后一次稳定进度，不要求强制回写为 `100`。
 
 ### `heartbeat`
 

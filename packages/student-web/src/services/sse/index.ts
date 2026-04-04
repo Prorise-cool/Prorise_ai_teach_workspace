@@ -2,12 +2,18 @@
  * 文件说明：提供任务事件流的解析、mock 回放与真实流消费入口。
  * 该模块统一承接任务 SSE 的恢复、补帧和 snapshot 回退策略。
  */
-import completedSequence from "../../../../../mocks/tasks/sse.sequence.completed.json";
-import failedSequence from "../../../../../mocks/tasks/sse.sequence.failed.json";
-import providerSwitchSequence from "../../../../../mocks/tasks/sse.sequence.provider-switch.json";
-import snapshotSequence from "../../../../../mocks/tasks/sse.sequence.snapshot.json";
+import {
+  createParser,
+  type EventSourceMessage,
+  type ParseError,
+} from "eventsource-parser";
 
 import { parseJsonText, readJsonBody } from "@/lib/type-guards";
+import { resolveRuntimeMode } from "@/services/api/adapters/base-adapter";
+import {
+  resolveTaskAdapter,
+  type TaskAdapter,
+} from "@/services/api/adapters/task-adapter";
 import type {
   TaskErrorCode,
   TaskEventName,
@@ -23,11 +29,11 @@ import {
   TASK_STATUS_VALUES,
 } from "@/types/task";
 
-import { resolveRuntimeMode } from "@/services/api/adapters/base-adapter";
-import {
-  resolveTaskAdapter,
-  type TaskAdapter,
-} from "@/services/api/adapters/task-adapter";
+import cancelledSequence from "../../../../../mocks/tasks/sse.sequence.cancelled.json";
+import completedSequence from "../../../../../mocks/tasks/sse.sequence.completed.json";
+import failedSequence from "../../../../../mocks/tasks/sse.sequence.failed.json";
+import providerSwitchSequence from "../../../../../mocks/tasks/sse.sequence.provider-switch.json";
+import snapshotSequence from "../../../../../mocks/tasks/sse.sequence.snapshot.json";
 
 type TaskEventStreamOptions = {
   scenario?: TaskMockScenario;
@@ -77,6 +83,7 @@ const DEFAULT_POLLING_INTERVAL_MS = 2000;
 const MOCK_SSE_SEQUENCES: Record<string, TaskEventTemplate[]> = {
   default: completedSequence as TaskEventTemplate[],
   completed: completedSequence as TaskEventTemplate[],
+  cancelled: cancelledSequence as TaskEventTemplate[],
   failed: failedSequence as TaskEventTemplate[],
   snapshot: snapshotSequence as TaskEventTemplate[],
   provider_switch: providerSwitchSequence as TaskEventTemplate[],
@@ -492,60 +499,35 @@ function normalizeTaskEventPayload(
 }
 
 /**
- * 按 SSE 协议拆分原始文本为消息数组。
+ * 使用 `eventsource-parser` 按 SSE 协议拆分原始文本为消息数组。
  *
  * @param rawBody - 原始 SSE 文本。
+ * @param logger - 解析日志输出器。
  * @returns 解析后的 SSE 消息数组。
  */
-function parseSseMessages(rawBody: string): RawSseMessage[] {
+function parseSseMessages(
+  rawBody: string,
+  logger: TaskEventParserLogger = console,
+): RawSseMessage[] {
   const messages: RawSseMessage[] = [];
-  let eventName: string | null = null;
-  let eventId: string | null = null;
-  let dataLines: string[] = [];
+  const parser = createParser({
+    onEvent(event: EventSourceMessage) {
+      messages.push({
+        eventName: event.event ?? null,
+        eventId: event.id ?? null,
+        data: event.data,
+      });
+    },
+    onError(error: ParseError) {
+      warnParseIssue(
+        logger,
+        `Ignoring malformed SSE protocol line: ${error.message}`,
+        error.line ?? error.value ?? rawBody,
+      );
+    },
+  });
 
-  const flush = () => {
-    if (dataLines.length === 0) {
-      eventName = null;
-      eventId = null;
-      return;
-    }
-
-    messages.push({
-      eventName,
-      eventId,
-      data: dataLines.join("\n"),
-    });
-    eventName = null;
-    eventId = null;
-    dataLines = [];
-  };
-
-  for (const line of rawBody.split(/\r?\n/)) {
-    if (line === "") {
-      flush();
-      continue;
-    }
-
-    if (line.startsWith(":")) {
-      continue;
-    }
-
-    if (line.startsWith("event:")) {
-      eventName = line.slice("event:".length).trim() || null;
-      continue;
-    }
-
-    if (line.startsWith("id:")) {
-      eventId = line.slice("id:".length).trim() || null;
-      continue;
-    }
-
-    if (line.startsWith("data:")) {
-      dataLines.push(line.slice("data:".length).trim());
-    }
-  }
-
-  flush();
+  parser.feed(`${rawBody}\n\n`);
 
   return messages;
 }
@@ -682,7 +664,7 @@ export async function parseTaskEventResponse(
 
   const rawBody = await response.text();
 
-  return parseSseMessages(rawBody).flatMap((message) => {
+  return parseSseMessages(rawBody, logger).flatMap((message) => {
     try {
       const event = normalizeTaskEventPayload(
         parseJsonText(message.data),
@@ -751,25 +733,10 @@ function resolveMockSequence(
   }
 
   if (scenario === "cancelled") {
-    const snapshotTemplate = cloneMockEventSequence(
+    return cloneMockEventSequence(
       taskId,
-      (snapshotSequence as TaskEventTemplate[]).slice(0, 2),
+      cancelledSequence as TaskEventTemplate[],
     );
-
-    return [
-      ...snapshotTemplate,
-      {
-        ...snapshotTemplate.at(-1)!,
-        id: buildTaskEventId(taskId, 3),
-        sequence: 3,
-        event: "snapshot",
-        status: "cancelled",
-        progress: 0,
-        message: "任务已取消，当前为最终快照",
-        errorCode: "TASK_CANCELLED",
-        resumeFrom: buildTaskEventId(taskId, 2),
-      },
-    ];
   }
 
   const template =

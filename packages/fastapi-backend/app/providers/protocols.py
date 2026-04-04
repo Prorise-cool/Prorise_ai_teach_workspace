@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Provider 抽象层协议、配置模型与统一异常。"""
+
 import re
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -31,6 +33,7 @@ class ProviderProtocolError(ProviderError):
 
 
 def validate_provider_id(provider_id: str) -> str:
+    """校验并归一化 Provider 标识符。"""
     normalized = provider_id.strip().lower()
     if not PROVIDER_ID_PATTERN.fullmatch(normalized):
         raise ProviderConfigurationError(
@@ -41,6 +44,8 @@ def validate_provider_id(provider_id: str) -> str:
 
 @dataclass(slots=True, frozen=True)
 class ProviderRuntimeConfig:
+    """运行时 Provider 配置，供工厂与 Failover 装配链路复用。"""
+
     provider_id: str
     priority: int = 100
     timeout_seconds: float = 30.0
@@ -65,6 +70,8 @@ class ProviderRuntimeConfig:
 
 @dataclass(slots=True, frozen=True)
 class ProviderResult:
+    """Provider 调用结果的统一传输对象。"""
+
     provider: str
     content: str
     metadata: Mapping[str, Any] = field(default_factory=dict)
