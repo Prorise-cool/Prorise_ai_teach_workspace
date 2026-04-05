@@ -48,6 +48,11 @@ Epic 6 负责“会话内即时伴学”这一共享消费层。
 - 依赖 `Epic 10` 的长期数据回写能力。
 - 与 `Epic 7` 存在边界关系，但不依赖 `Epic 7` 完成后才可先做 mock 伴学。  
 
+### Cross-Epic Parallel Guardrail
+- 不建议在结果页挂载位未冻结前与 `Epic 7` 整块并行。  
+- 若必须并行，`Epic 6` 只拥有“当前时刻提问侧栏”和其历史区，不拥有资料抽屉、文档上传和术语解释区域。  
+- 不得通过直接改视频 / 课堂引擎内部对象来绕过 `SessionArtifactGraph`，否则后续会同时拖垮 `Epic 4 / 5 / 9`。  
+
 ### Entry Criteria
 - 视频与课堂侧 artifact schema 已稳定到可消费。  
 - `TimeAnchor` 类型边界已讨论清晰。  
