@@ -210,7 +210,8 @@ export function ProfilePreferencesPage() {
 
             <div className="xm-profile-onboarding__stack-actions">
               <Button
-                className="xm-profile-onboarding__primary-btn"
+                className="w-full rounded-full shadow-md"
+                size="hero"
                 type="button"
                 disabled={!effectiveSelectedPersonality}
                 onClick={() => {
@@ -269,7 +270,8 @@ export function ProfilePreferencesPage() {
 
             <div className="xm-profile-onboarding__stack-actions">
               <Button
-                className="xm-profile-onboarding__primary-btn"
+                className="w-full rounded-full shadow-md"
+                size="hero"
                 type="button"
                 disabled={isSavingProfile}
                 onClick={() => {

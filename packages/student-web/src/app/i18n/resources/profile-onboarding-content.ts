@@ -11,6 +11,7 @@ export const zhCnProfileOnboardingResources = {
       skip: '跳过',
       avatarLabel: '点击上传头像',
       avatarHint: '上传头像后，后续 AI 老师会更快记住你。',
+      avatarUploading: '头像上传中，请稍候…',
       avatarPlaceholder: 'Avatar',
       bioLabel: '个人简介',
       bioPlaceholder: '例如：我是一名大二学生，最近在准备英语六级考试...',
@@ -105,6 +106,7 @@ export const enUsProfileOnboardingResources = {
       skip: 'Skip',
       avatarLabel: 'Upload avatar',
       avatarHint: 'An avatar helps your AI teachers recognize you faster.',
+      avatarUploading: 'Uploading avatar...',
       avatarPlaceholder: 'Avatar',
       bioLabel: 'Short bio',
       bioPlaceholder:

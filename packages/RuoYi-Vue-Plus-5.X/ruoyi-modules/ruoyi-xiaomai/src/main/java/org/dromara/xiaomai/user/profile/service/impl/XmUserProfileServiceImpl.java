@@ -31,6 +31,8 @@ import java.util.Collection;
 @Service
 public class XmUserProfileServiceImpl implements IXmUserProfileService {
 
+    private static final String DEFAULT_PROFILE_LANGUAGE = "zh-CN";
+
     private final XmUserProfileMapper baseMapper;
 
     /**
@@ -70,12 +72,77 @@ public class XmUserProfileServiceImpl implements IXmUserProfileService {
         return baseMapper.selectVoList(lqw);
     }
 
+    /**
+     * 根据用户 ID 查询用户配置。
+     *
+     * @param userId 用户 ID
+     * @return 用户配置
+     */
+    @Override
+    public XmUserProfileVo queryByUserId(Long userId) {
+        return baseMapper.selectVoOne(
+            Wrappers.<XmUserProfile>lambdaQuery()
+                .eq(XmUserProfile::getUserId, userId),
+            false
+        );
+    }
+
+    /**
+     * 保存当前登录用户配置。
+     *
+     * @param userId 当前登录用户 ID
+     * @param bo 用户配置
+     * @return 保存后的用户配置
+     */
+    @Override
+    public XmUserProfileVo saveCurrentProfile(Long userId, XmUserProfileBo bo) {
+        XmUserProfile existingEntity = queryEntityByUserId(userId);
+
+        bo.setUserId(userId);
+        if (StringUtils.isBlank(bo.getLanguage())) {
+            bo.setLanguage(DEFAULT_PROFILE_LANGUAGE);
+        }
+
+        if (existingEntity == null) {
+            if (bo.getIsCompleted() == null) {
+                bo.setIsCompleted(0L);
+            }
+            insertByBo(bo);
+            return queryById(bo.getId());
+        }
+
+        bo.setId(existingEntity.getId());
+        if (bo.getIsCompleted() == null) {
+            bo.setIsCompleted(existingEntity.getIsCompleted());
+        }
+        updateByBo(bo);
+        return queryById(existingEntity.getId());
+    }
+
+    /**
+     * 判断当前用户是否已完成配置。
+     *
+     * @param userId 当前登录用户 ID
+     * @return 是否完成
+     */
+    @Override
+    public Boolean isCompleted(Long userId) {
+        XmUserProfileVo profile = queryByUserId(userId);
+
+        return profile != null && Long.valueOf(1L).equals(profile.getIsCompleted());
+    }
+
     private LambdaQueryWrapper<XmUserProfile> buildQueryWrapper(XmUserProfileBo bo) {
         Map<String, Object> params = bo.getParams();
         LambdaQueryWrapper<XmUserProfile> lqw = Wrappers.lambdaQuery();
         lqw.eq(bo.getId() != null, XmUserProfile::getId, bo.getId());
         lqw.orderByAsc(XmUserProfile::getId);
         lqw.eq(bo.getUserId() != null, XmUserProfile::getUserId, bo.getUserId());
+        lqw.apply(
+            StringUtils.isNotBlank(bo.getUserName()),
+            "user_id in (select user_id from sys_user where user_name like {0})",
+            "%" + bo.getUserName().trim() + "%"
+        );
         lqw.like(StringUtils.isNotBlank(bo.getBio()), XmUserProfile::getBio, bo.getBio());
         lqw.eq(StringUtils.isNotBlank(bo.getPersonalityType()), XmUserProfile::getPersonalityType, bo.getPersonalityType());
         lqw.eq(StringUtils.isNotBlank(bo.getLanguage()), XmUserProfile::getLanguage, bo.getLanguage());
@@ -137,5 +204,13 @@ public class XmUserProfileServiceImpl implements IXmUserProfileService {
             //TODO 做一些业务上的校验,判断是否需要校验
         }
         return baseMapper.deleteByIds(ids) > 0;
+    }
+
+    private XmUserProfile queryEntityByUserId(Long userId) {
+        return baseMapper.selectOne(
+            Wrappers.<XmUserProfile>lambdaQuery()
+                .eq(XmUserProfile::getUserId, userId)
+                .last("limit 1")
+        );
     }
 }

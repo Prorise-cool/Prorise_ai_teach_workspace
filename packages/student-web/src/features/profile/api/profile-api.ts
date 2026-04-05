@@ -49,6 +49,7 @@ type ProfilePayload = {
 
 type ProfileApi = {
   getCurrentProfile(userId: string, accessToken?: string): Promise<UserProfile | null>;
+  uploadAvatar(file: File, accessToken?: string): Promise<string>;
   saveProfile(
     userId: string,
     input: SaveUserProfileInput,
@@ -64,6 +65,13 @@ type ResolveProfileApiOptions = {
 type RealProfileApiOptions = {
   client?: ApiClient;
 };
+
+type AvatarUploadPayload = {
+  imgUrl?: string | null;
+  url?: string | null;
+};
+
+const PROFILE_AVATAR_UPLOAD_PATH = '/system/user/profile/avatar';
 
 function mergeRequestHeaders(headers?: HeadersInit, accessToken?: string) {
   const mergedHeaders = new Headers(headers);
@@ -166,8 +174,25 @@ function writeLocalProfile(profile: UserProfile) {
   return profile;
 }
 
+function clearLocalProfile(userId: string) {
+  useUserProfileStore.getState().removeProfile(userId);
+}
+
 function shouldFallbackToLocal(error: unknown) {
-  return !(error instanceof ApiClientError && (error.status === 401 || error.status === 403));
+  if (!(error instanceof ApiClientError)) {
+    return false;
+  }
+
+  if ([404, 405, 501].includes(error.status)) {
+    return true;
+  }
+
+  return (
+    error.status === 500
+    && error.response === undefined
+    && error.data === undefined
+    && /failed to parse url|fetch failed/i.test(error.message)
+  );
 }
 
 async function requestProfileEnvelope<T>(
@@ -188,6 +213,13 @@ function createMockProfileApi(): ProfileApi {
   return {
     getCurrentProfile(userId) {
       return Promise.resolve(readLocalProfile(userId));
+    },
+    uploadAvatar(file) {
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        return Promise.resolve(URL.createObjectURL(file));
+      }
+
+      return Promise.resolve(`mock-avatar://${encodeURIComponent(file.name)}`);
     },
     saveProfile(userId, input) {
       const currentProfile =
@@ -218,7 +250,8 @@ function createRealProfileApi({
         );
 
         if (!payload) {
-          return readLocalProfile(userId);
+          clearLocalProfile(userId);
+          return null;
         }
 
         return writeLocalProfile(mapProfilePayload(userId, payload));
@@ -229,6 +262,32 @@ function createRealProfileApi({
 
         throw error;
       }
+    },
+    async uploadAvatar(file, accessToken) {
+      const formData = new FormData();
+      formData.append('avatarfile', file);
+
+      const payload = await requestProfileEnvelope<AvatarUploadPayload>(
+        client,
+        {
+          url: PROFILE_AVATAR_UPLOAD_PATH,
+          method: 'post',
+          data: formData
+        },
+          accessToken
+      );
+
+      const avatarPayload = readRecord(payload);
+      const avatarUrl = avatarPayload
+        ? readStringProperty(avatarPayload, 'imgUrl')
+          ?? readStringProperty(avatarPayload, 'url')
+        : undefined;
+
+      if (!avatarUrl) {
+        throw new ApiClientError(500, '头像上传接口返回异常', payload);
+      }
+
+      return avatarUrl;
     },
     async saveProfile(userId, input, accessToken) {
       const currentProfile =
@@ -247,9 +306,9 @@ function createRealProfileApi({
               avatarUrl: nextProfile.avatarUrl,
               bio: nextProfile.bio,
               personalityType: nextProfile.personalityType,
-              teacherTags: nextProfile.teacherTags,
+              teacherTags: JSON.stringify(nextProfile.teacherTags),
               language: nextProfile.language,
-              isCompleted: nextProfile.isCompleted
+              isCompleted: nextProfile.isCompleted ? 1 : 0
             }
           },
           accessToken

@@ -1,68 +1,105 @@
 /**
  * 文件说明：用户配置引导页响应式布局。
- * 负责在平板与移动端收紧 intro / preferences / tour 的间距与栅格。
+ * 负责在平板与移动端分别压缩登录壳层、信息收集页与导览页的版式。
  */
 @media (max-width: 960px) {
   .xm-profile-onboarding {
-    &__intro-shell,
     &__tour-content {
       flex-direction: column;
-    }
-
-    &__intro-shell {
-      .xm-auth-left-panel {
-        min-height: 320px;
-        min-width: 100%;
-      }
-    }
-
-    &__intro-panel {
-      padding: 32px 24px 36px;
-    }
-
-    &__tour-shell {
-      padding: 28px 24px 32px;
-    }
-
-    &__tour-progress {
-      top: 32px;
-    }
-
-    &__tour-content {
-      gap: 36px;
-      min-height: auto;
-      padding-top: 40px;
+      gap: 40px;
+      text-align: center;
     }
 
     &__tour-copy {
-      flex-basis: auto;
+      display: flex;
       width: 100%;
+      max-width: none;
+      flex-direction: column;
+      align-items: center;
     }
 
-    &__tour-card {
-      min-height: 360px;
+    &__step-copy--tour {
+      min-height: auto;
+      text-align: center;
+    }
+
+    &__stack-actions--tour {
+      align-items: center;
+    }
+
+    &__tour-demo {
+      max-width: 520px;
+    }
+  }
+}
+
+@media (max-width: 850px) {
+  .xm-profile-onboarding {
+    &--intro {
+      padding: 0;
+
+      .xm-auth-container {
+        min-height: 100vh;
+        border-radius: 0;
+      }
+
+      .xm-auth-left-panel {
+        min-width: 100%;
+        height: 35vh;
+      }
+
+      .xm-auth-right-panel {
+        margin-top: -14px;
+        border-radius: 24px 24px 0 0;
+      }
+    }
+
+    &__surface {
+      padding: 24px 24px 64px;
+    }
+
+    &__tour-shell {
+      padding: 0 24px;
+    }
+
+    &__tour-topbar {
+      padding: 0 24px;
     }
   }
 }
 
 @media (max-width: 640px) {
   .xm-profile-onboarding {
-    &--intro,
-    &--preferences,
-    &--tour {
-      padding: 12px;
-    }
-
-    &__surface,
-    &__tour-shell {
-      padding-left: 18px;
-      padding-right: 18px;
-    }
-
+    &__intro-form,
     &__personality-list,
     &__stack-actions,
     &__stack-actions--tour {
       width: 100%;
+    }
+
+    &__step-copy {
+      margin-bottom: 36px;
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+
+    &__tour-topbar {
+      top: 20px;
+    }
+
+    &__tour-progress {
+      top: 30px;
+    }
+
+    &__tour-content {
+      padding-top: 84px;
+    }
+
+    &__tour-card {
+      aspect-ratio: auto;
+      min-height: 320px;
     }
 
     &__teacher-tags {

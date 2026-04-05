@@ -42,6 +42,31 @@ public interface IXmUserProfileService {
     List<XmUserProfileVo> queryList(XmUserProfileBo bo);
 
     /**
+     * 根据用户 ID 查询用户配置。
+     *
+     * @param userId 用户 ID
+     * @return 用户配置
+     */
+    XmUserProfileVo queryByUserId(Long userId);
+
+    /**
+     * 保存当前登录用户配置。
+     *
+     * @param userId 当前登录用户 ID
+     * @param bo 用户配置
+     * @return 保存后的用户配置
+     */
+    XmUserProfileVo saveCurrentProfile(Long userId, XmUserProfileBo bo);
+
+    /**
+     * 判断当前用户是否已完成配置。
+     *
+     * @param userId 当前登录用户 ID
+     * @return 是否完成
+     */
+    Boolean isCompleted(Long userId);
+
+    /**
      * 新增用户配置
      *
      * @param bo 用户配置

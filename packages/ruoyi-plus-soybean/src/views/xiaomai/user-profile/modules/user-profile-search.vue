@@ -22,30 +22,29 @@ const model = defineModel<Api.Xiaomai.UserProfileSearchParams>('model', { requir
 
 const defaultModel = jsonClone(toRaw(model.value));
 
-const idInput = computed<string>({
-  get() {
-    return model.value.id == null ? '' : String(model.value.id);
-  },
-  set(value) {
-    model.value.id = value === '' ? null : Number(value);
+function normalizeYesNoDictValue(value: number | string | null | undefined) {
+  if (value === 1 || value === '1' || value === 'Y') {
+    return 'Y';
   }
-});
 
-const userIdInput = computed<string>({
-  get() {
-    return model.value.userId == null ? '' : String(model.value.userId);
-  },
-  set(value) {
-    model.value.userId = value === '' ? null : Number(value);
+  if (value === 0 || value === '0' || value === 'N') {
+    return 'N';
   }
-});
 
-const isCompletedValue = computed<string | null>({
+  return null;
+}
+
+const isCompletedValue = computed<string | null | undefined>({
   get() {
-    return model.value.isCompleted == null ? null : String(model.value.isCompleted);
+    return normalizeYesNoDictValue(model.value.isCompleted);
   },
   set(value) {
-    model.value.isCompleted = value == null || value === '' ? null : Number(value);
+    if (!value) {
+      model.value.isCompleted = null;
+      return;
+    }
+
+    model.value.isCompleted = value === 'Y' ? 1 : 0;
   }
 });
 
@@ -63,7 +62,10 @@ async function reset() {
 
 async function search() {
   await validate();
-  const params = model.value.params ?? (model.value.params = {});
+  if (!model.value.params) {
+    model.value.params = {};
+  }
+  const params = model.value.params;
   if (dateRangeCreateTime.value?.length) {
     params.beginCreateTime = dateRangeCreateTime.value[0];
     params.endCreateTime = dateRangeCreateTime.value[1];
@@ -88,11 +90,8 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="xiaomai-user-profile-search">
         <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" label="主键" label-width="auto" path="id" class="pr-24px">
-              <NInput v-model:value="idInput" placeholder="请输入主键" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="用户ID" label-width="auto" path="userId" class="pr-24px">
-              <NInput v-model:value="userIdInput" placeholder="请输入用户ID" />
+            <NFormItemGi span="24 s:12 m:6" label="用户名" label-width="auto" path="userName" class="pr-24px">
+              <NInput v-model:value="model.userName" placeholder="请输入用户名" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="个人简介" label-width="auto" path="bio" class="pr-24px">
               <NInput v-model:value="model.bio" placeholder="请输入个人简介" />

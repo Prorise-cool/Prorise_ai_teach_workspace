@@ -71,6 +71,16 @@ export function useUserProfile() {
     }
   });
 
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!accessToken) {
+        throw new Error('当前未登录，无法上传头像');
+      }
+
+      return profileApi.uploadAvatar(file, accessToken);
+    }
+  });
+
   return {
     userId,
     profile: cachedProfile ?? profileQuery.data ?? null,
@@ -79,8 +89,10 @@ export function useUserProfile() {
     refetchProfile: profileQuery.refetch,
     saveProfile: saveProfileMutation.mutateAsync,
     completeOnboarding: completeProfileMutation.mutateAsync,
+    uploadAvatar: uploadAvatarMutation.mutateAsync,
     isSavingProfile:
       saveProfileMutation.isPending || completeProfileMutation.isPending,
+    isUploadingAvatar: uploadAvatarMutation.isPending,
     clearProfile: () => {
       if (!userId) {
         return;

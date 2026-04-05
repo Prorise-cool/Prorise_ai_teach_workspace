@@ -34,6 +34,11 @@ public class XmUserProfileBo extends BaseEntity {
     private Long userId;
 
     /**
+     * 用户名
+     */
+    private String userName;
+
+    /**
      * 头像URL
      */
     private String avatarUrl;
@@ -61,7 +66,6 @@ public class XmUserProfileBo extends BaseEntity {
     /**
      * 是否完成配置
      */
-    @NotNull(message = "是否完成配置不能为空", groups = { AddGroup.class, EditGroup.class })
     private Long isCompleted;
 
 

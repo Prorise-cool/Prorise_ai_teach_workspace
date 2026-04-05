@@ -106,7 +106,7 @@ describe('Profile onboarding', () => {
     expect(useUserProfileStore.getState().profilesByUserId[session.user.id]?.bio).toBe('');
   });
 
-  it('routes filled intro submissions directly to the tour and persists the bio', async () => {
+  it('routes filled intro submissions to the preferences step and persists the bio when preferences are missing', async () => {
     const session = await seedSession();
     const router = createOnboardingRouter(['/profile/setup?returnTo=/video/input']);
     const user = userEvent.setup();
@@ -117,6 +117,43 @@ describe('Profile onboarding', () => {
       </AppProvider>
     );
 
+    await user.type(
+      screen.getByLabelText('个人简介'),
+      '我是一名正在准备英语六级考试的大二学生。'
+    );
+    await user.click(screen.getByRole('button', { name: '下一步' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/profile/setup/preferences');
+    });
+
+    expect(useUserProfileStore.getState().profilesByUserId[session.user.id]?.bio).toContain(
+      '英语六级'
+    );
+  });
+
+  it('routes filled intro submissions directly to the tour when preferences already exist', async () => {
+    const session = await seedSession();
+    const router = createOnboardingRouter(['/profile/setup?returnTo=/video/input']);
+    const user = userEvent.setup();
+
+    useUserProfileStore.getState().setProfile({
+      userId: session.user.id,
+      avatarUrl: null,
+      bio: '',
+      personalityType: 'action_oriented',
+      teacherTags: ['humorous'],
+      language: 'zh-CN',
+      isCompleted: false
+    });
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    await user.clear(screen.getByLabelText('个人简介'));
     await user.type(
       screen.getByLabelText('个人简介'),
       '我是一名正在准备英语六级考试的大二学生。'

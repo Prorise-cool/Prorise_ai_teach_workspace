@@ -1,16 +1,17 @@
 <script setup lang="tsx">
 import { ref } from 'vue';
-import { NDivider } from 'naive-ui';
+import { NDivider, NEllipsis, NImage } from 'naive-ui';
 import { fetchBatchDeleteUserProfile, fetchGetUserProfileList } from '@/service/api/xiaomai/user-profile';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
+import { useDict } from '@/hooks/business/dict';
 import { useDownload } from '@/hooks/business/download';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
-import { $t } from '@/locales';
+import DictTag from '@/components/custom/dict-tag.vue';
 import ButtonIcon from '@/components/custom/button-icon.vue';
+import { $t } from '@/locales';
 import UserProfileOperateDrawer from './modules/user-profile-operate-drawer.vue';
 import UserProfileSearch from './modules/user-profile-search.vue';
-import { useDict } from '@/hooks/business/dict';
 
 defineOptions({
   name: 'UserProfileList'
@@ -18,6 +19,7 @@ defineOptions({
 
 useDict('sys_yes_no');
 useDict('user_personality_type');
+useDict('user_teacher_tag');
 useDict('sys_language');
 
 const appStore = useAppStore();
@@ -27,8 +29,7 @@ const { hasAuth } = useAuth();
 const searchParams = ref<Api.Xiaomai.UserProfileSearchParams>({
   pageNum: 1,
   pageSize: 10,
-  id: null,
-  userId: null,
+  userName: null,
   bio: null,
   personalityType: null,
   language: null,
@@ -56,154 +57,205 @@ function normalizeTeacherTags(value: string | null | undefined) {
     .filter(Boolean);
 }
 
+function normalizeYesNoDictValue(value: number | string | null | undefined) {
+  if (value === 1 || value === '1' || value === 'Y') {
+    return 'Y';
+  }
+
+  if (value === 0 || value === '0' || value === 'N') {
+    return 'N';
+  }
+
+  return undefined;
+}
+
+function resolveAvatarImage(row: Api.Xiaomai.UserProfile) {
+  const translatedUrl = row.avatarUrlUrl?.trim();
+
+  if (translatedUrl) {
+    return translatedUrl;
+  }
+
+  const rawValue = row.avatarUrl?.trim();
+
+  if (!rawValue) {
+    return '';
+  }
+
+  return /^(https?:)?\/\//.test(rawValue) || rawValue.startsWith('/') || rawValue.startsWith('data:') ? rawValue : '';
+}
+
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination, scrollX } =
   useNaivePaginatedTable({
-  api: () => fetchGetUserProfileList(searchParams.value),
-  transform: response => defaultTransform(response),
-  onPaginationParamsChange: params => {
-    searchParams.value.pageNum = params.page;
-    searchParams.value.pageSize = params.pageSize;
-  },
-  columns: () => [
-    {
-      type: 'selection',
-      align: 'center',
-      width: 48
+    api: () => fetchGetUserProfileList(searchParams.value),
+    transform: response => defaultTransform(response),
+    onPaginationParamsChange: params => {
+      searchParams.value.pageNum = params.page;
+      searchParams.value.pageSize = params.pageSize;
     },
-    {
-      key: 'index',
-      title: $t('common.index'),
-      align: 'center',
-      width: 64,
-      render: (_, index) => index + 1
-    },
-    {
-      key: 'id',
-      title: '主键',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'userId',
-      title: '用户ID',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'avatarUrl',
-      title: '头像URL',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'bio',
-      title: '个人简介',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'personalityType',
-      title: '性格类型',
-      align: 'center',
-      minWidth: 120,
-      render(row) {
-        return <DictTag value={row.personalityType} dictCode="user_personality_type" />;
-      }
-    },
-    {
-      key: 'teacherTags',
-      title: 'AI导师偏好',
-      align: 'center',
-      minWidth: 120,
-      render(row) {
-        return <DictTag value={normalizeTeacherTags(row.teacherTags)} dictCode="user_teacher_tag" />;
-      }
-    },
-    {
-      key: 'language',
-      title: '语言偏好',
-      align: 'center',
-      minWidth: 120,
-      render(row) {
-        return <DictTag value={row.language} dictCode="sys_language" />;
-      }
-    },
-    {
-      key: 'isCompleted',
-      title: '是否完成配置',
-      align: 'center',
-      minWidth: 120,
-      render(row) {
-        return <DictTag value={row.isCompleted} dictCode="sys_yes_no" />;
-      }
-    },
-    {
-      key: 'createTime',
-      title: '创建时间',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'updateTime',
-      title: '更新时间',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'operate',
-      title: $t('common.operate'),
-      align: 'center',
-      width: 130,
-      render: row => {
-        const divider = () => {
-          if (!hasAuth('xiaomai:userProfile:edit') || !hasAuth('xiaomai:userProfile:remove')) {
-            return null;
+    columns: () => [
+      {
+        type: 'selection',
+        align: 'center',
+        width: 48
+      },
+      {
+        key: 'index',
+        title: $t('common.index'),
+        align: 'center',
+        width: 64,
+        render: (_, index) => index + 1
+      },
+      {
+        key: 'userName',
+        title: '用户',
+        align: 'left',
+        minWidth: 180,
+        render(row) {
+          if (!row.userName && !row.nickName) {
+            return '-';
           }
-          return <NDivider vertical />;
-        };
 
-        const editBtn = () => {
-          if (!hasAuth('xiaomai:userProfile:edit')) {
-            return null;
-          }
           return (
-            <ButtonIcon
-              text
-              type="primary"
-              icon="material-symbols:drive-file-rename-outline-outline"
-              tooltipContent={$t('common.edit')}
-              onClick={() => edit(row.id)}
-            />
+            <div class="max-w-180px flex flex-col">
+              <NEllipsis>{row.userName || '-'}</NEllipsis>
+              <NEllipsis class="text-12px text-[#8b7b6b]">{row.nickName || ''}</NEllipsis>
+            </div>
           );
-        };
+        }
+      },
+      {
+        key: 'avatarUrl',
+        title: '头像URL',
+        align: 'center',
+        minWidth: 120,
+        render(row) {
+          const avatarImage = resolveAvatarImage(row);
 
-        const deleteBtn = () => {
-          if (!hasAuth('xiaomai:userProfile:remove')) {
-            return null;
+          if (avatarImage) {
+            return <NImage class="h-40px w-40px rounded-full object-cover" preview-disabled src={avatarImage} />;
           }
-          return (
-            <ButtonIcon
-              text
-              type="error"
-              icon="material-symbols:delete-outline"
-              tooltipContent={$t('common.delete')}
-              popconfirmContent={$t('common.confirmDelete')}
-              onPositiveClick={() => handleDelete(row.id)}
-            />
-          );
-        };
 
-        return (
-          <div class="flex-center gap-8px">
-            {editBtn()}
-            {divider()}
-            {deleteBtn()}
-          </div>
-        );
+          if (!row.avatarUrl) {
+            return '-';
+          }
+
+          return (
+            <NEllipsis line-clamp={2} tooltip={false}>
+              {row.avatarUrl}
+            </NEllipsis>
+          );
+        }
+      },
+      {
+        key: 'bio',
+        title: '个人简介',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'personalityType',
+        title: '性格类型',
+        align: 'center',
+        minWidth: 660,
+        render(row) {
+          return <DictTag value={row.personalityType} dictCode="user_personality_type" />;
+        }
+      },
+      {
+        key: 'teacherTags',
+        title: 'AI导师偏好',
+        align: 'center',
+        minWidth: 260,
+        render(row) {
+          return <DictTag value={normalizeTeacherTags(row.teacherTags)} dictCode="user_teacher_tag" />;
+        }
+      },
+      {
+        key: 'language',
+        title: '语言偏好',
+        align: 'center',
+        minWidth: 120,
+        render(row) {
+          return <DictTag value={row.language} dictCode="sys_language" />;
+        }
+      },
+      {
+        key: 'isCompleted',
+        title: '是否完成配置',
+        align: 'center',
+        minWidth: 120,
+        render(row) {
+          return <DictTag value={normalizeYesNoDictValue(row.isCompleted)} dictCode="sys_yes_no" />;
+        }
+      },
+      {
+        key: 'createTime',
+        title: '创建时间',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'updateTime',
+        title: '更新时间',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: 130,
+        render: row => {
+          const divider = () => {
+            if (!hasAuth('xiaomai:userProfile:edit') || !hasAuth('xiaomai:userProfile:remove')) {
+              return null;
+            }
+            return <NDivider vertical />;
+          };
+
+          const editBtn = () => {
+            if (!hasAuth('xiaomai:userProfile:edit')) {
+              return null;
+            }
+            return (
+              <ButtonIcon
+                text
+                type="primary"
+                icon="material-symbols:drive-file-rename-outline-outline"
+                tooltipContent={$t('common.edit')}
+                onClick={() => edit(row.id)}
+              />
+            );
+          };
+
+          const deleteBtn = () => {
+            if (!hasAuth('xiaomai:userProfile:remove')) {
+              return null;
+            }
+            return (
+              <ButtonIcon
+                text
+                type="error"
+                icon="material-symbols:delete-outline"
+                tooltipContent={$t('common.delete')}
+                popconfirmContent={$t('common.confirmDelete')}
+                onPositiveClick={() => handleDelete(row.id)}
+              />
+            );
+          };
+
+          return (
+            <div class="flex-center gap-8px">
+              {editBtn()}
+              {divider()}
+              {deleteBtn()}
+            </div>
+          );
+        }
       }
-    }
-  ]
-});
+    ]
+  });
 
 const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys, onBatchDeleted, onDeleted } =
   useTableOperate(data, 'id', getData);

@@ -3,6 +3,7 @@
  * 复刻设计稿的三步导览流程，并在结束时标记 onboarding 完成。
  */
 import { ArrowLeft, ImagePlus } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -41,6 +42,7 @@ export function ProfileTourPage() {
       ? 'en-US'
       : PROFILE_DEFAULT_LANGUAGE;
   const currentSlide = slides[currentStep];
+  const isLastStep = currentStep === slides.length - 1;
 
   async function finishTour() {
     try {
@@ -92,14 +94,27 @@ export function ProfileTourPage() {
 
         <div className="xm-profile-onboarding__tour-content">
           <section className="xm-profile-onboarding__tour-copy">
-            <div className="xm-profile-onboarding__step-copy xm-profile-onboarding__step-copy--tour">
-              <h1>{currentSlide.title}</h1>
-              <p>{currentSlide.description}</p>
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`copy-${currentStep}`}
+                className="xm-profile-onboarding__step-copy xm-profile-onboarding__step-copy--tour"
+                initial={{ opacity: 0, x: -24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 18 }}
+                transition={{
+                  duration: 0.34,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+              >
+                <h1>{currentSlide.title}</h1>
+                <p>{currentSlide.description}</p>
+              </motion.div>
+            </AnimatePresence>
 
             <div className="xm-profile-onboarding__stack-actions xm-profile-onboarding__stack-actions--tour">
               <Button
-                className="xm-profile-onboarding__primary-btn"
+                className="xm-profile-onboarding__primary-btn w-full shadow-md"
+                size="hero"
                 type="button"
                 disabled={isSavingProfile}
                 onClick={() => {
@@ -111,33 +126,55 @@ export function ProfileTourPage() {
                   void finishTour();
                 }}
               >
-                {currentStep === slides.length - 1
+                {isLastStep
                   ? t('profileSetup.tour.finish')
                   : t('profileSetup.tour.continue')}
               </Button>
-              <button
+              <Button
                 type="button"
-                className="xm-profile-onboarding__secondary-link"
+                variant="ghost"
+                size="hero"
+                className="w-full text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground hover:underline"
                 onClick={() => {
                   void finishTour();
                 }}
               >
                 {t('profileSetup.tour.skip')}
-              </button>
+              </Button>
             </div>
           </section>
 
           <section className="xm-profile-onboarding__tour-demo">
             <div className="xm-profile-onboarding__tour-card">
-              <div className="xm-profile-onboarding__tour-placeholder">
-                <ImagePlus size={28} />
-                <span>
-                  {t('profileSetup.tour.placeholderLabel', {
-                    index: currentStep + 1,
-                    title: currentSlide.title
-                  })}
-                </span>
-              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`demo-${currentStep}`}
+                  className="xm-profile-onboarding__tour-placeholder"
+                  initial={{ opacity: 0, scale: 0.96, rotate: -1.5 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                  exit={{ opacity: 0, scale: 1.02, rotate: 1.5 }}
+                  transition={{
+                    duration: 0.38,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
+                >
+                  <img 
+                    className="xm-profile-onboarding__gif-preview" 
+                    src="" 
+                    alt="Demo GIF placeholder" 
+                    style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0 }} 
+                  />
+                  <div className="xm-profile-onboarding__placeholder-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <ImagePlus size={28} />
+                    <span>
+                      {t('profileSetup.tour.placeholderLabel', {
+                        index: currentStep + 1,
+                        title: currentSlide.title
+                      })}
+                    </span>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </section>
         </div>

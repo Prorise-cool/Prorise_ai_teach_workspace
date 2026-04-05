@@ -16,8 +16,14 @@ declare namespace Api {
                 id: CommonType.IdType; 
             /** 用户ID */
                 userId: CommonType.IdType; 
+            /** 用户名 */
+                userName?: string; 
+            /** 用户昵称 */
+                nickName?: string; 
             /** 头像URL */
                 avatarUrl: string; 
+            /** 头像URL 映射地址 */
+                avatarUrlUrl?: string; 
             /** 个人简介 */
                 bio: string; 
             /** 性格类型 */
@@ -36,6 +42,7 @@ declare namespace Api {
                 Api.Xiaomai.UserProfile,
                         | 'id'
                         | 'userId'
+                        | 'userName'
                         | 'bio'
                         | 'personalityType'
                         | 'language'
@@ -50,11 +57,14 @@ declare namespace Api {
                 Api.Xiaomai.UserProfile,
                         | 'id'
                         | 'userId'
+                        | 'userName'
+                        | 'nickName'
                         | 'avatarUrl'
                         | 'bio'
                         | 'personalityType'
                         | 'teacherTags'
                         | 'language'
+                        | 'isCompleted'
             >
         >;
 

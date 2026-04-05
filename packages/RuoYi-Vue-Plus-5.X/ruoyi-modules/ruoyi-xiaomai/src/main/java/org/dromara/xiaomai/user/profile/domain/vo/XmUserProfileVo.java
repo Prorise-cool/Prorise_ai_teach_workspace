@@ -43,6 +43,20 @@ public class XmUserProfileVo implements Serializable {
     private Long userId;
 
     /**
+     * 用户名
+     */
+    @ExcelProperty(value = "用户名")
+    @Translation(type = TransConstant.USER_ID_TO_NAME, mapper = "userId")
+    private String userName;
+
+    /**
+     * 用户昵称
+     */
+    @ExcelProperty(value = "用户昵称")
+    @Translation(type = TransConstant.USER_ID_TO_NICKNAME, mapper = "userId")
+    private String nickName;
+
+    /**
      * 头像URL
      */
     @ExcelProperty(value = "头像URL")

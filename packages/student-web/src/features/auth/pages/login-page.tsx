@@ -2,8 +2,8 @@
  * 文件说明：认证页页面容器。
  * 负责装配认证服务、会话写入和回跳逻辑，不直接承载页面细碎的 UI 状态。
  */
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, MoonStar, SunMedium } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -14,20 +14,20 @@ import { LoginForm } from '@/features/auth/components/login-form';
 import { RegisterForm } from '@/features/auth/components/register-form';
 import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state';
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect';
-import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
 import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
+import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
 import { authService, type AuthService } from '@/services/auth';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 import {
-  AUTH_DEFAULT_TENANT_ID,
-  type AuthSession
+	AUTH_DEFAULT_TENANT_ID,
+	type AuthSession
 } from '@/types/auth';
 
 import '@/features/auth/styles/login-page.scss';
 
 type LoginPageProps = {
-  service?: AuthService;
+	service?: AuthService;
 };
 
 type AuthView = 'login' | 'register';
@@ -40,295 +40,295 @@ type AuthView = 'login' | 'register';
  * @returns 认证页节点。
  */
 export function LoginPage({
-  service = authService
+	service = authService
 }: LoginPageProps) {
-  const { t } = useAppTranslation();
-  const authPageCopy = useAuthPageCopy();
-  const { notify } = useFeedback();
-  const navigate = useNavigate();
-  const [activeView, setActiveView] = useState<AuthView>('login');
-  const [registerEnabled, setRegisterEnabled] = useState(false);
-  const [registerSucceeded, setRegisterSucceeded] = useState(false);
-  const [prefilledLoginUsername, setPrefilledLoginUsername] = useState('');
-  const [authRedirectReason, setAuthRedirectReason] = useState<
-    'existing-session' | 'login-success'
-  >('existing-session');
-  const redirectFeedbackShownRef = useRef<'existing-session' | 'login-success' | null>(
-    null
-  );
-  const registerFallbackNotifiedRef = useRef(false);
+	const { t } = useAppTranslation();
+	const authPageCopy = useAuthPageCopy();
+	const { notify } = useFeedback();
+	const navigate = useNavigate();
+	const [activeView, setActiveView] = useState<AuthView>('login');
+	const [registerEnabled, setRegisterEnabled] = useState(false);
+	const [registerSucceeded, setRegisterSucceeded] = useState(false);
+	const [prefilledLoginUsername, setPrefilledLoginUsername] = useState('');
+	const [authRedirectReason, setAuthRedirectReason] = useState<
+		'existing-session' | 'login-success'
+	>('existing-session');
+	const redirectFeedbackShownRef = useRef<'existing-session' | 'login-success' | null>(
+		null
+	);
+	const registerFallbackNotifiedRef = useRef(false);
 
-  // 页面容器 Session状态。
-  const session = useAuthSessionStore(state => state.session);
-  const setSession = useAuthSessionStore(state => state.setSession);
+	// 页面容器 Session状态。
+	const session = useAuthSessionStore(state => state.session);
+	const setSession = useAuthSessionStore(state => state.setSession);
 
-  const {
-    themeMode,
-    scenePhase,
-    toggleThemeMode,
-    handleSceneZoneChange
-  } = useAuthPageUiState();
-  
-  const {
-    returnTo
-  } = useAuthRedirect();
+	const {
+		themeMode,
+		scenePhase,
+		toggleThemeMode,
+		handleSceneZoneChange
+	} = useAuthPageUiState();
 
-  /**
-   * 在认证成功后写入会话，并执行统一回跳。
-   *
-   * @param session - 已建立的认证会话。
-   */
-  function handleAuthenticated(session: AuthSession) {
-    setRegisterSucceeded(false);
-    setPrefilledLoginUsername('');
-    setAuthRedirectReason('login-success');
-    setSession(session);
-  }
+	const {
+		returnTo
+	} = useAuthRedirect();
 
-  useEffect(() => {
-    if (session?.accessToken) {
-      return;
-    }
+	/**
+	 * 在认证成功后写入会话，并执行统一回跳。
+	 *
+	 * @param session - 已建立的认证会话。
+	 */
+	function handleAuthenticated(session: AuthSession) {
+		setRegisterSucceeded(false);
+		setPrefilledLoginUsername('');
+		setAuthRedirectReason('login-success');
+		setSession(session);
+	}
 
-    redirectFeedbackShownRef.current = null;
-  }, [session?.accessToken]);
+	useEffect(() => {
+		if (session?.accessToken) {
+			return;
+		}
 
-  useLayoutEffect(() => {
-    let isActive = true;
+		redirectFeedbackShownRef.current = null;
+	}, [session?.accessToken]);
 
-    if (!session?.accessToken) {
-      return undefined;
-    }
+	useLayoutEffect(() => {
+		let isActive = true;
 
-    const activeSession = session;
+		if (!session?.accessToken) {
+			return undefined;
+		}
 
-    async function redirectAfterSessionReady() {
-      if (redirectFeedbackShownRef.current !== authRedirectReason) {
-        const isFreshLogin = authRedirectReason === 'login-success';
-        notify({
-          tone: isFreshLogin ? 'success' : 'info',
-          title: isFreshLogin
-            ? t('auth.feedback.loginSuccessTitle')
-            : t('auth.feedback.alreadySignedInTitle'),
-          description: isFreshLogin
-            ? t('auth.feedback.loginSuccessMessage')
-            : t('auth.feedback.alreadySignedInMessage')
-        });
+		const activeSession = session;
 
-        redirectFeedbackShownRef.current = authRedirectReason;
-      }
+		async function redirectAfterSessionReady() {
+			if (redirectFeedbackShownRef.current !== authRedirectReason) {
+				const isFreshLogin = authRedirectReason === 'login-success';
+				notify({
+					tone: isFreshLogin ? 'success' : 'info',
+					title: isFreshLogin
+						? t('auth.feedback.loginSuccessTitle')
+						: t('auth.feedback.alreadySignedInTitle'),
+					description: isFreshLogin
+						? t('auth.feedback.loginSuccessMessage')
+						: t('auth.feedback.alreadySignedInMessage')
+				});
 
-      const nextPath = await resolvePostAuthDestination({
-        userId: activeSession.user.id,
-        accessToken: activeSession.accessToken,
-        returnTo
-      });
+				redirectFeedbackShownRef.current = authRedirectReason;
+			}
 
-      if (!isActive) {
-        return;
-      }
+			const nextPath = await resolvePostAuthDestination({
+				userId: activeSession.user.id,
+				accessToken: activeSession.accessToken,
+				returnTo
+			});
 
-      void navigate(nextPath, {
-        replace: true,
-        state: null
-      });
-    }
+			if (!isActive) {
+				return;
+			}
 
-    void redirectAfterSessionReady();
+			void navigate(nextPath, {
+				replace: true,
+				state: null
+			});
+		}
 
-    return () => {
-      isActive = false;
-    };
-  }, [
-    authRedirectReason,
-    navigate,
-    notify,
-    returnTo,
-    session,
-    t
-  ]);
+		void redirectAfterSessionReady();
 
-  useEffect(() => {
-    let cancelled = false;
+		return () => {
+			isActive = false;
+		};
+	}, [
+		authRedirectReason,
+		navigate,
+		notify,
+		returnTo,
+		session,
+		t
+	]);
 
-    async function bootstrapRegisterState() {
-      try {
-        const enabled = await service.getRegisterEnabled(AUTH_DEFAULT_TENANT_ID);
+	useEffect(() => {
+		let cancelled = false;
 
-        if (cancelled) {
-          return;
-        }
+		async function bootstrapRegisterState() {
+			try {
+				const enabled = await service.getRegisterEnabled(AUTH_DEFAULT_TENANT_ID);
 
-        setRegisterEnabled(enabled);
+				if (cancelled) {
+					return;
+				}
 
-        if (!enabled) {
-          setActiveView('login');
-        }
-      } catch {
-        if (cancelled) {
-          return;
-        }
+				setRegisterEnabled(enabled);
 
-        setRegisterEnabled(false);
-        setActiveView('login');
+				if (!enabled) {
+					setActiveView('login');
+				}
+			} catch {
+				if (cancelled) {
+					return;
+				}
 
-        if (!registerFallbackNotifiedRef.current) {
-          registerFallbackNotifiedRef.current = true;
-          notify({
-            tone: 'warning',
-            title: t('auth.feedback.registerStateFallbackTitle'),
-            description: t('auth.feedback.registerStateFallbackMessage')
-          });
-        }
-      }
-    }
+				setRegisterEnabled(false);
+				setActiveView('login');
 
-    void bootstrapRegisterState();
+				if (!registerFallbackNotifiedRef.current) {
+					registerFallbackNotifiedRef.current = true;
+					notify({
+						tone: 'warning',
+						title: t('auth.feedback.registerStateFallbackTitle'),
+						description: t('auth.feedback.registerStateFallbackMessage')
+					});
+				}
+			}
+		}
 
-    return () => {
-      cancelled = true;
-    };
-  }, [notify, service, t]);
+		void bootstrapRegisterState();
 
-  function switchToLogin() {
-    setActiveView('login');
-  }
+		return () => {
+			cancelled = true;
+		};
+	}, [notify, service, t]);
 
-  function switchToRegister() {
-    if (!registerEnabled) {
-      return;
-    }
+	function switchToLogin() {
+		setActiveView('login');
+	}
 
-    setRegisterSucceeded(false);
-    setActiveView('register');
-  }
+	function switchToRegister() {
+		if (!registerEnabled) {
+			return;
+		}
 
-  function handleRegistered(username: string) {
-    setRegisterSucceeded(true);
-    setPrefilledLoginUsername(username);
-    setActiveView('login');
-    notify({
-      tone: 'success',
-      title: t('auth.feedback.registerSuccessTitle'),
-      description: t('auth.feedback.registerSuccessMessage')
-    });
-  }
+		setRegisterSucceeded(false);
+		setActiveView('register');
+	}
 
-  const isRegisterView = registerEnabled && activeView === 'register';
-  const viewTitle = isRegisterView
-    ? authPageCopy.registerTitle
-    : authPageCopy.loginTitle;
-  if (session?.accessToken) {
-    return null;
-  }
+	function handleRegistered(username: string) {
+		setRegisterSucceeded(true);
+		setPrefilledLoginUsername(username);
+		setActiveView('login');
+		notify({
+			tone: 'success',
+			title: t('auth.feedback.registerSuccessTitle'),
+			description: t('auth.feedback.registerSuccessMessage')
+		});
+	}
 
-  return (
-    <main className="xm-auth-page">
-      <div className="xm-auth-container">
-        <AuthScene phase={scenePhase} />
+	const isRegisterView = registerEnabled && activeView === 'register';
+	const viewTitle = isRegisterView
+		? authPageCopy.registerTitle
+		: authPageCopy.loginTitle;
+	if (session?.accessToken) {
+		return null;
+	}
 
-        <section className="xm-auth-right-panel">
-          <div className="xm-auth-brand-header">
-            <span className="xm-auth-brand-icon" aria-hidden="true">
-              <img
-                src="/entry/logo.png"
-                alt=""
-                className="xm-auth-brand-logo"
-              />
-            </span>
-            <span>{authPageCopy.brand}</span>
-          </div>
+	return (
+		<main className="xm-auth-page">
+			<div className="xm-auth-container">
+				<AuthScene phase={scenePhase} />
 
-          <Link className="xm-auth-back-link" to="/">
-            <ArrowLeft size={16} />
-            <span>{authPageCopy.backHome}</span>
-          </Link>
+				<section className="xm-auth-right-panel">
+					<div className="xm-auth-brand-header">
+						<span className="xm-auth-brand-icon" aria-hidden="true">
+							<img
+								src="/entry/logo.png"
+								alt=""
+								className="xm-auth-brand-logo"
+							/>
+						</span>
+						<span>{authPageCopy.brand}</span>
+					</div>
 
-          <div className="xm-auth-toolbar">
-            <Button
-              type="button"
-              variant="surface"
-              size="icon"
-              className="xm-auth-icon-btn"
-              aria-label={authPageCopy.themeToggle}
-              onClick={toggleThemeMode}
-            >
-              {themeMode === 'dark' ? (
-                <SunMedium size={18} />
-              ) : (
-                <MoonStar size={18} />
-              )}
-            </Button>
-          </div>
+					<Link className="xm-auth-back-link" to="/">
+						<ArrowLeft size={16} />
+						<span>{authPageCopy.backHome}</span>
+					</Link>
 
-          <h1 className="xm-auth-view-title">
-            {viewTitle}
-          </h1>
+					<div className="xm-auth-toolbar">
+						<Button
+							type="button"
+							variant="surface"
+							size="icon"
+							className="xm-auth-icon-btn"
+							aria-label={authPageCopy.themeToggle}
+							onClick={toggleThemeMode}
+						>
+							{themeMode === 'dark' ? (
+								<SunMedium size={18} />
+							) : (
+								<MoonStar size={18} />
+							)}
+						</Button>
+					</div>
 
-          {registerSucceeded ? (
-            <div className="xm-auth-return-banner" role="status">
-              <span>{authPageCopy.registerSuccess}</span>
-            </div>
-          ) : null}
+					<h1 className="xm-auth-view-title">
+						{viewTitle}
+					</h1>
 
-          {registerEnabled ? (
-            <Tabs
-              value={activeView}
-              onValueChange={nextValue => {
-                if (nextValue === 'register') {
-                  switchToRegister();
-                  return;
-                }
+					{registerSucceeded ? (
+						<div className="xm-auth-return-banner" role="status">
+							<span>{authPageCopy.registerSuccess}</span>
+						</div>
+					) : null}
 
-                switchToLogin();
-              }}
-            >
-              <TabsList
-                className="xm-auth-tabs"
-                aria-label={`${authPageCopy.loginTab}/${authPageCopy.registerTab}`}
-              >
-                <TabsTrigger className="xm-auth-tab" value="login">
-                  {authPageCopy.loginTab}
-                </TabsTrigger>
-                <TabsTrigger className="xm-auth-tab" value="register">
-                  {authPageCopy.registerTab}
-                </TabsTrigger>
-              </TabsList>
+					{registerEnabled ? (
+						<Tabs
+							value={activeView}
+							onValueChange={nextValue => {
+								if (nextValue === 'register') {
+									switchToRegister();
+									return;
+								}
 
-              <TabsContent value="login">
-                <LoginForm
-                  service={service}
-                  returnTo={returnTo}
-                  canRegister={registerEnabled}
-                  initialUsername={prefilledLoginUsername}
-                  onAuthenticated={handleAuthenticated}
-                  onSwitchToRegister={switchToRegister}
-                  onSceneZoneChange={handleSceneZoneChange}
-                />
-              </TabsContent>
+								switchToLogin();
+							}}
+						>
+							<TabsList
+								className="xm-auth-tabs"
+								aria-label={`${authPageCopy.loginTab}/${authPageCopy.registerTab}`}
+							>
+								<TabsTrigger className="xm-auth-tab" value="login">
+									{authPageCopy.loginTab}
+								</TabsTrigger>
+								<TabsTrigger className="xm-auth-tab" value="register">
+									{authPageCopy.registerTab}
+								</TabsTrigger>
+							</TabsList>
 
-              <TabsContent value="register">
-                <RegisterForm
-                  service={service}
-                  onRegistered={handleRegistered}
-                  onSwitchToLogin={switchToLogin}
-                  onSceneZoneChange={handleSceneZoneChange}
-                />
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <LoginForm
-              service={service}
-              returnTo={returnTo}
-              canRegister={registerEnabled}
-              initialUsername={prefilledLoginUsername}
-              onAuthenticated={handleAuthenticated}
-              onSwitchToRegister={switchToRegister}
-              onSceneZoneChange={handleSceneZoneChange}
-            />
-          )}
-        </section>
-      </div>
-    </main>
-  );
+							<TabsContent value="login">
+								<LoginForm
+									service={service}
+									returnTo={returnTo}
+									canRegister={registerEnabled}
+									initialUsername={prefilledLoginUsername}
+									onAuthenticated={handleAuthenticated}
+									onSwitchToRegister={switchToRegister}
+									onSceneZoneChange={handleSceneZoneChange}
+								/>
+							</TabsContent>
+
+							<TabsContent value="register">
+								<RegisterForm
+									service={service}
+									onRegistered={handleRegistered}
+									onSwitchToLogin={switchToLogin}
+									onSceneZoneChange={handleSceneZoneChange}
+								/>
+							</TabsContent>
+						</Tabs>
+					) : (
+						<LoginForm
+							service={service}
+							returnTo={returnTo}
+							canRegister={registerEnabled}
+							initialUsername={prefilledLoginUsername}
+							onAuthenticated={handleAuthenticated}
+							onSwitchToRegister={switchToRegister}
+							onSceneZoneChange={handleSceneZoneChange}
+						/>
+					)}
+				</section>
+			</div>
+		</main>
+	);
 }

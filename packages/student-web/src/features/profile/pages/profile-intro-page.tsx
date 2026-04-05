@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Camera, MoonStar, SunMedium } from 'lucide-react';
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -32,6 +32,7 @@ import {
 } from '@/features/profile/types';
 import { useFeedback } from '@/shared/feedback';
 
+import '@/features/auth/styles/login-page.scss';
 import '@/features/profile/styles/profile-onboarding.scss';
 
 /**
@@ -46,7 +47,14 @@ export function ProfileIntroPage() {
   const [searchParams] = useSearchParams();
   const { notify } = useFeedback();
   const { themeMode, scenePhase, toggleThemeMode } = useAuthPageUiState();
-  const { userId, profile, saveProfile, isSavingProfile } = useUserProfile();
+  const {
+    userId,
+    profile,
+    saveProfile,
+    uploadAvatar,
+    isSavingProfile,
+    isUploadingAvatar
+  } = useUserProfile();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     profile?.avatarUrl ?? null
@@ -90,23 +98,19 @@ export function ProfileIntroPage() {
       return;
     }
 
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            resolve(reader.result);
-            return;
-          }
-
-          reject(new Error('Invalid avatar result'));
-        };
-        reader.onerror = () => reject(reader.error ?? new Error('Avatar read failed'));
-        reader.readAsDataURL(nextFile);
+    if (!userId) {
+      notify({
+        tone: 'warning',
+        title: t('profileSetup.feedback.saveFailedTitle'),
+        description: t('profileSetup.feedback.missingSession')
       });
+      event.target.value = '';
+      return;
+    }
 
-      setAvatarPreview(dataUrl);
+    try {
+      const uploadedAvatarUrl = await uploadAvatar(nextFile);
+      setAvatarPreview(uploadedAvatarUrl);
     } catch {
       notify({
         tone: 'warning',
@@ -135,12 +139,10 @@ export function ProfileIntroPage() {
         language: currentLanguage
       });
 
-      const shouldSkipPreferences =
-        values.bio.trim().length > 0 ||
-        hasCollectedProfilePreferences(nextProfile);
+      const hasProfilePreferences = hasCollectedProfilePreferences(nextProfile);
 
       void navigate(
-        shouldSkipPreferences
+        hasProfilePreferences
           ? buildProfileTourPath(returnTo)
           : buildProfilePreferencesPath(returnTo),
         {
@@ -157,28 +159,23 @@ export function ProfileIntroPage() {
   });
 
   return (
-    <main className="xm-profile-onboarding xm-profile-onboarding--intro">
-      <div className="xm-profile-onboarding__intro-shell">
+    <main className="xm-auth-page xm-profile-onboarding xm-profile-onboarding--intro">
+      <div className="xm-auth-container xm-profile-onboarding__intro-shell">
         <AuthScene phase={scenePhase} />
 
-        <section className="xm-profile-onboarding__intro-panel">
-          <div className="xm-profile-onboarding__brand-row">
-            <span className="xm-profile-onboarding__brand-mark" aria-hidden="true">
-              <img src="/entry/logo.png" alt="" className="xm-profile-onboarding__brand-logo" />
+        <section className="xm-auth-right-panel xm-profile-onboarding__intro-panel">
+          <div className="xm-auth-brand-header xm-profile-onboarding__brand-row">
+            <span className="xm-auth-brand-icon xm-profile-onboarding__brand-mark" aria-hidden="true">
+              <img src="/entry/logo.png" alt="" className="xm-auth-brand-logo xm-profile-onboarding__brand-logo" />
             </span>
             <span>{authPageCopy.brand}</span>
           </div>
-
-          <Link className="xm-profile-onboarding__back-link" to="/">
-            {t('profileSetup.intro.backHome')}
-          </Link>
-
-          <div className="xm-profile-onboarding__toolbar">
+          <div className="xm-auth-toolbar xm-profile-onboarding__toolbar">
             <Button
               type="button"
               variant="surface"
               size="icon"
-              className="xm-profile-onboarding__theme-btn"
+              className="xm-auth-icon-btn xm-profile-onboarding__theme-btn"
               aria-label={t('profileSetup.intro.themeToggle')}
               onClick={toggleThemeMode}
             >
@@ -198,10 +195,12 @@ export function ProfileIntroPage() {
             {t('profileSetup.intro.skip')}
           </button>
 
-          <div className="xm-profile-onboarding__intro-copy">
-            <h1>{t('profileSetup.intro.title')}</h1>
-            <p>{t('profileSetup.intro.subtitle')}</p>
-          </div>
+          <h1 className="xm-auth-view-title xm-profile-onboarding__intro-title">
+            {t('profileSetup.intro.title')}
+          </h1>
+          <p className="xm-auth-view-subtitle xm-profile-onboarding__intro-subtitle">
+            {t('profileSetup.intro.subtitle')}
+          </p>
 
           <form
             className="xm-profile-onboarding__intro-form"
@@ -223,6 +222,7 @@ export function ProfileIntroPage() {
               <button
                 type="button"
                 className="xm-profile-onboarding__avatar-trigger"
+                disabled={isUploadingAvatar}
                 onClick={() => {
                   fileInputRef.current?.click();
                 }}
@@ -244,7 +244,11 @@ export function ProfileIntroPage() {
               </button>
               <div className="xm-profile-onboarding__avatar-copy">
                 <strong>{t('profileSetup.intro.avatarLabel')}</strong>
-                <span>{t('profileSetup.intro.avatarHint')}</span>
+                <span>
+                  {isUploadingAvatar
+                    ? t('profileSetup.intro.avatarUploading')
+                    : t('profileSetup.intro.avatarHint')}
+                </span>
               </div>
             </div>
 
@@ -276,7 +280,8 @@ export function ProfileIntroPage() {
             </div>
 
             <Button
-              className="xm-profile-onboarding__primary-btn"
+              className="w-full rounded-full shadow-md"
+              size="hero"
               type="submit"
               disabled={isSavingProfile}
             >

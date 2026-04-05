@@ -45,7 +45,7 @@ const model = ref<Model>(createDefaultModel());
 
 const userIdInput = computed<string>({
   get() {
-    return model.value.userId == null ? '' : String(model.value.userId);
+    return model.value.userId === null || model.value.userId === undefined ? '' : String(model.value.userId);
   },
   set(value) {
     model.value.userId = value === '' ? null : Number(value);
@@ -61,22 +61,32 @@ const avatarUrlValue = computed<string>({
   }
 });
 
+const avatarPreviewUrl = computed(() => {
+  const value = model.value.avatarUrl?.trim() ?? '';
+
+  if (!value) {
+    return '';
+  }
+
+  return /^(https?:)?\/\//.test(value) || value.startsWith('/') || value.startsWith('data:') ? value : '';
+});
+
 function createDefaultModel(): Model {
   return {
-      id: null,
-      userId: null,
-      avatarUrl: '',
-      bio: '',
-      personalityType: '',
-      teacherTags: '',
-      language: '',
+    id: null,
+    userId: null,
+    userName: '',
+    nickName: '',
+    avatarUrl: '',
+    bio: '',
+    personalityType: '',
+    teacherTags: '',
+    language: '',
+    isCompleted: 0
   };
 }
 
-type RuleKey = Extract<
-  keyof Model,
-  | 'userId'
->;
+type RuleKey = Extract<keyof Model, 'userId'>;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
   userId: createRequiredRule('用户ID不能为空')
@@ -97,17 +107,34 @@ function closeDrawer() {
 async function handleSubmit() {
   await validate();
 
-  const { id, userId, avatarUrl, bio, personalityType, teacherTags, language } = model.value;
+  const { id, userId, avatarUrl, bio, personalityType, teacherTags, language, isCompleted } = model.value;
 
   // request
   if (props.operateType === 'add') {
-    const { error } = await fetchCreateUserProfile({ userId, avatarUrl, bio, personalityType, teacherTags, language });
+    const { error } = await fetchCreateUserProfile({
+      userId,
+      avatarUrl,
+      bio,
+      personalityType,
+      teacherTags,
+      language,
+      isCompleted
+    });
     if (error) return;
     window.$message?.success($t('common.addSuccess'));
   }
 
   if (props.operateType === 'edit') {
-    const { error } = await fetchUpdateUserProfile({ id, userId, avatarUrl, bio, personalityType, teacherTags, language });
+    const { error } = await fetchUpdateUserProfile({
+      id,
+      userId,
+      avatarUrl,
+      bio,
+      personalityType,
+      teacherTags,
+      language,
+      isCompleted
+    });
     if (error) return;
     window.$message?.success($t('common.updateSuccess'));
   }
@@ -131,16 +158,25 @@ watch(visible, () => {
         <NFormItem label="用户ID" path="userId">
           <NInput v-model:value="userIdInput" placeholder="请输入用户ID" />
         </NFormItem>
+        <NFormItem label="用户名">
+          <NInput v-model:value="model.userName" placeholder="系统自动关联用户名" readonly />
+        </NFormItem>
+        <NFormItem label="用户昵称">
+          <NInput v-model:value="model.nickName" placeholder="系统自动关联昵称" readonly />
+        </NFormItem>
         <NFormItem label="头像URL" path="avatarUrl">
-          <OssUpload v-model:value="avatarUrlValue" upload-type="image" />
+          <div class="w-full flex-col gap-12px">
+            <NInput v-model:value="avatarUrlValue" placeholder="请输入头像URL" />
+            <NImage
+              v-if="avatarPreviewUrl"
+              class="h-80px w-80px rounded-full object-cover"
+              preview-disabled
+              :src="avatarPreviewUrl"
+            />
+          </div>
         </NFormItem>
         <NFormItem label="个人简介" path="bio">
-          <NInput
-            v-model:value="model.bio"
-            :rows="3"
-            type="textarea"
-            placeholder="请输入个人简介"
-          />
+          <NInput v-model:value="model.bio" :rows="3" type="textarea" placeholder="请输入个人简介" />
         </NFormItem>
         <NFormItem label="性格类型" path="personalityType">
           <DictSelect
@@ -151,20 +187,10 @@ watch(visible, () => {
           />
         </NFormItem>
         <NFormItem label="AI导师偏好" path="teacherTags">
-          <NInput
-            v-model:value="model.teacherTags"
-            :rows="3"
-            type="textarea"
-            placeholder="请输入AI导师偏好"
-          />
+          <NInput v-model:value="model.teacherTags" :rows="3" type="textarea" placeholder="请输入AI导师偏好" />
         </NFormItem>
         <NFormItem label="语言偏好" path="language">
-          <DictSelect
-            v-model:value="model.language"
-            placeholder="请选择语言偏好"
-            dict-code="sys_language"
-            clearable
-          />
+          <DictSelect v-model:value="model.language" placeholder="请选择语言偏好" dict-code="sys_language" clearable />
         </NFormItem>
       </NForm>
       <template #footer>
@@ -177,4 +203,13 @@ watch(visible, () => {
   </NDrawer>
 </template>
 
-<style scoped></style>
+<style scoped>
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-12px {
+  gap: 12px;
+}
+</style>
