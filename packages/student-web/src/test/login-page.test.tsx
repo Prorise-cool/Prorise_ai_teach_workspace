@@ -12,6 +12,9 @@ import { appI18n } from '@/app/i18n';
 import { AppProvider } from '@/app/provider/app-provider';
 import { LoginPage } from '@/features/auth/pages/login-page';
 import { SocialCallbackPage } from '@/features/auth/pages/social-callback-page';
+import {
+  createEmptyUserProfile
+} from '@/features/profile/types';
 import { createMockAuthAdapter, createAuthError } from '@/services/api/adapters';
 import {
   AUTH_RETURN_TO_KEY,
@@ -23,6 +26,10 @@ import {
   resetAuthSessionStore,
   useAuthSessionStore
 } from '@/stores/auth-session-store';
+import {
+  resetUserProfileStore,
+  useUserProfileStore
+} from '@/features/profile/stores/user-profile-store';
 import { AUTH_DEFAULT_USER_TYPE } from '@/types/auth';
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
@@ -66,6 +73,18 @@ function renderAuthRoute({
         element: <div>Video input route</div>
       },
       {
+        path: '/profile/setup',
+        element: <div>Profile setup route</div>
+      },
+      {
+        path: '/profile/setup/preferences',
+        element: <div>Profile preferences route</div>
+      },
+      {
+        path: '/profile/setup/tour',
+        element: <div>Profile tour route</div>
+      },
+      {
         path: '/login',
         element: <LoginPage service={service} />
       },
@@ -91,11 +110,16 @@ function renderAuthRoute({
 }
 
 describe('LoginPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetAuthSessionStore();
+    resetUserProfileStore();
     window.localStorage.clear();
     window.sessionStorage.clear();
     document.documentElement.dataset.theme = 'light';
+
+    await act(async () => {
+      await appI18n.changeLanguage('zh-CN');
+    });
   });
 
   it('supports keyboard navigation on the login page', async () => {
@@ -160,7 +184,28 @@ describe('LoginPage', () => {
     expect(screen.getByText('请输入密码')).toBeInTheDocument();
   });
 
-  it('logs in with admin credentials and redirects to the query returnTo target', async () => {
+  it('redirects newly signed-in users to profile setup before restoring returnTo', async () => {
+    const { user } = renderAuthRoute({
+      initialEntries: [`/login?${AUTH_RETURN_TO_KEY}=/video/input`]
+    });
+
+    await user.type(screen.getByLabelText('账号'), 'admin');
+    await user.type(screen.getByLabelText('密码'), 'admin123{Enter}');
+
+    expect(await screen.findByText('Profile setup route')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(useAuthSessionStore.getState().session?.user.username).toBe('admin');
+    });
+  });
+
+  it('restores the original returnTo target when the profile is already completed', async () => {
+    useUserProfileStore.getState().setProfile({
+      ...createEmptyUserProfile('1'),
+      bio: '我已经完成配置',
+      isCompleted: true
+    });
+
     const { user } = renderAuthRoute({
       initialEntries: [`/login?${AUTH_RETURN_TO_KEY}=/video/input`]
     });
@@ -205,7 +250,7 @@ describe('LoginPage', () => {
     expect(screen.queryByText('账号或密码不正确，请重试')).toBeNull();
   });
 
-  it('redirects away from the login page when a session already exists', async () => {
+  it('redirects existing sessions to profile setup when onboarding is incomplete', async () => {
     const session = await mockAuthService.login({
       username: 'admin',
       password: 'admin123'
@@ -215,7 +260,7 @@ describe('LoginPage', () => {
     const { router } = renderAuthRoute();
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/');
+      expect(router.state.location.pathname).toBe('/profile/setup');
     });
 
     expect(router.state.location.pathname).not.toBe('/login');
@@ -337,7 +382,33 @@ describe('LoginPage', () => {
     expect(await screen.findByText('请输入验证码')).toBeInTheDocument();
   });
 
-  it('completes the social callback flow and restores the pending returnTo', async () => {
+  it('completes the social callback flow and enters profile setup first when onboarding is incomplete', async () => {
+    window.sessionStorage.setItem(
+      AUTH_SOCIAL_RETURN_TO_STORAGE_KEY,
+      '/video/input'
+    );
+
+    renderAuthRoute({
+      initialEntries: [
+        '/login/social-callback?source=github&code=mock-github-code&state=eyJ0ZW5hbnRJZCI6IjAwMDAwMCIsImRvbWFpbiI6ImxvY2FsaG9zdDo0MTczIn0='
+      ]
+    });
+
+    expect(await screen.findByText('Profile setup route')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(useAuthSessionStore.getState().session?.user.username).toBe(
+        'social_student'
+      );
+    });
+  });
+
+  it('restores the pending returnTo after social login when the profile is already completed', async () => {
+    useUserProfileStore.getState().setProfile({
+      ...createEmptyUserProfile('10003'),
+      bio: '社交登录用户',
+      isCompleted: true
+    });
     window.sessionStorage.setItem(
       AUTH_SOCIAL_RETURN_TO_STORAGE_KEY,
       '/video/input'

@@ -3,6 +3,7 @@
  * 当前只覆盖已接入 i18n 的最小页面范围，用于验证资源扩展能力。
  */
 import { enUsEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+import { enUsProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
 
 export const enUsResources = {
   auth: {
@@ -147,7 +148,7 @@ export const enUsResources = {
     sessionBadge: 'Auth consistency',
     title: 'Session and protected-access checks now use the real validation chain',
     description:
-      'This page verifies whether the frontend, FastAPI, and RuoYi agree on the same session, while also exposing unified sign-out and permission-denied flows.',
+      'This page verifies whether the frontend, FastAPI, and Xiao-Mai backend agree on the same session, while also exposing unified sign-out and permission-denied flows.',
     currentSessionTitle: 'Current session',
     currentUserLabel: 'Display name',
     currentAccountLabel: 'Account',
@@ -163,12 +164,13 @@ export const enUsResources = {
     sessionProbeLoading: 'Checking...',
     permissionProbeAction: 'Verify permission-denied flow',
     sessionProbeSuccessTitle: 'Protected access verified',
-    sessionProbeSuccessMessage: 'The frontend, FastAPI, and RuoYi agree on the current session.',
+    sessionProbeSuccessMessage: 'The frontend, FastAPI, and Xiao-Mai backend agree on the current session.',
     sessionProbeUserIdLabel: 'User ID',
     sessionProbeTtlLabel: 'Online TTL (seconds)',
     sessionProbeRequestIdLabel: 'Request trace ID',
     sessionProbePermissionsLabel: 'Backend permission snapshot',
     sessionProbeErrorFallback: 'The protected access check failed. Please try again later.'
   },
+  ...enUsProfileOnboardingResources,
   ...enUsEntryPageResources
 } as const;

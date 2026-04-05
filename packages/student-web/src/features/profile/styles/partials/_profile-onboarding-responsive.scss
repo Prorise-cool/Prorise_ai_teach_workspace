@@ -1,0 +1,109 @@
+/**
+ * 文件说明：用户配置引导页响应式布局。
+ * 负责在平板与移动端分别压缩登录壳层、信息收集页与导览页的版式。
+ */
+@media (max-width: 960px) {
+  .xm-profile-onboarding {
+    &__tour-content {
+      flex-direction: column;
+      gap: 40px;
+      text-align: center;
+    }
+
+    &__tour-copy {
+      display: flex;
+      width: 100%;
+      max-width: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    &__step-copy--tour {
+      min-height: auto;
+      text-align: center;
+    }
+
+    &__stack-actions--tour {
+      align-items: center;
+    }
+
+    &__tour-demo {
+      max-width: 520px;
+    }
+  }
+}
+
+@media (max-width: 850px) {
+  .xm-profile-onboarding {
+    &--intro {
+      padding: 0;
+
+      .xm-auth-container {
+        min-height: 100vh;
+        border-radius: 0;
+      }
+
+      .xm-auth-left-panel {
+        min-width: 100%;
+        height: 35vh;
+      }
+
+      .xm-auth-right-panel {
+        margin-top: -14px;
+        border-radius: 24px 24px 0 0;
+      }
+    }
+
+    &__surface {
+      padding: 24px 24px 64px;
+    }
+
+    &__tour-shell {
+      padding: 0 24px;
+    }
+
+    &__tour-topbar {
+      padding: 0 24px;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .xm-profile-onboarding {
+    &__intro-form,
+    &__personality-list,
+    &__stack-actions,
+    &__stack-actions--tour {
+      width: 100%;
+    }
+
+    &__step-copy {
+      margin-bottom: 36px;
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+
+    &__tour-topbar {
+      top: 20px;
+    }
+
+    &__tour-progress {
+      top: 30px;
+    }
+
+    &__tour-content {
+      padding-top: 84px;
+    }
+
+    &__tour-card {
+      aspect-ratio: auto;
+      min-height: 320px;
+    }
+
+    &__teacher-tags {
+      justify-content: flex-start;
+    }
+  }
+}

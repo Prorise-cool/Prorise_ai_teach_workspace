@@ -90,6 +90,51 @@ async function loadClassroomInputRoute() {
 }
 
 /**
+ * 按需加载用户配置引导第一页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadProfileSetupRoute() {
+  const { ProfileIntroPage } = await import(
+    '@/features/profile/pages/profile-intro-page'
+  );
+
+  return {
+    Component: ProfileIntroPage
+  };
+}
+
+/**
+ * 按需加载用户配置偏好收集页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadProfilePreferencesRoute() {
+  const { ProfilePreferencesPage } = await import(
+    '@/features/profile/pages/profile-preferences-page'
+  );
+
+  return {
+    Component: ProfilePreferencesPage
+  };
+}
+
+/**
+ * 按需加载用户配置导览页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadProfileTourRoute() {
+  const { ProfileTourPage } = await import(
+    '@/features/profile/pages/profile-tour-page'
+  );
+
+  return {
+    Component: ProfileTourPage
+  };
+}
+
+/**
  * 按需加载视频输入页，确保其他入口按路由切分。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -118,6 +163,18 @@ export const appRouter = createBrowserRouter([
       {
         element: <RequireAuthRoute />,
         children: [
+          {
+            path: 'profile/setup',
+            lazy: loadProfileSetupRoute
+          },
+          {
+            path: 'profile/setup/preferences',
+            lazy: loadProfilePreferencesRoute
+          },
+          {
+            path: 'profile/setup/tour',
+            lazy: loadProfileTourRoute
+          },
           {
             path: 'classroom/input',
             lazy: loadClassroomInputRoute

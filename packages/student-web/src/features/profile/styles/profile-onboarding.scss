@@ -1,0 +1,7 @@
+/**
+ * 文件说明：用户配置引导页样式入口。
+ * 负责组织 Story 1.5 的 intro / preferences / tour 三类页面样式 partials。
+ */
+@use './partials/profile-onboarding-tokens';
+@use './partials/profile-onboarding-layout';
+@use './partials/profile-onboarding-responsive';

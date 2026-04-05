@@ -3,6 +3,7 @@
  * 当前先承接认证页与首页占位页文案，后续页面继续按相同结构扩展。
  */
 import { zhCnEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+import { zhCnProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
 
 export const zhCnResources = {
   auth: {
@@ -144,7 +145,7 @@ export const zhCnResources = {
     sessionBadge: '认证一致性',
     title: '登录态与受保护访问已经接到真实校验链路',
     description:
-      '当前页面用于验证前端、FastAPI 与 RuoYi 对同一会话的判断是否一致，并提供统一的登出与权限不足体验入口。',
+      '当前页面用于验证前端、FastAPI 与 Xiao-Mai 后端对同一会话的判断是否一致，并提供统一的登出与权限不足体验入口。',
     currentSessionTitle: '当前会话',
     currentUserLabel: '显示昵称',
     currentAccountLabel: '登录账号',
@@ -160,12 +161,13 @@ export const zhCnResources = {
     sessionProbeLoading: '校验中...',
     permissionProbeAction: '验证权限不足反馈',
     sessionProbeSuccessTitle: '受保护访问校验成功',
-    sessionProbeSuccessMessage: '前端、FastAPI 与 RuoYi 对当前会话判断一致。',
+    sessionProbeSuccessMessage: '前端、FastAPI 与 Xiao-Mai 后端对当前会话判断一致。',
     sessionProbeUserIdLabel: '用户 ID',
     sessionProbeTtlLabel: '在线态 TTL（秒）',
     sessionProbeRequestIdLabel: '请求追踪 ID',
     sessionProbePermissionsLabel: '后端权限快照',
     sessionProbeErrorFallback: '受保护访问校验失败，请稍后重试。'
   },
+  ...zhCnProfileOnboardingResources,
   ...zhCnEntryPageResources
 } as const;

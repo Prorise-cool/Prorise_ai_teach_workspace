@@ -5,16 +5,22 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, vi } from 'vitest';
 
+import { appI18n } from '@/app/i18n';
 import { AppProvider } from '@/app/provider/app-provider';
 import { RequireAuthRoute } from '@/features/auth/components/require-auth-route';
 import { ForbiddenPage } from '@/features/auth/pages/forbidden-page';
 import { LoginPage } from '@/features/auth/pages/login-page';
+import { createEmptyUserProfile } from '@/features/profile/types';
 import { createAuthError, createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService, type AuthService } from '@/services/auth';
 import {
   resetAuthSessionStore,
   useAuthSessionStore
 } from '@/stores/auth-session-store';
+import {
+  resetUserProfileStore,
+  useUserProfileStore
+} from '@/features/profile/stores/user-profile-store';
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
 
@@ -30,10 +36,15 @@ describe('RequireAuthRoute', () => {
     vi.useRealTimers();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     resetAuthSessionStore();
+    resetUserProfileStore();
     window.localStorage.clear();
     window.sessionStorage.clear();
+
+    await act(async () => {
+      await appI18n.changeLanguage('zh-CN');
+    });
   });
 
   it('redirects unauthenticated users to /login and preserves the original classroom target', async () => {
@@ -89,6 +100,11 @@ describe('RequireAuthRoute', () => {
       password: 'admin123'
     });
 
+    useUserProfileStore.getState().setProfile({
+      ...createEmptyUserProfile(session.user.id),
+      bio: '已完成配置',
+      isCompleted: true
+    });
     useAuthSessionStore.getState().setSession(session);
 
     const router = createMemoryRouter(
@@ -129,6 +145,61 @@ describe('RequireAuthRoute', () => {
     expect(router.state.location.pathname).toBe('/classroom/input');
   });
 
+  it('redirects authenticated users with incomplete onboarding to /profile/setup', async () => {
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/',
+          element: <RequireAuthRoute service={mockAuthService} />,
+          children: [
+            {
+              path: 'classroom/input',
+              element: <div>Protected classroom input</div>
+            },
+            {
+              path: 'profile/setup',
+              element: <div>Profile setup route</div>
+            }
+          ]
+        },
+        {
+          path: '/login',
+          element: <LoginPage service={mockAuthService} />
+        },
+        {
+          path: '/forbidden',
+          element: <ForbiddenPage />
+        }
+      ],
+      {
+        initialEntries: ['/classroom/input']
+      }
+    );
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    expect(await screen.findByText('Profile setup route')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/profile/setup');
+    });
+
+    expect(router.state.location.search).toBe(
+      '?returnTo=%2Fclassroom%2Finput'
+    );
+  });
+
   it('uses the top loading bar instead of a centered loading card while validating sessions', async () => {
     vi.useFakeTimers();
 
@@ -137,6 +208,11 @@ describe('RequireAuthRoute', () => {
       password: 'admin123'
     });
 
+    useUserProfileStore.getState().setProfile({
+      ...createEmptyUserProfile(session.user.id),
+      bio: '已完成配置',
+      isCompleted: true
+    });
     useAuthSessionStore.getState().setSession(session);
 
     let resolveCurrentUser:
