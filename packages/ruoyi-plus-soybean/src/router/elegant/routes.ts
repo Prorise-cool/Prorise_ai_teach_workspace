@@ -353,6 +353,15 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'xiaomai_landing-lead',
+        path: '/xiaomai/landing-lead',
+        component: 'view.xiaomai_landing-lead',
+        meta: {
+          title: 'xiaomai_landing-lead',
+          i18nKey: 'route.xiaomai_landing-lead'
+        }
+      },
+      {
         name: 'xiaomai_user-profile',
         path: '/xiaomai/user-profile',
         component: 'view.xiaomai_user-profile',

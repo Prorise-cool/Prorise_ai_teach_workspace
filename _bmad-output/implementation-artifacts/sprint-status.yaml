@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-05 16:05:00 +0800
+last_updated: 2026-04-06 00:27:55 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -50,14 +50,14 @@ development_status:
   0-5-request-id-task-id-日志追踪骨架: done
   0-6-story-交付门禁与并行开发-dor-dod-冻结: done
   epic-0-retrospective: done
-  epic-1: in-progress
-  1-1-统一认证契约会话-payload-与-mock-基线: review
+  epic-1: done
+  1-1-统一认证契约会话-payload-与-mock-基线: done
   1-2-独立认证页中的注册登录与回跳: done
-  1-3-登出401-处理与受保护访问一致性: review
-  1-4-首页课堂直达入口与顶栏导航分发: review
-  1-5-用户配置系统（个人简介与学习偏好）: in-progress
-  1-6-视频课堂入口页与社区瀑布流: in-progress
-  1-7-营销落地页与-home-首页分流: ready-for-dev
+  1-3-登出401-处理与受保护访问一致性: done
+  1-4-首页课堂直达入口与顶栏导航分发: done
+  1-5-用户配置系统（个人简介与学习偏好）: done
+  1-6-视频课堂入口页与社区瀑布流: done
+  1-7-营销落地页与-home-首页分流: done
   epic-1-retrospective: optional
   epic-2: done
   2-1-统一任务状态枚举错误码与结果-schema-冻结: done

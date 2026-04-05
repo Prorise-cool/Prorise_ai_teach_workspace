@@ -298,6 +298,7 @@ const local: App.I18n.Schema = {
     tool: '系统工具',
     tool_gen: '代码生成',
     xiaomai: '学生管理',
+    'xiaomai_landing-lead': '营销落地页线索',
     'xiaomai_user-profile': '用户配置',
     about: '关于'
   },

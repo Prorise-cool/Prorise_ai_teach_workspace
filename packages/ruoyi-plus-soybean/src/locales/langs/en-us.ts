@@ -302,6 +302,7 @@ const local: App.I18n.Schema = {
     tool: 'System Tools',
     tool_gen: 'Code Generation',
     xiaomai: 'Student Management',
+    'xiaomai_landing-lead': 'Landing Leads',
     'xiaomai_user-profile': 'User Profile',
     about: 'About'
   },

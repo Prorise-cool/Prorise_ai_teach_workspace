@@ -44,5 +44,6 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   system_tenant: () => import("@/views/system/tenant/index.vue"),
   system_user: () => import("@/views/system/user/index.vue"),
   tool_gen: () => import("@/views/tool/gen/index.vue"),
+  "xiaomai_landing-lead": () => import("@/views/xiaomai/landing-lead/index.vue"),
   "xiaomai_user-profile": () => import("@/views/xiaomai/user-profile/index.vue"),
 };
