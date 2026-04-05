@@ -121,8 +121,8 @@ SELECT * FROM sys_dict_type WHERE dict_type IN ('user_personality_type', 'user_t
 |--------|---------|
 | 生成模板 | 单表 |
 | 生成包路径 | org.dromara.xiaomai.user.profile |
-| 生成模块名 | ruoyi-xiaomai |
-| 生成业务名 | user/profile |
+| 生成模块名 | xiaomai |
+| 生成业务名 | user-profile |
 | 生成功能名 | 用户配置 |
 
 **字段配置**:

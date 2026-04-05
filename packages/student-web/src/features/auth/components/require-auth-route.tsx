@@ -12,6 +12,11 @@ import { isAuthError } from '@/services/api/adapters';
 import { AUTH_RETURN_TO_KEY, normalizeReturnTo } from '@/services/auth';
 import { authService, type AuthService } from '@/services/auth';
 import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
+import { profileApi } from '@/features/profile/api/profile-api';
+import {
+  buildProfileSetupPath,
+  isProfileOnboardingPath
+} from '@/features/profile/shared/profile-routing';
 import { getAuthFeedbackMessage } from '@/features/auth/shared/auth-feedback';
 import { FeedbackStateCard, useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
@@ -76,19 +81,34 @@ export function RequireAuthRoute({
     [location.hash, location.pathname, location.search]
   );
   const accessToken = session?.accessToken;
+  const sessionUserId = session?.user.id ?? '';
+  const isOnboardingPath = isProfileOnboardingPath(location.pathname);
   const validationQuery = useQuery({
     queryKey: ['auth', 'current-user', accessToken],
     enabled: Boolean(accessToken),
     retry: false,
     queryFn: async () => service.getCurrentUser(accessToken)
   });
-
   const validationState: SessionValidationState =
     accessToken && validationQuery.isSuccess
       ? 'ready'
       : accessToken && validationQuery.isError
         ? 'error'
         : 'checking';
+  const profileCompletionQuery = useQuery({
+    queryKey: ['profile', 'completed', sessionUserId, accessToken],
+    enabled:
+      validationQuery.isSuccess &&
+      Boolean(accessToken) &&
+      Boolean(sessionUserId) &&
+      !isOnboardingPath,
+    retry: false,
+    queryFn: async () => {
+      const profile = await profileApi.getCurrentProfile(sessionUserId, accessToken);
+
+      return profile?.isCompleted ?? false;
+    }
+  });
   const validationErrorMessage = validationQuery.isError
     ? getAuthFeedbackMessage(
         validationQuery.error,
@@ -129,7 +149,9 @@ export function RequireAuthRoute({
 
   useEffect(() => {
     const shouldShowLoadingBar =
-      Boolean(session?.accessToken) && validationState === 'checking';
+      Boolean(session?.accessToken) &&
+      (validationState === 'checking' ||
+        (!isOnboardingPath && profileCompletionQuery.isPending));
 
     if (shouldShowLoadingBar) {
       if (loadingBarIdRef.current === null) {
@@ -145,6 +167,8 @@ export function RequireAuthRoute({
     }
   }, [
     hideLoadingBar,
+    isOnboardingPath,
+    profileCompletionQuery.isPending,
     session?.accessToken,
     showLoadingBar,
     validationState
@@ -243,6 +267,52 @@ export function RequireAuthRoute({
     validationQuery.errorUpdatedAt,
     validationQuery.isError
   ]);
+
+  useEffect(() => {
+    if (
+      validationState !== 'ready' ||
+      !accessToken ||
+      !sessionUserId ||
+      isOnboardingPath ||
+      !profileCompletionQuery.isSuccess ||
+      profileCompletionQuery.data
+    ) {
+      return;
+    }
+
+    void navigate(buildProfileSetupPath(returnTo), {
+      replace: true,
+      state: null
+    });
+  }, [
+    accessToken,
+    isOnboardingPath,
+    navigate,
+    profileCompletionQuery.data,
+    profileCompletionQuery.isSuccess,
+    returnTo,
+    sessionUserId,
+    validationState
+  ]);
+
+  if (
+    session?.accessToken &&
+    validationState === 'ready' &&
+    !isOnboardingPath &&
+    profileCompletionQuery.isPending
+  ) {
+    return null;
+  }
+
+  if (
+    session?.accessToken &&
+    validationState === 'ready' &&
+    !isOnboardingPath &&
+    profileCompletionQuery.isSuccess &&
+    !profileCompletionQuery.data
+  ) {
+    return null;
+  }
 
   if (session?.accessToken && validationState === 'ready') {
     return <Outlet />;

@@ -40,6 +40,11 @@ Epic 8 负责“会话后层”。
 - 依赖 `Epic 7` 的资料能力作为部分增强来源。
 - 依赖 `Epic 10` 的 quiz、path、wrongbook 等长期承接。  
 
+### Cross-Epic Parallel Guardrail
+- 不建议与 `Epic 4` 或 `Epic 5` 整块同时推进真实联调，因为都会碰结果页后的下一步动作。  
+- 若提前启动，`Epic 8` 只拥有会话后入口页、checkpoint、quiz 和学习路径页面本身，不拥有视频 / 课堂结果页主结构。  
+- 结果页里进入 Learning Coach 的 CTA 必须通过已冻结入口位承接，不能在多个 Epic 中反复改文案、位置和跳转语义。  
+
 ### Entry Criteria
 - 会话后路由与页面边界已冻结。  
 - `checkpoint / quiz / path` 的最小交互状态说明已稳定。  

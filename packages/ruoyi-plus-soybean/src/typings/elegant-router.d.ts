@@ -54,6 +54,8 @@ declare module "@elegant-router/types" {
     "tool": "/tool";
     "tool_gen": "/tool/gen";
     "user-center": "/user-center";
+    "xiaomai": "/xiaomai";
+    "xiaomai_user-profile": "/xiaomai/user-profile";
   };
 
   /**
@@ -102,6 +104,7 @@ declare module "@elegant-router/types" {
     | "system"
     | "tool"
     | "user-center"
+    | "xiaomai"
   >;
 
   /**
@@ -148,6 +151,7 @@ declare module "@elegant-router/types" {
     | "system_tenant"
     | "system_user"
     | "tool_gen"
+    | "xiaomai_user-profile"
   >;
 
   /**

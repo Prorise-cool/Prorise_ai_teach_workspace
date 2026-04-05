@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppTranslation } from "@/app/i18n/use-app-translation";
-import { useAuthRedirect } from "@/features/auth/hooks/use-auth-redirect";
+import { resolvePostAuthDestination } from "@/features/profile/api/profile-api";
 import { getAuthFeedbackMessage } from "@/features/auth/shared/auth-feedback";
 import {
 	parseJsonText,
@@ -92,7 +92,6 @@ export function SocialCallbackPage({
   const { t } = useAppTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { redirectAfterAuth } = useAuthRedirect();
   const setSession = useAuthSessionStore((state) => state.setSession);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -132,11 +131,19 @@ export function SocialCallbackPage({
         }
 
         const pendingReturnTo = readSocialAuthReturnTo();
+        const nextPath = await resolvePostAuthDestination({
+          userId: session.user.id,
+          accessToken: session.accessToken,
+          returnTo: pendingReturnTo ?? undefined
+        });
 
         clearSocialAuthReturnTo();
         setSession(session);
         setStatusMessage(t("auth.feedback.socialSuccessRedirect"));
-        redirectAfterAuth(pendingReturnTo);
+        void navigate(nextPath, {
+          replace: true,
+          state: null
+        });
       } catch (error) {
         if (!isActive) {
           return;
@@ -157,7 +164,7 @@ export function SocialCallbackPage({
     return () => {
       isActive = false;
     };
-  }, [navigate, redirectAfterAuth, searchParams, service, setSession, t]);
+  }, [navigate, searchParams, service, setSession, t]);
 
   return (
     <main className="xm-auth-page xm-auth-callback-page">

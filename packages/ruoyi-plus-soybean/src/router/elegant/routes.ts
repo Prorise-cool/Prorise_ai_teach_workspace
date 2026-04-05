@@ -342,5 +342,25 @@ export const generatedRoutes: GeneratedRoute[] = [
       icon: 'material-symbols:account-circle-full',
       hideInMenu: true
     }
+  },
+  {
+    name: 'xiaomai',
+    path: '/xiaomai',
+    component: 'layout.base',
+    meta: {
+      title: 'xiaomai',
+      i18nKey: 'route.xiaomai'
+    },
+    children: [
+      {
+        name: 'xiaomai_user-profile',
+        path: '/xiaomai/user-profile',
+        component: 'view.xiaomai_user-profile',
+        meta: {
+          title: 'xiaomai_user-profile',
+          i18nKey: 'route.xiaomai_user-profile'
+        }
+      }
+    ]
   }
 ];

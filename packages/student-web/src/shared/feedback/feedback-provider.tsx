@@ -260,10 +260,12 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
   );
 
   useEffect(() => {
+    const loadingBarIds = loadingBarIdsRef.current;
+
     return () => {
       hideSpotlight();
       clearLoadingBarTimers();
-      loadingBarIdsRef.current.clear();
+      loadingBarIds.clear();
       loadingBarVisibleAtRef.current = null;
       setLoadingBarVisible(false);
     };

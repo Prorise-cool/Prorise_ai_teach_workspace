@@ -25,9 +25,13 @@
 以下规则默认适用于 `packages/student-web/`，除非 Story 或架构文档明确说明例外：
 
 - `src/styles/theme.css` 只允许承载全局设计令牌与 CSS Variables 桥接，不允许写入页面、feature 或场景私有变量。
-- 页面或 feature 私有样式变量必须放在对应 feature 的局部样式文件中，例如 `src/features/<feature>/styles/*.css`，并挂在 feature 根选择器作用域下。
+- 页面或 feature 私有样式变量必须放在对应 feature 的局部样式文件中，例如 `src/features/<feature>/styles/*.scss`，并挂在 feature 根选择器作用域下。
 - 新增样式前优先复用现有 `src/styles/tokens/*`、`theme.css` 中的 `--xm-*` 令牌和已存在组件；能抽成通用组件的，不要继续堆页面专属实现。
 - 若已有令牌可表达颜色、字号、间距、圆角、阴影、层级、动效，则前端禁止重复硬编码同类视觉值。
+- 架构文档已指定且 `package.json` 已引入的前端基础设施依赖，后续对应场景必须优先消费，不得长期保留手写替代实现。
+- `Tailwind` 的主要职责是服务 `shadcn/ui` 共享组件封装、令牌消费与少量结构拼装；页面级复杂视觉默认由 feature `SCSS` 承接。
+- `shadcn/ui` 是否落地，必须以 `components/ui/` 下可复用原语组件的真实封装与页面消费为准；`sonner` 只属于独立反馈依赖，不计入 `shadcn/ui` 组件库落地完成度。
+- `SCSS` 必须真实用于 partials 分包、BEM 命名与嵌套组织；仅把 `.css` 改名为 `.scss` 但继续平铺选择器，视为未落地。
 - 小麦前端坚持单一品牌风格；Agent 风格只允许作为局部点缀数据，不允许演化成页面级全局主题切换。
 - 非 `mock`、`test` 前端源码文件必须包含规范化文件头注释，明确文件职责、边界和主要承载内容。
 - 非 `mock`、`test` 前端源码中的函数、组件、hooks、工具函数必须补充规范 `JSDoc` 注释；说明用途，并在适用时补齐 `@param`、`@returns`、`@throws`。
@@ -52,9 +56,12 @@
 
 ### 2. 样式文件分层与作用域（严格隔离）
 - `src/styles/theme.css` **仅**负责 `@import "tailwindcss";` + `@theme { ... }` + 全局 `:root`/`.dark` 令牌桥接。**禁止**任何页面/组件/特性私有样式。
-- 特性私有样式必须放在 `src/features/<feature>/styles/*.css`，并**严格 scoped** 在 feature 根选择器下（e.g. `.home-page { --local-*: ... }`）。
+- 特性私有样式必须放在 `src/features/<feature>/styles/*.scss`，并**严格 scoped** 在 feature 根选择器下（e.g. `.home-page { --local-*: ... }`）。
 - `src/styles/globals.css` 仅引入 Tailwind base、tokens 生成的 CSS Variables 和必要 reset。**禁止**组件/页面级样式。
 - 所有自定义 CSS **必须**使用 `var(--xm-*)`，不得出现裸露的 `#hex`、`16px` 等。
+- 页面或 feature 的复杂视觉默认用 `SCSS` 入口 + `partials/_*.scss` 组织，不再接受超长单文件样式持续膨胀。
+- 页面级和 feature 级复杂样式必须采用 BEM block + SCSS 嵌套维护，不得继续把选择器平铺成长列表。
+- 同一视觉职责只能有一个主表达层：共享组件变体走 Tailwind / CVA，页面复杂视觉走 feature `SCSS`，禁止长期混写。
 
 ### 3. 类名处理规范 —— 强制使用 `cn()` + tailwind-merge + clsx
 - **必须**在 `src/lib/utils.ts`（或同等位置）定义并全局使用 `cn` 工具函数：
@@ -75,11 +82,18 @@
   3. 仅在以上无法满足时，才在 feature 局部 CSS 中新增 scoped 语义令牌。
 - 任何可抽成通用组件的 UI 片段**禁止**堆页面专属实现，必须抽到 `components/` 并用 CVA + `cn()`。
 
+### 4.1 已装依赖的强制消费边界
+- 表单默认使用 `react-hook-form + zod`，禁止继续使用 `useState + 手写校验 + 手写错误显隐` 作为长期方案。
+- 服务端状态默认使用 `@tanstack/react-query` 的 `useQuery / useMutation`，禁止继续维护同职责的手写请求状态机。
+- 全局短反馈默认使用 `sonner`，禁止继续维护手写 toast 队列、移除计时器和宿主视口；但 `sonner` 不得被当成 `shadcn/ui` 落地证据，也不能冲抵 `components/ui` 原语层建设。
+- 轮播默认使用 `embla-carousel-react`，禁止继续用 `translateX + resize listener + slidesPerView` 手写 carousel。
+- 可复用交互默认使用 `shadcn/ui + Radix UI` 原语，禁止在页面内长期保留原生散件版 `Checkbox`、`Dialog`、`Popover`、抽屉和同类交互壳层。
+
 ### 5. Radix UI Primitives + @base-ui/react 样式最佳实践
 - **Radix UI**：使用 `data-[state=open/closed/checked/disabled]` 属性选择器（官方推荐）。示例：`data-[state=open]:animate-in`、`[&[data-state=open]>svg]:rotate-180`。
 - Radix 暴露的 CSS Variables（如 `--radix-accordion-content-height`、`--radix-select-trigger-width`）**必须**在动画/布局中使用。
 - **@base-ui/react**：通过 `className` prop（支持函数形式 `(state) => ...`）或 data 属性（如 `[data-checked]`）应用 Tailwind 类。支持 `style` prop 但仅限动态 CSS var。
-- 两者均为 **unstyled**，所有样式通过 Tailwind + CVA + `cn()` 实现。**禁止**覆盖 Radix 默认样式（使用 CSS layers 确保 Tailwind 优先）。
+- 两者均为 **unstyled**，共享原语层样式通过 Tailwind + CVA + `cn()` 实现，页面级复杂容器与视觉效果通过 feature `SCSS` 承接。**禁止**覆盖 Radix 默认样式（使用 CSS layers 确保 Tailwind 优先）。
 
 ### 6. Motion（v12，前 Framer Motion）动画最佳实践
 - 静态样式用 Tailwind 类（`className`），动态动画用 Motion props（`whileHover`、`animate`、`variants`、`layout` 等）。
