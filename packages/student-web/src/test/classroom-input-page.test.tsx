@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import { AppProvider } from '@/app/provider/app-provider';
-import { ClassroomInputPage } from '@/features/classroom/classroom-input-page';
+import { ClassroomInputPage } from '@/features/classroom/pages/classroom-input-page';
 import {
   resetAuthSessionStore,
   useAuthSessionStore

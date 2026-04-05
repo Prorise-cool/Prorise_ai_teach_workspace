@@ -13,7 +13,7 @@ import { AuthRuntimeBridge } from '@/features/auth/components/auth-runtime-bridg
  */
 export function AppShell() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen">
       <AuthRuntimeBridge />
       <Outlet />
     </div>

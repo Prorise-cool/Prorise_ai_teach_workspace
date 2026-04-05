@@ -66,6 +66,23 @@ export const zhCnEntryPageResources = {
         description: '从知识点理解到动画合成，全流程分钟级完成。'
       }
     ],
+    workspaceRoutes: [
+      {
+        label: '单题讲解',
+        href: '/video/input',
+        icon: 'video'
+      },
+      {
+        label: '虚拟课堂',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
+      {
+        label: '学习中心',
+        href: '#',
+        icon: 'book-open'
+      }
+    ],
     repoLabel: '查看参考仓库',
     openWorkspace: '进入工作区',
     signIn: '登录',
@@ -85,8 +102,6 @@ export const zhCnEntryPageResources = {
     description:
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
-    primaryActionZh: '进入课堂工作区',
-    videoAction: '创建视频',
     workspaceHint: 'ENTER WORKSPACE',
     imageAlt: '小麦虚拟课堂角色形象'
   },
@@ -135,7 +150,9 @@ export const zhCnEntryPageResources = {
     ],
     feedTitle: '热门题目讲解视频',
     feedDesc: '浏览其他同学生成的优质 Manim 动画讲解',
-    feedCategories: ['最近高分', '高等数学', '大学物理']
+    feedCategories: ['最近高分', '高等数学', '大学物理'],
+    feedLoadMore: '加载更多解题视频',
+    feedLoading: '正在拉取数据...'
   },
   /** Story 1-6：课堂输入页文案。 */
   classroomInput: {
@@ -149,7 +166,7 @@ export const zhCnEntryPageResources = {
     multiAgentHint: '支持多 Agent 讨论模式',
     toolUploadFile: '上传课件/PDF',
     toolVoiceInput: '语音输入',
-    toolEnhanceSettings: '增强设置',
+
     toolWebSearch: '开启联网',
     submitLabel: '生成课堂',
     suggestionsLabel: 'Try These',
@@ -170,7 +187,9 @@ export const zhCnEntryPageResources = {
     ],
     feedTitle: '探索优质课堂案例',
     feedDesc: '看看大家都在用小麦学什么系统课程',
-    feedCategories: ['推荐精选', '理工科', '经管文法']
+    feedCategories: ['推荐精选', '理工科', '经管文法'],
+    feedLoadMore: '加载更多案例',
+    feedLoading: '正在为您检索课程...'
   },
   landing: {
     hero: {
@@ -684,6 +703,23 @@ export const enUsEntryPageResources = {
           'From topic understanding to animation rendering, the full pipeline completes in minutes.'
       }
     ],
+    workspaceRoutes: [
+      {
+        label: 'Video Explainer',
+        href: '/video/input',
+        icon: 'video'
+      },
+      {
+        label: 'Virtual Classroom',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
+      {
+        label: 'Learning Center',
+        href: '#',
+        icon: 'book-open'
+      }
+    ],
     repoLabel: 'View reference repository',
     openWorkspace: 'Open Workspace',
     signIn: 'Sign in',
@@ -703,8 +739,6 @@ export const enUsEntryPageResources = {
     description:
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
-    primaryActionZh: 'Enter Classroom Workspace',
-    videoAction: 'Create Video',
     workspaceHint: 'ENTER WORKSPACE',
     imageAlt: 'XiaoMai virtual classroom mascot'
   },
@@ -757,7 +791,9 @@ export const enUsEntryPageResources = {
     ],
     feedTitle: 'Trending Problem Explainers',
     feedDesc: 'Browse high-quality Manim animation explainers created by other students',
-    feedCategories: ['Top Rated', 'Calculus', 'College Physics']
+    feedCategories: ['Top Rated', 'Calculus', 'College Physics'],
+    feedLoadMore: 'Load more explainers',
+    feedLoading: 'Fetching data...'
   },
   /** Story 1-6: Classroom input page copy. */
   classroomInput: {
@@ -796,7 +832,9 @@ export const enUsEntryPageResources = {
     ],
     feedTitle: 'Explore Quality Classrooms',
     feedDesc: 'See what systematic courses others are learning with XiaoMai',
-    feedCategories: ['Featured', 'STEM', 'Business & Liberal Arts']
+    feedCategories: ['Featured', 'STEM', 'Business & Liberal Arts'],
+    feedLoadMore: 'Load more classrooms',
+    feedLoading: 'Searching courses...'
   },
   landing: {
     hero: {

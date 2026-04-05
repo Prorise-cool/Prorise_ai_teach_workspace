@@ -8,10 +8,22 @@
   margin: 3rem auto 0;
   padding: 0 1.5rem 4rem;
 
-  /* 标题区 */
+  /* 标题区：左侧文字 + 右侧 Tabs 水平排列 */
   &__header {
-    text-align: center;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
     margin-bottom: 2rem;
+
+    @media (max-width: 639px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  &__header-text {
+    flex-shrink: 0;
   }
 
   &__title {
@@ -32,54 +44,67 @@
     font-weight: 500;
   }
 
-  /* 分类标签 */
-  &__categories {
+  /* 分类下划线 Tabs */
+  &__tabs {
     display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
+    align-items: center;
+    gap: 1.5rem;
   }
 
-  &__category {
-    padding: 0.375rem 1rem;
-    border-radius: var(--xm-radius-full);
-    border: 1px solid var(--xm-color-border);
-    background: var(--xm-color-surface);
-    font-size: 0.8125rem;
-    font-weight: 600;
+  &__tab {
+    position: relative;
+    padding: 0.25rem 0;
+    border: none;
+    background: none;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: var(--xm-color-text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -2px;
+      height: 2px;
+      border-radius: 1px;
+      background: transparent;
+      transition: background 0.2s ease;
+    }
 
     &:hover {
-      border-color: var(--xm-color-brand-400);
+      color: var(--xm-color-text-primary);
     }
 
     &--active {
-      border-color: var(--xm-color-brand-400);
-      color: var(--xm-color-brand-500);
-      background: color-mix(in srgb, var(--xm-color-brand-400) 8%, transparent);
+      color: var(--xm-color-text-primary);
+      font-weight: 600;
+
+      &::after {
+        background: var(--xm-color-brand-500);
+      }
     }
   }
 
-  /* 瀑布流网格 */
+  /* 瀑布流网格 -> 真实网格 */
   &__grid {
-    column-count: 1;
-    column-gap: 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.25rem;
 
     @media (min-width: 640px) {
-      column-count: 2;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     @media (min-width: 1024px) {
-      column-count: 3;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
   /* 卡片 */
   &__card {
-    break-inside: avoid;
-    margin-bottom: 1.25rem;
     border-radius: var(--xm-radius-lg);
     border: 1px solid var(--xm-color-border);
     background: var(--xm-color-surface);
@@ -141,6 +166,7 @@
         line-height: 1.6;
         display: -webkit-box;
         -webkit-line-clamp: 4;
+        line-clamp: 4;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
@@ -216,6 +242,38 @@
       font-size: 0.75rem;
       font-weight: 500;
       color: var(--xm-color-text-secondary);
+    }
+  }
+
+  /* 加载更多 */
+  &__load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  &__load-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    border: 1px solid var(--xm-color-border);
+    border-radius: var(--xm-radius-full);
+    background: var(--xm-color-surface);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--xm-color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      border-color: var(--xm-color-brand-400);
+      color: var(--xm-color-brand-500);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
   }
 }

@@ -65,7 +65,7 @@ body,
 
 body {
   margin: 0;
-  background:
+  background-image:
     radial-gradient(
       circle at top,
       color-mix(in srgb, var(--xm-color-primary) 24%, transparent),
@@ -77,10 +77,22 @@ body {
       transparent 28%
     ),
     linear-gradient(
+      to right, 
+      color-mix(in srgb, var(--xm-color-text-primary) 3.5%, transparent) 1px, 
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom, 
+      color-mix(in srgb, var(--xm-color-text-primary) 3.5%, transparent) 1px, 
+      transparent 1px
+    ),
+    linear-gradient(
       180deg,
       var(--xm-color-background-elevated) 0%,
       var(--xm-color-background) 100%
     );
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px, 100% 100%;
+  background-attachment: fixed, fixed, fixed, fixed, fixed;
   color: var(--xm-color-text-primary);
   transition:
     background var(--xm-duration-slow) var(--xm-easing-standard),
@@ -123,5 +135,37 @@ body {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@layer utilities {
+  .animate-audio-bar-1 {
+    animation: audio-bounce 1s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+  .animate-audio-bar-2 {
+    animation: audio-bounce 1s ease-in-out infinite;
+    animation-delay: 0.2s;
+  }
+  .animate-audio-bar-3 {
+    animation: audio-bounce 1s ease-in-out infinite;
+    animation-delay: 0.4s;
+  }
+  .animate-audio-bar-4 {
+    animation: audio-bounce 1s ease-in-out infinite;
+    animation-delay: 0.1s;
+  }
+  .animate-audio-bar-5 {
+    animation: audio-bounce 1s ease-in-out infinite;
+    animation-delay: 0.3s;
+  }
+}
+
+@keyframes audio-bounce {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
   }
 }

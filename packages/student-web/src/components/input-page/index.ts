@@ -5,3 +5,5 @@
 export { InputPageHeader } from './input-page-header';
 export { InputPageGuideCards, type GuideCardItem } from './input-page-guide-cards';
 export { InputPageSuggestions } from './input-page-suggestions';
+export { useFileDropzone } from './hooks/use-file-dropzone';
+export { useBrowserAsr } from './hooks/use-browser-asr';

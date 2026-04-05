@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import { AppProvider } from '@/app/provider/app-provider';
-import { VideoInputPage } from '@/features/video/video-input-page';
+import { VideoInputPage } from '@/features/video/pages/video-input-page';
 import {
   resetAuthSessionStore,
   useAuthSessionStore
