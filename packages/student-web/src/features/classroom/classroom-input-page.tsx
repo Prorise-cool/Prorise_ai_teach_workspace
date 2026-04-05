@@ -1,248 +1,225 @@
 /**
- * 文件说明：课堂工作区入口占位页。
- * 当前先承接 Story 1.3 的一致性验证控制台，并为后续课堂输入 Story 预留正式业务入口。
+ * 文件说明：课堂工作区输入页容器。
+ * 对照设计稿 06-课堂输入页/01-input.html 还原沉浸式输入区：
+ * 标题区 + 核心输入卡片（智能匹配提示 + Textarea + 工具栏 + 提交按钮）+ 建议标签 + 引导卡片。
+ * 社区瀑布流由 CommunityFeed 组件独立承接。
  */
-import { useMutation } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+
+import {
+	ArrowRight,
+	Globe,
+	LayoutTemplate,
+	Mic,
+	PackageSearch,
+	Paperclip,
+	Settings2,
+	ShieldAlert,
+	Sparkles,
+	WifiOff
+} from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { CommunityFeed, CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
+import {
+	InputPageGuideCards,
+	InputPageHeader,
+	InputPageSuggestions,
+	type GuideCardItem
+} from '@/components/input-page';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
-import { authService, type AuthService } from '@/services/auth';
-import {
-  authConsistencyService,
-  type AuthConsistencyService,
-  type AuthSessionProbe
-} from '@/services/auth-consistency';
-import { useFeedback } from '@/shared/feedback';
-import { useAuthSessionStore } from '@/stores/auth-session-store';
+import { cn } from '@/lib/utils';
 
+import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';
 
-const FORBIDDEN_DEMO_PERMISSION = 'demo:restricted:enter';
-
+/** 导航链接类型。 */
 type EntryNavLink = {
-  href: string;
-  label: string;
+	href: string;
+	label: string;
 };
 
-type ClassroomInputPageProps = {
-  consistencyService?: AuthConsistencyService;
-  service?: AuthService;
-};
-
-function resolveProbeErrorMessage(error: unknown, fallbackMessage: string) {
-  if (error instanceof Error && ('status' in error || 'code' in error)) {
-    return error.message;
-  }
-
-  return fallbackMessage;
-}
+/** 引导卡片图标映射（图标不走 i18n）。 */
+const GUIDE_CARD_ICONS = [PackageSearch, ShieldAlert, WifiOff] as const;
 
 /**
- * 渲染课堂工作区占位页，并保留真实登录态验证控制台。
+ * 渲染课堂工作区输入页。
  *
- * @param props - 页面参数。
- * @returns 课堂入口页节点。
+ * @returns 课堂输入页节点。
  */
-export function ClassroomInputPage({
-  consistencyService = authConsistencyService,
-  service = authService
-}: ClassroomInputPageProps) {
-  const { t } = useAppTranslation();
-  const { notify } = useFeedback();
-  const session = useAuthSessionStore(state => state.session);
-  const { isLoggingOut, logout } = useAuthSessionActions({ service });
-  const navLinks = t('entryNav.landingLinks', {
-    returnObjects: true
-  }) as EntryNavLink[];
-  const sessionProbeMutation = useMutation({
-    mutationKey: ['auth', 'session-probe', session?.accessToken],
-    retry: false,
-    mutationFn: async () => consistencyService.getSessionProbe(session?.accessToken),
-    onSuccess: () => {
-      notify({
-        tone: 'success',
-        title: t('home.sessionProbeSuccessTitle'),
-        description: t('home.sessionProbeSuccessMessage')
-      });
-    }
-  });
-  const permissionProbeMutation = useMutation({
-    mutationKey: ['auth', 'permission-probe', session?.accessToken],
-    retry: false,
-    mutationFn: async () =>
-      consistencyService.getPermissionProbe(
-        FORBIDDEN_DEMO_PERMISSION,
-        session?.accessToken
-      )
-  });
-  const sessionProbePayload: AuthSessionProbe | undefined = sessionProbeMutation.data;
-  const sessionProbeErrorMessage = sessionProbeMutation.error
-    ? resolveProbeErrorMessage(
-        sessionProbeMutation.error,
-        t('home.sessionProbeErrorFallback')
-      )
-    : '';
+export function ClassroomInputPage() {
+	const { t } = useAppTranslation();
+	const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
-  return (
-    <main className="xm-classroom-input-page min-h-screen px-5 pb-12 pt-5 md:px-8">
-      <GlobalTopNav
-        links={navLinks}
-        showAuthAction
-        showBrandIcon
-        showLocaleToggle
-        className="xm-landing-glass-nav"
-      />
+	const navLinks = t('entryNav.landingLinks', {
+		returnObjects: true
+	}) as EntryNavLink[];
 
-      <section className="xm-classroom-input-page__grid mx-auto mt-10 grid max-w-[1280px] gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="xm-surface-card">
-          <CardContent className="p-8">
-            <Badge variant="floating">{t('entryRoutes.classroom.badge')}</Badge>
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
-              {t('entryRoutes.classroom.title')}
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-              {t('entryRoutes.classroom.description')}
-            </p>
+	const badgeLabel = t('classroomInput.badgeLabel');
+	const titleLine1 = t('classroomInput.titleLine1');
+	const titleGradient = t('classroomInput.titleGradient');
+	const placeholder = t('classroomInput.placeholder');
+	const submitLabel = t('classroomInput.submitLabel');
+	const smartMatchHint = t('classroomInput.smartMatchHint');
+	const smartMatchDesc = t('classroomInput.smartMatchDesc');
+	const multiAgentHint = t('classroomInput.multiAgentHint');
+	const toolUploadFile = t('classroomInput.toolUploadFile');
+	const toolVoiceInput = t('classroomInput.toolVoiceInput');
+	const toolEnhanceSettings = t('classroomInput.toolEnhanceSettings');
+	const toolWebSearch = t('classroomInput.toolWebSearch');
+	const suggestionsLabel = t('classroomInput.suggestionsLabel');
+	const suggestions = t('classroomInput.suggestions', {
+		returnObjects: true
+	}) as string[];
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button
-                type="button"
-                onClick={() => {
-                  sessionProbeMutation.mutate();
-                }}
-                disabled={sessionProbeMutation.isPending}
-              >
-                {sessionProbeMutation.isPending
-                  ? t('home.sessionProbeLoading')
-                  : t('home.sessionProbeAction')}
-              </Button>
+	const feedTitle = t('classroomInput.feedTitle');
+	const feedDesc = t('classroomInput.feedDesc');
+	const feedCategories = t('classroomInput.feedCategories', {
+		returnObjects: true
+	}) as string[];
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  permissionProbeMutation.mutate();
-                }}
-                disabled={permissionProbeMutation.isPending}
-              >
-                {t('home.permissionProbeAction')}
-              </Button>
+	const guideCardsData = t('classroomInput.guideCards', {
+		returnObjects: true
+	}) as Array<{ title: string; desc: string }>;
 
-              <Button asChild variant="outline">
-                <Link to="/landing">{t('entryRoutes.classroom.secondaryAction')}</Link>
-              </Button>
+	const guideCards: GuideCardItem[] = guideCardsData.map((card, i) => ({
+		icon: GUIDE_CARD_ICONS[i],
+		title: card.title,
+		desc: card.desc
+	}));
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  void logout();
-                }}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut
-                  ? t('auth.page.logoutSubmitting')
-                  : t('auth.page.logoutAction')}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+	return (
+		<main className="xm-classroom-input">
+			<GlobalTopNav
+				links={navLinks}
+				showAuthAction
+				showBrandIcon
+				showLocaleToggle
+				className="xm-landing-glass-nav"
+			/>
 
-        <Card className="xm-surface-card">
-          <CardHeader className="pb-0">
-            <CardTitle>{t('home.currentSessionTitle')}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <dl className="space-y-3 text-sm text-muted-foreground">
-            <div>
-              <dt>{t('home.currentUserLabel')}</dt>
-              <dd className="mt-1 font-medium text-foreground">
-                {session?.user.nickname ?? '-'}
-              </dd>
-            </div>
-            <div>
-              <dt>{t('home.currentAccountLabel')}</dt>
-              <dd className="mt-1 font-medium text-foreground">
-                {session?.user.username ?? '-'}
-              </dd>
-            </div>
-            <div>
-              <dt>{t('home.currentRolesLabel')}</dt>
-              <dd className="mt-1 font-medium text-foreground">
-                {session?.user.roles.map(role => role.name).join(' / ') || '-'}
-              </dd>
-            </div>
-            <div>
-              <dt>{t('home.currentPermissionsLabel')}</dt>
-              <dd className="mt-1 break-all font-medium text-foreground">
-                {session?.user.permissions.map(permission => permission.key).join(', ') || '-'}
-              </dd>
-            </div>
-            </dl>
-          </CardContent>
-        </Card>
-      </section>
+			<div className="xm-classroom-input__content">
+				{/* 标题区 */}
+				<InputPageHeader
+					badgeIcon={LayoutTemplate}
+					badgeLabel={badgeLabel}
+					titleLine1={titleLine1}
+					titleGradient={titleGradient}
+				/>
 
-      <section className="xm-classroom-input-page__probe mx-auto mt-6 max-w-[1280px]">
-        <Card className="xm-surface-card">
-          <CardHeader className="pb-0">
-            <CardTitle>{t('home.sessionProbeTitle')}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
+				{/* 核心输入卡片 */}
+				<div className="xm-classroom-input__card">
+					{/* 智能匹配提示栏 */}
+					<div className="xm-classroom-input__card-hints">
+						<div className="xm-classroom-input__card-hint xm-classroom-input__card-hint--accent">
+							<Sparkles className="h-3.5 w-3.5" />
+							<span>{smartMatchHint}</span>
+							<span className="xm-classroom-input__card-hint-desc">
+								{smartMatchDesc}
+							</span>
+						</div>
+						<div className="xm-classroom-input__card-hint">
+							<span>{multiAgentHint}</span>
+						</div>
+					</div>
 
-          {sessionProbeMutation.isSuccess && sessionProbePayload ? (
-            <dl className="mt-4 grid gap-3 text-sm text-muted-foreground md:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <dt>{t('home.sessionProbeUserIdLabel')}</dt>
-                <dd className="mt-1 font-medium text-foreground">
-                  {sessionProbePayload.userId}
-                </dd>
-              </div>
-              <div>
-                <dt>{t('home.sessionProbeTtlLabel')}</dt>
-                <dd className="mt-1 font-medium text-foreground">
-                  {sessionProbePayload.onlineTtlSeconds ?? '-'}
-                </dd>
-              </div>
-              <div>
-                <dt>{t('home.sessionProbeRequestIdLabel')}</dt>
-                <dd className="mt-1 break-all font-medium text-foreground">
-                  {sessionProbePayload.requestId ?? '-'}
-                </dd>
-              </div>
-              <div>
-                <dt>{t('home.sessionProbePermissionsLabel')}</dt>
-                <dd className="mt-1 break-all font-medium text-foreground">
-                  {sessionProbePayload.permissions.join(', ') || '-'}
-                </dd>
-              </div>
-            </dl>
-          ) : null}
+					{/* 输入区 */}
+					<div className="xm-classroom-input__card-body">
+						<textarea
+							className="xm-classroom-input__card-textarea"
+							placeholder={placeholder}
+							rows={4}
+						/>
+					</div>
 
-          {sessionProbeMutation.isError ? (
-            <p className="mt-4 text-sm text-destructive">
-              {sessionProbeErrorMessage}
-            </p>
-          ) : null}
+					{/* 工具栏 */}
+					<div className="xm-classroom-input__card-toolbar">
+						<div className="xm-classroom-input__card-tools">
+							<button
+								type="button"
+								className="xm-classroom-input__card-tool-btn"
+								title={toolUploadFile}
+								onClick={() => {
 
-          {sessionProbeMutation.isIdle ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              {t('home.sessionProbeHint')}
-            </p>
-          ) : null}
-          </CardContent>
-        </Card>
-      </section>
-    </main>
-  );
+									console.log('[ClassroomInput] 上传课件 - 待接入');
+								}}
+							>
+								<Paperclip className="h-4 w-4" />
+							</button>
+							<button
+								type="button"
+								className="xm-classroom-input__card-tool-btn"
+								title={toolVoiceInput}
+								onClick={() => {
+
+									console.log('[ClassroomInput] 语音输入 - 待接入');
+								}}
+							>
+								<Mic className="h-4 w-4" />
+							</button>
+
+							<div className="xm-classroom-input__card-divider" />
+
+							<button
+								type="button"
+								className="xm-classroom-input__card-tool-text-btn"
+								onClick={() => {
+
+									console.log('[ClassroomInput] 增强设置 - 待接入');
+								}}
+							>
+								<Settings2 className="h-3.5 w-3.5" />
+								{toolEnhanceSettings}
+							</button>
+
+							<button
+								type="button"
+								className={cn(
+									'xm-classroom-input__card-toggle',
+									webSearchEnabled && 'xm-classroom-input__card-toggle--active'
+								)}
+								onClick={() => setWebSearchEnabled((prev) => !prev)}
+							>
+								<Globe className="h-3.5 w-3.5" />
+								{toolWebSearch}
+							</button>
+						</div>
+
+						<button
+							type="button"
+							className="xm-classroom-input__card-submit"
+							onClick={() => {
+
+								console.log('[ClassroomInput] 生成课堂 - 待接入');
+							}}
+						>
+							<span>{submitLabel}</span>
+							<ArrowRight className="h-4 w-4" />
+						</button>
+					</div>
+				</div>
+
+				{/* 建议标签 */}
+				<InputPageSuggestions
+					label={suggestionsLabel}
+					pills={suggestions}
+					onSelect={(pill) => {
+
+						console.log(`[ClassroomInput] 建议: ${pill}`);
+					}}
+				/>
+			</div>
+
+			{/* 引导卡片 */}
+			<InputPageGuideCards cards={guideCards} />
+
+			{/* 社区瀑布流 */}
+			<CommunityFeed
+				title={feedTitle}
+				description={feedDesc}
+				categories={feedCategories}
+				cards={CLASSROOM_FEED_MOCK_CARDS}
+			/>
+		</main>
+	);
 }

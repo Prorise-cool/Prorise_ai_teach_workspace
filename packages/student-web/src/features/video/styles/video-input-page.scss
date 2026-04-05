@@ -1,11 +1,31 @@
 /**
- * 文件说明：视频入口占位页局部样式。
- * 负责页面根容器与卡片层级的 feature scoped 微调。
+ * 文件说明：视频输入页局部样式入口。
+ * 仅保留视频输入页独有的输入卡片样式。
+ * Header、Suggestions、Guide 等共享样式由 components/input-page/styles 承接。
  */
-.xm-video-input-page {
-  &__shell,
-  &__card {
+@use './partials/video-input-card' as *;
+
+.xm-video-input {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  &__content {
     position: relative;
-    z-index: 1;
+    z-index: 20;
+    flex: 1;
+    width: 100%;
+    max-width: 56rem; /* ~896px */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 8vh 1rem 3rem;
+
+    @media (min-width: 768px) {
+      padding-top: 10vh;
+    }
   }
 }

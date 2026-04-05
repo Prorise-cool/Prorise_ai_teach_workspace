@@ -338,30 +338,31 @@
 			<div
 				class="relative w-full rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md transition-shadow duration-300 focus-within:shadow-lg flex flex-col min-h-[280px]">
 
-					<!-- 顶栏：智能匹配提示 (纯实底) -->
-					<div
-						class="relative z-30 flex items-center justify-between px-4 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] rounded-t-2xl">
+				<!-- 顶栏：智能匹配提示 (纯实底) -->
+				<div
+					class="relative z-30 flex items-center justify-between px-4 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] rounded-t-2xl">
 
-						<!-- 智能师生匹配提示 -->
-						<div class="flex items-center gap-2">
-							<div class="w-7 h-7 rounded-lg bg-brand flex items-center justify-center shadow-sm">
-								<i data-lucide="sparkles" class="w-4 h-4 text-[#3b1701]"></i>
-							</div>
-							<div class="flex flex-col">
-								<span
-									class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark">智能师生匹配</span>
-								<span
-									class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">根据您的配置自动适配 AI 老师</span>
-							</div>
+					<!-- 智能师生匹配提示 -->
+					<div class="flex items-center gap-2">
+						<div class="w-7 h-7 rounded-lg bg-brand flex items-center justify-center shadow-sm">
+							<i data-lucide="sparkles" class="w-4 h-4 text-[#3b1701]"></i>
 						</div>
-
-						<!-- 模式提示 -->
-						<span
-							class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark hidden md:flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2.5 py-1 rounded-md border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
-							<i data-lucide="users" class="w-3.5 h-3.5"></i> 支持多 Agent 讨论模式
-						</span>
+						<div class="flex flex-col">
+							<span
+								class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark">智能师生匹配</span>
+							<span
+								class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">根据您的配置自动适配
+								AI 老师</span>
+						</div>
 					</div>
-							</button>
+
+					<!-- 模式提示 -->
+					<span
+						class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark hidden md:flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2.5 py-1 rounded-md border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+						<i data-lucide="users" class="w-3.5 h-3.5"></i> 支持多 Agent 讨论模式
+					</span>
+				</div>
+				</button>
 
 				<!-- 核心文本输入区 -->
 				<div class="p-6 flex-1 relative z-20 flex flex-col gap-4">
@@ -693,7 +694,7 @@
 			menu.addEventListener('click', (e) => e.stopPropagation());
 		}
 		// 老师下拉菜单已移除
-	// 老师下拉菜单已移除，改用智能师生匹配
+		// 老师下拉菜单已移除，改用智能师生匹配
 		document.addEventListener('click', () => {
 			document.querySelectorAll('.dropdown-open').forEach(menu => {
 				menu.classList.remove('dropdown-open');
