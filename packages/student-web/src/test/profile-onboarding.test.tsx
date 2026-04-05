@@ -138,13 +138,16 @@ describe('Profile onboarding', () => {
     const user = userEvent.setup();
 
     useUserProfileStore.getState().setProfile({
+      id: null,
       userId: session.user.id,
       avatarUrl: null,
       bio: '',
       personalityType: 'action_oriented',
       teacherTags: ['humorous'],
       language: 'zh-CN',
-      isCompleted: false
+      isCompleted: false,
+      createTime: null,
+      updateTime: null
     });
 
     render(

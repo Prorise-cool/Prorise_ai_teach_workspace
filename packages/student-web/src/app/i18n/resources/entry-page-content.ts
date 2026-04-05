@@ -66,6 +66,23 @@ export const zhCnEntryPageResources = {
         description: '从知识点理解到动画合成，全流程分钟级完成。'
       }
     ],
+    workspaceRoutes: [
+      {
+        label: '单题讲解',
+        href: '/video/input',
+        icon: 'video'
+      },
+      {
+        label: '虚拟课堂',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
+      {
+        label: '学习中心',
+        href: '#',
+        icon: 'book-open'
+      }
+    ],
     repoLabel: '查看参考仓库',
     openWorkspace: '进入工作区',
     signIn: '登录',
@@ -85,7 +102,6 @@ export const zhCnEntryPageResources = {
     description:
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
-    primaryActionZh: '进入课堂工作区',
     workspaceHint: 'ENTER WORKSPACE',
     imageAlt: '小麦虚拟课堂角色形象'
   },
@@ -105,6 +121,75 @@ export const zhCnEntryPageResources = {
       primaryAction: '返回首页',
       secondaryAction: '查看产品落地页'
     }
+  },
+  /** Story 1-6：视频输入页文案。 */
+  videoInput: {
+    badgeLabel: 'Video Engine',
+    titleLine1: '输入或拍题，',
+    titleGradient: '5分钟生成动画讲解',
+    placeholder:
+      '粘贴题目文本，或描述具体题目要求...\n\n例如：\n「求函数 f(x) = x³ - 3x 的极值点并画出变化趋势」',
+    toolUploadImage: '上传图片',
+    toolScreenshot: '截图',
+    submitLabel: '生成视频',
+    suggestionsLabel: 'Try These',
+    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
+    guideCards: [
+      {
+        title: '没找到合适讲解？',
+        desc: '如果推荐区里暂时没有相似内容，也不会影响你继续拍题、粘贴题目或直接生成新视频。'
+      },
+      {
+        title: '登录后看更多',
+        desc: '登录即可解锁更多公开讲解。即使暂未登录，主流程仍然照常可用，绝不卡点。'
+      },
+      {
+        title: '网络不稳也能继续',
+        desc: '推荐内容加载慢时，先继续做题更高效。推荐区变慢不影响核心的题目分析与生成。'
+      }
+    ],
+    feedTitle: '热门题目讲解视频',
+    feedDesc: '浏览其他同学生成的优质 Manim 动画讲解',
+    feedCategories: ['最近高分', '高等数学', '大学物理'],
+    feedLoadMore: '加载更多解题视频',
+    feedLoading: '正在拉取数据...'
+  },
+  /** Story 1-6：课堂输入页文案。 */
+  classroomInput: {
+    badgeLabel: 'Classroom Builder',
+    titleLine1: '输入主题，',
+    titleGradient: '即刻生成完整虚拟课堂',
+    placeholder:
+      '你想系统地学点什么？\n\n例如：\n「结合生活案例，系统讲解一下微积分中的链式法则」',
+    smartMatchHint: '智能师生匹配',
+    smartMatchDesc: '根据您的配置自动适配 AI 老师',
+    multiAgentHint: '支持多 Agent 讨论模式',
+    toolUploadFile: '上传课件/PDF',
+    toolVoiceInput: '语音输入',
+
+    toolWebSearch: '开启联网',
+    submitLabel: '生成课堂',
+    suggestionsLabel: 'Try These',
+    suggestions: ['二叉树原理图解', '泰勒展开式推导', '微积分链式法则'],
+    guideCards: [
+      {
+        title: '没找到合适讲解？',
+        desc: '如果推荐区里暂时没有相似内容，也不会影响你继续上传课件或直接生成新课堂。'
+      },
+      {
+        title: '登录后看更多',
+        desc: '登录即可解锁更多公开课件。即使暂未登录，主流程仍然照常可用，绝不卡点。'
+      },
+      {
+        title: '网络不稳也能继续',
+        desc: '推荐内容加载慢时，先继续构思更高效。推荐区变慢不影响核心的课程生成。'
+      }
+    ],
+    feedTitle: '探索优质课堂案例',
+    feedDesc: '看看大家都在用小麦学什么系统课程',
+    feedCategories: ['推荐精选', '理工科', '经管文法'],
+    feedLoadMore: '加载更多案例',
+    feedLoading: '正在为您检索课程...'
   },
   landing: {
     hero: {
@@ -618,6 +703,23 @@ export const enUsEntryPageResources = {
           'From topic understanding to animation rendering, the full pipeline completes in minutes.'
       }
     ],
+    workspaceRoutes: [
+      {
+        label: 'Video Explainer',
+        href: '/video/input',
+        icon: 'video'
+      },
+      {
+        label: 'Virtual Classroom',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
+      {
+        label: 'Learning Center',
+        href: '#',
+        icon: 'book-open'
+      }
+    ],
     repoLabel: 'View reference repository',
     openWorkspace: 'Open Workspace',
     signIn: 'Sign in',
@@ -637,7 +739,6 @@ export const enUsEntryPageResources = {
     description:
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
-    primaryActionZh: 'Enter Classroom Workspace',
     workspaceHint: 'ENTER WORKSPACE',
     imageAlt: 'XiaoMai virtual classroom mascot'
   },
@@ -657,6 +758,83 @@ export const enUsEntryPageResources = {
       primaryAction: 'Back home',
       secondaryAction: 'View the landing page'
     }
+  },
+  /** Story 1-6: Video input page copy. */
+  videoInput: {
+    badgeLabel: 'Video Engine',
+    titleLine1: 'Enter or snap a problem, ',
+    titleGradient: '5-minute animated explainer',
+    placeholder:
+      'Paste problem text or describe the question...\n\nFor example:\n"Find the extrema of f(x) = x³ - 3x and sketch the trend"',
+    toolUploadImage: 'Upload image',
+    toolScreenshot: 'Screenshot',
+    submitLabel: 'Generate Video',
+    suggestionsLabel: 'Try These',
+    suggestions: [
+      "Prove L'Hôpital's rule",
+      'Solve partial differential equations',
+      'Explain Fourier transform'
+    ],
+    guideCards: [
+      {
+        title: 'No matching explainer?',
+        desc: "If similar content isn't available yet, you can still snap a problem, paste text, or generate a new video directly."
+      },
+      {
+        title: 'Sign in for more',
+        desc: 'Sign in to unlock more public explainers. The core flow works without an account — no blockers.'
+      },
+      {
+        title: 'Unstable network? Keep going',
+        desc: 'If recommendations load slowly, focus on your problem first. A slow feed never blocks core analysis and generation.'
+      }
+    ],
+    feedTitle: 'Trending Problem Explainers',
+    feedDesc: 'Browse high-quality Manim animation explainers created by other students',
+    feedCategories: ['Top Rated', 'Calculus', 'College Physics'],
+    feedLoadMore: 'Load more explainers',
+    feedLoading: 'Fetching data...'
+  },
+  /** Story 1-6: Classroom input page copy. */
+  classroomInput: {
+    badgeLabel: 'Classroom Builder',
+    titleLine1: 'Enter a topic, ',
+    titleGradient: 'instantly build a virtual classroom',
+    placeholder:
+      'What do you want to learn systematically?\n\nFor example:\n"Using real-life examples, explain the chain rule in calculus"',
+    smartMatchHint: 'Smart student-teacher matching',
+    smartMatchDesc: 'Automatically matches the best AI teacher based on your preferences',
+    multiAgentHint: 'Multi-agent discussion mode',
+    toolUploadFile: 'Upload courseware/PDF',
+    toolVoiceInput: 'Voice input',
+    toolEnhanceSettings: 'Enhancement settings',
+    toolWebSearch: 'Enable web search',
+    submitLabel: 'Generate Classroom',
+    suggestionsLabel: 'Try These',
+    suggestions: [
+      'Binary tree visual guide',
+      'Taylor expansion derivation',
+      'Chain rule in calculus'
+    ],
+    guideCards: [
+      {
+        title: 'No matching explainer?',
+        desc: "If similar content isn't available yet, you can still upload courseware or generate a new classroom directly."
+      },
+      {
+        title: 'Sign in for more',
+        desc: 'Sign in to unlock more public courseware. The core flow works without an account — no blockers.'
+      },
+      {
+        title: 'Unstable network? Keep going',
+        desc: 'If recommendations load slowly, keep brainstorming. A slow feed never blocks core classroom generation.'
+      }
+    ],
+    feedTitle: 'Explore Quality Classrooms',
+    feedDesc: 'See what systematic courses others are learning with XiaoMai',
+    feedCategories: ['Featured', 'STEM', 'Business & Liberal Arts'],
+    feedLoadMore: 'Load more classrooms',
+    feedLoading: 'Searching courses...'
   },
   landing: {
     hero: {

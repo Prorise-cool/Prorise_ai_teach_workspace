@@ -62,12 +62,13 @@ export function HomePage() {
 							{t('entryHome.description')}
 						</p>
 
-						<Button asChild size="hero">
-							<Link to="/classroom/input">
-								<span className="hidden sm:inline">{t('entryHome.primaryAction')}</span>
-								<span className="sm:hidden">{t('entryHome.primaryActionZh')}</span>
-							</Link>
-						</Button>
+						<div className="flex flex-wrap items-center gap-3">
+							<Button asChild size="hero">
+								<Link to="/classroom/input">
+									{t('entryHome.primaryAction')}
+								</Link>
+							</Button>
+						</div>
 					</div>
 				</section>
 			</div>
