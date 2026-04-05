@@ -1,0 +1,47 @@
+/**
+ * 文件说明：输入页共享标题区样式。
+ * 负责 badge + gradient 标题的排版，视频与课堂输入页共用。
+ */
+.xm-input-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.6875rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-radius: var(--xm-radius-full);
+    background: var(--xm-color-text-primary);
+    color: var(--xm-color-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  &__title {
+    margin-top: 1rem;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--xm-color-text-primary);
+
+    @media (min-width: 768px) {
+      font-size: 2.75rem;
+    }
+  }
+
+  &__gradient {
+    background: linear-gradient(
+      to right,
+      var(--xm-color-brand-400),
+      #ff8c00
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}

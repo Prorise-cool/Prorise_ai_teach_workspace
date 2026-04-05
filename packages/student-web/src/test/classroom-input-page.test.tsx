@@ -1,74 +1,38 @@
 /**
- * 文件说明：验证课堂输入页仍保留 Story 1.3 的一致性校验与登出动作。
+ * 文件说明：验证课堂输入页正确渲染共享组件与课堂专属输入卡片。
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
 import { AppProvider } from '@/app/provider/app-provider';
-import { ClassroomInputPage } from '@/features/classroom/classroom-input-page';
-import {
-  createAuthConsistencyService,
-  type AuthConsistencyService
-} from '@/services/auth-consistency';
-import { createMockAuthAdapter } from '@/services/api/adapters';
-import { createAuthService, type AuthService } from '@/services/auth';
+import { ClassroomInputPage } from '@/features/classroom/pages/classroom-input-page';
 import {
   resetAuthSessionStore,
   useAuthSessionStore
 } from '@/stores/auth-session-store';
+import { createAuthService } from '@/services/auth';
+import { createMockAuthAdapter } from '@/services/api/adapters';
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
 
 /**
- * 构造可替换认证服务的课堂页路由。
+ * 构造课堂输入页路由。
  *
- * @param service - 认证服务桩。
- * @param consistencyService - 一致性服务桩。
  * @returns 内存路由实例。
  */
-function createClassroomRouter(
-  service: AuthService,
-  consistencyService: AuthConsistencyService
-) {
+function createClassroomRouter() {
   return createMemoryRouter(
     [
       {
         path: '/classroom/input',
-        element: (
-          <ClassroomInputPage
-            consistencyService={consistencyService}
-            service={service}
-          />
-        )
-      },
-      {
-        path: '/login',
-        element: <div>Login route</div>
+        element: <ClassroomInputPage />
       }
     ],
     {
       initialEntries: ['/classroom/input']
     }
   );
-}
-
-function createServiceStub(overrides: Partial<AuthService> = {}): AuthService {
-  return {
-    ...mockAuthService,
-    ...overrides
-  };
-}
-
-function createConsistencyServiceStub(
-  overrides: Partial<AuthConsistencyService> = {}
-): AuthConsistencyService {
-  return {
-    ...createAuthConsistencyService({
-      request: vi.fn()
-    } as never),
-    ...overrides
-  };
 }
 
 describe('ClassroomInputPage', () => {
@@ -78,28 +42,14 @@ describe('ClassroomInputPage', () => {
     window.sessionStorage.clear();
   });
 
-  it('renders the protected probe result after a successful consistency check', async () => {
+  it('renders the header with badge and gradient title', async () => {
     const session = await mockAuthService.login({
       username: 'admin',
       password: 'admin123'
     });
 
     useAuthSessionStore.getState().setSession(session);
-    const consistencyService = createConsistencyServiceStub({
-      getSessionProbe: vi.fn().mockResolvedValue({
-        userId: '1',
-        username: 'admin',
-        roles: ['admin'],
-        permissions: ['video:task:add', 'classroom:session:add'],
-        onlineTtlSeconds: 7200,
-        requestId: 'req_home_probe_001'
-      })
-    });
-    const router = createClassroomRouter(
-      createServiceStub(),
-      consistencyService
-    );
-    const user = userEvent.setup();
+    const router = createClassroomRouter();
 
     render(
       <AppProvider>
@@ -107,26 +57,100 @@ describe('ClassroomInputPage', () => {
       </AppProvider>
     );
 
-    await user.click(
-      screen.getByRole('button', { name: '验证受保护访问' })
-    );
-
-    expect(await screen.findByText('req_home_probe_001')).toBeInTheDocument();
-    expect(screen.getByText('7200')).toBeInTheDocument();
+    expect(screen.getByText('Classroom Builder')).toBeInTheDocument();
+    expect(screen.getByText(/即刻生成完整虚拟课堂/)).toBeInTheDocument();
   });
 
-  it('clears the local session and returns to /login after logout', async () => {
+  it('renders the submit button and suggestion pills', async () => {
     const session = await mockAuthService.login({
       username: 'admin',
       password: 'admin123'
     });
 
     useAuthSessionStore.getState().setSession(session);
-    const logout = vi.fn().mockResolvedValue(undefined);
-    const router = createClassroomRouter(
-      createServiceStub({ logout }),
-      createConsistencyServiceStub()
+    const router = createClassroomRouter();
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
     );
+
+    expect(
+      screen.getByRole('button', { name: /生成课堂/ })
+    ).toBeInTheDocument();
+    expect(screen.getByText('二叉树原理图解')).toBeInTheDocument();
+  });
+
+  it('renders three guide cards', async () => {
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+    const router = createClassroomRouter();
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    expect(screen.getByText('没找到合适讲解？')).toBeInTheDocument();
+    expect(screen.getByText('登录后看更多')).toBeInTheDocument();
+    expect(screen.getByText('网络不稳也能继续')).toBeInTheDocument();
+  });
+
+  it('renders the community feed with at least 6 cards', async () => {
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+    const router = createClassroomRouter();
+
+    render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    expect(screen.getByText('探索优质课堂案例')).toBeInTheDocument();
+    expect(screen.getByText('微积分基本定理系统精讲')).toBeInTheDocument();
+
+    const feedCards = screen.getAllByRole('article');
+    expect(feedCards.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('does not render backend-only fields in community cards', async () => {
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+    const router = createClassroomRouter();
+
+    const { container } = render(
+      <AppProvider>
+        <RouterProvider router={router} />
+      </AppProvider>
+    );
+
+    expect(container.textContent).not.toContain('status');
+    expect(container.textContent).not.toContain('tenant_id');
+  });
+
+  it('toggles the web search button', async () => {
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+    const router = createClassroomRouter();
     const user = userEvent.setup();
 
     render(
@@ -135,13 +159,11 @@ describe('ClassroomInputPage', () => {
       </AppProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: '退出登录' }));
+    const toggleBtn = screen.getByRole('button', { name: /开启联网/ });
+    expect(toggleBtn).toBeInTheDocument();
+    expect(toggleBtn).not.toHaveClass('xm-classroom-input__card-toggle--active');
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/login');
-    });
-
-    expect(logout).toHaveBeenCalledWith(session.accessToken);
-    expect(useAuthSessionStore.getState().session).toBeNull();
+    await user.click(toggleBtn);
+    expect(toggleBtn).toHaveClass('xm-classroom-input__card-toggle--active');
   });
 });

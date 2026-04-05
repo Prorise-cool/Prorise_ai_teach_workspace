@@ -1,10 +1,178 @@
 # Workspace Agent Instructions
 
 ## Canonical Source
+面对用户，你 100%需要使用中文作为回复，禁止使用其他语言！
 
 - `_bmad-output/` 是本仓库唯一的事实来源。
 - 产品、PRD、UX、架构、Epic、Story 与实现状态，统一以 `_bmad-output/` 为准。
 - 所有导航文件仅作入口使用；若与 `_bmad-output/` 冲突，以 `_bmad-output/` 为准。
+- 再阅读`_bmad-output`时必须按需阅读此次任务相关的索引获取上下文，详细定位到/Volumes/DataDisk/Projects/ProriseProjects/Prorise_ai_teach_workspace/_bmad-output/INDEX.md文件中
+
+项目结构请快速参考：
+_bmad-output                                                       
+├─ brainstorming                                                   
+│  └─ brainstorming-session-2026-03-18-142300.md                   
+├─ implementation-artifacts                                        
+│  ├─ 0-1-monorepo-基础目录与工程骨架冻结.md                                  
+│  ├─ 0-2-契约资产目录命名规则与版本规则冻结.md                                     
+│  ├─ 0-3-前端-adapter-与-mock-handler-环境切换基线.md                      
+│  ├─ 0-4-后端-schema-openapi-与示例-payload-输出基线.md                    
+│  ├─ 0-5-request-id-task-id-与日志追踪骨架.md                            
+│  ├─ 0-6-story-交付门禁与并行开发-dor-dod-冻结.md                            
+│  ├─ 1-1-统一认证契约会话-payload-与-mock-基线.md                            
+│  ├─ 1-2-独立认证页中的注册登录与回跳.md                                        
+│  ├─ 1-3-登出401-处理与受保护访问一致性.md                                     
+│  ├─ 1-4-首页课堂直达入口与顶栏导航分发.md                                       
+│  ├─ 1-5-用户配置系统（个人简介与学习偏好）.md                                     
+│  ├─ 1-6-角色边界与入口级权限可见性.md                                         
+│  ├─ 1-7-营销落地页与-home-首页分流.md                                      
+│  ├─ 10-1-长期业务数据边界业务表清单与字段基线冻结.md                                 
+│  ├─ 10-2-ruoyi-小麦业务模块与权限承接规则.md                                  
+│  ├─ 10-3-fastapi-与-ruoyi-防腐层客户端.md                               
+│  ├─ 10-4-视频与课堂任务元数据长期承接.md                                       
+│  ├─ 10-5-companion-与-evidence-问答长期承接.md                          
+│  ├─ 10-6-learning-coach-结果错题与路径长期承接.md                           
+│  ├─ 10-7-学习记录收藏与聚合查询承接.md                                        
+│  ├─ 10-8-后台查询导出与审计边界.md                                          
+│  ├─ 2-1-统一任务状态枚举错误码与结果-schema-冻结.md                              
+│  ├─ 2-2-task-基类taskcontext-与调度骨架.md                              
+│  ├─ 2-3-dramatiq-redis-broker-基础接入.md                            
+│  ├─ 2-4-redis-运行态-keyttl-与事件缓存落地.md                              
+│  ├─ 2-5-sse-事件类型payload-与-broker-契约冻结.md                         
+│  ├─ 2-6-sse-断线恢复与-status-查询降级.md                                 
+│  ├─ 2-7-provider-protocol工厂与优先级注册骨架.md                           
+│  ├─ 2-8-provider-健康检查failover-与缓存策略.md                           
+│  ├─ 3-6-视频输入页公开视频广场与复用入口.md                                      
+│  ├─ 4-10-视频结果公开发布与输入页复用卡片.md                                     
+│  ├─ 5-10-课堂结果导出与分享产物.md                                          
+│  ├─ 5-9-课堂输入页联网搜索增强与证据范围配置.md                                    
+│  ├─ 7-7-联网搜索-provider-与生成前证据增强.md                                
+│  ├─ epic-0-retro-2026-04-04.md                                   
+│  ├─ epic-10-retro-2026-04-04.md                                  
+│  ├─ index.md                                                     
+│  ├─ sprint-status.yaml                                           
+│  └─ story-template-checklist.md                                  
+├─ planning-artifacts                                              
+│  ├─ architecture                                                 
+│  │  ├─ 01-1-文档说明.md                                              
+│  │  ├─ 02-2-项目背景与架构目标.md                                         
+│  │  ├─ 03-3-核心术语与架构原则.md                                         
+│  │  ├─ 04-4-系统边界与总体架构.md                                         
+│  │  ├─ 05-5-运行机制与关键链路.md                                         
+│  │  ├─ 06-6-数据分层与存储策略.md                                         
+│  │  ├─ 07-7-职责边界与集成关系.md                                         
+│  │  ├─ 08-8-模块划分与实现策略.md                                         
+│  │  ├─ 09-9-外部平台集成策略.md                                          
+│  │  ├─ 10-10-一致性规则与项目规范.md                                       
+│  │  ├─ 11-11-技术选型与评估结论.md                                        
+│  │  ├─ 12-12-架构决策记录摘要.md                                         
+│  │  ├─ 13-13-未决事项与后续补充.md                                        
+│  │  ├─ 14-14-项目结构与边界定义.md                                        
+│  │  ├─ 15-15-架构验证与完整性检查.md                                       
+│  │  └─ index.md                                                  
+│  ├─ archive                                                      
+│  │  ├─ architecture.md                                           
+│  │  ├─ design-tokens.md                                          
+│  │  ├─ epics.md                                                  
+│  │  ├─ index.md                                                  
+│  │  ├─ prd.md                                                    
+│  │  └─ ux-design-specification.md                                
+│  ├─ epics                                                        
+│  │  ├─ 01-overview.md                                            
+│  │  ├─ 02-document-usage-rule.md                                 
+│  │  ├─ 03-design-goals-of-this-breakdown.md                      
+│  │  ├─ 04-requirements-inventory.md                              
+│  │  ├─ 05-epic-restructure-principles.md                         
+│  │  ├─ 06-dependency-model.md                                    
+│  │  ├─ 07-story-definition-standard.md                           
+│  │  ├─ 08-fr-coverage-map.md                                     
+│  │  ├─ 09-nfr-coverage-map.md                                    
+│  │  ├─ 10-epic-list.md                                           
+│  │  ├─ 11-delivery-waves.md                                      
+│  │  ├─ 12-detailed-planning-format.md                            
+│  │  ├─ 13-epic-0.md                                              
+│  │  ├─ 14-epic-1-revised-story-1-5.md                            
+│  │  ├─ 14-epic-1-story-1-5-replacement.md                        
+│  │  ├─ 14-epic-1.md                                              
+│  │  ├─ 15-epic-2.md                                              
+│  │  ├─ 16-epic-3.md                                              
+│  │  ├─ 17-epic-4.md                                              
+│  │  ├─ 18-epic-5.md                                              
+│  │  ├─ 19-midpoint-quality-check.md                              
+│  │  ├─ 20-implementation-sequencing-advice-for-upper-half.md     
+│  │  ├─ 21-definition-of-done-for-upper-half-epics.md             
+│  │  ├─ 22-risks-addressed-by-this-upper-half-design.md           
+│  │  ├─ 23-epic-6.md                                              
+│  │  ├─ 24-epic-7.md                                              
+│  │  ├─ 25-epic-8.md                                              
+│  │  ├─ 26-epic-9.md                                              
+│  │  ├─ 27-epic-10-ruoyi.md                                       
+│  │  ├─ 28-cross-epic-integration-matrix.md                       
+│  │  ├─ 29-milestone-plan.md                                      
+│  │  ├─ 30-recommended-team-execution-model.md                    
+│  │  ├─ 31-final-validation-checklist.md                          
+│  │  ├─ 32-final-notes-for-story-writers.md                       
+│  │  ├─ 33-appendix-a-epic-to-story-id-index.md                   
+│  │  ├─ 34-appendix-b-recommended-bmad-ticket-split.md            
+│  │  ├─ 35-appendix-c-suggested-story-sizing-rule.md              
+│  │  ├─ 36-appendix-d-high-risk-stories-requiring-early-spike.md  
+│  │  ├─ 37-appendix-e-release-gate-checklist.md                   
+│  │  ├─ 38-appendix-f-mvp-cut-strategy.md                         
+│  │  ├─ 39-appendix-g-final-quality-statement.md                  
+│  │  ├─ 40-closing-recommendation.md                              
+│  │  ├─ epic-1-implementation-baseline.md                         
+│  │  ├─ epic-1-openmaic-alignment-baseline.md                     
+│  │  └─ index.md                                                  
+│  ├─ prd                                                          
+│  │  ├─ 01-1-文档说明.md                                              
+│  │  ├─ 02-2-产品概述.md                                              
+│  │  ├─ 03-3-架构对齐摘要.md                                            
+│  │  ├─ 04-4-用户与核心场景.md                                           
+│  │  ├─ 05-5-版本范围.md                                              
+│  │  ├─ 06-6-功能需求.md                                              
+│  │  ├─ 07-7-非功能需求.md                                             
+│  │  ├─ 08-8-数据与集成约束.md                                           
+│  │  ├─ 09-9-成功标准.md                                              
+│  │  ├─ 10-10-需求追踪矩阵rtm.md                                        
+│  │  ├─ 11-11-测试与上线门禁.md                                          
+│  │  ├─ 12-12-definition-of-ready-definition-of-done.md           
+│  │  ├─ 13-13-版本计划.md                                             
+│  │  ├─ 14-14-变更控制.md                                             
+│  │  ├─ 15-15-术语简表.md                                             
+│  │  ├─ 16-16-附录与旧-prd-的继承说明.md                                   
+│  │  └─ index.md                                                  
+│  ├─ research                                                     
+│  │  ├─ domain-AI教学视频智能体-2026-03-20.md                            
+│  │  └─ market-AI教学视频智能体-research-2026-03-20.md                   
+│  ├─ ux-design-specification                                      
+│  │  ├─ 01-executive-summary.md                                   
+│  │  ├─ 02-core-user-experience.md                                
+│  │  ├─ 03-desired-emotional-response.md                          
+│  │  ├─ 04-ux-pattern-analysis-inspiration.md                     
+│  │  ├─ 05-design-system-foundation.md                            
+│  │  ├─ 06-2-core-user-experience.md                              
+│  │  ├─ 07-visual-design-foundation.md                            
+│  │  ├─ 08-7-page-level-design-specifications页面级设计规范.md           
+│  │  ├─ 09-8-companion-layer-ux会话伴学层.md                           
+│  │  ├─ 10-9-evidence-retrieval-ux证据面板层.md                        
+│  │  ├─ 11-10-learning-coach-layer学习教练层.md                        
+│  │  ├─ 12-11-frontend-backend-interaction-boundary前端与双后端交互边界.md  
+│  │  ├─ 13-12-unified-waiting-experience统一等待体验设计.md               
+│  │  ├─ 13-design-updates.md                                      
+│  │  ├─ 14-13-user-profile-data-specification用户配置数据规范.md          
+│  │  ├─ 15-14-future-considerations未来考虑.md                        
+│  │  ├─ 16-附录-a-ui-线框图索引.md                                       
+│  │  ├─ 17-附录-b-sse-事件类型完整列表.md                                   
+│  │  ├─ 18-附录-c-错误码完整列表.md                                        
+│  │  └─ index.md                                                  
+│  ├─ index.md                                                     
+│  └─ product-brief-小麦-2026-03-22.md                               
+├─ research                                                        
+│  ├─ openmaic-issue-pr-audit-2026-03-23.md                        
+│  └─ technical-AI教学视频智能体-research-2026-03-21.md                   
+├─ INDEX.md                                                        
+└─ project-context.md                                              
+
 
 ## Documentation Output
 
@@ -164,4 +332,3 @@
 1. PRD、架构、Epic / Story 已完成并相互对齐。
 2. `004-开发规范` 与 `005-环境搭建` 已初始化。
 3. GitHub 仓库已按 `0002-Git工作流.md` 启用受保护分支与 PR 流程。
-4. 对于 `story 1-1`，已明确认证由 RuoYi 承载，业务前端承载路径采用架构默认方案。

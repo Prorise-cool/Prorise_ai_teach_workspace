@@ -81,7 +81,7 @@ async function loadForbiddenRoute() {
  */
 async function loadClassroomInputRoute() {
   const { ClassroomInputPage } = await import(
-    '@/features/classroom/classroom-input-page'
+    '@/features/classroom/pages/classroom-input-page'
   );
 
   return {
@@ -140,7 +140,7 @@ async function loadProfileTourRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadVideoInputRoute() {
-  const { VideoInputPage } = await import('@/features/video/video-input-page');
+  const { VideoInputPage } = await import('@/features/video/pages/video-input-page');
 
   return {
     Component: VideoInputPage
