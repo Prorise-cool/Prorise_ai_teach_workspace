@@ -14,10 +14,12 @@
 
 ### Epic 2 Done
 - 新任务可复用统一任务框架
-- SSE 事件结构稳定
+- SSE 事件结构稳定，公共事件目录与 schema 无漂移
 - 断线恢复和 `/status` 降级可用
 - ProviderFactory 与 Failover 可用
 - Redis 运行态 key 具备 TTL
+- OpenAPI / schema / 示例 payload 可稳定产出并被前端消费
+- 底座共享模块与契约说明满足当前仓库规范化注释 / 文档要求
 
 ### Epic 3 Done
 - 用户可用文本 / 图片创建视频任务

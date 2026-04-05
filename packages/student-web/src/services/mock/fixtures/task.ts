@@ -431,7 +431,7 @@ export function getMockTaskEventSequence(
     return [
       ...baseEvents,
       {
-        event: "snapshot",
+        event: "cancelled",
         taskId: detail.taskId,
         requestId: detail.requestId,
         taskType: detail.taskType,

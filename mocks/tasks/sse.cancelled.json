@@ -1,0 +1,14 @@
+{
+  "id": "task_mock_cancelled:evt:000003",
+  "sequence": 3,
+  "event": "cancelled",
+  "taskId": "task_mock_cancelled",
+  "taskType": "video",
+  "status": "cancelled",
+  "progress": 35,
+  "message": "任务已取消",
+  "timestamp": "2026-03-30T13:05:13Z",
+  "requestId": "req_task_mock_cancelled_sse",
+  "errorCode": "TASK_CANCELLED",
+  "stage": "generation"
+}

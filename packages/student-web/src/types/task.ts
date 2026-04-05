@@ -39,6 +39,7 @@ export const TASK_EVENT_NAME_VALUES = [
   "provider_switch",
   "completed",
   "failed",
+  "cancelled",
   "heartbeat",
   "snapshot",
 ] as const;

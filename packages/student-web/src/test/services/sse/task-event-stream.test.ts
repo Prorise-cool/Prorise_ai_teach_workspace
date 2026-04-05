@@ -63,6 +63,26 @@ describe('task event stream', () => {
     });
   });
 
+  it('replays cancelled terminal semantics from the shared mock sequence', async () => {
+    const stream = resolveTaskEventStream({ useMock: true });
+    const events = await collectTaskEvents(
+      stream.streamTaskEvents('task_mock_cancelled', {
+        scenario: 'cancelled'
+      })
+    );
+
+    expect(events.map(event => event.event)).toEqual([
+      'connected',
+      'progress',
+      'cancelled'
+    ]);
+    expect(events.at(-1)).toMatchObject({
+      event: 'cancelled',
+      status: 'cancelled',
+      errorCode: 'TASK_CANCELLED'
+    });
+  });
+
   it('parses real SSE payloads, forwards Last-Event-ID, and skips unknown events', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(

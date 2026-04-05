@@ -10,7 +10,7 @@
 
 1. 同一 `taskId` 内，`sequence` 从 `1` 开始，严格单调递增。
 2. `connected` 必须是一次 SSE 会话输出的首个事件。
-3. `completed` / `failed` 为终态事件；终态之后不允许再写入 `progress` 或 `provider_switch`。
+3. `completed` / `failed` / `cancelled` 为终态事件；终态之后不允许再写入 `progress` 或 `provider_switch`。
 4. `heartbeat` 只负责保活，但仍然占用新的 `sequence`，保证客户端可检测事件缺口。
 5. `snapshot` 用于恢复当前最小状态，它本身也具有新的 `id` / `sequence`，同时通过 `resumeFrom` 指向最近已稳定可恢复的事件 ID。
 
@@ -29,6 +29,10 @@
 ### Provider 切换后失败
 
 `connected -> progress -> provider_switch -> heartbeat -> failed`
+
+### 显式取消
+
+`connected -> progress -> cancelled`
 
 ### 断线恢复
 
