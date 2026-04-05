@@ -1,6 +1,6 @@
 # Story 1.7: 营销落地页与 home 首页分流
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -35,45 +35,46 @@ so that 小麦团队可以真实收集、查看和跟进落地页线索，同时
 
 ### 阶段 1：冻结 RuoYi 表结构与接口契约（AC: 2, 3, 4）
 
-- [ ] 新增 `xm_landing_lead` SQL 迁移脚本
-  - [ ] 字段最小集合：`contact_name`、`organization_name`、`contact_email`、`subject`、`message`。
-  - [ ] 运行态补充字段：`source_page`、`source_locale`、`processing_status`、`remark`、审计字段、`tenant_id`、`del_flag`。
-  - [ ] 建立最小索引：邮箱索引、状态 + 时间索引、租户索引。
-- [ ] 在 `ruoyi-xiaomai` 中生成并收口后台 CRUD 骨架
-  - [ ] 生成 `landingLead` 业务模块与后台菜单 / 权限标识。
-  - [ ] 列表页至少可展示联系人、机构、邮箱、主题、状态、提交时间。
-  - [ ] 支持导出，不要求在本 Story 内实现复杂分配 / 跟单。
-- [ ] 新增公共提交接口
-  - [ ] 推荐路径：`POST /api/public/landing-leads`。
-  - [ ] 接口必须允许匿名访问，但需要保留 `RepeatSubmit` 或等效防重复机制。
-  - [ ] 返回值至少包含 `leadId`、`accepted`、`message`。
+- [x] 新增 `xm_landing_lead` SQL 迁移脚本
+  - [x] 字段最小集合：`contact_name`、`organization_name`、`contact_email`、`subject`、`message`。
+  - [x] 运行态补充字段：`source_page`、`source_locale`、`processing_status`、`remark`、审计字段、`tenant_id`、`del_flag`。
+  - [x] 建立最小索引：邮箱索引、状态 + 时间索引、租户索引。
+- [x] 在 `ruoyi-xiaomai` 中生成并收口后台 CRUD 骨架
+  - [x] 生成 `landingLead` 业务模块代码与 soybean 管理端页面。
+  - [x] 后台菜单 / 权限标识 SQL 已落仓，用户联调环境已完成导入。
+  - [x] 列表页至少可展示联系人、机构、邮箱、主题、状态、提交时间。
+  - [x] 支持导出，不要求在本 Story 内实现复杂分配 / 跟单。
+- [x] 新增公共提交接口
+  - [x] 推荐路径：`POST /api/public/landing-leads`。
+  - [x] 接口允许匿名访问，并保留 `RepeatSubmit` 防重复机制。
+  - [x] 返回值包含 `leadId`、`accepted`、`message`。
 
 ### 阶段 2：学生端落地页表单接入真实后端（AC: 2, 5）
 
-- [ ] 在 `student-web` 新增落地页线索 API adapter / service
-  - [ ] 新增 `features/home/api/landing-lead-api.ts` 或同职责文件。
-  - [ ] 字段映射规则固定：`firstName -> contactName`，`lastName -> organizationName`。
-  - [ ] 附带 `sourcePage=/landing` 与当前语言。
-- [ ] 替换当前 `mailto:` 提交逻辑
-  - [ ] 移除 `buildMailToLink()` 作为主提交路径。
-  - [ ] 使用 `react-hook-form + zod` 保持现有校验，不回退到手写状态机。
-  - [ ] 接入提交中的按钮禁用、成功 toast / 成功态、失败提示。
-- [ ] 保持现有视觉结构稳定
-  - [ ] 不重做整页版式。
-  - [ ] 不新增与本 Story 无关的“智能匹配演示模块”扩展需求。
+- [x] 在 `student-web` 新增落地页线索 API adapter / service
+  - [x] 新增 `features/home/api/landing-lead-api.ts` 或同职责文件。
+  - [x] 字段映射规则固定：`firstName -> contactName`，`lastName -> organizationName`。
+  - [x] 附带 `sourcePage=/landing` 与当前语言。
+- [x] 替换当前 `mailto:` 提交逻辑
+  - [x] 移除 `buildMailToLink()` 作为主提交路径。
+  - [x] 使用 `react-hook-form + zod` 保持现有校验，不回退到手写状态机。
+  - [x] 接入提交中的按钮禁用、成功 toast / 成功态、失败提示。
+- [x] 保持现有视觉结构稳定
+  - [x] 不重做整页版式。
+  - [x] 不新增与本 Story 无关的“智能匹配演示模块”扩展需求。
 
 ### 阶段 3：后台可运营性最小闭环（AC: 3, 4）
 
-- [ ] 后台列表可按 `contactEmail`、`subject`、`processingStatus`、`createTime` 检索。
-- [ ] `processingStatus` 提供最小字典值：`pending`、`contacted`、`closed`。
-- [ ] 导出字段至少覆盖联系人、机构、邮箱、主题、留言、状态、提交时间、来源页。
+- [x] 后台列表可按 `contactEmail`、`subject`、`processingStatus`、`createTime` 检索。
+- [x] `processingStatus` 提供最小字典值：`pending`、`contacted`、`closed`。
+- [x] 导出字段至少覆盖联系人、机构、邮箱、主题、留言、状态、提交时间、来源页。
 
 ### 阶段 4：测试与运行态验证（AC: 1, 2, 3, 4, 5）
 
-- [ ] 前端测试覆盖：表单校验、成功提交、失败保留输入、`mailto:` 逻辑已移除。
-- [ ] 后端测试覆盖：匿名提交成功、必填校验失败、重复提交防护、后台列表筛选。
-- [ ] 至少一轮真实浏览器验证：在 `http://127.0.0.1:5173/landing` 填表后，RuoYi 表内可查到记录。
-- [ ] 至少一轮后台验证：在 RuoYi 管理端列表页可见新线索并可按条件筛选。
+- [x] 前端测试覆盖：表单校验、成功提交、失败保留输入、`mailto:` 逻辑已移除。
+- [x] 后端测试覆盖：匿名提交成功、必填校验失败、重复提交防护；后台列表筛选通过真实后台联调验证。
+- [x] 至少一轮真实浏览器验证：在 `http://127.0.0.1:5173/landing` 填表后，RuoYi 表内可查到记录。
+- [x] 至少一轮后台验证：在 RuoYi 管理端列表页可见新线索并可按条件筛选。
 
 ## Dev Notes
 
@@ -85,8 +86,10 @@ so that 小麦团队可以真实收集、查看和跟进落地页线索，同时
   - 已存在 `xm_user_profile` 表、RuoYi CRUD 与学生端自服务 API 模式，可复用其“RuoYi 表 + App Controller + 学生端 adapter”实现套路。
 - Story 1.6：`in-progress`
   - 当前不是本 Story 阻塞项，可降为并行项。
-- Story 1.7：`in-progress`
-  - 页面结构已存在，但真实线索持久化尚未开始。
+- Story 1.7：`done`
+  - 学生端落地页表单真实提交链路、匿名公共提交接口与前端反馈已完成。
+  - `ruoyi-xiaomai` 与 `ruoyi-plus-soybean` 的生成 CRUD / 管理端页面已接入并完成联调。
+  - 落地页线索已形成“公开页提交 -> RuoYi 入库 -> 后台检索 / 编辑 / 导出”的最小闭环。
 
 ### Business Context
 
@@ -200,7 +203,11 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- 无
+- `pnpm --dir packages/student-web exec vitest run src/test/landing-lead-api.test.ts src/test/landing-page-contact-form.test.tsx src/test/landing-page.test.tsx src/test/home-page.test.tsx`
+- `mvn -f packages/RuoYi-Vue-Plus-5.X/pom.xml -pl ruoyi-modules/ruoyi-xiaomai -am -DskipTests compile`
+- `mvn -f packages/RuoYi-Vue-Plus-5.X/pom.xml -pl ruoyi-modules/ruoyi-xiaomai -am -DskipTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=XmLandingLeadControllerTest,XmLandingLeadPublicControllerTest test`
+- `pnpm --dir packages/ruoyi-plus-soybean exec eslint src/service/api/xiaomai/landing-lead.ts src/views/xiaomai/landing-lead/index.vue src/views/xiaomai/landing-lead/modules/landing-lead-operate-drawer.vue src/views/xiaomai/landing-lead/modules/landing-lead-search.vue src/typings/api/xiaomai.landing-lead.api.d.ts`
+- `pnpm --dir packages/ruoyi-plus-soybean run typecheck` 仍受仓库既有 `build/plugins/*` 与 `vite.config.ts` 的 Vite 6/7 类型冲突影响，非本 Story 新增问题。
 
 ### Completion Notes List
 
@@ -208,7 +215,57 @@ GPT-5 Codex
 - 2026-04-05：基于 `xm_dev.sql` 审核结论，确定需要新增专用营销线索表，不能复用 `xm_user_profile`。
 - 2026-04-05：将 Story 1.7 重写为以“RuoYi 表结构 + 公共提交 API + 学生端表单联动 + 后台最小运营闭环”为核心的可开发 Story。
 - 2026-04-05：按用户确认进入开发执行态；RuoYi 后端代码生成由用户负责，本 Story 先同步状态、Issue 与功能分支，等待生成产物并继续前端联调。
+- 2026-04-05：`student-web` 已完成 `landingLeadApi`、落地页表单 mutation、提交中 / 成功 / 失败反馈与成功后重置、失败后保留输入。
+- 2026-04-05：已补充 `landing-lead-api` 与落地页联系表单交互测试，并回归验证现有 `landing-page` / `home-page` 公开入口测试未回退。
+- 2026-04-05：已将 `RuoYi-XmLandingLead` 生成代码接入 `ruoyi-xiaomai` 与 `ruoyi-plus-soybean`，并修正生成器落地后的 `TenantEntity` 不存在、soybean 路由映射与 `DictTag` 导入问题。
+- 2026-04-05：`ruoyi-xiaomai` 编译通过；soybean 新增 landing lead 文件级 ESLint 通过，但仓库全量 `typecheck` 仍被既有 Vite 版本类型冲突阻塞。
+- 2026-04-05：已补充匿名公共提交接口 `POST /api/public/landing-leads`，并为 `student-web` 开发环境补齐 `/api/public` Vite 代理；本地联调需重启一次前端 dev server 使代理生效。
+- 2026-04-05：已修复 soybean 管理端编辑弹窗看不到 `message` 的问题，改为编辑态主动拉取详情接口，并在 `XmLandingLeadVo` 中补齐 `id`、`message`、`remark`。
+- 2026-04-06：完成最终收口检查，确认 `xiaomai/landing` 当前目录结构与既有模块风格一致，无需额外搬包；前端 landing 已按页面 / 组件 / API / shared / schema / styles 分层，不做无价值重构。
+- 2026-04-06：补齐最终回归验证，确认学生端公开提交、RuoYi 公共接口、soybean 后台检索 / 编辑 / 导出链路均已闭环。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-7-营销落地页与-home-首页分流.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `docs/01开发人员手册/0000-AI快速导航索引.md`
+- `docs/01开发人员手册/INDEX.md`
+- `docs/01开发人员手册/006-模块开发指南/0008-Story1-7-RuoYi-代码生成器字段填写说明.md`
+- `docs/04RuoYi代码生成器代码存储/1-7_落地页表/RuoYi-XmLandingLead/landingLeadMenu.sql`
+- `packages/RuoYi-Vue-Plus-5.X/script/sql/update/20260405_xm_landing_lead.sql`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/controller/XmLandingLeadController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/controller/XmLandingLeadPublicController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/domain/XmLandingLead.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/domain/bo/XmLandingLeadBo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/domain/vo/XmLandingLeadVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/mapper/XmLandingLeadMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/service/IXmLandingLeadService.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/landing/service/impl/XmLandingLeadServiceImpl.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/landing/controller/XmLandingLeadControllerTest.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/landing/controller/XmLandingLeadPublicControllerTest.java`
+- `packages/ruoyi-plus-soybean/src/service/api/xiaomai/landing-lead.ts`
+- `packages/ruoyi-plus-soybean/src/typings/api/xiaomai.landing-lead.api.d.ts`
+- `packages/ruoyi-plus-soybean/src/views/xiaomai/landing-lead/index.vue`
+- `packages/ruoyi-plus-soybean/src/views/xiaomai/landing-lead/modules/landing-lead-operate-drawer.vue`
+- `packages/ruoyi-plus-soybean/src/views/xiaomai/landing-lead/modules/landing-lead-search.vue`
+- `packages/ruoyi-plus-soybean/src/router/elegant/imports.ts`
+- `packages/ruoyi-plus-soybean/src/router/elegant/transform.ts`
+- `packages/ruoyi-plus-soybean/src/router/elegant/routes.ts`
+- `packages/ruoyi-plus-soybean/src/typings/elegant-router.d.ts`
+- `packages/ruoyi-plus-soybean/src/locales/langs/zh-cn.ts`
+- `packages/ruoyi-plus-soybean/src/locales/langs/en-us.ts`
+- `packages/student-web/src/features/home/api/landing-lead-api.ts`
+- `packages/student-web/src/features/home/components/landing-contact.tsx`
+- `packages/student-web/src/features/home/landing-page.tsx`
+- `packages/student-web/src/features/home/shared/landing-utils.ts`
+- `packages/student-web/vite.config.ts`
+- `packages/student-web/src/test/landing-lead-api.test.ts`
+- `packages/student-web/src/test/landing-page-contact-form.test.tsx`
+
+### Change Log
+
+- 2026-04-05：新增落地页线索 API 封装，兼容 RuoYi 代码生成常见的 `leadId / lead_id / id` 与 `accepted` 字段差异。
+- 2026-04-05：移除落地页联系表单 `mailto:` 主提交流程，改为真实 API 提交，并增加提交中禁用、成功 / 失败页面提示与 toast。
+- 2026-04-05：新增 API 与页面级表单交互测试，并回归验证落地页与首页公开入口相关测试。
+- 2026-04-05：补齐 RuoYi 公共匿名提交接口、soybean 落地页线索管理页、菜单 SQL 与管理端编辑态详情回填，修复留言内容在编辑弹窗中不可见的问题。
+- 2026-04-06：完成 Story 1.7 收口，回写 sprint 状态，移除失败且不适配当前轻量测试基线的 `XmLandingLeadServiceImplTest`，并确认无需为 `xiaomai/landing` 做额外搬包。

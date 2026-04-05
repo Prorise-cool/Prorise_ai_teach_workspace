@@ -201,6 +201,7 @@ const routeMap: RouteMap = {
   "tool_gen": "/tool/gen",
   "user-center": "/user-center",
   "xiaomai": "/xiaomai",
+  "xiaomai_landing-lead": "/xiaomai/landing-lead",
   "xiaomai_user-profile": "/xiaomai/user-profile"
 };
 
