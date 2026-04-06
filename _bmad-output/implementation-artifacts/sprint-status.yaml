@@ -78,7 +78,7 @@ development_status:
   3-6-视频输入页公开视频广场与复用入口: ready-for-dev
   epic-3-retrospective: optional
   epic-4: in-progress
-  4-1-视频流水线阶段进度区间与结果契约冻结: in-progress
+  4-1-视频流水线阶段进度区间与结果契约冻结: review
   4-2-题目理解与分镜生成服务: review
   4-3-manim-代码生成与自动修复链: review
   4-4-manim-沙箱执行与资源限制: review
