@@ -4,12 +4,15 @@ import asyncio
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime
 
 import httpx
 from fastapi.testclient import TestClient
 
+from app.core.errors import IntegrationError
 from app.core.security import RuoYiAccessProfile, get_security_runtime_store
 from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.pipeline.models import PublishState
 from app.features.video.pipeline.sandbox import LocalSandboxExecutor
 from app.features.video.pipeline.services import VideoPipelineService
 from app.features.video.routes import get_video_service
@@ -39,7 +42,30 @@ def _build_client_factory(handler):
     return factory
 
 
-def _build_video_service(tmp_path, state: dict[str, list[dict]]) -> VideoService:
+def _build_video_service(tmp_path, state: dict[str, object]) -> VideoService:
+    def build_publication_row(payload: dict[str, object], *, existing: dict[str, object] | None) -> dict[str, object]:
+        now = datetime(2026, 4, 6, 20, 0, 0).replace(microsecond=0)
+        updated_at = now.replace(second=len(state["publications"]) + 1).strftime("%Y-%m-%d %H:%M:%S")
+        created_at = existing["createdAt"] if existing is not None else updated_at
+        work_id = existing["workId"] if existing is not None else len(state["publications"]) + 1
+        version = existing["version"] + 1 if existing is not None else 0
+        return {
+            "tableName": "xm_user_work",
+            "workId": work_id,
+            "workType": payload.get("workType", "video"),
+            "taskRefId": payload["taskRefId"],
+            "userId": str(payload["userId"]),
+            "title": payload.get("title") or (existing["title"] if existing is not None else ""),
+            "description": payload.get("description") or (existing.get("description") if existing is not None else None),
+            "coverUrl": payload.get("coverUrl") or (existing.get("coverUrl") if existing is not None else None),
+            "isPublic": bool(payload.get("isPublic")),
+            "status": payload.get("status") or (existing["status"] if existing is not None else "normal"),
+            "publishedAt": updated_at if payload.get("isPublic") else None,
+            "createdAt": created_at,
+            "updatedAt": updated_at,
+            "version": version,
+        }
+
     def handler(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content.decode("utf-8")) if request.content else None
         if request.url.path == "/video/task/list":
@@ -59,6 +85,59 @@ def _build_video_service(tmp_path, state: dict[str, list[dict]]) -> VideoService
             row = {"id": payload["id"], **{key: value for key, value in payload.items() if key != "id"}}
             state["video"] = [row]
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
+        if request.method == "POST" and request.url.path == "/internal/xiaomai/video/publications":
+            existing = next(
+                (item for item in state["publications"] if item["taskRefId"] == payload["taskRefId"]),
+                None,
+            )
+            row = build_publication_row(payload, existing=existing)
+            if existing is None:
+                state["publications"].append(row)
+            else:
+                state["publications"] = [
+                    row if item["taskRefId"] == payload["taskRefId"] else item for item in state["publications"]
+                ]
+            return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
+        if request.method == "GET" and request.url.path.startswith("/internal/xiaomai/video/publications/"):
+            task_ref_id = request.url.path.rsplit("/", 1)[-1]
+            row = next((item for item in state["publications"] if item["taskRefId"] == task_ref_id), None)
+            if row is None:
+                return httpx.Response(200, json={"code": 404, "msg": "not found", "data": None})
+            return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
+        if request.method == "GET" and request.url.path == "/internal/xiaomai/video/publications":
+            rows = [
+                item
+                for item in state["publications"]
+                if item["workType"] == request.url.params.get("workType", "video")
+                and item["status"] == request.url.params.get("status", "normal")
+                and int(item["isPublic"]) == int(request.url.params.get("isPublic", "1"))
+            ]
+            rows.sort(key=lambda item: item["updatedAt"], reverse=True)
+            page_num = int(request.url.params.get("pageNum", "1"))
+            page_size = int(request.url.params.get("pageSize", "12"))
+            start = max(page_num - 1, 0) * page_size
+            end = start + page_size
+            return httpx.Response(
+                200,
+                json={"code": 200, "msg": "ok", "rows": rows[start:end], "total": len(rows)},
+            )
+        if request.method == "POST" and request.url.path == "/internal/xiaomai/video/session-artifacts":
+            state["session_artifacts"][payload["sessionRefId"]] = payload
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "msg": "ok",
+                    "data": {
+                        "tableName": "xm_session_artifact",
+                        "sessionType": payload["sessionType"],
+                        "sessionRefId": payload["sessionRefId"],
+                        "payloadRef": payload.get("payloadRef"),
+                        "syncedCount": len(payload.get("artifacts", [])),
+                        "artifacts": payload.get("artifacts", []),
+                    },
+                },
+            )
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
     asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
@@ -153,7 +232,7 @@ def api_client(tmp_path, runtime_store: RuntimeStore, video_service: VideoServic
 
 
 def test_video_pipeline_result_and_publish_api_flow(tmp_path, monkeypatch) -> None:
-    state = {"video": []}
+    state = {"video": [], "publications": [], "session_artifacts": {}}
     runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
     video_service = _build_video_service(tmp_path, state)
     task_id = _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
@@ -174,28 +253,102 @@ def test_video_pipeline_result_and_publish_api_flow(tmp_path, monkeypatch) -> No
             f"/api/v1/video/tasks/{task_id}/publish",
             headers={"Authorization": f"Bearer {VALID_TOKEN}"},
         )
+        detail_ref = state["video"][0]["detailRef"]
+        detail = video_service._asset_store.read_result_detail(detail_ref)
+        detail_key = video_service._asset_store.ref_to_key(detail_ref)
+        video_service._asset_store.write_json(
+            detail_key,
+            detail.model_copy(update={"publish_state": PublishState()}).model_dump(mode="json", by_alias=True),
+        )
+        published_result_response = client.get(f"/api/v1/video/tasks/{task_id}/result")
         list_response = client.get("/api/v1/video/published", params={"page": 1, "pageSize": 12})
         unpublish_response = client.delete(
             f"/api/v1/video/tasks/{task_id}/publish",
             headers={"Authorization": f"Bearer {VALID_TOKEN}"},
         )
+        unpublished_result_response = client.get(f"/api/v1/video/tasks/{task_id}/result")
         list_after_response = client.get("/api/v1/video/published", params={"page": 1, "pageSize": 12})
 
     assert result_response.status_code == 200
+    assert result_response.json()["data"]["publishState"]["published"] is False
     assert result_response.json()["data"]["result"]["taskId"] == task_id
     assert result_response.json()["data"]["result"]["videoUrl"].endswith(f"/video/{task_id}/output.mp4")
     assert result_response.json()["data"]["result"]["coverUrl"].endswith(f"/video/{task_id}/cover.jpg")
 
+    assert task_id in state["session_artifacts"]
+    assert len(state["session_artifacts"][task_id]["artifacts"]) == 6
+    assert state["session_artifacts"][task_id]["artifacts"][0]["artifactType"] == "timeline"
+
     assert publish_response.status_code == 200
     assert publish_response.json()["data"]["published"] is True
     assert publish_response.json()["data"]["card"]["resultId"] == f"video_result_{task_id}"
+    assert publish_response.json()["data"]["publishedAt"] is not None
+
+    assert published_result_response.status_code == 200
+    assert published_result_response.json()["data"]["publishState"]["published"] is True
+    assert published_result_response.json()["data"]["publishState"]["publishedAt"] is not None
 
     assert list_response.status_code == 200
     assert list_response.json()["data"]["total"] == 1
     assert list_response.json()["data"]["rows"][0]["resultId"] == f"video_result_{task_id}"
+    assert list_response.json()["data"]["rows"][0]["duration"] == 120
 
     assert unpublish_response.status_code == 200
     assert unpublish_response.json()["data"]["published"] is False
+    assert state["publications"][0]["isPublic"] is False
+
+    assert unpublished_result_response.status_code == 200
+    assert unpublished_result_response.json()["data"]["publishState"]["published"] is False
 
     assert list_after_response.status_code == 200
     assert list_after_response.json()["data"]["total"] == 0
+
+
+def test_video_result_detail_falls_back_to_local_publish_state_when_publication_overlay_unavailable(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    state = {"video": [], "publications": [], "session_artifacts": {}}
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    video_service = _build_video_service(tmp_path, state)
+    task_id = _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
+
+    detail_ref = state["video"][0]["detailRef"]
+    detail = video_service._asset_store.read_result_detail(detail_ref)
+    detail_key = video_service._asset_store.ref_to_key(detail_ref)
+    video_service._asset_store.write_json(
+        detail_key,
+        detail.model_copy(
+            update={"publish_state": PublishState(published=True, published_at="2026-04-06T20:00:00Z")}
+        ).model_dump(mode="json", by_alias=True),
+    )
+
+    async def fake_load_ruoyi_access_profile(access_token: str, *, client_id: str | None = None) -> RuoYiAccessProfile:
+        return RuoYiAccessProfile(
+            access_token=access_token,
+            user_id="10001",
+            username="video-owner",
+            permissions={"video:task:read"},
+            roles={"student"},
+        )
+
+    async def fail_get_publication(task_ref_id: str):
+        raise IntegrationError(
+            service="ruoyi",
+            resource="video-publication",
+            operation="get",
+            code="RUOYI_UNAVAILABLE",
+            message="RuoYi service unavailable",
+            status_code=502,
+            retryable=True,
+        )
+
+    monkeypatch.setattr("app.core.security.load_ruoyi_access_profile", fake_load_ruoyi_access_profile)
+    monkeypatch.setattr(video_service._publication_service, "get_publication", fail_get_publication)
+
+    with api_client(tmp_path, runtime_store, video_service) as client:
+        response = client.get(f"/api/v1/video/tasks/{task_id}/result")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["publishState"]["published"] is True
+    assert response.json()["data"]["publishState"]["publishedAt"] == "2026-04-06T20:00:00Z"
