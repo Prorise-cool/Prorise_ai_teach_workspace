@@ -142,6 +142,9 @@ def test_task_status_route_returns_latest_snapshot_and_resume_metadata() -> None
             "requestId": "req_route_recovery_002",
             "errorCode": "TASK_PROVIDER_TIMEOUT",
             "stage": "provider_failover",
+            "currentStage": "provider_failover",
+            "stageLabel": None,
+            "stageProgress": None,
             "context": {
                 "stage": "provider_failover",
                 "nextAction": "retry_or_poll"
