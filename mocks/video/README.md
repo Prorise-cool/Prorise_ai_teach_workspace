@@ -17,6 +17,8 @@ Story 3.1 冻结的视频任务创建 mock 样例：
 | `preprocess.ocr-failed.json` | OCR 失败但图片已存储 | `200` |
 | `preprocess.ocr-timeout.json` | OCR 超时降级 | `200` |
 | `preprocess.validation-error.json` | 文件类型或大小不合法 | `422` |
+| `public-videos.json` | 公开视频发现区列表成功 | `200` |
+| `public-videos.empty.json` | 公开视频发现区空列表 | `200` |
 
 ## 约定
 

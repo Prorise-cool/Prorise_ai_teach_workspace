@@ -6,3 +6,4 @@
 - `create-task-response.schema.json` 成功响应 `code` 从 `200` 修正为 `202`。
 - 新增 `preprocess-request.schema.json` 与 `preprocess-response.schema.json`。
 - 补充 preprocess 的稳定机读错误语义与 mock 样例说明。
+- 新增 `public-videos.schema.json`，冻结 Story `3.6` 公开视频发现区的查询参数与响应结构。

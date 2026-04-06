@@ -10,6 +10,7 @@ import { AppProvider } from '@/app/provider/app-provider';
 import { VideoInputPage } from '@/features/video/pages/video-input-page';
 import { createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService } from '@/services/auth';
+import { getMockVideoPublicListSuccess } from '@/services/mock/fixtures/video-public';
 import {
 	resetAuthSessionStore,
 	useAuthSessionStore
@@ -19,6 +20,7 @@ const mockAuthService = createAuthService(createMockAuthAdapter());
 
 const createTaskMock = vi.fn();
 const preprocessImageMock = vi.fn();
+const usePublicVideosMock = vi.fn();
 
 vi.mock('@/services/api/adapters/video-task-adapter', () => ({
 	resolveVideoTaskAdapter: () => ({
@@ -30,6 +32,10 @@ vi.mock('@/services/api/adapters/video-preprocess-adapter', () => ({
 	resolveVideoPreprocessAdapter: () => ({
 		preprocessImage: preprocessImageMock,
 	}),
+}));
+
+vi.mock('@/features/video/hooks/use-public-videos', () => ({
+	usePublicVideos: (...args: unknown[]) => usePublicVideosMock(...args),
 }));
 
 /**
@@ -44,11 +50,28 @@ function createVideoRouter() {
 				path: '/video/input',
 				element: <VideoInputPage />
 			},
+			{
+				path: '/video/:id/generating',
+				element: <div>生成中</div>,
+			},
+			{
+				path: '/video/:id',
+				element: <div>视频结果页</div>,
+			},
 		],
 		{
 			initialEntries: ['/video/input']
 		}
 	);
+}
+
+function createPublicVideosQueryResult(overrides: Record<string, unknown> = {}) {
+	return {
+		data: getMockVideoPublicListSuccess('default').data,
+		isLoading: false,
+		isError: false,
+		...overrides,
+	};
 }
 
 describe('VideoInputPage', () => {
@@ -58,6 +81,7 @@ describe('VideoInputPage', () => {
 		window.sessionStorage.clear();
 		createTaskMock.mockReset();
 		preprocessImageMock.mockReset();
+		usePublicVideosMock.mockReset();
 		createTaskMock.mockResolvedValue({
 			taskId: 'vtask_test_001',
 			taskType: 'video',
@@ -74,6 +98,7 @@ describe('VideoInputPage', () => {
 			suggestions: [],
 			errorCode: null
 		});
+		usePublicVideosMock.mockReturnValue(createPublicVideosQueryResult());
 	});
 
 	it('renders the header with badge and gradient title', async () => {
@@ -136,7 +161,7 @@ describe('VideoInputPage', () => {
 		expect(screen.getByText('网络不稳也能继续')).toBeInTheDocument();
 	});
 
-	it('renders the community feed with at least 6 cards', async () => {
+	it('renders the public video feed with at least 6 cards', async () => {
 		const session = await mockAuthService.login({
 			username: 'admin',
 			password: 'admin123'
@@ -153,8 +178,10 @@ describe('VideoInputPage', () => {
 
 		expect(screen.getByText('热门题目讲解视频')).toBeInTheDocument();
 		expect(screen.getByText('洛必达法则的完整推导')).toBeInTheDocument();
+		expect(screen.getAllByRole('link', { name: '查看讲解' })).toHaveLength(6);
+		expect(screen.getAllByRole('button', { name: '复用题目' })).toHaveLength(6);
 
-		const feedCards = screen.getAllByRole('article');
+		const feedCards = document.querySelectorAll('article');
 		expect(feedCards.length).toBeGreaterThanOrEqual(6);
 	});
 
@@ -175,6 +202,92 @@ describe('VideoInputPage', () => {
 
 		expect(container.textContent).not.toContain('status');
 		expect(container.textContent).not.toContain('tenant_id');
+	});
+
+	it('公开视频为空时展示空态', async () => {
+		usePublicVideosMock.mockReturnValue(
+			createPublicVideosQueryResult({
+				data: getMockVideoPublicListSuccess('empty').data,
+			}),
+		);
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(screen.getByText('暂无公开视频，快来创建第一个')).toBeInTheDocument();
+		expect(
+			screen.getByText('公开发现区为空时，不会影响你继续输入题目并直接生成新视频。'),
+		).toBeInTheDocument();
+	});
+
+	it('公开视频加载失败时展示降级提示且输入区仍可用', async () => {
+		const user = userEvent.setup();
+		usePublicVideosMock.mockReturnValue(
+			createPublicVideosQueryResult({
+				data: undefined,
+				isError: true,
+			}),
+		);
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(screen.getByText('公开视频暂时不可用')).toBeInTheDocument();
+		await user.type(
+			screen.getByPlaceholderText(/粘贴题目文本/),
+			'即使推荐区报错，也应该允许我继续提交题目。',
+		);
+		expect(
+			screen.getByDisplayValue('即使推荐区报错，也应该允许我继续提交题目。'),
+		).toBeInTheDocument();
+	});
+
+	it('加载公开视频时展示骨架屏', async () => {
+		usePublicVideosMock.mockReturnValue(
+			createPublicVideosQueryResult({
+				data: undefined,
+				isLoading: true,
+			}),
+		);
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(document.querySelectorAll('article').length).toBeGreaterThanOrEqual(6);
+		expect(screen.queryByText('洛必达法则的完整推导')).not.toBeInTheDocument();
 	});
 
 	it('空输入提交时展示 inline 错误提示', async () => {
@@ -295,6 +408,53 @@ describe('VideoInputPage', () => {
 		await waitFor(() => {
 			expect(screen.queryByText(/请输入至少 10 个字符/)).not.toBeInTheDocument();
 			expect(screen.getByText('algebra.png')).toBeInTheDocument();
+		});
+	});
+
+	it('点击复用题目会把 sourceText 回填到 textarea', async () => {
+		const user = userEvent.setup();
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		await user.click(screen.getAllByRole('button', { name: '复用题目' })[0]);
+
+		expect(
+			screen.getByDisplayValue('请证明洛必达法则为什么成立，并给出完整推导过程。'),
+		).toBeInTheDocument();
+		expect(screen.getByText('已复用题目到输入区')).toBeInTheDocument();
+	});
+
+	it('点击查看讲解会导航到对应视频结果页', async () => {
+		const user = userEvent.setup();
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		await user.click(screen.getAllByRole('link', { name: '查看讲解' })[0]);
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe('/video/video_public_lhopital');
 		});
 	});
 });

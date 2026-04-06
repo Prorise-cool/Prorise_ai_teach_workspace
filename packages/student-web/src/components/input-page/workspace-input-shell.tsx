@@ -92,6 +92,8 @@ type WorkspaceInputShellProps = {
   feedLoadMoreLabel?: string;
   /** 加载中文案。 */
   feedLoadingLabel?: string;
+  /** 自定义 feed 槽位，优先级高于默认 CommunityFeed。 */
+  feedSlot?: ReactNode;
 };
 
 const containerVariants: Variants = {
@@ -140,6 +142,7 @@ export function WorkspaceInputShell({
   feedCards,
   feedLoadMoreLabel,
   feedLoadingLabel,
+  feedSlot,
 }: WorkspaceInputShellProps) {
   const contentSections = (
     <>
@@ -211,14 +214,16 @@ export function WorkspaceInputShell({
       </motion.div>
 
       <motion.div variants={itemVariants} className="w-full max-w-7xl mx-auto">
-        <CommunityFeed
-          title={feedTitle}
-          description={feedDescription}
-          categories={feedCategories}
-          cards={feedCards}
-          loadMoreLabel={feedLoadMoreLabel}
-          loadingLabel={feedLoadingLabel}
-        />
+        {feedSlot ?? (
+          <CommunityFeed
+            title={feedTitle}
+            description={feedDescription}
+            categories={feedCategories}
+            cards={feedCards}
+            loadMoreLabel={feedLoadMoreLabel}
+            loadingLabel={feedLoadingLabel}
+          />
+        )}
       </motion.div>
     </motion.main>
   );
