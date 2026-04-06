@@ -74,7 +74,7 @@ development_status:
   3-2-视频输入页壳层与多模态输入交互: review
   3-3-图片-ocr-前置预处理接口: review
   3-4-视频任务创建接口与初始化运行态: review
-  3-5-创建后跳转等待页与任务上下文承接: in-progress
+  3-5-创建后跳转等待页与任务上下文承接: review
   3-6-视频输入页公开视频广场与复用入口: ready-for-dev
   epic-3-retrospective: optional
   epic-4: in-progress
