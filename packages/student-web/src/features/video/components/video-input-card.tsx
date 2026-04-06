@@ -1,6 +1,7 @@
 /**
  * 文件说明：视频输入页核心输入卡片组件。
  * 页面容器负责业务编排，本组件只承接输入交互和展示状态。
+ * 支持多图上传，预览以 grid 缩略图形式展示。
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import type { FieldErrors, UseFormReturn } from 'react-hook-form';
@@ -49,7 +50,7 @@ export function VideoInputCard({
   const { notify } = useFeedback();
   const { register, setValue, watch, clearErrors, setError } = form;
   const inputType = watch('inputType');
-  const imageFile = watch('imageFile');
+  const imageFiles = watch('imageFiles');
   const textField = register('text');
 
   const {
@@ -57,88 +58,108 @@ export function VideoInputCard({
     handleDragOver,
     handleDragLeave,
     handleDrop: originalHandleDrop,
-    attachedFile,
-    clearFile,
+    attachedFiles,
+    clearFiles,
     triggerSelect,
     fileInputRef,
     handleFileChange: originalHandleFileChange,
-  } = useFileDropzone();
+  } = useFileDropzone({ multiple: true });
 
   const acceptedMimeTypes = useMemo(
     () => new Set<string>(VIDEO_INPUT_ACCEPTED_IMAGE_TYPES),
     [],
   );
-  const previewUrl = useMemo(() => {
-    if (!imageFile) {
-      return null;
-    }
 
-    return URL.createObjectURL(imageFile);
-  }, [imageFile]);
+  const previewUrls = useMemo(() => {
+    return imageFiles.map((file) => URL.createObjectURL(file));
+  }, [imageFiles]);
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      for (const url of previewUrls) {
+        URL.revokeObjectURL(url);
       }
     };
-  }, [previewUrl]);
+  }, [previewUrls]);
 
-  const syncImageFile = useCallback(
-    (file: File | null) => {
-      if (!file) {
-        setValue('inputType', 'text');
-        setValue('imageFile', null, { shouldValidate: false });
+  /**
+   * 将新文件追加到表单 imageFiles 中，校验格式和大小。
+   */
+  const addImageFiles = useCallback(
+    (files: File[]) => {
+      const valid: File[] = [];
+
+      for (const file of files) {
+        if (!acceptedMimeTypes.has(file.type)) {
+          setError('imageFiles', {
+            type: 'manual',
+            message: '仅支持 JPG、PNG、WebP 格式的图片',
+          });
+          notify({
+            title: '图片格式不支持',
+            description: `${file.name} 不是支持的图片格式，请上传 JPG、PNG 或 WebP`,
+            tone: 'error',
+          });
+          continue;
+        }
+
+        if (file.size > VIDEO_INPUT_MAX_IMAGE_SIZE) {
+          setError('imageFiles', {
+            type: 'manual',
+            message: '图片大小不能超过 30MB',
+          });
+          notify({
+            title: '图片过大',
+            description: `${file.name} 超过 30MB，请压缩后再试`,
+            tone: 'error',
+          });
+          continue;
+        }
+
+        valid.push(file);
+      }
+
+      if (valid.length === 0) {
         return;
       }
 
-      if (!acceptedMimeTypes.has(file.type)) {
-        clearFile();
-        setError('imageFile', {
-          type: 'manual',
-          message: '仅支持 JPG、PNG、WebP 格式的图片',
-        });
-        notify({
-          title: '图片格式不支持',
-          description: '请上传 JPG、PNG 或 WebP 图片',
-          tone: 'error',
-        });
-        return;
-      }
-
-      if (file.size > VIDEO_INPUT_MAX_IMAGE_SIZE) {
-        clearFile();
-        setError('imageFile', {
-          type: 'manual',
-          message: '图片大小不能超过 10MB',
-        });
-        notify({
-          title: '图片过大',
-          description: '请压缩图片后再试',
-          tone: 'error',
-        });
-        return;
-      }
-
-      clearErrors(['imageFile', 'text']);
+      clearErrors(['imageFiles', 'text']);
+      const current = form.getValues('imageFiles');
+      const merged = [...current, ...valid];
       setValue('inputType', 'image');
-      setValue('imageFile', file, { shouldValidate: false });
+      setValue('imageFiles', merged, { shouldValidate: false });
     },
-    [acceptedMimeTypes, clearErrors, clearFile, notify, setError, setValue],
+    [acceptedMimeTypes, clearErrors, form, notify, setError, setValue],
   );
 
+  /* 同步 dropzone attachedFiles 到表单 */
   useEffect(() => {
-    if (attachedFile) {
-      syncImageFile(attachedFile);
+    if (attachedFiles.length > 0) {
+      addImageFiles(attachedFiles);
+      clearFiles();
     }
-  }, [attachedFile, syncImageFile]);
+  }, [attachedFiles, addImageFiles, clearFiles]);
 
-  const handleClearImage = useCallback(() => {
-    clearFile();
-    clearErrors('imageFile');
+  const removeImage = useCallback(
+    (index: number) => {
+      const current = form.getValues('imageFiles');
+      const next = current.filter((_, i) => i !== index);
+      setValue('imageFiles', next, { shouldValidate: false });
+
+      if (next.length === 0) {
+        setValue('inputType', 'text');
+        clearErrors('imageFiles');
+      }
+    },
+    [clearErrors, form, setValue],
+  );
+
+  const handleClearAllImages = useCallback(() => {
+    clearFiles();
+    clearErrors('imageFiles');
     setValue('inputType', 'text');
-    setValue('imageFile', null, { shouldValidate: false });
-  }, [clearErrors, clearFile, setValue]);
+    setValue('imageFiles', [], { shouldValidate: false });
+  }, [clearErrors, clearFiles, setValue]);
 
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLDivElement>) => {
@@ -148,6 +169,8 @@ export function VideoInputCard({
         return;
       }
 
+      const pastedFiles: File[] = [];
+
       for (const item of items) {
         if (!item.type.startsWith('image/')) {
           continue;
@@ -156,19 +179,21 @@ export function VideoInputCard({
         const file = item.getAsFile();
 
         if (file) {
-          event.preventDefault();
-          syncImageFile(file);
+          pastedFiles.push(file);
         }
+      }
 
-        break;
+      if (pastedFiles.length > 0) {
+        event.preventDefault();
+        addImageFiles(pastedFiles);
       }
     },
-    [syncImageFile],
+    [addImageFiles],
   );
 
   const fieldErrorIds = [
     errors.text ? 'video-input-text-error' : null,
-    errors.imageFile ? 'video-input-image-error' : null,
+    errors.imageFiles ? 'video-input-image-error' : null,
   ].filter(Boolean);
   const describedBy = fieldErrorIds.length > 0 ? fieldErrorIds.join(' ') : undefined;
 
@@ -200,38 +225,27 @@ export function VideoInputCard({
           </div>
         )}
 
-        {imageFile && inputType === 'image' && (
-          <div className="flex items-center justify-between rounded-lg bg-[color:var(--xm-color-surface-sunken)] p-3 border border-[color:var(--xm-color-border-subtle)]">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-[color:var(--xm-color-surface-highest)] overflow-hidden">
-                {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt={imageFile.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <Image className="h-4 w-4 text-muted-foreground" />
-                )}
+        {/* 多图 grid 预览区 */}
+        {imageFiles.length > 0 && inputType === 'image' && (
+          <div className="xm-video-input__card-image-grid">
+            {imageFiles.map((file, index) => (
+              <div key={`${file.name}-${file.size}-${index}`} className="xm-video-input__card-image-thumb">
+                <img
+                  src={previewUrls[index]}
+                  alt={file.name}
+                  className="xm-video-input__card-image-thumb-img"
+                />
+                <button
+                  type="button"
+                  className="xm-video-input__card-image-thumb-remove"
+                  onClick={() => removeImage(index)}
+                  title="移除图片"
+                  aria-label={`移除图片 ${file.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="truncate text-sm font-medium text-foreground">
-                  {imageFile.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {(imageFile.size / 1024 / 1024).toFixed(2)} MB
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)]"
-              onClick={handleClearImage}
-              title="移除图片"
-              aria-label="移除图片"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            ))}
           </div>
         )}
 
@@ -240,7 +254,7 @@ export function VideoInputCard({
           className="xm-video-input__card-textarea"
           placeholder={labels.placeholder}
           rows={4}
-          aria-invalid={Boolean(errors.text || errors.imageFile)}
+          aria-invalid={Boolean(errors.text || errors.imageFiles)}
           aria-describedby={describedBy}
         />
 
@@ -254,13 +268,13 @@ export function VideoInputCard({
           </p>
         )}
 
-        {errors.imageFile?.message && (
+        {errors.imageFiles?.message && (
           <p
             id="video-input-image-error"
             className="mt-1 px-1 text-xs text-destructive"
             role="alert"
           >
-            {errors.imageFile.message}
+            {errors.imageFiles.message}
           </p>
         )}
       </div>
@@ -273,6 +287,7 @@ export function VideoInputCard({
             ref={fileInputRef}
             onChange={originalHandleFileChange}
             accept={VIDEO_INPUT_ACCEPTED_IMAGE_TYPES.join(',')}
+            multiple
             aria-label={labels.toolUploadImage}
           />
           <button
