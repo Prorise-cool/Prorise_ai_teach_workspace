@@ -1,7 +1,7 @@
 ---
 project_name: '小麦 - AI 教学视频智能体'
 user_name: 'Prorise'
-date: '2026-04-05'
+date: '2026-04-06'
 sections_completed:
   - 'technology_stack'
   - 'language_rules'
@@ -40,6 +40,14 @@ _本文件只保留 AI 代理最容易遗漏、但对当前仓库实现质量影
 - **Java 管理后端基座**：`Java 21`、`Spring Boot 3.5.9`、`RuoYi-Vue-Plus 5.5.3`、`Sa-Token 1.44.0`、`MyBatis-Plus 3.5.16`、`Redisson 3.52.0`。
 - **管理端前端基座**：`Vue 3.5.26`、`Vite 7.3.0`、`TypeScript 5.9.3`、`Naive UI 2.43.2`、`Pinia 3.0.4`、`Vue Router 4.6.4`。
 - **近期语义漂移提醒**：自 `2026-04-04` 起，Story 1.5 的真实语义已从“老师风格选择”修正为“用户配置系统（个人简介与学习偏好）”；任何引用旧说法的文档或实现推断都应视为过时。
+
+## Current Delivery Snapshot
+
+- **当前 Epic 状态快照**：截至 `2026-04-06`，`Epic 0 / 1 / 2 / 10` 已完成，`Epic 3 / 4 / 5` 进行中，`Epic 6+` 仍处于 `backlog`。
+- **当前视频主链路进度**：`Story 3.5` 已完成，视频创建成功后跳转等待页、SSE 状态消费、刷新恢复、失败重试与 mock 恢复 404 修复都已进入 `master`；不要再按“等待页未完成”处理。
+- **近期已合并基线**：`PR #109` 收敛 `fastapi-backend` 结构边界，`PR #110` 收敛共享壳层并实现视频等待页主链路，`PR #111` 修复 mock 视频等待页动态 `taskId` 恢复 404；这些变更都已是默认基线，而不是功能分支特例。
+- **当前进度导航入口**：开发过程进度、验收清单与阶段收口优先查看 `docs/01开发人员手册/009-里程碑与进度/index.md`；Story 真值与状态真值仍以 `_bmad-output/implementation-artifacts/index.md` 和 `sprint-status.yaml` 为准。
+- **当前分支判断规则**：若本地工作区出现未跟踪过程文档或草稿，不自动把它们视为仓库事实；仓库事实仍以已纳入版本管理的 `_bmad-output/`、`docs/`、`packages/`、`contracts/`、`mocks/` 为准。
 
 ## Critical Implementation Rules
 
@@ -142,4 +150,4 @@ _本文件只保留 AI 代理最容易遗漏、但对当前仓库实现质量影
 - 保持精简，只保留 AI 代理最容易遗漏的约束。
 - 如果 `contracts/`、`mocks/` 或 `ruoyi-xiaomai` 新增业务域，除了补各自 README / 文档，也要同步更新本文件，避免代理漏看。
 
-Last Updated: 2026-04-05
+Last Updated: 2026-04-06
