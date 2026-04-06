@@ -1,5 +1,5 @@
 from app.features.common import BootstrapStatus
-from app.features.video.task_metadata import (
+from app.shared.task_metadata import (
     TaskMetadataCreateRequest,
     TaskMetadataPageResponse,
     TaskMetadataPreviewResponse,

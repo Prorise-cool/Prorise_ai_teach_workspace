@@ -5,11 +5,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.features.classroom.routes import get_classroom_service
 from app.features.classroom.service import ClassroomService
+from app.features.video.routes import get_video_service
 from app.features.video.service import VideoService
 from app.main import create_app
-import app.features.classroom.routes as classroom_routes
-import app.features.video.routes as video_routes
 from app.shared.ruoyi_client import RuoYiClient
 
 
@@ -26,14 +26,15 @@ def _build_client_factory(handler):
     return factory
 
 
-def _create_client(monkeypatch: pytest.MonkeyPatch, handler) -> TestClient:
-    monkeypatch.setattr(video_routes, "service", VideoService(client_factory=_build_client_factory(handler)))
-    monkeypatch.setattr(classroom_routes, "service", ClassroomService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+def _create_client(handler) -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_video_service] = lambda: VideoService(client_factory=_build_client_factory(handler))
+    app.dependency_overrides[get_classroom_service] = lambda: ClassroomService(client_factory=_build_client_factory(handler))
+    return TestClient(app)
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client() -> TestClient:
     state = {
         "video": [],
         "classroom": [],
@@ -95,7 +96,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    return _create_client(monkeypatch, handler)
+    return _create_client(handler)
 
 
 def test_task_metadata_routes_persist_query_and_replay_with_ruoyi_time_format(client: TestClient) -> None:
@@ -247,9 +248,7 @@ def test_video_task_filters_use_exact_session_match_and_single_sided_time_window
     assert updated_to_response.json()["rows"][0]["task_id"] == "video_route_010"
 
 
-def test_task_metadata_routes_return_invalid_response_envelope_for_unknown_task_type(
-    monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_task_metadata_routes_return_invalid_response_envelope_for_unknown_task_type() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/video/task/list":
             return httpx.Response(
@@ -274,7 +273,7 @@ def test_task_metadata_routes_return_invalid_response_envelope_for_unknown_task_
             )
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    with _create_client(monkeypatch, handler) as client:
+    with _create_client(handler) as client:
         list_response = client.get("/api/v1/video/tasks")
         detail_response = client.get("/api/v1/video/tasks/video_bad")
 

@@ -10,23 +10,16 @@ from app.features.classroom.schemas import ClassroomTaskMetadataCreateRequest
 from app.features.classroom.service import ClassroomService
 from app.features.video.schemas import VideoTaskMetadataCreateRequest
 from app.features.video.service import VideoService
-from app.features.video.task_metadata import (
+from app.shared.task_metadata import (
     TaskMetadataCreateRequest,
     TaskMetadataRepository,
     TaskType,
-    shared_task_metadata_repository,
     snapshot_from_ruoyi_row,
 )
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.task_framework.status import TaskStatus
 
-
-def _reset_repository() -> None:
-    shared_task_metadata_repository.clear()
-
-
 def test_repository_upserts_lifecycle_and_preserves_long_term_fields() -> None:
-    _reset_repository()
     repository = TaskMetadataRepository()
 
     created_at = datetime(2026, 3, 29, 10, 30, 0)
@@ -78,7 +71,6 @@ def test_repository_upserts_lifecycle_and_preserves_long_term_fields() -> None:
 
 
 def test_repository_replay_session_keeps_video_and_classroom_records_visible() -> None:
-    _reset_repository()
     repository = TaskMetadataRepository()
 
     repository.save_task(

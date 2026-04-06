@@ -1,7 +1,8 @@
 from pydantic import ValidationError
 
 from app.core.errors import IntegrationError
-from app.features.companion.long_term_records import (
+from app.features.companion.schemas import CompanionBootstrapResponse
+from app.shared.long_term_records import (
     CompanionTurnCreateRequest,
     CompanionTurnSnapshot,
     SessionReplaySnapshot,
@@ -9,7 +10,6 @@ from app.features.companion.long_term_records import (
     companion_turn_to_ruoyi_payload,
     session_replay_from_ruoyi_data,
 )
-from app.features.companion.schemas import CompanionBootstrapResponse
 from app.shared.ruoyi_client import RuoYiClient
 
 

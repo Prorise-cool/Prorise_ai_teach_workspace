@@ -4,9 +4,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.features.learning.routes import get_learning_service
 from app.features.learning.service import LearningService
 from app.main import create_app
-import app.features.learning.routes as learning_routes
 from app.shared.ruoyi_client import RuoYiClient
 
 
@@ -23,13 +23,14 @@ def _build_client_factory(handler):
     return factory
 
 
-def _create_client(monkeypatch: pytest.MonkeyPatch, handler) -> TestClient:
-    monkeypatch.setattr(learning_routes, "service", LearningService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+def _create_client(handler) -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_learning_service] = lambda: LearningService(client_factory=_build_client_factory(handler))
+    return TestClient(app)
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client() -> TestClient:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method != "POST" or request.url.path != "/internal/xiaomai/learning/results":
             raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
@@ -54,7 +55,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             },
         )
 
-    return _create_client(monkeypatch, handler)
+    return _create_client(handler)
 
 
 def test_learning_persistence_route_syncs_to_ruoyi(client: TestClient) -> None:
@@ -97,7 +98,6 @@ def test_learning_persistence_route_syncs_to_ruoyi(client: TestClient) -> None:
     ]
 )
 def test_learning_persistence_route_returns_invalid_response_envelope_for_malformed_success_payload(
-    monkeypatch: pytest.MonkeyPatch,
     upstream_data: object,
     expected_reason: str
 ) -> None:
@@ -106,7 +106,7 @@ def test_learning_persistence_route_returns_invalid_response_envelope_for_malfor
             raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
         return httpx.Response(200, json={"code": 200, "msg": "ok", "data": upstream_data})
 
-    with _create_client(monkeypatch, handler) as client:
+    with _create_client(handler) as client:
         response = client.post(
             "/api/v1/learning/persistence",
             headers={"X-Request-ID": "req_learning_invalid_payload"},

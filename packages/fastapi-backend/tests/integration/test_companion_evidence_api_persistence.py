@@ -4,11 +4,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.features.companion.routes import get_companion_service
 from app.features.companion.service import CompanionService
+from app.features.knowledge.routes import get_knowledge_service
 from app.features.knowledge.service import KnowledgeService
 from app.main import create_app
-import app.features.companion.routes as companion_routes
-import app.features.knowledge.routes as knowledge_routes
 from app.shared.ruoyi_client import RuoYiClient
 
 
@@ -25,14 +25,15 @@ def _build_client_factory(handler):
     return factory
 
 
-def _create_client(monkeypatch: pytest.MonkeyPatch, handler) -> TestClient:
-    monkeypatch.setattr(companion_routes, "service", CompanionService(client_factory=_build_client_factory(handler)))
-    monkeypatch.setattr(knowledge_routes, "service", KnowledgeService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app())
+def _create_client(handler) -> TestClient:
+    app = create_app()
+    app.dependency_overrides[get_companion_service] = lambda: CompanionService(client_factory=_build_client_factory(handler))
+    app.dependency_overrides[get_knowledge_service] = lambda: KnowledgeService(client_factory=_build_client_factory(handler))
+    return TestClient(app)
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client() -> TestClient:
     state = {
         "companion_turns": [],
         "knowledge_chat_logs": [],
@@ -150,7 +151,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    return _create_client(monkeypatch, handler)
+    return _create_client(handler)
 
 
 def test_companion_turn_roundtrip_via_api(client: TestClient) -> None:
@@ -264,9 +265,7 @@ def test_knowledge_chat_roundtrip_and_session_replay_via_api(client: TestClient)
     assert len(replay_response.json()["knowledge_chat_logs"]) == 1
 
 
-def test_companion_detail_returns_invalid_response_envelope_for_malformed_success_payload(
-    monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_companion_detail_returns_invalid_response_envelope_for_malformed_success_payload() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET" and request.url.path == "/internal/xiaomai/companion/turns/turn_bad":
             return httpx.Response(
@@ -288,7 +287,7 @@ def test_companion_detail_returns_invalid_response_envelope_for_malformed_succes
             )
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    with _create_client(monkeypatch, handler) as client:
+    with _create_client(handler) as client:
         response = client.get("/api/v1/companion/turns/turn_bad")
 
     assert response.status_code == 502
@@ -296,9 +295,7 @@ def test_companion_detail_returns_invalid_response_envelope_for_malformed_succes
     assert "'anchor'" in response.json()["data"]["details"]["reason"]
 
 
-def test_knowledge_detail_returns_invalid_response_envelope_for_malformed_success_payload(
-    monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_knowledge_detail_returns_invalid_response_envelope_for_malformed_success_payload() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "GET" and request.url.path == "/internal/xiaomai/knowledge/chat-logs/chat_bad":
             return httpx.Response(
@@ -320,7 +317,7 @@ def test_knowledge_detail_returns_invalid_response_envelope_for_malformed_succes
             )
         raise AssertionError(f"unexpected upstream request: {request.method} {request.url}")
 
-    with _create_client(monkeypatch, handler) as client:
+    with _create_client(handler) as client:
         response = client.get("/api/v1/knowledge/chat-logs/chat_bad")
 
     assert response.status_code == 502
