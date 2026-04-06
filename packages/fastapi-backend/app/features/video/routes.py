@@ -15,6 +15,11 @@ from app.features.video.create_task_models import (
     IdempotentConflictPayload,
     IdempotentConflictEnvelope,
 )
+from app.features.video.pipeline.models import (
+    PublishedVideoPageResponseEnvelope,
+    PublishOperationResponseEnvelope,
+    VideoResultDetailResponseEnvelope,
+)
 from app.features.video.preprocess_models import VideoPreprocessSuccessEnvelope
 from app.features.video.schemas import (
     VideoTaskMetadataCreateRequest,
@@ -152,6 +157,16 @@ async def get_video_task(
     return snapshot
 
 
+@router.get("/tasks/{task_id}/result", response_model=VideoResultDetailResponseEnvelope)
+async def get_video_task_result(
+    task_id: str,
+    request: Request,
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    payload = await service.get_result_detail(task_id, runtime_store=request.app.state.runtime_store)
+    return build_success_envelope(payload)
+
+
 @router.get(
     "/tasks/{task_id}/status",
     response_model=TaskSnapshotResponseEnvelope,
@@ -194,6 +209,51 @@ async def get_video_task_events(
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> Response:
     return await get_shared_task_events(task_id, request, last_event_id)
+
+
+@router.post("/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope)
+async def publish_video_task(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    payload = await service.publish_task(
+        task_id,
+        access_context=access_context,
+        runtime_store=request.app.state.runtime_store,
+    )
+    return build_success_envelope(payload, msg="公开发布成功")
+
+
+@router.delete("/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope)
+async def unpublish_video_task(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    payload = await service.unpublish_task(
+        task_id,
+        access_context=access_context,
+        runtime_store=request.app.state.runtime_store,
+    )
+    return build_success_envelope(payload, msg="已取消公开")
+
+
+@router.get("/published", response_model=PublishedVideoPageResponseEnvelope)
+async def list_published_video_tasks(
+    request: Request,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, alias="pageSize", ge=1, le=50),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    payload = await service.list_published_tasks(
+        page=page,
+        page_size=page_size,
+        runtime_store=request.app.state.runtime_store,
+    )
+    return build_success_envelope(payload)
 
 
 @router.get("/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse)

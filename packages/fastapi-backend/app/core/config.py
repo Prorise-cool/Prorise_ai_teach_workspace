@@ -32,6 +32,24 @@ class Settings(BaseSettings):
     cos_base_url: str = Field(default="https://cos.example.local", alias="FASTAPI_COS_BASE_URL")
     default_llm_provider: str = Field(default="stub-llm", alias="FASTAPI_DEFAULT_LLM_PROVIDER")
     default_tts_provider: str = Field(default="stub-tts", alias="FASTAPI_DEFAULT_TTS_PROVIDER")
+    video_asset_root: str = Field(
+        default=str(PROJECT_ROOT / ".runtime" / "video-assets"),
+        alias="FASTAPI_VIDEO_ASSET_ROOT",
+    )
+    video_target_duration_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_TARGET_DURATION_SECONDS")
+    video_min_duration_seconds: int = Field(default=90, alias="FASTAPI_VIDEO_MIN_DURATION_SECONDS")
+    video_max_duration_seconds: int = Field(default=180, alias="FASTAPI_VIDEO_MAX_DURATION_SECONDS")
+    video_fix_max_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS")
+    video_ffmpeg_timeout_seconds: int = Field(default=60, alias="FASTAPI_VIDEO_FFMPEG_TIMEOUT_SECONDS")
+    video_upload_retry_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_UPLOAD_RETRY_ATTEMPTS")
+    video_publish_cache_ttl_seconds: int = Field(default=600, alias="FASTAPI_VIDEO_PUBLISH_CACHE_TTL_SECONDS")
+    video_output_audio_format: str = Field(default="mp3", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_FORMAT")
+    video_output_audio_sample_rate: int = Field(default=44100, alias="FASTAPI_VIDEO_OUTPUT_AUDIO_SAMPLE_RATE")
+    video_output_audio_bitrate: str = Field(default="192k", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_BITRATE")
+    video_sandbox_cpu_count: float = Field(default=1.0, alias="FASTAPI_VIDEO_SANDBOX_CPU_COUNT")
+    video_sandbox_memory_mb: int = Field(default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB")
+    video_sandbox_timeout_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS")
+    video_sandbox_tmp_size_mb: int = Field(default=1024, alias="FASTAPI_VIDEO_SANDBOX_TMP_SIZE_MB")
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

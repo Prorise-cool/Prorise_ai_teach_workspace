@@ -1,0 +1,10 @@
+{
+  "code": 200,
+  "msg": "已取消公开",
+  "data": {
+    "taskId": "video_pipeline_api_001",
+    "published": false,
+    "publishedAt": null,
+    "card": null
+  }
+}

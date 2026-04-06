@@ -60,6 +60,9 @@ def _build_ephemeral_task_event(
     context = _as_context(current_state.get("context"))
     raw_stage = context.get("stage")
     raw_result = context.get("result")
+    raw_current_stage = context.get("currentStage")
+    raw_stage_label = context.get("stageLabel")
+    raw_stage_progress = context.get("stageProgress")
 
     return TaskProgressEvent(
         event=event,
@@ -73,6 +76,12 @@ def _build_ephemeral_task_event(
         error_code=str(current_state["errorCode"]) if current_state.get("errorCode") is not None else None,
         context=context,
         stage=raw_stage if isinstance(raw_stage, str) else None,
+        current_stage=(
+            raw_current_stage if isinstance(raw_current_stage, str)
+            else (raw_stage if isinstance(raw_stage, str) else None)
+        ),
+        stage_label=raw_stage_label if isinstance(raw_stage_label, str) else None,
+        stage_progress=raw_stage_progress if isinstance(raw_stage_progress, int) else None,
         result=raw_result if isinstance(raw_result, dict) else None,
     )
 
@@ -85,6 +94,9 @@ def _build_snapshot_payload(
 ) -> TaskSnapshotPayload:
     context = _as_context(state.get("context"))
     stage = context.get("stage")
+    current_stage = context.get("currentStage")
+    stage_label = context.get("stageLabel")
+    stage_progress = context.get("stageProgress")
 
     return TaskSnapshotPayload(
         task_id=task_id,
@@ -96,6 +108,12 @@ def _build_snapshot_payload(
         request_id=str(state["requestId"]) if state.get("requestId") is not None else None,
         error_code=str(state["errorCode"]) if state.get("errorCode") is not None else None,
         stage=stage if isinstance(stage, str) else None,
+        current_stage=(
+            current_stage if isinstance(current_stage, str)
+            else (stage if isinstance(stage, str) else None)
+        ),
+        stage_label=stage_label if isinstance(stage_label, str) else None,
+        stage_progress=stage_progress if isinstance(stage_progress, int) else None,
         context=context,
         resume_from=last_event_id,
         last_event_id=last_event_id
