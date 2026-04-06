@@ -3,7 +3,7 @@
  * 页面容器负责业务编排，本组件只承接输入交互和展示状态。
  * 支持多图上传，预览以 grid 缩略图形式展示。
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type MutableRefObject } from 'react';
 import type { FieldErrors, UseFormReturn } from 'react-hook-form';
 import { Image, Loader2, Mic, Send, X } from 'lucide-react';
 
@@ -35,6 +35,7 @@ type VideoInputCardProps = {
     toolUploadImage: string;
     toolVoiceInput: string;
   };
+  textAreaRef?: MutableRefObject<HTMLTextAreaElement | null>;
 };
 
 /**
@@ -50,6 +51,7 @@ export function VideoInputCard({
   isRecording,
   onToggleRecording,
   labels,
+  textAreaRef,
 }: VideoInputCardProps) {
   const { notify } = useFeedback();
   const classNames = createInputWorkspaceCardClassNames('xm-video-input');
@@ -240,6 +242,13 @@ export function VideoInputCard({
 
           <textarea
             {...textField}
+            ref={(node) => {
+              textField.ref(node);
+
+              if (textAreaRef) {
+                textAreaRef.current = node;
+              }
+            }}
             className={`${classNames.root}-textarea`}
             placeholder={labels.placeholder}
             rows={4}

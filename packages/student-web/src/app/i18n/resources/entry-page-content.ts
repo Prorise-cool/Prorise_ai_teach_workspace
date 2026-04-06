@@ -152,7 +152,15 @@ export const zhCnEntryPageResources = {
     feedDesc: '浏览其他同学生成的优质 Manim 动画讲解',
     feedCategories: ['最近高分', '高等数学', '大学物理'],
     feedLoadMore: '加载更多解题视频',
-    feedLoading: '正在拉取数据...'
+    feedLoading: '正在拉取数据...',
+    feedEmptyTitle: '暂无公开视频，快来创建第一个',
+    feedEmptyDesc: '公开发现区为空时，不会影响你继续输入题目并直接生成新视频。',
+    feedErrorTitle: '公开视频暂时不可用',
+    feedErrorDesc: '推荐区加载失败不会阻断主流程，你仍然可以直接输入题目并发起新任务。',
+    feedViewAction: '查看讲解',
+    feedReuseAction: '复用题目',
+    feedReuseToastTitle: '已复用题目到输入区',
+    feedReuseToastDesc: '你可以继续补充细节后再生成新视频。'
   },
   /** Story 1-6：课堂输入页文案。 */
   classroomInput: {
@@ -793,7 +801,15 @@ export const enUsEntryPageResources = {
     feedDesc: 'Browse high-quality Manim animation explainers created by other students',
     feedCategories: ['Top Rated', 'Calculus', 'College Physics'],
     feedLoadMore: 'Load more explainers',
-    feedLoading: 'Fetching data...'
+    feedLoading: 'Fetching data...',
+    feedEmptyTitle: 'No public explainers yet. Be the first to create one.',
+    feedEmptyDesc: 'An empty discovery area never blocks you from entering a problem and generating a new video.',
+    feedErrorTitle: 'Public explainers are temporarily unavailable',
+    feedErrorDesc: 'A failed recommendation request never blocks the core creation flow.',
+    feedViewAction: 'View explainer',
+    feedReuseAction: 'Reuse prompt',
+    feedReuseToastTitle: 'Prompt copied into the input area',
+    feedReuseToastDesc: 'You can refine the prompt before generating a new video.'
   },
   /** Story 1-6: Classroom input page copy. */
   classroomInput: {

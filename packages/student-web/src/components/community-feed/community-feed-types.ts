@@ -3,6 +3,8 @@
  * 同时服务视频与课堂输入页的社区内容卡片。
  */
 
+import type { ReactNode } from 'react';
+
 /** 社区作品卡片数据。 */
 export type CommunityWorkCard = {
   /** 作品 ID。 */
@@ -21,6 +23,12 @@ export type CommunityWorkCard = {
   authorName: string;
   /** 作者头像 URL（可选）。 */
   authorAvatar?: string;
+  /** 作品时长标签（可选）。 */
+  durationLabel?: string;
+  /** 复用原文（可选，仅视频发现区使用）。 */
+  sourceText?: string;
+  /** 目标路由（可选）。 */
+  routeTo?: string;
 };
 
 /** CommunityFeed 属性。 */
@@ -39,4 +47,16 @@ export type CommunityFeedProps = {
   loadingLabel?: string;
   /** 外层容器自定义类名。 */
   className?: string;
+  /** 首次加载骨架屏。 */
+  isLoading?: boolean;
+  /** 骨架卡片数量。 */
+  skeletonCount?: number;
+  /** 错态节点。 */
+  errorState?: ReactNode;
+  /** 空态节点。 */
+  emptyState?: ReactNode;
+  /** 自定义卡片动作区。 */
+  renderCardActions?: (card: CommunityWorkCard) => ReactNode;
+  /** 点击封面播放按钮时的回调。 */
+  onCardPlay?: (card: CommunityWorkCard) => void;
 };

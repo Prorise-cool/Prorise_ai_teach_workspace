@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/public-videos.schema.json",
+  "title": "VideoPublicListContract",
+  "description": "Story 3.6 冻结的公开视频发现区列表契约，包含 GET /api/v1/video/public 的查询参数与响应结构。",
+  "type": "object",
+  "required": ["request", "response"],
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "type": "object",
+      "required": ["page", "pageSize", "sort"],
+      "additionalProperties": false,
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "页码，默认 1。"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 12,
+          "description": "每页数量，默认 12，最大 50。"
+        },
+        "sort": {
+          "type": "string",
+          "enum": ["latest", "popular"],
+          "default": "latest",
+          "description": "排序方式：latest 按发布时间倒序，popular 按热度倒序。"
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": ["code", "msg", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "integer",
+          "const": 200
+        },
+        "msg": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "required": ["items", "total", "page", "pageSize"],
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/VideoPublicCard"
+              }
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pageSize": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "VideoPublicCard": {
+      "type": "object",
+      "required": [
+        "videoId",
+        "title",
+        "summary",
+        "thumbnail",
+        "duration",
+        "viewCount",
+        "createdAt",
+        "sourceText",
+        "authorName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "videoId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "thumbnail": {
+          "type": ["string", "null"]
+        },
+        "duration": {
+          "type": "string",
+          "minLength": 1,
+          "description": "格式化后的时长标签，例如 05:32。"
+        },
+        "viewCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "复用题目时回填到输入区的原文。"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorAvatar": {
+          "type": "string"
+        },
+        "knowledgePoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-06 18:36:31 +0800
+last_updated: 2026-04-06 19:23:01 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -75,7 +75,7 @@ development_status:
   3-3-图片-ocr-前置预处理接口: review
   3-4-视频任务创建接口与初始化运行态: review
   3-5-创建后跳转等待页与任务上下文承接: done
-  3-6-视频输入页公开视频广场与复用入口: ready-for-dev
+  3-6-视频输入页公开视频广场与复用入口: review
   epic-3-retrospective: optional
   epic-4: in-progress
   4-1-视频流水线阶段进度区间与结果契约冻结: ready-for-dev

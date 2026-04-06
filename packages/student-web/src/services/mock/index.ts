@@ -9,6 +9,7 @@ import { videoTaskHandlers } from './handlers/video-task';
 export { authMockFixtures } from './fixtures/auth';
 export { taskMockFixtures } from './fixtures/task';
 export { videoPreprocessMockFixtures } from './fixtures/video-preprocess';
+export { videoPublicMockFixtures } from './fixtures/video-public';
 export { videoTaskMockFixtures } from './fixtures/video-task';
 export { authHandlers } from './handlers/auth';
 export { taskHandlers } from './handlers/task';
