@@ -27,7 +27,7 @@ export interface VideoGeneratingState {
   taskId: string | null;
   /** 当前流水线阶段。 */
   currentStage: VideoPipelineStage | null;
-  /** 当前阶段中文显示名。 */
+  /** 当前阶段显示名（i18n key，消费端使用 t(stageLabel) 获取翻译文案）。 */
   stageLabel: string;
   /** 全局进度（0–100）。 */
   progress: number;
@@ -77,7 +77,7 @@ export interface VideoGeneratingActions {
 const INITIAL_STATE: VideoGeneratingState = {
   taskId: null,
   currentStage: null,
-  stageLabel: '准备生成视频',
+  stageLabel: 'video.generating.preparing',
   progress: 0,
   status: 'pending',
   error: null,
@@ -121,7 +121,7 @@ export const useVideoGeneratingStore = create<
     set({
       status: 'completed',
       progress: 100,
-      stageLabel: '生成完毕',
+      stageLabel: 'video.generating.completed',
     }),
 
   setDegradedPolling: (degraded) =>

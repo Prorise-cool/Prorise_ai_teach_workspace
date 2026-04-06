@@ -27,7 +27,14 @@ interface VideoTaskStatusSnapshot {
 
 const POLLING_INTERVAL_MS = 3000;
 
-const apiClient = createApiClient({ baseURL: resolveFastapiBaseUrl() });
+/**
+ * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
+ *
+ * @returns API 客户端实例。
+ */
+function getApiClient() {
+  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
+}
 
 /**
  * 查询视频任务状态快照。
@@ -36,7 +43,7 @@ const apiClient = createApiClient({ baseURL: resolveFastapiBaseUrl() });
  * @returns 状态快照。
  */
 async function fetchVideoTaskStatus(taskId: string): Promise<VideoTaskStatusSnapshot> {
-  const response = await apiClient.request<TaskDataEnvelope<VideoTaskStatusSnapshot>>({
+  const response = await getApiClient().request<TaskDataEnvelope<VideoTaskStatusSnapshot>>({
     url: `/api/v1/video/tasks/${taskId}/status`,
     method: 'get',
   });

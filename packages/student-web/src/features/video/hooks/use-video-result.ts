@@ -5,7 +5,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 
-import { createApiClient, isApiClientError } from '@/services/api/client';
+import { createApiClient } from '@/services/api/client';
 import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
 import type { TaskDataEnvelope } from '@/types/task';
@@ -41,7 +41,24 @@ export interface VideoResultState {
   refetch: () => void;
 }
 
-const apiClient = createApiClient({ baseURL: resolveFastapiBaseUrl() });
+/**
+ * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
+ *
+ * @returns API 客户端实例。
+ */
+function getApiClient() {
+  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
+}
+
+/**
+ * 判断错误对象是否包含 HTTP status 码。
+ *
+ * @param err - 未知错误。
+ * @returns 是否为带 status 的 Error。
+ */
+function hasStatusCode(err: unknown): err is Error & { status: number } {
+  return err instanceof Error && typeof (err as unknown as Record<string, unknown>).status === 'number';
+}
 
 /**
  * 获取视频任务结果数据。
@@ -69,7 +86,7 @@ async function fetchVideoResult(taskId: string): Promise<VideoResultData> {
     return envelope.data;
   }
 
-  const response = await apiClient.request<TaskDataEnvelope<VideoResultData>>({
+  const response = await getApiClient().request<TaskDataEnvelope<VideoResultData>>({
     url: `/api/v1/video/tasks/${taskId}`,
     method: 'get',
   });
@@ -97,9 +114,7 @@ export function useVideoResult(taskId: string | undefined): VideoResultState {
   if (isLoading) {
     viewStatus = 'loading';
   } else if (error) {
-    const errorObj = error as Error & { status?: number };
-
-    if (errorObj.status === 403) {
+    if (hasStatusCode(error) && error.status === 403) {
       viewStatus = 'permission-denied';
     } else {
       viewStatus = 'error';

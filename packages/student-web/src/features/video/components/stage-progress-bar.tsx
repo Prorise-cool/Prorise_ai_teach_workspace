@@ -7,7 +7,7 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export interface StageProgressBarProps {
-  /** 当前阶段中文标签。 */
+  /** 当前阶段显示标签（已翻译的文案）。 */
   stageLabel: string;
   /** 全局进度（0–100）。 */
   progress: number;
@@ -41,8 +41,8 @@ export function StageProgressBar({
           <span
             className={cn(
               'text-xl font-bold tracking-wide transition-colors duration-300',
-              isWarning && 'text-[color:var(--xm-color-warning)] drop-shadow-[0_0_8px_rgba(255,103,0,0.4)]',
-              isError && 'text-[color:var(--xm-color-error)]',
+              isWarning && 'text-warning',
+              isError && 'text-destructive',
             )}
           >
             {stageLabel}
@@ -60,8 +60,8 @@ export function StageProgressBar({
         <motion.div
           className={cn(
             'xm-generating-progress-fill h-full bg-primary rounded-full relative',
-            isWarning && 'bg-[color:var(--xm-color-warning)]',
-            isError && 'bg-[color:var(--xm-color-error)]',
+            isWarning && 'bg-warning',
+            isError && 'bg-destructive',
           )}
           initial={false}
           animate={{ width: `${clampedProgress}%` }}

@@ -113,7 +113,7 @@ describe('VideoGeneratingPage', () => {
     act(() => {
       useVideoGeneratingStore.getState().updateStage({
         currentStage: 'tts',
-        stageLabel: '生成旁白',
+        stageLabel: 'video.stages.tts',
         progress: 75,
       });
     });
@@ -126,6 +126,7 @@ describe('VideoGeneratingPage', () => {
       </AppProvider>,
     );
 
+    // i18n key 'video.stages.tts' 翻译为中文 '生成旁白'
     expect(screen.getByText('生成旁白')).toBeInTheDocument();
     expect(screen.getByText('75%')).toBeInTheDocument();
   });
@@ -222,7 +223,7 @@ describe('VideoGeneratingPage', () => {
 
     store.updateStage({
       currentStage: 'manim_fix',
-      stageLabel: '修复动画脚本',
+      stageLabel: 'video.stages.manim_fix',
       progress: 50,
       fixAttempt: 1,
       fixTotal: 2,
@@ -231,7 +232,7 @@ describe('VideoGeneratingPage', () => {
     const state = useVideoGeneratingStore.getState();
 
     expect(state.currentStage).toBe('manim_fix');
-    expect(state.stageLabel).toBe('修复动画脚本');
+    expect(state.stageLabel).toBe('video.stages.manim_fix');
     expect(state.progress).toBe(50);
     expect(state.fixAttempt).toBe(1);
     expect(state.fixTotal).toBe(2);

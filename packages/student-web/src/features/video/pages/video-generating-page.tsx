@@ -3,123 +3,32 @@
  * 承接视频创建成功后的跳转，通过 SSE 消费 8 阶段进度事件。
  * 支持 SSE 断线恢复、status 降级轮询、修复态展示、失败态展示。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Check, CopySlash, Loader2, Moon, Sparkles, SunMedium, TriangleAlert, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Loader2, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import '@/components/generating/styles/task-generating-view.scss';
 
 import { FixAttemptIndicator } from '../components/fix-attempt-indicator';
 import { GeneratingFailureCard } from '../components/generating-failure-card';
+import { LogItemRow } from '../components/log-item-row';
 import { StageProgressBar } from '../components/stage-progress-bar';
-import { estimateEtaText, getRequiredStages, getStageConfig, VIDEO_STAGES } from '../config/video-stages';
+import { buildStageLog, estimateEtaText } from '../config/video-stages';
+import { useTipRotation } from '../hooks/use-tip-rotation';
 import { useVideoStatusPolling } from '../hooks/use-video-status-polling';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-import type { VideoStageConfig } from '../config/video-stages';
-
-/** 等待页底部轮播提示池。 */
-const TIPS = [
-  '小麦提示：生成完毕后，您还可以通过自然语言二次修改画面。',
-  '复杂的数学公式推导，小麦会自动为您添加高亮引导。',
-  '视频渲染过程需要在云端进行大量计算，感谢您的耐心等待。',
-  '您可以随时切换板书风格、讲师音色和教学节奏。',
-  '生成历史会自动保存在您的工作台，随时可以回来查看。',
-];
+import type { VideoPipelineStage } from '@/types/video';
 
 /** 完成后跳转结果页的延迟（毫秒）。 */
 const COMPLETED_REDIRECT_DELAY_MS = 2000;
-
-/** Tips 轮播间隔（毫秒）。 */
-const TIP_ROTATION_INTERVAL_MS = 6000;
-
-/** 日志条目类型。 */
-interface LogItem {
-  id: string;
-  status: 'success' | 'warning' | 'error' | 'pending';
-  text: string;
-  tag?: string;
-}
-
-/**
- * 根据当前阶段和进度构建日志列表。
- *
- * @param currentStage - 当前阶段枚举值。
- * @param progress - 全局进度。
- * @returns 日志列表。
- */
-function buildStageLog(
-  currentStage: string | null,
-  progress: number,
-): LogItem[] {
-  const logs: LogItem[] = [];
-  let passedCurrent = false;
-
-  for (const stage of VIDEO_STAGES) {
-    if (passedCurrent) {
-      break;
-    }
-
-    if (currentStage === stage.key) {
-      passedCurrent = true;
-      logs.push({
-        id: stage.key,
-        status: 'pending',
-        text: `正在${stage.label}...`,
-        tag: stage.tag,
-      });
-    } else if (progress > stage.progressEnd) {
-      logs.push({
-        id: stage.key,
-        status: 'success',
-        text: `${stage.label}完成`,
-        tag: stage.tag,
-      });
-    } else if (!stage.conditional) {
-      // 还没到这个阶段，且不是条件阶段 → 不显示
-    }
-  }
-
-  return logs;
-}
-
-/** 日志行组件。 */
-function LogItemRow({ item }: { item: LogItem }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      layout
-      className={cn(
-        'flex items-start gap-3',
-        item.status === 'success' ? 'text-[color:var(--xm-color-text-secondary)] opacity-70' :
-        item.status === 'warning' ? 'text-[color:var(--xm-color-warning)]' :
-        item.status === 'error' ? 'text-[color:var(--xm-color-error)]' :
-        'text-[color:var(--xm-color-text-primary)] font-medium',
-      )}
-    >
-      {item.status === 'success' && <Check className="h-4 w-4 mt-0.5 font-bold text-[color:var(--xm-color-success)]" />}
-      {item.status === 'warning' && <TriangleAlert className="h-4 w-4 mt-0.5 font-bold text-[color:var(--xm-color-warning)]" />}
-      {item.status === 'error' && <CopySlash className="h-4 w-4 mt-0.5 font-bold text-[color:var(--xm-color-error)]" />}
-      {item.status === 'pending' && <Loader2 className="h-4 w-4 mt-0.5 text-primary animate-spin drop-shadow-[0_0_8px_rgba(245,197,71,0.6)]" />}
-
-      <div className="flex-1">
-        <span>{item.text}</span>
-        {item.tag && (
-          <span className="text-[10px] ml-2 px-1.5 py-0.5 rounded border border-current opacity-40">
-            {item.tag}
-          </span>
-        )}
-        {item.status === 'pending' && <span className="xm-generating-cursor-blink" />}
-      </div>
-    </motion.div>
-  );
-}
 
 /**
  * 渲染视频生成等待页。
@@ -130,26 +39,32 @@ export function VideoGeneratingPage() {
   const { id: taskId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { themeMode, toggleThemeMode } = useThemeMode();
+  const { t } = useAppTranslation();
 
-  /* ── 1. zustand store 状态 ── */
-  const status = useVideoGeneratingStore((s) => s.status);
-  const progress = useVideoGeneratingStore((s) => s.progress);
-  const currentStage = useVideoGeneratingStore((s) => s.currentStage);
-  const stageLabel = useVideoGeneratingStore((s) => s.stageLabel);
-  const error = useVideoGeneratingStore((s) => s.error);
-  const degradedToPolling = useVideoGeneratingStore((s) => s.degradedToPolling);
-  const fixAttempt = useVideoGeneratingStore((s) => s.fixAttempt);
-  const fixTotal = useVideoGeneratingStore((s) => s.fixTotal);
-  const sseConnected = useVideoGeneratingStore((s) => s.sseConnected);
+  /* -- 1. zustand store 状态（shallow selector） -- */
+  const {
+    status, progress, currentStage, stageLabel, error,
+    degradedToPolling, fixAttempt, fixTotal, sseConnected,
+  } = useVideoGeneratingStore(useShallow((s) => ({
+    status: s.status,
+    progress: s.progress,
+    currentStage: s.currentStage,
+    stageLabel: s.stageLabel,
+    error: s.error,
+    degradedToPolling: s.degradedToPolling,
+    fixAttempt: s.fixAttempt,
+    fixTotal: s.fixTotal,
+    sseConnected: s.sseConnected,
+  })));
 
-  /* ── 2. 查询任务快照，恢复上下文 ── */
+  /* -- 2. 查询任务快照，恢复上下文 -- */
   const {
     snapshot,
     isLoading: isSnapshotLoading,
     isNotFound,
   } = useVideoTaskStatus(taskId);
 
-  /* ── 3. 从 snapshot 恢复 store 状态 ── */
+  /* -- 3. 从 snapshot 恢复 store 状态 -- */
   useEffect(() => {
     if (!snapshot || isSnapshotLoading || isNotFound) {
       return;
@@ -169,12 +84,12 @@ export function VideoGeneratingPage() {
         store.setFailed({
           errorCode: snapshot.errorCode ?? null,
           errorMessage: snapshot.message ?? null,
-          failedStage: (snapshotStage as import('@/types/video').VideoPipelineStage) ?? null,
+          failedStage: (snapshotStage as VideoPipelineStage) ?? null,
           retryable: false,
         });
       } else if (snapshotStage) {
         store.updateStage({
-          currentStage: snapshotStage as import('@/types/video').VideoPipelineStage,
+          currentStage: snapshotStage as VideoPipelineStage,
           stageLabel: snapshotStageLabel ?? snapshotStage,
           progress: snapshot.progress,
         });
@@ -184,7 +99,7 @@ export function VideoGeneratingPage() {
     }
   }, [snapshot, isSnapshotLoading, isNotFound]);
 
-  /* ── 4. SSE 事件流 ── */
+  /* -- 4. SSE 事件流 -- */
   const sseEnabled =
     !isSnapshotLoading &&
     !isNotFound &&
@@ -194,10 +109,10 @@ export function VideoGeneratingPage() {
 
   useVideoTaskSse(taskId, { enabled: sseEnabled });
 
-  /* ── 5. 降级轮询 ── */
+  /* -- 5. 降级轮询 -- */
   useVideoStatusPolling(taskId);
 
-  /* ── 6. 终态跳转 ── */
+  /* -- 6. 终态跳转 -- */
   useEffect(() => {
     if (status !== 'completed' || !taskId) {
       return;
@@ -210,18 +125,11 @@ export function VideoGeneratingPage() {
     return () => clearTimeout(timer);
   }, [status, taskId, navigate]);
 
-  /* ── 7. Tips 轮播 ── */
-  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  /* -- 7. Tips 轮播 -- */
+  const tips = t('video.generating.tips', { returnObjects: true }) as string[];
+  const currentTipIndex = useTipRotation(tips.length);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTipIndex((prev) => (prev + 1) % TIPS.length);
-    }, TIP_ROTATION_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  /* ── 8. 操作回调 ── */
+  /* -- 8. 操作回调 -- */
   const handleRetry = useCallback(() => {
     void navigate('/video/input?retry=1', { replace: true });
   }, [navigate]);
@@ -230,19 +138,25 @@ export function VideoGeneratingPage() {
     void navigate('/video/input');
   }, [navigate]);
 
-  /* ── 9. 派生状态 ── */
+  /* -- 9. 派生状态 -- */
   const isFixing = currentStage === 'manim_fix' && fixAttempt > 0;
-  const etaText = estimateEtaText(progress);
-  const logs = buildStageLog(currentStage, progress);
+  const etaText = t(estimateEtaText(progress));
+  const logs = buildStageLog(currentStage, progress, (label, completed) =>
+    completed
+      ? t('video.log.stageCompleted', { stage: t(label) })
+      : t('video.log.stageInProgress', { stage: t(label) }),
+  );
 
-  /* ── 10. 渲染 ── */
+  /* -- 10. 渲染 -- */
 
   // 加载中
   if (isSnapshotLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="mt-4 text-sm text-muted-foreground">正在查询任务进度...</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t('video.generating.loadingSubtitle')}
+        </p>
       </div>
     );
   }
@@ -251,15 +165,17 @@ export function VideoGeneratingPage() {
   if (isNotFound) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 gap-4">
-        <h2 className="text-lg font-semibold text-foreground">任务不存在</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {t('video.generating.notFoundTitle')}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          任务 {taskId ?? ''} 不存在或已过期，请返回重新创建
+          {t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}
         </p>
         <button
           onClick={handleReturn}
           className="text-sm font-medium text-primary hover:underline"
         >
-          返回输入页
+          {t('video.common.returnToInput')}
         </button>
       </div>
     );
@@ -297,7 +213,7 @@ export function VideoGeneratingPage() {
           <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center group-hover:bg-border/50 transition-colors backdrop-blur-md">
             <ArrowLeft className="h-4 w-4" />
           </div>
-          返回工作台
+          {t('video.common.returnToWorkbench')}
         </button>
 
         <div className="flex items-center gap-6">
@@ -305,9 +221,9 @@ export function VideoGeneratingPage() {
           <div className="flex items-center gap-2">
             {degradedToPolling ? (
               <>
-                <WifiOff className="h-3.5 w-3.5 text-[color:var(--xm-color-warning)]" />
-                <span className="text-xs font-semibold text-[color:var(--xm-color-warning)] tracking-widest uppercase opacity-80">
-                  Polling
+                <WifiOff className="h-3.5 w-3.5 text-warning" />
+                <span className="text-xs font-semibold text-warning tracking-widest uppercase opacity-80">
+                  {t('video.generating.connectionPolling')}
                 </span>
               </>
             ) : (
@@ -317,7 +233,7 @@ export function VideoGeneratingPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase opacity-80">
-                  Engine Active
+                  {t('video.generating.connectionActive')}
                 </span>
               </>
             )}
@@ -326,7 +242,7 @@ export function VideoGeneratingPage() {
           <button
             onClick={toggleThemeMode}
             className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-border/50 transition-colors backdrop-blur-md"
-            aria-label="Toggle Theme"
+            aria-label={t('video.generating.toggleTheme')}
           >
             {themeMode === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
@@ -349,7 +265,7 @@ export function VideoGeneratingPage() {
 
         {/* 阶段进度条 */}
         <StageProgressBar
-          stageLabel={stageLabel}
+          stageLabel={t(stageLabel)}
           progress={progress}
           etaText={etaText}
           isWarning={isFixing}
@@ -367,7 +283,7 @@ export function VideoGeneratingPage() {
         {degradedToPolling && (
           <div className="w-full max-w-2xl mb-4 flex items-center gap-2 text-xs text-muted-foreground/60">
             <WifiOff className="w-3 h-3" />
-            <span>网络恢复中，已切换到轮询模式</span>
+            <span>{t('video.generating.degradedPollingHint')}</span>
           </div>
         )}
 
@@ -390,7 +306,7 @@ export function VideoGeneratingPage() {
         <div className="mt-10 flex items-center justify-center gap-2.5 text-sm text-muted-foreground/80 font-medium h-6">
           <Sparkles className="h-4 w-4 text-primary animate-pulse" />
           <AnimatePresence mode="wait">
-            {TIPS.length > 0 && (
+            {tips.length > 0 && (
               <motion.div
                 key={currentTipIndex}
                 initial={{ opacity: 0, y: 15 }}
@@ -398,7 +314,7 @@ export function VideoGeneratingPage() {
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.5 }}
               >
-                {TIPS[currentTipIndex]}
+                {tips[currentTipIndex]}
               </motion.div>
             )}
           </AnimatePresence>

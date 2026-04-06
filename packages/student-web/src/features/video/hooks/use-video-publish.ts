@@ -5,6 +5,7 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { createApiClient } from '@/services/api/client';
 import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
@@ -16,57 +17,42 @@ interface PublishResponse {
   published: boolean;
 }
 
-const apiClient = createApiClient({ baseURL: resolveFastapiBaseUrl() });
-
 /**
- * 调用公开发布 API。
+ * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
  *
- * @param taskId - 任务 ID。
- * @returns 发布响应。
+ * @returns API 客户端实例。
  */
-async function publishVideo(taskId: string): Promise<PublishResponse> {
-  const isMock = resolveRuntimeMode() === 'mock';
-
-  if (isMock) {
-    const response = await fetch(
-      `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/publish`,
-      { method: 'POST' },
-    );
-    const envelope = await response.json();
-
-    return (envelope as { data: PublishResponse }).data;
-  }
-
-  const response = await apiClient.request<{ data: PublishResponse }>({
-    url: `/api/v1/video/tasks/${taskId}/publish`,
-    method: 'post',
-  });
-
-  return response.data.data;
+function getApiClient() {
+  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
 }
 
 /**
- * 调用取消公开 API。
+ * 发送视频发布/取消请求的统一函数。
+ * mock 模式使用原生 fetch，真实模式使用 apiClient。
  *
  * @param taskId - 任务 ID。
- * @returns 取消响应。
+ * @param method - HTTP 方法：'post' 公开发布，'delete' 取消公开。
+ * @returns 发布/取消响应。
  */
-async function unpublishVideo(taskId: string): Promise<PublishResponse> {
+async function videoPublishRequest(
+  taskId: string,
+  method: 'post' | 'delete',
+): Promise<PublishResponse> {
   const isMock = resolveRuntimeMode() === 'mock';
 
   if (isMock) {
     const response = await fetch(
       `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/publish`,
-      { method: 'DELETE' },
+      { method: method.toUpperCase() },
     );
     const envelope = await response.json();
 
     return (envelope as { data: PublishResponse }).data;
   }
 
-  const response = await apiClient.request<{ data: PublishResponse }>({
+  const response = await getApiClient().request<{ data: PublishResponse }>({
     url: `/api/v1/video/tasks/${taskId}/publish`,
-    method: 'delete',
+    method,
   });
 
   return response.data.data;
@@ -81,28 +67,29 @@ async function unpublishVideo(taskId: string): Promise<PublishResponse> {
 export function useVideoPublish(taskId: string) {
   const queryClient = useQueryClient();
   const { notify } = useFeedback();
+  const { t } = useAppTranslation();
 
   const publishMutation = useMutation({
-    mutationFn: () => publishVideo(taskId),
+    mutationFn: () => videoPublishRequest(taskId, 'post'),
     onSuccess: () => {
-      notify({ tone: 'success', title: '已公开发布' });
+      notify({ tone: 'success', title: t('video.result.publishSuccess') });
       void queryClient.invalidateQueries({ queryKey: ['video', 'result', taskId] });
       void queryClient.invalidateQueries({ queryKey: ['video', 'published'] });
     },
     onError: () => {
-      notify({ tone: 'error', title: '公开发布失败，请稍后重试' });
+      notify({ tone: 'error', title: t('video.result.publishFailed') });
     },
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: () => unpublishVideo(taskId),
+    mutationFn: () => videoPublishRequest(taskId, 'delete'),
     onSuccess: () => {
-      notify({ tone: 'success', title: '已取消公开' });
+      notify({ tone: 'success', title: t('video.result.unpublishSuccess') });
       void queryClient.invalidateQueries({ queryKey: ['video', 'result', taskId] });
       void queryClient.invalidateQueries({ queryKey: ['video', 'published'] });
     },
     onError: () => {
-      notify({ tone: 'error', title: '取消公开失败，请稍后重试' });
+      notify({ tone: 'error', title: t('video.result.unpublishFailed') });
     },
   });
 

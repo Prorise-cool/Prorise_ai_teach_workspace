@@ -13,20 +13,28 @@ import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
 /**
  * 从 SSE 事件中提取视频流水线扩展字段。
+ * 使用运行时类型检查代替 unsafe cast，确保字段类型安全。
  *
  * @param event - SSE 事件 payload。
  * @returns 扩展字段对象。
  */
 function extractPipelineFields(event: TaskStreamEventPayload) {
   const raw = event as unknown as Record<string, unknown>;
+  const context =
+    raw.context && typeof raw.context === 'object'
+      ? (raw.context as Record<string, unknown>)
+      : null;
 
   return {
-    currentStage: (raw.currentStage as VideoPipelineStage) ?? null,
-    stageLabel: (raw.stageLabel as string) ?? null,
-    stageProgress: (raw.stageProgress as number) ?? null,
-    attemptNo: ((raw.context as Record<string, unknown>)?.attemptNo as number) ?? null,
-    fixEvent: ((raw.context as Record<string, unknown>)?.fixEvent as string) ?? null,
-    failure: (raw.context as Record<string, unknown>)?.failure as Record<string, unknown> | null ?? null,
+    currentStage: typeof raw.currentStage === 'string' ? (raw.currentStage as VideoPipelineStage) : null,
+    stageLabel: typeof raw.stageLabel === 'string' ? raw.stageLabel : null,
+    stageProgress: typeof raw.stageProgress === 'number' ? raw.stageProgress : null,
+    attemptNo: typeof context?.attemptNo === 'number' ? context.attemptNo : null,
+    fixEvent: typeof context?.fixEvent === 'string' ? context.fixEvent : null,
+    failure:
+      context?.failure && typeof context.failure === 'object'
+        ? (context.failure as Record<string, unknown>)
+        : null,
   };
 }
 

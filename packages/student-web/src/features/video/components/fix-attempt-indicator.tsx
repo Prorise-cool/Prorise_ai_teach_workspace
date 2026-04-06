@@ -5,6 +5,8 @@
 import { Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 export interface FixAttemptIndicatorProps {
   /** 当前修复尝试次数。 */
   attempt: number;
@@ -19,15 +21,17 @@ export interface FixAttemptIndicatorProps {
  * @returns 修复指示器 UI。
  */
 export function FixAttemptIndicator({ attempt, total }: FixAttemptIndicatorProps) {
+  const { t } = useAppTranslation();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[color:var(--xm-color-warning)]/10 border border-[color:var(--xm-color-warning)]/20 text-[color:var(--xm-color-warning)]"
+      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-warning/10 border border-warning/20 text-warning"
     >
       <Wrench className="w-4 h-4 animate-spin" style={{ animationDuration: '3s' }} />
       <span className="text-sm font-medium">
-        正在尝试修复…第 {attempt}/{total} 次
+        {t('video.generating.fixAttemptLabel', { attempt, total })}
       </span>
     </motion.div>
   );
