@@ -60,6 +60,142 @@
 - **说明**: 数据库、后端、前端详细实施步骤
 - **包含**: 依赖关系图、代码示例、验收标准
 
+## Epic 5: 主题课堂学习闭环
+
+### Story 5.1: 课堂任务契约、结果 schema 与 mock session 基线
+- [文档](./5-1-课堂任务契约结果-schema-与-mock-session-基线.md)
+- **状态**: ready-for-dev
+- **说明**: 冻结课堂创建、结果、completion signal 与 mock session 契约
+
+### Story 5.2: 主题输入与课堂任务创建
+- [文档](./5-2-主题输入与课堂任务创建.md)
+- **状态**: ready-for-dev
+- **说明**: 打通 `/classroom/input` 的主题输入、`userProfile` 透传与任务创建跳转
+
+### Story 5.3: 课堂等待页与统一进度复用
+- [文档](./5-3-课堂等待页与统一进度复用.md)
+- **状态**: ready-for-dev
+- **说明**: 基于统一任务契约落地课堂等待页、SSE 恢复与 `/status` 降级
+
+### Story 5.4: 课堂生成服务与多 Agent 讨论结果
+- [文档](./5-4-课堂生成服务与多-agent-讨论结果.md)
+- **状态**: ready-for-dev
+- **说明**: 建立课堂生成主链路，产出 slides、discussion、whiteboard 输入与统一失败语义
+
+### Story 5.5: 白板布局与基础可读性规则
+- [文档](./5-5-白板布局与基础可读性规则.md)
+- **状态**: ready-for-dev
+- **说明**: 冻结 whiteboard layout schema，并以“基础可读 + 结构化降级”为目标实现
+
+### Story 5.6: 课堂结果页中的幻灯片、讨论与白板浏览
+- [文档](./5-6-课堂结果页中的幻灯片讨论与白板浏览.md)
+- **状态**: ready-for-dev
+- **说明**: 落地 `/classroom/:id` 结果页与三类 viewer，同时固定后续入口边界
+
+### Story 5.7: 会话结束信号与课后触发出口
+- [文档](./5-7-会话结束信号与课后触发出口.md)
+- **状态**: ready-for-dev
+- **说明**: 定义 completion signal、课后 CTA 与对 Epic 8 的 handoff 参数
+
+### Story 5.8: 课堂侧 SessionArtifactGraph 回写
+- [文档](./5-8-课堂侧-sessionartifactgraph-回写.md)
+- **状态**: ready-for-dev
+- **说明**: 将课堂 artifact、章节摘要与 learning signal 回写到长期宿主
+
+### Story 5.9: 课堂输入页联网搜索增强与证据范围配置
+- [文档](./5-9-课堂输入页联网搜索增强与证据范围配置.md)
+- **状态**: ready-for-dev
+- **说明**: 在课堂输入页增加显式联网搜索开关、最小证据范围与可降级透传
+
+### Story 5.10: 课堂结果导出与分享产物
+- [文档](./5-10-课堂结果导出与分享产物.md)
+- **状态**: ready-for-dev
+- **说明**: 以 `PPTX` 或等效教学分享文件为优先目标，补齐导出状态与失败闭环
+
+## Epic 3: 单题视频输入与任务创建
+
+### Story 3.1: 视频任务创建契约与 mock task 基线
+- [文档](./3-1-视频任务创建契约与-mock-task-基线.md)
+- **状态**: ready-for-dev
+- **说明**: 冻结 `POST /api/v1/video/tasks` schema、错误码、mock 样例与前端 mock handler
+
+### Story 3.2: 视频输入页壳层与多模态输入交互
+- [文档](./3-2-视频输入页壳层与多模态输入交互.md)
+- **状态**: ready-for-dev
+- **说明**: 重构输入页表单管理（react-hook-form + zod），对接创建 adapter，实现提交态/错误态
+
+### Story 3.3: 图片 / OCR 前置预处理接口
+- [文档](./3-3-图片-ocr-前置预处理接口.md)
+- **状态**: ready-for-dev
+- **说明**: 实现图片校验、存储与 OCR 预处理，OCR 失败降级不阻断主流程
+
+### Story 3.4: 视频任务创建接口与初始化运行态
+- [文档](./3-4-视频任务创建接口与初始化运行态.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 `POST /api/v1/video/tasks`，含幂等处理、Redis 运行态、Dramatiq 分发
+
+### Story 3.5: 创建后跳转等待页与任务上下文承接
+- [文档](./3-5-创建后跳转等待页与任务上下文承接.md)
+- **状态**: ready-for-dev
+- **说明**: 实现视频等待页、SSE 事件消费、任务上下文恢复与失败重试
+
+### Story 3.6: 视频输入页公开视频广场与复用入口
+- [文档](./3-6-视频输入页公开视频广场与复用入口.md)
+- **状态**: ready-for-dev
+- **说明**: 实现公开视频发现区、卡片数据消费、"查看讲解"与"复用题目"动作
+
+## Epic 4: 单题视频生成、结果消费与失败恢复
+
+### Story 4.1: 视频流水线阶段、进度区间与结果契约冻结
+- [文档](./4-1-视频流水线阶段进度区间与结果契约冻结.md)
+- **状态**: ready-for-dev
+- **说明**: 冻结 VideoStage 枚举（8 阶段）、进度 0-100 区间、VideoResult/VideoFailure schema 与 mock SSE stage 流
+
+### Story 4.2: 题目理解与分镜生成服务
+- [文档](./4-2-题目理解与分镜生成服务.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 understanding service（主题摘要、知识点、解题步骤）与 storyboard service（场景分镜、旁白、时长约束 90-180s）
+
+### Story 4.3: Manim 代码生成与自动修复链
+- [文档](./4-3-manim-代码生成与自动修复链.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 manim_gen service 与 FixChain（RuleBasedFixer → LLMBasedFixer），最大修复 2 次
+
+### Story 4.4: Manim 沙箱执行与资源限制
+- [文档](./4-4-manim-沙箱执行与资源限制.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 SandboxExecutor 抽象与 DockerSandboxExecutor，含 AST 安全扫描与资源限制（1vCPU/2GiB/120s）
+
+### Story 4.5: TTS 合成与 Provider Failover 落地
+- [文档](./4-5-tts-合成与-provider-failover-落地.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 TTS 服务与 Provider Failover（Story 2.8），按场景粒度处理，支持 MP3 44100Hz 192kbps
+
+### Story 4.6: FFmpeg 合成、COS 上传与完成结果回写
+- [文档](./4-6-ffmpeg-合成cos-上传与完成结果回写.md)
+- **状态**: ready-for-dev
+- **说明**: FFmpeg 合成（H.264+AAC）、COS 上传重试、封面帧提取、VideoResult 回写 Redis/RuoYi
+
+### Story 4.7: 视频等待页前端状态机、恢复与降级
+- [文档](./4-7-视频等待页前端状态机恢复与降级.md)
+- **状态**: ready-for-dev
+- **说明**: zustand 状态机、SSE 事件消费、status 轮询降级、manim_fix 修复态 UI
+
+### Story 4.8: 视频结果页、播放器与结果操作
+- [文档](./4-8-视频结果页播放器与结果操作.md)
+- **状态**: ready-for-dev
+- **说明**: Video.js 播放器封装、结果页布局、后续动作入口（disabled）、结果操作区壳层
+
+### Story 4.9: 视频侧 SessionArtifactGraph 回写
+- [文档](./4-9-视频侧-sessionartifactgraph-回写.md)
+- **状态**: ready-for-dev
+- **说明**: VideoArtifactGraph 组装与 RuoYi 回写，含 timeline/storyboard/narration/knowledge_points/solution_steps 五类 artifact
+
+### Story 4.10: 视频结果公开发布与输入页复用卡片
+- [文档](./4-10-视频结果公开发布与输入页复用卡片.md)
+- **状态**: ready-for-dev
+- **说明**: publish/unpublish API、PublishedVideoCard schema、公开列表分页与 Story 3.6 发现区对接
+
 ## 快速导航
 
 - [Epic 1 执行清单](../../../docs/01开发人员手册/0000-AI快速导航索引/epic-1-execution-checklist.md)
