@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/mock-preprocess-success.jpg",
+    "ocrText": "已知函数 f(x) = 2x^3 - 3x^2 + 1，求其单调区间。",
+    "confidence": 0.92,
+    "width": 1280,
+    "height": 960,
+    "format": "jpeg",
+    "suggestions": [],
+    "errorCode": null
+  }
+}

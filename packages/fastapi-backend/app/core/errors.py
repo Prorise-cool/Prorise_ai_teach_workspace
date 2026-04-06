@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.logging import (
@@ -11,6 +12,7 @@ from app.core.logging import (
 )
 from app.core.middleware.request_context import REQUEST_ID_HEADER
 from app.schemas.common import build_error_envelope
+from app.shared.task_framework.status import TaskErrorCode
 
 logger = get_logger("app.errors")
 
@@ -146,6 +148,40 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         reset_trace_context(tokens)
 
 
+async def request_validation_error_handler(
+    request: Request,
+    exc: RequestValidationError
+) -> JSONResponse:
+    request_id, details = _resolve_trace_details(
+        request,
+        {"validation_errors": exc.errors()},
+    )
+    error_code = TaskErrorCode.INVALID_INPUT.value
+    tokens = bind_trace_context(
+        request_id=request_id or EMPTY_TRACE_VALUE,
+        task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+        error_code=error_code,
+    )
+    try:
+        logger.warning("Request validation failed path=%s", request.url.path)
+        return JSONResponse(
+            status_code=422,
+            content=build_error_envelope(
+                code=422,
+                msg="请求参数校验失败",
+                error_code=error_code,
+                retryable=False,
+                request_id=request_id,
+                task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+                details=details,
+            ),
+            headers=_trace_headers(request_id),
+        )
+    finally:
+        reset_trace_context(tokens)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, app_error_handler)
+    app.add_exception_handler(RequestValidationError, request_validation_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)

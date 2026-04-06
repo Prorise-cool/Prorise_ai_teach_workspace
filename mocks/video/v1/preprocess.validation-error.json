@@ -1,0 +1,18 @@
+{
+  "code": 422,
+  "msg": "不支持的文件类型，仅支持 JPG、PNG、WebP",
+  "data": {
+    "errorCode": "VIDEO_IMAGE_FORMAT_INVALID",
+    "retryable": false,
+    "requestId": null,
+    "taskId": null,
+    "details": {
+      "field": "file",
+      "allowed": [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ]
+    }
+  }
+}

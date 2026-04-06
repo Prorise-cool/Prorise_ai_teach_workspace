@@ -1,22 +1,13 @@
 /**
  * 文件说明：视频讲解输入页容器。
- * 对照设计稿 03-视频输入页/01-input.html 还原沉浸式输入区：
- * 标题区 + 核心输入卡片（Textarea + 工具栏 + 提交按钮）+ 建议标签 + 引导卡片。
- * 社区瀑布流由 CommunityFeed 组件独立承接。
+ * 页面容器负责表单装配、mutation 提交和路由跳转，输入交互下沉到 VideoInputCard。
  */
-import {
-  FileText,
-  Image,
-  Mic,
-  PackageSearch,
-  Send,
-  ShieldAlert,
-  Sparkles,
-  WifiOff,
-  X
-} from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PackageSearch, ShieldAlert, Sparkles, WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Variants } from 'motion/react';
+import { useCallback, type FormEvent } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { CommunityFeed, VIDEO_FEED_MOCK_CARDS } from '@/components/community-feed';
@@ -24,12 +15,16 @@ import {
   InputPageGuideCards,
   InputPageHeader,
   InputPageSuggestions,
-  useFileDropzone,
   useBrowserAsr,
-  type GuideCardItem
+  type GuideCardItem,
 } from '@/components/input-page';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
-import { cn } from '@/lib/utils';
+import { VideoInputCard } from '@/features/video/components/video-input-card';
+import { useVideoCreate } from '@/features/video/hooks/use-video-create';
+import {
+  type VideoInputFormValues,
+  videoInputFormSchema,
+} from '@/features/video/schemas/video-input-schema';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/video/styles/video-input-page.scss';
@@ -57,22 +52,26 @@ const GUIDE_CARD_ICONS = [PackageSearch, ShieldAlert, WifiOff] as const;
  */
 export function VideoInputPage() {
   const { t } = useAppTranslation();
-  const [text, setText] = useState('');
-
-  const { 
-    isDragging, 
-    handleDragOver, 
-    handleDragLeave, 
-    handleDrop,
-    attachedFile,
-    clearFile,
-    triggerSelect,
-    fileInputRef,
-    handleFileChange 
-  } = useFileDropzone();
+  const form = useForm<VideoInputFormValues>({
+    resolver: zodResolver(videoInputFormSchema),
+    defaultValues: {
+      inputType: 'text',
+      text: '',
+      imageFile: null,
+    },
+    mode: 'onSubmit',
+  });
+  const createMutation = useVideoCreate();
+  const { control, handleSubmit, formState, setValue } = form;
 
   const { isRecording, toggleRecording } = useBrowserAsr((transcript) => {
-    if (transcript) setText(transcript);
+    if (transcript) {
+      setValue('text', transcript, { shouldValidate: false });
+    }
+  });
+  const imageFile = useWatch({
+    control,
+    name: 'imageFile',
   });
   const navLinks = t('entryNav.landingLinks', {
     returnObjects: true
@@ -81,28 +80,28 @@ export function VideoInputPage() {
     returnObjects: true
   }) as WorkspaceRoute[];
 
-  const badgeLabel = t('videoInput.badgeLabel') as string;
-  const titleLine1 = t('videoInput.titleLine1') as string;
-  const titleGradient = t('videoInput.titleGradient') as string;
-  const placeholder = t('videoInput.placeholder') as string;
-  const submitLabel = t('videoInput.submitLabel') as string;
-  const smartMatchHint = t('classroomInput.smartMatchHint') as string;
-  const smartMatchDesc = t('classroomInput.smartMatchDesc') as string;
-  const multiAgentHint = t('classroomInput.multiAgentHint') as string;
-  const toolUploadImage = t('videoInput.toolUploadImage') as string;
-  const toolVoiceInput = t('classroomInput.toolVoiceInput') as string;
-  const suggestionsLabel = t('videoInput.suggestionsLabel') as string;
+  const badgeLabel = t('videoInput.badgeLabel');
+  const titleLine1 = t('videoInput.titleLine1');
+  const titleGradient = t('videoInput.titleGradient');
+  const placeholder = t('videoInput.placeholder');
+  const submitLabel = t('videoInput.submitLabel');
+  const smartMatchHint = t('classroomInput.smartMatchHint');
+  const smartMatchDesc = t('classroomInput.smartMatchDesc');
+  const multiAgentHint = t('classroomInput.multiAgentHint');
+  const toolUploadImage = t('videoInput.toolUploadImage');
+  const toolVoiceInput = t('classroomInput.toolVoiceInput');
+  const suggestionsLabel = t('videoInput.suggestionsLabel');
   const suggestions = t('videoInput.suggestions', {
     returnObjects: true
   }) as string[];
 
-  const feedTitle = t('videoInput.feedTitle') as string;
-  const feedDesc = t('videoInput.feedDesc') as string;
+  const feedTitle = t('videoInput.feedTitle');
+  const feedDesc = t('videoInput.feedDesc');
   const feedCategories = t('videoInput.feedCategories', {
     returnObjects: true
   }) as string[];
-  const feedLoadMore = t('videoInput.feedLoadMore') as string;
-  const feedLoading = t('videoInput.feedLoading') as string;
+  const feedLoadMore = t('videoInput.feedLoadMore');
+  const feedLoading = t('videoInput.feedLoading');
 
   const guideCardsData = t('videoInput.guideCards', {
     returnObjects: true
@@ -113,6 +112,19 @@ export function VideoInputPage() {
     title: card.title,
     desc: card.desc
   }));
+
+  const onFormSubmit = useCallback(
+    (values: VideoInputFormValues) => {
+      createMutation.mutate(values);
+    },
+    [createMutation],
+  );
+  const handlePageSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      void handleSubmit(onFormSubmit)(event);
+    },
+    [handleSubmit, onFormSubmit],
+  );
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -160,7 +172,11 @@ export function VideoInputPage() {
         className="xm-landing-glass-nav"
       />
 
-      <div className="xm-video-input__content">
+      <form
+        className="xm-video-input__content"
+        onSubmit={handlePageSubmit}
+        noValidate
+      >
         {/* 标题区 */}
         <motion.div variants={itemVariants}>
           <InputPageHeader
@@ -173,121 +189,23 @@ export function VideoInputPage() {
         </motion.div>
 
         {/* 核心输入卡片 */}
-        <motion.div variants={itemVariants} className="xm-video-input__card">
-          {/* 智能匹配提示栏 */}
-          <div className="xm-video-input__card-hints">
-            <div className="xm-video-input__card-hint xm-video-input__card-hint--accent">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{smartMatchHint}</span>
-              <span className="xm-video-input__card-hint-desc">
-                {smartMatchDesc}
-              </span>
-            </div>
-            <div className="xm-video-input__card-hint">
-              <span>{multiAgentHint}</span>
-            </div>
-          </div>
-
-          <div 
-            className="xm-video-input__card-body relative"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {isDragging && (
-              <div className="absolute inset-0 z-10 m-3 flex flex-col items-center justify-center rounded-[var(--xm-radius-md)] bg-[color:var(--xm-color-surface-glass)] backdrop-blur-sm border-2 border-dashed border-primary">
-                <p className="text-sm font-semibold text-primary">松开鼠标，上传参考文件</p>
-              </div>
-            )}
-
-            {/* 附件预览区 */}
-            {attachedFile && (
-              <div className="flex items-center justify-between rounded-lg bg-[color:var(--xm-color-surface-sunken)] p-3 border border-[color:var(--xm-color-border-subtle)]">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-[color:var(--xm-color-surface-highest)]">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {attachedFile.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {(attachedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  onClick={clearFile}
-                  title="取消引用"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            <textarea
-              className="xm-video-input__card-textarea"
-              placeholder={placeholder}
-              rows={4}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </div>
-
-          <div className="xm-video-input__card-toolbar">
-            <div className="xm-video-input__card-tools">
-              <input
-                type="file"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-              />
-              <button
-                type="button"
-                className="xm-video-input__card-tool-btn"
-                title={toolUploadImage}
-                onClick={triggerSelect}
-              >
-                <Image className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  'xm-video-input__card-tool-btn relative',
-                  isRecording && 'text-primary bg-[color:var(--xm-color-brand-50)]'
-                )}
-                title={toolVoiceInput}
-                onClick={toggleRecording}
-              >
-                {isRecording ? (
-                  <div className="flex items-center justify-center gap-[2px] h-4 w-4">
-                    <span className="w-[2px] h-2 bg-current rounded-full animate-audio-bar-1" />
-                    <span className="w-[2px] h-4 bg-current rounded-full animate-audio-bar-2" />
-                    <span className="w-[2px] h-3 bg-current rounded-full animate-audio-bar-3" />
-                  </div>
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-                {isRecording && (
-                  <span className="absolute inset-0 rounded-md bg-[color:var(--xm-color-brand-500)] opacity-20 animate-ping" />
-                )}
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="xm-video-input__card-submit"
-              onClick={() => {
-                // eslint-disable-next-line no-console
-                console.log('[VideoInput] 生成视频 - 待接入');
-              }}
-            >
-              <span>{submitLabel}</span>
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+        <motion.div variants={itemVariants}>
+          <VideoInputCard
+            form={form}
+            errors={formState.errors}
+            isSubmitting={createMutation.isPending}
+            isRecording={isRecording}
+            onToggleRecording={toggleRecording}
+            labels={{
+              smartMatchHint,
+              smartMatchDesc,
+              multiAgentHint,
+              placeholder,
+              submitLabel,
+              toolUploadImage,
+              toolVoiceInput,
+            }}
+          />
         </motion.div>
 
         {/* 建议标签 */}
@@ -296,12 +214,15 @@ export function VideoInputPage() {
             label={suggestionsLabel}
             pills={suggestions}
             onSelect={(pill) => {
-              // eslint-disable-next-line no-console
-              console.log(`[VideoInput] 建议: ${pill}`);
+              setValue('text', pill, { shouldValidate: false });
+
+              if (!imageFile) {
+                setValue('inputType', 'text');
+              }
             }}
           />
         </motion.div>
-      </div>
+      </form>
 
       {/* 引导卡片 */}
       <motion.div variants={itemVariants}>

@@ -9,6 +9,7 @@ import type {
   VideoTaskMockScenario,
 } from '@/types/video';
 import { readNumber, readRecord, readString } from '@/lib/type-guards';
+import { createVideoTaskAdapterError } from '@/services/api/adapters/video-task-error';
 
 const FIXTURE_TIMESTAMP = '2026-04-06T10:30:00Z';
 
@@ -31,7 +32,7 @@ function buildMockVideoTaskId(suffix: string) {
 }
 
 const textSuccessFixture: VideoTaskCreateSuccessEnvelope = {
-  code: 200,
+  code: 202,
   msg: '视频任务创建成功',
   data: {
     taskId: 'vtask_01JA2B3C4D5E6F7G8H9J0KLM',
@@ -42,7 +43,7 @@ const textSuccessFixture: VideoTaskCreateSuccessEnvelope = {
 };
 
 const imageSuccessFixture: VideoTaskCreateSuccessEnvelope = {
-  code: 200,
+  code: 202,
   msg: '视频任务创建成功',
   data: {
     taskId: 'vtask_01JA2B3C4D5E6F7G8H9JIMG1',
@@ -74,7 +75,7 @@ const permissionDeniedFixture: VideoTaskCreateErrorEnvelope = {
   code: 403,
   msg: '当前账号暂无视频任务创建权限',
   data: {
-    errorCode: 'TASK_INVALID_INPUT',
+    errorCode: 'AUTH_PERMISSION_DENIED',
     retryable: false,
     requestId: 'req_mock_permission_denied',
     taskId: null,
@@ -98,7 +99,7 @@ export const videoTaskMockFixtures = {
     } satisfies VideoTaskFixtureError,
     permissionDenied: {
       status: 403,
-      code: '403',
+      code: 'AUTH_PERMISSION_DENIED',
       message: permissionDeniedFixture.msg,
     } satisfies VideoTaskFixtureError,
   },
@@ -178,15 +179,7 @@ export function getVideoTaskFixtureError(
 export function throwVideoTaskFixtureError(
   error: VideoTaskFixtureError,
 ): never {
-  const fixtureError = new Error(error.message);
-
-  Object.assign(fixtureError, {
-    name: 'VideoTaskAdapterError',
-    status: error.status,
-    code: error.code,
-  });
-
-  throw fixtureError;
+  throw createVideoTaskAdapterError(error.status, error.code, error.message);
 }
 
 /**

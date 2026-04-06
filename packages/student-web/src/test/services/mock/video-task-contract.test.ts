@@ -3,10 +3,10 @@
  * Story 3.1：覆盖 schema 一致性、mock 样例合法性、adapter + handler 往返测试。
  */
 import { describe, it, expect } from 'vitest';
+import { setupServer } from 'msw/node';
 
 import type {
   VideoTaskCreateRequest,
-  VideoTaskCreateResult,
   VideoTaskCreateSuccessEnvelope,
   VideoTaskCreateErrorEnvelope,
 } from '@/types/video';
@@ -21,12 +21,12 @@ import {
   getMockVideoTaskCreateSuccess,
   getMockVideoTaskCreateError,
   getVideoTaskFixtureError,
-  videoTaskMockFixtures,
 } from '@/services/mock/fixtures/video-task';
 import {
   createMockVideoTaskAdapter,
   VideoTaskAdapterError,
 } from '@/services/api/adapters/video-task-adapter';
+import { videoTaskHandlers } from '@/services/mock/handlers/video-task';
 
 /* ---------- 契约资产导入 ---------- */
 
@@ -34,6 +34,20 @@ import textSuccessJson from '../../../../../../mocks/video/v1/create-task.text-s
 import imageSuccessJson from '../../../../../../mocks/video/v1/create-task.image-success.json';
 import validationErrorJson from '../../../../../../mocks/video/v1/create-task.validation-error.json';
 import permissionDeniedJson from '../../../../../../mocks/video/v1/create-task.permission-denied.json';
+
+const server = setupServer(...videoTaskHandlers);
+
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
+});
 
 /* ---------- 请求 schema 字段契约 ---------- */
 
@@ -58,7 +72,7 @@ describe('VideoTaskCreateResponse schema 结构一致性', () => {
   it('成功响应必须包含 code=200、msg、data.{taskId, taskType, status, createdAt}', () => {
     const envelope = textSuccessJson as VideoTaskCreateSuccessEnvelope;
 
-    expect(envelope.code).toBe(200);
+    expect(envelope.code).toBe(202);
     expect(typeof envelope.msg).toBe('string');
     expect(envelope.data).toBeDefined();
     expect(typeof envelope.data.taskId).toBe('string');
@@ -109,11 +123,11 @@ describe('mock 样例与 schema 合法性', () => {
 
   it('四组 JSON 样例与 fixture 常量一致', () => {
     expect(textSuccessJson).toMatchObject({
-      code: 200,
+      code: 202,
       data: { taskType: 'video', status: 'pending' },
     });
     expect(imageSuccessJson).toMatchObject({
-      code: 200,
+      code: 202,
       data: { taskType: 'video', status: 'pending' },
     });
     expect(validationErrorJson).toMatchObject({
@@ -246,12 +260,13 @@ describe('mock VideoTaskAdapter 往返测试', () => {
       adapter.createTask(request, { scenario: 'validation-error' }),
     ).rejects.toThrow();
 
-    try {
-      await adapter.createTask(request, { scenario: 'validation-error' });
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).name).toBe('VideoTaskAdapterError');
-    }
+    const error = await adapter.createTask(request, { scenario: 'validation-error' }).then(
+      () => new Error('预期应抛出校验错误'),
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toBeInstanceOf(VideoTaskAdapterError);
   });
 
   it('权限失败场景抛出 VideoTaskAdapterError', async () => {
@@ -265,11 +280,31 @@ describe('mock VideoTaskAdapter 往返测试', () => {
       adapter.createTask(request, { scenario: 'permission-denied' }),
     ).rejects.toThrow();
 
-    try {
-      await adapter.createTask(request, { scenario: 'permission-denied' });
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).name).toBe('VideoTaskAdapterError');
-    }
+    const error = await adapter.createTask(request, { scenario: 'permission-denied' }).then(
+      () => new Error('预期应抛出权限错误'),
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toBeInstanceOf(VideoTaskAdapterError);
+  });
+});
+
+describe('mock VideoTask handlers 契约', () => {
+  it('畸形请求体返回 422 与 TASK_INVALID_INPUT', async () => {
+    const response = await fetch('http://localhost/api/v1/video/tasks', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputType: 'text',
+      }),
+    });
+    const payload = await response.json() as VideoTaskCreateErrorEnvelope;
+
+    expect(response.status).toBe(422);
+    expect(payload.code).toBe(422);
+    expect(payload.data.errorCode).toBe('TASK_INVALID_INPUT');
   });
 });

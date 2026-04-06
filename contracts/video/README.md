@@ -11,6 +11,9 @@ Story 3.1 冻结的视频任务创建契约资产：
 | `create-task-request.schema.json` | `POST /api/v1/video/tasks` 请求 schema |
 | `create-task-response.schema.json` | 成功（202）与错误（422/403/429/500）响应 schema |
 | `create-task-errors.md` | 视频域错误码定义、触发场景与前端处理建议 |
+| `preprocess-request.schema.json` | `POST /api/v1/video/preprocess` 请求 schema |
+| `preprocess-response.schema.json` | 预处理成功响应 schema |
+| `CHANGELOG.md` | 视频域契约变更记录 |
 
 ## 约定
 

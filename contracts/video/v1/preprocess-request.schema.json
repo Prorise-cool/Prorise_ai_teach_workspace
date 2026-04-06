@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/preprocess-request.schema.json",
+  "title": "VideoPreprocessRequest",
+  "description": "视频图片预处理请求 schema，使用 multipart/form-data 上传单个 file 字段。",
+  "type": "object",
+  "required": ["file"],
+  "additionalProperties": false,
+  "properties": {
+    "file": {
+      "type": "string",
+      "contentEncoding": "binary",
+      "description": "待预处理的图片文件，仅支持 JPG/PNG/WebP，最大 10MB。"
+    }
+  }
+}

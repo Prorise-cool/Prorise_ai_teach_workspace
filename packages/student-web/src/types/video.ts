@@ -54,13 +54,26 @@ export const VIDEO_CLIENT_REQUEST_ID_MAX_LENGTH = 128;
 
 /* ---------- 请求 ---------- */
 
-/** 视频任务创建请求。 */
-export interface VideoTaskCreateRequest {
-  inputType: VideoInputType;
-  sourcePayload: VideoSourcePayload;
+/** 文本模式视频任务创建请求。 */
+export interface VideoTextTaskCreateRequest {
+  inputType: 'text';
+  sourcePayload: VideoTextSourcePayload;
   userProfile?: Record<string, unknown>;
   clientRequestId: string;
 }
+
+/** 图片模式视频任务创建请求。 */
+export interface VideoImageTaskCreateRequest {
+  inputType: 'image';
+  sourcePayload: VideoImageSourcePayload;
+  userProfile?: Record<string, unknown>;
+  clientRequestId: string;
+}
+
+/** 视频任务创建请求。 */
+export type VideoTaskCreateRequest =
+  | VideoTextTaskCreateRequest
+  | VideoImageTaskCreateRequest;
 
 /* ---------- 响应 ---------- */
 
@@ -84,6 +97,12 @@ export const VIDEO_ERROR_CODE_VALUES = [
   'VIDEO_INPUT_TOO_LONG',
   'VIDEO_IMAGE_FORMAT_INVALID',
   'VIDEO_IMAGE_TOO_LARGE',
+  'VIDEO_IMAGE_UNREADABLE',
+  'VIDEO_OCR_FAILED',
+  'VIDEO_OCR_EMPTY',
+  'VIDEO_OCR_TIMEOUT',
+  'VIDEO_STORAGE_FAILED',
+  'VIDEO_DISPATCH_FAILED',
 ] as const;
 
 /** 视频域错误码类型。 */
@@ -91,7 +110,7 @@ export type VideoErrorCode = (typeof VIDEO_ERROR_CODE_VALUES)[number];
 
 /** 视频任务创建错误详情。 */
 export interface VideoTaskCreateError {
-  errorCode: VideoErrorCode | string;
+  errorCode: string;
   retryable: boolean;
   requestId: string | null;
   taskId: string | null;
@@ -129,4 +148,53 @@ export function isVideoTaskMockScenario(
   value: unknown,
 ): value is VideoTaskMockScenario {
   return VIDEO_TASK_MOCK_SCENARIO_VALUES.some((s) => s === value);
+}
+
+/* ---------- 预处理 ---------- */
+
+/** 视频图片预处理结果。 */
+export interface VideoPreprocessResult {
+  imageRef: string;
+  ocrText: string | null;
+  confidence: number;
+  width: number;
+  height: number;
+  format: 'jpeg' | 'png' | 'webp';
+  suggestions: string[];
+  errorCode: 'VIDEO_OCR_FAILED' | 'VIDEO_OCR_EMPTY' | 'VIDEO_OCR_TIMEOUT' | null;
+}
+
+/** 视频图片预处理成功响应包。 */
+export type VideoPreprocessSuccessEnvelope = TaskDataEnvelope<VideoPreprocessResult>;
+
+/** 视频图片预处理错误响应。 */
+export interface VideoPreprocessErrorEnvelope {
+  code: number;
+  msg: string;
+  data: VideoTaskCreateError;
+}
+
+/** 视频图片预处理 mock 场景。 */
+export const VIDEO_PREPROCESS_MOCK_SCENARIO_VALUES = [
+  'success',
+  'ocr-low-confidence',
+  'ocr-failed',
+  'ocr-timeout',
+  'validation-error',
+] as const;
+
+/** 视频图片预处理 mock 场景类型。 */
+export type VideoPreprocessMockScenario =
+  (typeof VIDEO_PREPROCESS_MOCK_SCENARIO_VALUES)[number];
+
+/**
+ * 判断值是否为受支持的视频图片预处理 mock 场景。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `VideoPreprocessMockScenario`。
+ */
+export function isVideoPreprocessMockScenario(
+  value: unknown,
+): value is VideoPreprocessMockScenario {
+  return VIDEO_PREPROCESS_MOCK_SCENARIO_VALUES.some((scenario) => scenario === value);
 }
