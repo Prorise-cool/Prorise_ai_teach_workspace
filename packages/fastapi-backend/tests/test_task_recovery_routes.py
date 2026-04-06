@@ -299,3 +299,78 @@ def test_task_events_route_emits_heartbeat_when_waiting_for_new_events(monkeypat
     assert "event: connected" in body
     assert "event: heartbeat" in body
     assert last_event_id
+
+
+def test_module_task_status_routes_proxy_shared_snapshot() -> None:
+    with TestClient(create_app()) as client:
+        runtime_store = client.app.state.runtime_store
+
+        for route_prefix, task_type in (
+            ("/api/v1/video", "video"),
+            ("/api/v1/classroom", "classroom"),
+        ):
+            task_id = f"{task_type}_20260406180000_status"
+            runtime_store.clear()
+            runtime_store.set_task_state(
+                task_id=task_id,
+                task_type=task_type,
+                internal_status=TaskInternalStatus.RUNNING,
+                message="任务处理中",
+                progress=64,
+                request_id=f"req_{task_type}_status_proxy",
+                source=f"{task_type}.proxy",
+                context={"stage": "running"},
+            )
+
+            response = client.get(f"{route_prefix}/tasks/{task_id}/status")
+
+            assert response.status_code == 200
+            assert response.json()["data"]["taskType"] == task_type
+            assert response.json()["data"]["progress"] == 64
+            assert response.json()["data"]["stage"] == "running"
+
+        runtime_store.clear()
+
+
+def test_module_task_events_routes_proxy_shared_stream() -> None:
+    with TestClient(create_app()) as client:
+        runtime_store = client.app.state.runtime_store
+
+        for route_prefix, task_type in (
+            ("/api/v1/video", "video"),
+            ("/api/v1/classroom", "classroom"),
+        ):
+            task_id = f"{task_type}_20260406180500_events"
+            runtime_store.clear()
+            runtime_store.set_task_state(
+                task_id=task_id,
+                task_type=task_type,
+                internal_status=TaskInternalStatus.RUNNING,
+                message="任务处理中",
+                progress=30,
+                request_id=f"req_{task_type}_events_proxy",
+                source=f"{task_type}.proxy",
+            )
+            runtime_store.append_task_event(
+                task_id,
+                TaskProgressEvent(
+                    event="completed",
+                    task_id=task_id,
+                    task_type=task_type,
+                    status="completed",
+                    progress=100,
+                    message="任务执行完成",
+                    request_id=f"req_{task_type}_events_proxy",
+                    error_code=None,
+                ),
+            )
+
+            with client.stream("GET", f"{route_prefix}/tasks/{task_id}/events") as response:
+                body = "".join(response.iter_text())
+
+            assert response.status_code == 200
+            assert response.headers["content-type"].startswith("text/event-stream")
+            assert "event: connected" in body
+            assert "event: completed" in body
+
+        runtime_store.clear()

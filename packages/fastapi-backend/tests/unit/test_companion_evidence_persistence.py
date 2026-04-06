@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app.core.errors import IntegrationError
-from app.features.companion.long_term_records import (
+from app.shared.long_term_records import (
     AnchorContext,
     AnchorKind,
     CompanionTurnCreateRequest,

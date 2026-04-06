@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from functools import lru_cache
+
+from fastapi import APIRouter, Depends
 
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.learning.schemas import (
@@ -10,7 +12,11 @@ from app.schemas.common import build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
 
 router = APIRouter(prefix="/learning", tags=["learning"])
-service = LearningService()
+
+
+@lru_cache
+def get_learning_service() -> LearningService:
+    return LearningService()
 
 
 @router.get(
@@ -23,20 +29,24 @@ service = LearningService()
         }
     }
 )
-async def learning_bootstrap() -> dict[str, object]:
+async def learning_bootstrap(
+    service: LearningService = Depends(get_learning_service),
+) -> dict[str, object]:
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
 
 @router.post("/persistence-preview", response_model=LearningPersistenceResponse)
 async def learning_persistence_preview(
-    request: LearningPersistenceRequest
+    request: LearningPersistenceRequest,
+    service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
     return await service.prepare_persistence_preview(request)
 
 
 @router.post("/persistence", response_model=LearningPersistenceResponse)
 async def learning_persistence(
-    request: LearningPersistenceRequest
+    request: LearningPersistenceRequest,
+    service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
     return await service.persist_results(request)
