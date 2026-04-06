@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/preprocess-response.schema.json",
+  "title": "VideoPreprocessResponse",
+  "description": "视频预处理接口响应契约。包含图片存储引用、OCR 识别结果、图片元数据和建议。",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "integer",
+      "const": 200,
+      "description": "业务状态码"
+    },
+    "msg": {
+      "type": "string",
+      "description": "业务消息"
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "imageRef": {
+          "type": "string",
+          "description": "图片存储引用，格式为 URI（如 local://... 或 cos://...），对前端不透明",
+          "examples": ["local://uploads/video/20260406/abc123.jpg"]
+        },
+        "ocrText": {
+          "type": ["string", "null"],
+          "description": "OCR 识别文本，识别失败或超时时为 null"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "OCR 识别置信度，0 表示未识别，<0.6 建议用户补充手动文本"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "图片宽度（像素）"
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "图片高度（像素）"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["jpeg", "png", "webp"],
+          "description": "图片格式"
+        },
+        "suggestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "给用户的建议列表，如低置信度时建议补充手动文本"
+        }
+      },
+      "required": ["imageRef", "ocrText", "confidence", "width", "height", "format", "suggestions"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["code", "msg", "data"],
+  "x-error-codes": {
+    "VIDEO_OCR_FAILED": "OCR 服务调用失败",
+    "VIDEO_OCR_EMPTY": "OCR 识别结果为空",
+    "VIDEO_IMAGE_UNREADABLE": "图片无法解码或质量不足",
+    "VIDEO_FILE_TYPE_INVALID": "不支持的文件类型",
+    "VIDEO_FILE_TOO_LARGE": "文件大小超过限制",
+    "VIDEO_STORAGE_FAILED": "图片存储失败"
+  }
+}

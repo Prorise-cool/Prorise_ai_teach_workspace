@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/abc123def456.jpg",
+    "ocrText": "已知函数 f(x) = 2x³ - 3x² + 1\n(1) 求 f(x) 的单调递增区间\n(2) 求 f(x) 在 [0, 2] 上的最大值和最小值",
+    "confidence": 0.92,
+    "width": 1280,
+    "height": 960,
+    "format": "jpeg",
+    "suggestions": []
+  }
+}

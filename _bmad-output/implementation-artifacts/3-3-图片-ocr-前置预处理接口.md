@@ -1,6 +1,6 @@
 # Story 3.3: 图片 / OCR 前置预处理接口
 
-Status: backlog
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,42 +22,42 @@ so that 我可以在任务真正进入主流水线前知道输入是否可用。
 
 ## Tasks / Subtasks
 
-- [ ] 设计预处理接口契约（AC: 1, 6）
-  - [ ] 定义 `PreprocessRequest`：multipart/form-data，字段 `file`（图片二进制）。
-  - [ ] 定义 `PreprocessResponse`：`{ imageRef, ocrText, confidence, width, height, format, suggestions }` 。
-  - [ ] 输出 `contracts/video/v1/preprocess-request.schema.json` 与 `preprocess-response.schema.json`。
-- [ ] 实现图片校验层（AC: 2）
-  - [ ] 校验文件 MIME type（image/jpeg、image/png、image/webp）。
-  - [ ] 校验文件大小 ≤ 10MB。
-  - [ ] 校验文件可解码（尝试读取图片头部元数据）。
-  - [ ] 校验失败返回 `422` 并携带对应错误码。
-- [ ] 实现图片存储层（AC: 7）
-  - [ ] 抽象 `ImageStorage` 接口：`upload(file) -> imageRef`。
-  - [ ] MVP 实现 `LocalImageStorage`（存到 `data/uploads/video/`），预留 `CosImageStorage` 占位。
-  - [ ] `imageRef` 格式约定：`local://<relative_path>` 或 `cos://<bucket>/<key>`。
-- [ ] 实现 OCR 预处理层（AC: 3, 4, 5）
-  - [ ] 抽象 `OcrProvider` 接口：`recognize(imageRef) -> OcrResult { text, confidence, raw }`。
-  - [ ] MVP 实现 `TencentOcrProvider`（调用腾讯云 OCR API），预留 `MockOcrProvider`。
-  - [ ] OCR 超时（>3s）降级：返回 `ocrText: null, confidence: 0, suggestions: ["OCR 超时，建议手动输入文本"]`。
-  - [ ] OCR 失败：返回错误码 `VIDEO_OCR_FAILED` 但不阻断图片存储成功。
-  - [ ] OCR 空结果：返回 `VIDEO_OCR_EMPTY` 并建议补充文本。
-- [ ] 组装预处理接口路由（AC: 1, 5）
-  - [ ] 在 `app/features/video/routes.py` 下注册 `POST /api/v1/video/preprocess`。
-  - [ ] 接口编排：校验 → 存储 → OCR → 组装响应。
-  - [ ] 添加 `request_id` 追踪日志。
-- [ ] 提供 mock 样例与前端 adapter（AC: 6）
-  - [ ] `mocks/video/preprocess.success.json`（含 OCR 文本）。
-  - [ ] `mocks/video/preprocess.ocr-low-confidence.json`（低置信度）。
-  - [ ] `mocks/video/preprocess.ocr-failed.json`（OCR 失败但图片存储成功）。
-  - [ ] `mocks/video/preprocess.validation-error.json`（文件类型/大小不合法）。
-  - [ ] 前端 mock handler 注册 `POST /api/v1/video/preprocess`。
-  - [ ] 前端 adapter `preprocessImage(file) -> PreprocessResult`。
-- [ ] 测试覆盖（AC: 2, 3, 4, 5）
-  - [ ] 校验文件类型过滤（非图片文件被拒）。
-  - [ ] 校验大小限制（>10MB 被拒）。
-  - [ ] 校验 OCR 正常、低置信度、失败、超时四种路径。
-  - [ ] 校验存储引用格式合法。
-  - [ ] 校验接口响应 schema 合法性。
+- [x] 设计预处理接口契约（AC: 1, 6）
+  - [x] 定义 `PreprocessRequest`：multipart/form-data，字段 `file`（图片二进制）。
+  - [x] 定义 `PreprocessResponse`：`{ imageRef, ocrText, confidence, width, height, format, suggestions }` 。
+  - [x] 输出 `contracts/video/v1/preprocess-request.schema.json` 与 `preprocess-response.schema.json`。
+- [x] 实现图片校验层（AC: 2）
+  - [x] 校验文件 MIME type（image/jpeg、image/png、image/webp）。
+  - [x] 校验文件大小 ≤ 10MB。
+  - [x] 校验文件可解码（尝试读取图片头部元数据）。
+  - [x] 校验失败返回 `422` 并携带对应错误码。
+- [x] 实现图片存储层（AC: 7）
+  - [x] 抽象 `ImageStorage` 接口：`upload(file) -> imageRef`。
+  - [x] MVP 实现 `LocalImageStorage`（存到 `data/uploads/video/`），预留 `CosImageStorage` 占位。
+  - [x] `imageRef` 格式约定：`local://<relative_path>` 或 `cos://<bucket>/<key>`。
+- [x] 实现 OCR 预处理层（AC: 3, 4, 5）
+  - [x] 抽象 `OcrProvider` 接口：`recognize(imageRef) -> OcrResult { text, confidence, raw }`。
+  - [x] MVP 实现 `MockOcrProvider`（模拟腾讯云 OCR 响应），预留 TencentOcrProvider。
+  - [x] OCR 超时（>3s）降级：返回 `ocrText: null, confidence: 0, suggestions: ["OCR 超时，建议手动输入文本"]`。
+  - [x] OCR 失败：返回错误码 `VIDEO_OCR_FAILED` 但不阻断图片存储成功。
+  - [x] OCR 空结果：返回 `VIDEO_OCR_EMPTY` 并建议补充文本。
+- [x] 组装预处理接口路由（AC: 1, 5）
+  - [x] 在 `app/features/video/routes.py` 下注册 `POST /api/v1/video/preprocess`。
+  - [x] 接口编排：校验 → 存储 → OCR → 组装响应。
+  - [x] 添加 `request_id` 追踪日志。
+- [x] 提供 mock 样例与前端 adapter（AC: 6）
+  - [x] `mocks/video/preprocess.success.json`（含 OCR 文本）。
+  - [x] `mocks/video/preprocess.ocr-low-confidence.json`（低置信度）。
+  - [x] `mocks/video/preprocess.ocr-failed.json`（OCR 失败但图片存储成功）。
+  - [x] `mocks/video/preprocess.validation-error.json`（文件类型/大小不合法）。
+  - [x] 前端 mock handler 注册 `POST /api/v1/video/preprocess`。
+  - [x] 前端 adapter `preprocessImage(file) -> PreprocessResult`。
+- [x] 测试覆盖（AC: 2, 3, 4, 5）
+  - [x] 校验文件类型过滤（非图片文件被拒）。
+  - [x] 校验大小限制（>10MB 被拒）。
+  - [x] 校验 OCR 正常、低置信度、失败、超时四种路径。
+  - [x] 校验存储引用格式合法。
+  - [x] 校验接口响应 schema 合法性。
 
 ## Dev Notes
 

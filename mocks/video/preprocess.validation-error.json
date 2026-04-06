@@ -1,0 +1,14 @@
+{
+  "code": 422,
+  "msg": "不支持的文件类型: application/pdf，仅支持 JPG/PNG/WebP",
+  "data": {
+    "error_code": "VIDEO_FILE_TYPE_INVALID",
+    "retryable": false,
+    "request_id": null,
+    "task_id": null,
+    "details": {
+      "content_type": "application/pdf",
+      "allowed": ["image/jpeg", "image/png", "image/webp"]
+    }
+  }
+}

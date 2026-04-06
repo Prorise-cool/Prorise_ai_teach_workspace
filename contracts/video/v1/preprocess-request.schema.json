@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/preprocess-request.schema.json",
+  "title": "VideoPreprocessRequest",
+  "description": "视频预处理接口请求契约。请求为 multipart/form-data 格式，包含一个图片文件字段。",
+  "type": "object",
+  "properties": {
+    "file": {
+      "type": "string",
+      "format": "binary",
+      "description": "上传的图片文件（multipart/form-data），支持 JPEG/PNG/WebP，最大 10MB"
+    }
+  },
+  "required": ["file"],
+  "additionalProperties": false,
+  "x-content-type": "multipart/form-data",
+  "x-constraints": {
+    "allowedMimeTypes": ["image/jpeg", "image/png", "image/webp"],
+    "maxFileSizeBytes": 10485760,
+    "maxFileSizeHuman": "10MB"
+  }
+}

@@ -3,6 +3,7 @@
  */
 import { authHandlers } from './handlers/auth';
 import { taskHandlers } from './handlers/task';
+import { videoPreprocessHandlers } from './handlers/video-preprocess';
 
 export { authMockFixtures } from './fixtures/auth';
 export { taskMockFixtures } from './fixtures/task';
@@ -43,4 +44,6 @@ export function resetMockServiceWorkerForTest() {
 }
 
 /** 当前应用对外暴露的全部 mock handlers。 */
-export const mockHandlers = [...authHandlers, ...taskHandlers];
+export { videoPreprocessHandlers } from './handlers/video-preprocess';
+
+export const mockHandlers = [...authHandlers, ...taskHandlers, ...videoPreprocessHandlers];

@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/timeout002.png",
+    "ocrText": null,
+    "confidence": 0,
+    "width": 1920,
+    "height": 1080,
+    "format": "png",
+    "suggestions": [
+      "OCR 识别超时，图片已成功存储；建议手动输入题目文本"
+    ]
+  }
+}

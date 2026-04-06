@@ -29,6 +29,13 @@ class TaskErrorCode(StrEnum):
     PROVIDER_ALL_FAILED = "TASK_PROVIDER_ALL_FAILED"
     CANCELLED = "TASK_CANCELLED"
     UNHANDLED_EXCEPTION = "TASK_UNHANDLED_EXCEPTION"
+    # OCR 域错误码 (Story 3.3)
+    VIDEO_OCR_FAILED = "VIDEO_OCR_FAILED"
+    VIDEO_OCR_EMPTY = "VIDEO_OCR_EMPTY"
+    VIDEO_IMAGE_UNREADABLE = "VIDEO_IMAGE_UNREADABLE"
+    VIDEO_FILE_TYPE_INVALID = "VIDEO_FILE_TYPE_INVALID"
+    VIDEO_FILE_TOO_LARGE = "VIDEO_FILE_TOO_LARGE"
+    VIDEO_STORAGE_FAILED = "VIDEO_STORAGE_FAILED"
 
 
 TASK_INTERNAL_STATUS_MAPPING: Final[dict[TaskInternalStatus, TaskStatus]] = {
@@ -53,7 +60,14 @@ TASK_ERROR_RETRYABLE: Final[dict[TaskErrorCode, bool]] = {
     TaskErrorCode.PROVIDER_TIMEOUT: True,
     TaskErrorCode.PROVIDER_ALL_FAILED: True,
     TaskErrorCode.CANCELLED: False,
-    TaskErrorCode.UNHANDLED_EXCEPTION: True
+    TaskErrorCode.UNHANDLED_EXCEPTION: True,
+    # OCR 域错误码 (Story 3.3)
+    TaskErrorCode.VIDEO_OCR_FAILED: True,
+    TaskErrorCode.VIDEO_OCR_EMPTY: False,
+    TaskErrorCode.VIDEO_IMAGE_UNREADABLE: False,
+    TaskErrorCode.VIDEO_FILE_TYPE_INVALID: False,
+    TaskErrorCode.VIDEO_FILE_TOO_LARGE: False,
+    TaskErrorCode.VIDEO_STORAGE_FAILED: True,
 }
 
 

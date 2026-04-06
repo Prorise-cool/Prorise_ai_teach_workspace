@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/lowconf789.png",
+    "ocrText": "已知 f(x) = x² + 2x + 1\n求 f(3) 的值",
+    "confidence": 0.45,
+    "width": 800,
+    "height": 600,
+    "format": "png",
+    "suggestions": [
+      "OCR 识别置信度较低（45%），建议核对识别结果并补充修正"
+    ]
+  }
+}
