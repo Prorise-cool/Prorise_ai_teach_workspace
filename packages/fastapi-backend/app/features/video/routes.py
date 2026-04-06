@@ -1,8 +1,18 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import JSONResponse
 
+from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
+from app.features.video.create_task_models import (
+    CreateVideoTaskAcceptedPayload,
+    CreateVideoTaskRequest,
+    CreateVideoTaskSuccessEnvelope,
+    IdempotentConflictPayload,
+    IdempotentConflictEnvelope,
+)
+from app.features.video.preprocess_models import VideoPreprocessSuccessEnvelope
 from app.features.video.schemas import (
     VideoTaskMetadataCreateRequest,
     VideoTaskMetadataPageResponse,
@@ -10,12 +20,18 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
+from app.features.video.services.create_task import (
+    create_video_task,
+    ensure_video_task_create_permission,
+)
+from app.features.video.services.preprocess import PreprocessService
 from app.schemas.common import build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus
 
 router = APIRouter(prefix="/video", tags=["video"])
 service = VideoService()
+preprocess_service = PreprocessService()
 
 
 @router.get(
@@ -33,8 +49,55 @@ async def video_bootstrap() -> dict[str, object]:
     return build_success_envelope(payload)
 
 
-@router.post("/tasks", response_model=VideoTaskMetadataPreviewResponse)
-async def create_video_task(payload: VideoTaskMetadataCreateRequest) -> VideoTaskMetadataPreviewResponse:
+@router.post(
+    "/preprocess",
+    response_model=VideoPreprocessSuccessEnvelope,
+    summary="图片预处理（校验、存储与 OCR）",
+)
+async def preprocess_image(
+    file: UploadFile = File(..., description="图片文件（JPEG/PNG/WebP，最大 10MB）"),
+) -> dict[str, object]:
+    result = await preprocess_service.preprocess(
+        file_bytes=await file.read(),
+        filename=file.filename or "upload-image",
+        content_type=file.content_type,
+    )
+    return build_success_envelope(result, msg="预处理完成")
+
+
+@router.post(
+    "/tasks",
+    status_code=202,
+    response_model=CreateVideoTaskSuccessEnvelope,
+    responses={
+        409: {"model": IdempotentConflictEnvelope, "description": "幂等键冲突，返回已有任务"},
+    },
+)
+async def create_video_task_endpoint(
+    payload: CreateVideoTaskRequest,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+) -> dict[str, object] | JSONResponse:
+    ensure_video_task_create_permission(access_context)
+    result = await create_video_task(
+        payload,
+        access_context=access_context,
+        runtime_store=request.app.state.runtime_store,
+        scheduler=request.app.state.task_scheduler,
+        metadata_service=service,
+    )
+    if isinstance(result, IdempotentConflictPayload):
+        return JSONResponse(
+            status_code=409,
+            content=IdempotentConflictEnvelope(data=result).model_dump(mode="json", by_alias=True),
+        )
+    return CreateVideoTaskSuccessEnvelope(
+        data=CreateVideoTaskAcceptedPayload.model_validate(result)
+    ).model_dump(mode="json", by_alias=True)
+
+
+@router.post("/tasks/metadata", response_model=VideoTaskMetadataPreviewResponse)
+async def create_video_task_metadata(payload: VideoTaskMetadataCreateRequest) -> VideoTaskMetadataPreviewResponse:
     return await service.persist_task(payload)
 
 

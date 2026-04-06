@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/mock-preprocess-timeout.jpg",
+    "ocrText": null,
+    "confidence": 0,
+    "width": 1024,
+    "height": 768,
+    "format": "webp",
+    "suggestions": [
+      "OCR 识别超时，建议手动输入题目文本"
+    ],
+    "errorCode": "VIDEO_OCR_TIMEOUT"
+  }
+}

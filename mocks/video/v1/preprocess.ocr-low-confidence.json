@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "msg": "预处理完成",
+  "data": {
+    "imageRef": "local://20260406/mock-preprocess-low-confidence.jpg",
+    "ocrText": "已知 f(x)=x^2+2x+1，求 f(3)",
+    "confidence": 0.45,
+    "width": 1024,
+    "height": 768,
+    "format": "png",
+    "suggestions": [
+      "OCR 识别置信度较低，建议核对识别结果并补充修正"
+    ],
+    "errorCode": null
+  }
+}

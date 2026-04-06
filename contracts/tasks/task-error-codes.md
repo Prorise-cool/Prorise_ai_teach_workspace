@@ -10,6 +10,16 @@
 | `TASK_PROVIDER_ALL_FAILED` | `503` | `true` | 稍后重试 | 已尝试的 Provider 全部失败 |
 | `TASK_CANCELLED` | `409` | `false` | 如需继续请重新发起任务 | 任务被用户或系统显式取消 |
 | `TASK_UNHANDLED_EXCEPTION` | `500` | `true` | 记录 `requestId` / `taskId` 后排障 | 未被业务层显式捕获的异常 |
+| `VIDEO_INPUT_EMPTY` | `422` | `false` | 填写内容后重新提交 | 视频文本输入为空或仅空白 |
+| `VIDEO_INPUT_TOO_LONG` | `422` | `false` | 缩减内容后重新提交 | 视频文本输入超过 5000 字符上限 |
+| `VIDEO_IMAGE_FORMAT_INVALID` | `422` | `false` | 选择 JPG/PNG/WebP 格式图片 | 图片格式不在支持列表内 |
+| `VIDEO_IMAGE_TOO_LARGE` | `422` | `false` | 压缩图片或选择更小文件 | 图片体积超过 10MB 限制 |
+| `VIDEO_IMAGE_UNREADABLE` | `422` | `false` | 更换清晰且完整的图片 | 图片为空、损坏或无法解码 |
+| `VIDEO_OCR_FAILED` | `200` | `false` | 手动补充题目文本 | OCR 调用失败，但图片已成功存储 |
+| `VIDEO_OCR_EMPTY` | `200` | `false` | 手动补充题目文本 | OCR 没有识别到有效文本 |
+| `VIDEO_OCR_TIMEOUT` | `200` | `true` | 可重试预处理或直接手动输入文本 | OCR 超时降级 |
+| `VIDEO_STORAGE_FAILED` | `500` | `true` | 稍后重试 | 图片存储失败 |
+| `VIDEO_DISPATCH_FAILED` | `500` | `true` | 稍后重新提交 | 视频任务创建后消息分发失败 |
 
 ## 追踪字段语义
 

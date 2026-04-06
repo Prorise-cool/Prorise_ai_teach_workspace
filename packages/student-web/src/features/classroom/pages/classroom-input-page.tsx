@@ -14,7 +14,6 @@ import {
 	Mic,
 	PackageSearch,
 	Paperclip,
-	Settings2,
 	ShieldAlert,
 	Sparkles,
 	WifiOff,
@@ -35,7 +34,6 @@ import {
 } from '@/components/input-page';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { cn } from '@/lib/utils';
-import { useFeedback } from '@/shared/feedback/feedback-context';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';
