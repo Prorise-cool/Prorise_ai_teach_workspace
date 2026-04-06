@@ -4,11 +4,9 @@
  */
 import type { LucideIcon } from 'lucide-react';
 import { BookOpen, Languages, LayoutTemplate, LogOut, Menu, Moon, SunMedium, Video, X } from 'lucide-react';
-import type { MouseEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,9 +15,9 @@ import {
 	DialogTitle,
 	DialogTrigger
 } from '@/components/ui/dialog';
+import { useTopNavControls } from '@/components/navigation/use-top-nav-controls';
 import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
 import { cn } from '@/lib/utils';
-import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 
 import '@/components/navigation/global-top-nav.scss';
@@ -92,8 +90,18 @@ export function GlobalTopNav({
 	const location = useLocation();
 	const session = useAuthSessionStore(state => state.session);
 	const { logout, isLoggingOut } = useAuthSessionActions();
-	const { themeMode, toggleThemeMode } = useThemeMode();
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const {
+		closeLabel,
+		closeMobileMenu,
+		handleLocaleToggle,
+		localeToggleLabel,
+		mobileMenuOpen,
+		openMenuLabel,
+		setMobileMenuOpen,
+		themeMode,
+		themeToggleAriaLabel,
+		toggleThemeMode
+	} = useTopNavControls();
 
 	const brandLabel = useMemo(
 		() =>
@@ -124,18 +132,6 @@ export function GlobalTopNav({
 			: t('entryNav.signIn'),
 		to: '/classroom/input'
 	};
-
-	const nextLocale = appI18n.resolvedLanguage === 'zh-CN' ? 'en-US' : 'zh-CN';
-
-	function closeMobileMenu() {
-		setMobileMenuOpen(false);
-	}
-
-	function handleLocaleToggle(event: MouseEvent<HTMLButtonElement>) {
-		event.preventDefault();
-		event.stopPropagation();
-		void appI18n.changeLanguage(nextLocale);
-	}
 
 	function renderNavLink(link: GlobalTopNavLink, mobile = false) {
 		const isCurrent = isActiveLink(location.pathname, link.href);
@@ -237,11 +233,11 @@ export function GlobalTopNav({
 							variant="outline"
 							size="sm"
 							className="min-w-10 border-border/80 bg-background/70 px-3"
-							aria-label={t('entryNav.localeToggle')}
+							aria-label={localeToggleLabel}
 							onClick={handleLocaleToggle}
 						>
 							<Languages className="mr-1 h-4 w-4" />
-							<span>{t('entryNav.localeToggle')}</span>
+							<span>{localeToggleLabel}</span>
 						</Button>
 					) : null}
 
@@ -250,7 +246,7 @@ export function GlobalTopNav({
 						variant="outline"
 						size="icon"
 						className="border-border/80 bg-background/70"
-						aria-label={t('entryNav.themeToggle')}
+						aria-label={themeToggleAriaLabel}
 						onClick={toggleThemeMode}
 					>
 						{themeMode === 'dark' ? (
@@ -314,7 +310,7 @@ export function GlobalTopNav({
 							variant="outline"
 							size="icon"
 							className="border-border/80 bg-background/70 md:hidden"
-							aria-label={mobileMenuOpen ? t('common.close') : t('common.openMenu')}
+							aria-label={mobileMenuOpen ? closeLabel : openMenuLabel}
 						>
 							{mobileMenuOpen ? (
 								<X className="h-4 w-4" />
@@ -337,7 +333,7 @@ export function GlobalTopNav({
 						variant="outline"
 						size="icon"
 						className="size-9 border-border/80 bg-background/70"
-						aria-label={t('common.close')}
+						aria-label={closeLabel}
 						onClick={closeMobileMenu}
 					>
 						<X className="h-4 w-4" />
@@ -407,7 +403,7 @@ export function GlobalTopNav({
 							}}
 						>
 							<Languages className="mr-2 h-4 w-4" />
-							{t('entryNav.localeToggle')}
+							{localeToggleLabel}
 						</Button>
 					) : null}
 				</div>

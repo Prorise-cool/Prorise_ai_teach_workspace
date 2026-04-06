@@ -13,6 +13,7 @@ import { AuthScene } from '@/features/auth/components/auth-scene';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { RegisterForm } from '@/features/auth/components/register-form';
 import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state';
+import { useRegisterEnabledQuery } from '@/features/auth/hooks/use-register-enabled-query';
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect';
 import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
 import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
@@ -20,7 +21,6 @@ import { authService, type AuthService } from '@/services/auth';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 import {
-	AUTH_DEFAULT_TENANT_ID,
 	type AuthSession
 } from '@/types/auth';
 
@@ -47,7 +47,6 @@ export function LoginPage({
 	const { notify } = useFeedback();
 	const navigate = useNavigate();
 	const [activeView, setActiveView] = useState<AuthView>('login');
-	const [registerEnabled, setRegisterEnabled] = useState(false);
 	const [registerSucceeded, setRegisterSucceeded] = useState(false);
 	const [prefilledLoginUsername, setPrefilledLoginUsername] = useState('');
 	const [authRedirectReason, setAuthRedirectReason] = useState<
@@ -57,6 +56,7 @@ export function LoginPage({
 		null
 	);
 	const registerFallbackNotifiedRef = useRef(false);
+	const registerEnabledQuery = useRegisterEnabledQuery(service);
 
 	// 页面容器 Session状态。
 	const session = useAuthSessionStore(state => state.session);
@@ -72,6 +72,7 @@ export function LoginPage({
 	const {
 		returnTo
 	} = useAuthRedirect();
+	const registerEnabled = registerEnabledQuery.data ?? false;
 
 	/**
 	 * 在认证成功后写入会话，并执行统一回跳。
@@ -149,46 +150,25 @@ export function LoginPage({
 	]);
 
 	useEffect(() => {
-		let cancelled = false;
-
-		async function bootstrapRegisterState() {
-			try {
-				const enabled = await service.getRegisterEnabled(AUTH_DEFAULT_TENANT_ID);
-
-				if (cancelled) {
-					return;
-				}
-
-				setRegisterEnabled(enabled);
-
-				if (!enabled) {
-					setActiveView('login');
-				}
-			} catch {
-				if (cancelled) {
-					return;
-				}
-
-				setRegisterEnabled(false);
-				setActiveView('login');
-
-				if (!registerFallbackNotifiedRef.current) {
-					registerFallbackNotifiedRef.current = true;
-					notify({
-						tone: 'warning',
-						title: t('auth.feedback.registerStateFallbackTitle'),
-						description: t('auth.feedback.registerStateFallbackMessage')
-					});
-				}
-			}
+		if (registerEnabled) {
+			return;
 		}
 
-		void bootstrapRegisterState();
+		setActiveView('login');
+	}, [registerEnabled]);
 
-		return () => {
-			cancelled = true;
-		};
-	}, [notify, service, t]);
+	useEffect(() => {
+		if (!registerEnabledQuery.isError || registerFallbackNotifiedRef.current) {
+			return;
+		}
+
+		registerFallbackNotifiedRef.current = true;
+		notify({
+			tone: 'warning',
+			title: t('auth.feedback.registerStateFallbackTitle'),
+			description: t('auth.feedback.registerStateFallbackMessage')
+		});
+	}, [notify, registerEnabledQuery.isError, t]);
 
 	function switchToLogin() {
 		setActiveView('login');
