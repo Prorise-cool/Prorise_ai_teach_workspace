@@ -85,7 +85,7 @@ development_status:
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
   4-7-视频等待页前端状态机恢复与降级: review
-  4-8-视频结果页播放器与结果操作: ready-for-dev
+  4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: in-progress
   epic-4-retrospective: optional
