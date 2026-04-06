@@ -75,8 +75,8 @@ export function VideoGeneratingPage() {
     };
   }, [snapshot]);
 
-  // SSE 已推送过事件（progress > 0 或已连接）时使用 SSE 状态，否则用 snapshot 兜底
-  const hasSseData = sseState.connected || sseState.progress > 0;
+  // SSE 推送过实际进度事件时才采用 SSE 状态；仅 connected 不算（此时还没有进度数据，会覆盖 snapshot）
+  const hasSseData = sseState.progress > 0 || sseState.status === 'completed' || sseState.status === 'failed' || sseState.status === 'cancelled';
   const effectiveStatus = hasSseData ? sseState.status : (snapshotFallback?.status ?? sseState.status);
   const effectiveProgress = hasSseData ? sseState.progress : (snapshotFallback?.progress ?? sseState.progress);
   const effectiveStageTitle = hasSseData ? sseState.stageTitle : (snapshotFallback?.stageTitle ?? sseState.stageTitle);

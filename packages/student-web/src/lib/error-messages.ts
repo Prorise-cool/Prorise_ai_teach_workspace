@@ -16,14 +16,15 @@ const TASK_ERROR_MESSAGES: Record<TaskErrorCode, string> = {
 
 /**
  * 根据任务错误码返回用户可读文案。
+ * 当 errorCode 为空或无匹配映射时返回 undefined，由调用方决定 fallback（如后端原始 errorMessage）。
  *
  * @param errorCode - 任务错误码。
- * @returns 用户可读的错误描述。
+ * @returns 用户可读的错误描述，无匹配时返回 undefined。
  */
-export function getTaskErrorMessage(errorCode: TaskErrorCode | null | undefined): string {
+export function getTaskErrorMessage(errorCode: TaskErrorCode | null | undefined): string | undefined {
   if (!errorCode) {
-    return '任务处理异常，请稍后重试';
+    return undefined;
   }
 
-  return TASK_ERROR_MESSAGES[errorCode] ?? '任务处理异常，请稍后重试';
+  return TASK_ERROR_MESSAGES[errorCode];
 }

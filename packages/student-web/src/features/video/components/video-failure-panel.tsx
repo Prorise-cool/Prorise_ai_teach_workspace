@@ -35,7 +35,7 @@ export function VideoFailurePanel({
   onFeedback,
   className,
 }: VideoFailurePanelProps) {
-  const displayMessage = getTaskErrorMessage(errorCode) || errorMessage || '任务处理异常';
+  const displayMessage = getTaskErrorMessage(errorCode) ?? errorMessage ?? '任务处理异常，请稍后重试';
 
   return (
     <div
