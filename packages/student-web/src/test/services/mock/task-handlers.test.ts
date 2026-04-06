@@ -59,6 +59,20 @@ describe("task mock handlers", () => {
     );
   });
 
+  it("returns processing snapshots for dynamically created mock video task ids", async () => {
+    const taskId = "vtask_mock_text_mnn16hgn";
+    const response = await fetch(
+      `http://localhost/api/v1/tasks/${taskId}/snapshot`,
+    );
+    const payload = await readJsonRecord(response);
+    const payloadData = readRecord(payload.data);
+
+    expect(response.status).toBe(200);
+    expect(readStringProperty(payloadData ?? {}, "taskId")).toBe(taskId);
+    expect(readStringProperty(payloadData ?? {}, "status")).toBe("processing");
+    expect(readNumberProperty(payloadData ?? {}, "progress")).toBe(42);
+  });
+
   it("returns a forbidden envelope when the scenario requires access denial", async () => {
     const response = await fetch(
       "http://localhost/api/v1/tasks?scenario=forbidden",
