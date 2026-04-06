@@ -1,0 +1,15 @@
+{
+  "code": 422,
+  "msg": "输入内容为空，请填写后重新提交",
+  "data": {
+    "errorCode": "VIDEO_INPUT_EMPTY",
+    "retryable": false,
+    "requestId": null,
+    "taskId": null,
+    "details": {
+      "field": "sourcePayload.text",
+      "constraint": "minLength",
+      "expected": 10
+    }
+  }
+}

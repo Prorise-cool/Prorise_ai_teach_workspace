@@ -10,6 +10,10 @@
 | `TASK_PROVIDER_ALL_FAILED` | `503` | `true` | 稍后重试 | 已尝试的 Provider 全部失败 |
 | `TASK_CANCELLED` | `409` | `false` | 如需继续请重新发起任务 | 任务被用户或系统显式取消 |
 | `TASK_UNHANDLED_EXCEPTION` | `500` | `true` | 记录 `requestId` / `taskId` 后排障 | 未被业务层显式捕获的异常 |
+| `VIDEO_INPUT_EMPTY` | `422` | `false` | 填写内容后重新提交 | 视频文本输入为空或仅空白 |
+| `VIDEO_INPUT_TOO_LONG` | `422` | `false` | 缩减内容后重新提交 | 视频文本输入超过 5000 字符上限 |
+| `VIDEO_IMAGE_FORMAT_INVALID` | `422` | `false` | 选择 JPG/PNG/WebP 格式图片 | 图片格式不在支持列表内 |
+| `VIDEO_IMAGE_TOO_LARGE` | `422` | `false` | 压缩图片或选择更小文件 | 图片体积超过 10MB 限制 |
 
 ## 追踪字段语义
 

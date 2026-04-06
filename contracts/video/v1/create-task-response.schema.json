@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/create-task-response.schema.json",
+  "title": "VideoTaskCreateResponse",
+  "description": "视频任务创建响应 schema，Story 3.1 冻结。",
+  "oneOf": [
+    {
+      "title": "VideoTaskCreateSuccessResponse",
+      "description": "202 Accepted 成功响应。",
+      "type": "object",
+      "required": ["code", "msg", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "integer",
+          "const": 200,
+          "description": "业务状态码，成功固定为 200。"
+        },
+        "msg": {
+          "type": "string",
+          "description": "成功说明文本。"
+        },
+        "data": {
+          "type": "object",
+          "required": ["taskId", "taskType", "status", "createdAt"],
+          "additionalProperties": false,
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "description": "任务唯一标识，格式 vtask_<ulid>。"
+            },
+            "taskType": {
+              "type": "string",
+              "const": "video",
+              "description": "任务类型固定为 video。"
+            },
+            "status": {
+              "type": "string",
+              "const": "pending",
+              "description": "创建后初始状态固定为 pending。"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "任务创建时间戳，ISO 8601 格式。"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "VideoTaskCreateErrorResponse",
+      "description": "422/403/429/500 失败响应。",
+      "type": "object",
+      "required": ["code", "msg", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "integer",
+          "description": "业务错误状态码。"
+        },
+        "msg": {
+          "type": "string",
+          "description": "错误说明文本。"
+        },
+        "data": {
+          "type": "object",
+          "required": ["errorCode", "retryable", "details"],
+          "additionalProperties": false,
+          "properties": {
+            "errorCode": {
+              "type": "string",
+              "enum": [
+                "VIDEO_INPUT_EMPTY",
+                "VIDEO_INPUT_TOO_LONG",
+                "VIDEO_IMAGE_FORMAT_INVALID",
+                "VIDEO_IMAGE_TOO_LARGE",
+                "TASK_INVALID_INPUT",
+                "TASK_UNHANDLED_EXCEPTION"
+              ],
+              "description": "视频域错误码或统一任务错误码。"
+            },
+            "retryable": {
+              "type": "boolean",
+              "description": "是否允许调用方重试。"
+            },
+            "requestId": {
+              "type": ["string", "null"],
+              "description": "请求链路追踪 ID。"
+            },
+            "taskId": {
+              "type": ["string", "null"],
+              "description": "如已创建则携带 taskId。"
+            },
+            "details": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "机器可读的上下文信息。"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
