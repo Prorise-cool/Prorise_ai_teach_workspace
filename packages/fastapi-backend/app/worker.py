@@ -5,6 +5,7 @@ import asyncio
 import dramatiq
 
 from app.core.config import get_settings
+from app.features.video.tasks.video_task_actor import build_video_task
 from app.infra.redis_client import create_dramatiq_broker, create_runtime_store
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.demo_task import DemoTask
@@ -28,6 +29,7 @@ runtime_store = create_runtime_store(settings)
 broker = create_dramatiq_broker(settings)
 dramatiq.set_broker(broker)
 register_task("demo", build_demo_task)
+register_task("video", build_video_task)
 
 
 def consume_task_message(task_type: str, context_payload: dict[str, object]) -> dict[str, object]:

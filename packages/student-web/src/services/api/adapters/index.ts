@@ -24,6 +24,29 @@ export {
   createRealTaskAdapter,
   resolveTaskAdapter
 } from './task-adapter';
+export type {
+  VideoTaskAdapter
+} from './video-task-adapter';
+export {
+  createMockVideoTaskAdapter,
+  createRealVideoTaskAdapter,
+  isVideoTaskAdapterError,
+  resolveVideoTaskAdapter
+} from './video-task-adapter';
+export {
+  VideoTaskAdapterError,
+  createVideoTaskAdapterError,
+} from './video-task-error';
+export type {
+  VideoPreprocessAdapter
+} from './video-preprocess-adapter';
+export {
+  VideoPreprocessAdapterError,
+  createMockVideoPreprocessAdapter,
+  createRealVideoPreprocessAdapter,
+  isVideoPreprocessAdapterError,
+  resolveVideoPreprocessAdapter,
+} from './video-preprocess-adapter';
 export {
   pickAdapterImplementation,
   resolveRuntimeMode

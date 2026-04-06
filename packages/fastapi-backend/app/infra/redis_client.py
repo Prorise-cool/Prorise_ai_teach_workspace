@@ -118,6 +118,42 @@ class RuntimeStore:
             self.storage[key] = json.loads(json.dumps(value))
             self.expirations[key] = self._now() + ttl_seconds
 
+    def claim_runtime_value(
+        self,
+        key: str,
+        value: object,
+        *,
+        ttl_seconds: int,
+        scope: RuntimeStorageScope = RuntimeStorageScope.RUNTIME,
+    ) -> bool:
+        if RuntimeStorageScope(scope) is not RuntimeStorageScope.RUNTIME:
+            raise ValueError("RuntimeStore 不能承担长期业务数据持久化")
+        if ttl_seconds <= 0:
+            raise ValueError("RuntimeStore 写入必须显式设置正数 TTL")
+        if not key.startswith("xm_"):
+            raise ValueError("RuntimeStore key 必须使用 xm_ 运行态命名空间")
+
+        if self.client is not None:
+            result = self.client.set(key, json.dumps(value), ex=ttl_seconds, nx=True)
+            return bool(result)
+
+        with self._lock:
+            self._purge_expired_locked(key)
+            if key in self.storage:
+                return False
+            self.storage[key] = json.loads(json.dumps(value))
+            self.expirations[key] = self._now() + ttl_seconds
+            return True
+
+    def delete_runtime_value(self, key: str) -> None:
+        if self.client is not None:
+            self.client.delete(key)
+            return
+
+        with self._lock:
+            self.storage.pop(key, None)
+            self.expirations.pop(key, None)
+
     def ttl(self, key: str) -> int:
         if self.client is not None:
             return int(self.client.ttl(key))
@@ -214,9 +250,11 @@ class RuntimeStore:
         request_id: str | None = None,
         error_code: TaskErrorCode | None = None,
         source: str = "unknown",
-        context: dict[str, object] | None = None
+        context: dict[str, object] | None = None,
+        created_at: str | None = None,
     ) -> dict[str, object]:
         status = map_internal_status(internal_status)
+        existing = self.get_task_state(task_id) or {}
         payload: dict[str, object] = {
             "taskId": task_id,
             "taskType": task_type,
@@ -228,6 +266,7 @@ class RuntimeStore:
             "errorCode": error_code.value if error_code is not None else None,
             "source": source,
             "context": dict(context or {}),
+            "createdAt": created_at or existing.get("createdAt") or format_trace_timestamp(),
             "updatedAt": format_trace_timestamp()
         }
         self.set_runtime_value(

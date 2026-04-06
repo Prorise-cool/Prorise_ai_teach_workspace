@@ -3,11 +3,17 @@
  */
 import { authHandlers } from './handlers/auth';
 import { taskHandlers } from './handlers/task';
+import { videoPreprocessHandlers } from './handlers/video-preprocess';
+import { videoTaskHandlers } from './handlers/video-task';
 
 export { authMockFixtures } from './fixtures/auth';
 export { taskMockFixtures } from './fixtures/task';
+export { videoPreprocessMockFixtures } from './fixtures/video-preprocess';
+export { videoTaskMockFixtures } from './fixtures/video-task';
 export { authHandlers } from './handlers/auth';
 export { taskHandlers } from './handlers/task';
+export { videoPreprocessHandlers } from './handlers/video-preprocess';
+export { videoTaskHandlers } from './handlers/video-task';
 
 let mockWorkerStartPromise: Promise<boolean> | null = null;
 
@@ -43,4 +49,9 @@ export function resetMockServiceWorkerForTest() {
 }
 
 /** 当前应用对外暴露的全部 mock handlers。 */
-export const mockHandlers = [...authHandlers, ...taskHandlers];
+export const mockHandlers = [
+  ...authHandlers,
+  ...taskHandlers,
+  ...videoPreprocessHandlers,
+  ...videoTaskHandlers,
+];

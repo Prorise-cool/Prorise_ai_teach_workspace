@@ -147,6 +147,21 @@ async function loadVideoInputRoute() {
   };
 }
 
+/**
+ * 按需加载视频等待页占位路由。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadVideoGeneratingRoute() {
+  const { VideoGeneratingPlaceholder } = await import(
+    '@/features/video/pages/video-generating-placeholder'
+  );
+
+  return {
+    Component: VideoGeneratingPlaceholder
+  };
+}
+
 export const appRouter = createBrowserRouter([
   {
     path: '/',
@@ -182,6 +197,10 @@ export const appRouter = createBrowserRouter([
           {
             path: 'video/input',
             lazy: loadVideoInputRoute
+          },
+          {
+            path: 'video/:id/generating',
+            lazy: loadVideoGeneratingRoute
           }
         ]
       },
