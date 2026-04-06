@@ -5,8 +5,12 @@
  */
 import { useCallback, useEffect, useMemo } from 'react';
 import type { FieldErrors, UseFormReturn } from 'react-hook-form';
-import { Image, Loader2, Mic, Send, Sparkles, X } from 'lucide-react';
+import { Image, Loader2, Mic, Send, X } from 'lucide-react';
 
+import {
+  createInputWorkspaceCardClassNames,
+  InputWorkspaceCardFrame,
+} from '@/components/input-page/input-workspace-card-frame';
 import { useFileDropzone } from '@/components/input-page';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';
@@ -48,6 +52,7 @@ export function VideoInputCard({
   labels,
 }: VideoInputCardProps) {
   const { notify } = useFeedback();
+  const classNames = createInputWorkspaceCardClassNames('xm-video-input');
   const { register, setValue, watch, clearErrors, setError } = form;
   const inputType = watch('inputType');
   const imageFiles = watch('imageFiles');
@@ -154,13 +159,6 @@ export function VideoInputCard({
     [clearErrors, form, setValue],
   );
 
-  const handleClearAllImages = useCallback(() => {
-    clearFiles();
-    clearErrors('imageFiles');
-    setValue('inputType', 'text');
-    setValue('imageFiles', [], { shouldValidate: false });
-  }, [clearErrors, clearFiles, setValue]);
-
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLDivElement>) => {
       const items = event.clipboardData?.items;
@@ -196,91 +194,82 @@ export function VideoInputCard({
     errors.imageFiles ? 'video-input-image-error' : null,
   ].filter(Boolean);
   const describedBy = fieldErrorIds.length > 0 ? fieldErrorIds.join(' ') : undefined;
+  const toolButtonClassName = `${classNames.root}-tool-btn`;
+  const submitClassName = `${classNames.root}-submit`;
 
   return (
-    <div className="xm-video-input__card">
-      <div className="xm-video-input__card-hints">
-        <div className="xm-video-input__card-hint xm-video-input__card-hint--accent">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>{labels.smartMatchHint}</span>
-          <span className="xm-video-input__card-hint-desc">
-            {labels.smartMatchDesc}
-          </span>
-        </div>
-        <div className="xm-video-input__card-hint">
-          <span>{labels.multiAgentHint}</span>
-        </div>
-      </div>
-
-      <div
-        className="xm-video-input__card-body relative"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={originalHandleDrop}
-        onPaste={handlePaste}
-      >
-        {isDragging && (
-          <div className="absolute inset-0 z-10 m-3 flex flex-col items-center justify-center rounded-[var(--xm-radius-md)] bg-[color:var(--xm-color-surface-glass)] backdrop-blur-sm border-2 border-dashed border-primary">
-            <p className="text-sm font-semibold text-primary">松开鼠标，上传参考图片</p>
-          </div>
-        )}
-
-        {/* 多图 grid 预览区 */}
-        {imageFiles.length > 0 && inputType === 'image' && (
-          <div className="xm-video-input__card-image-grid">
-            {imageFiles.map((file, index) => (
-              <div key={`${file.name}-${file.size}-${index}`} className="xm-video-input__card-image-thumb">
-                <img
-                  src={previewUrls[index]}
-                  alt={file.name}
-                  className="xm-video-input__card-image-thumb-img"
-                />
-                <button
-                  type="button"
-                  className="xm-video-input__card-image-thumb-remove"
-                  onClick={() => removeImage(index)}
-                  title="移除图片"
-                  aria-label={`移除图片 ${file.name}`}
+    <InputWorkspaceCardFrame
+      block="xm-video-input"
+      smartMatchHint={labels.smartMatchHint}
+      smartMatchDesc={labels.smartMatchDesc}
+      multiAgentHint={labels.multiAgentHint}
+      dragOverlayLabel="松开鼠标，上传参考图片"
+      isDragging={isDragging}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={originalHandleDrop}
+      onPaste={handlePaste}
+      body={
+        <>
+          {imageFiles.length > 0 && inputType === 'image' ? (
+            <div className={`${classNames.root}-image-grid`}>
+              {imageFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${file.size}-${index}`}
+                  className={`${classNames.root}-image-thumb`}
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <img
+                    src={previewUrls[index]}
+                    alt={file.name}
+                    className={`${classNames.root}-image-thumb-img`}
+                  />
+                  <span className="sr-only">{file.name}</span>
+                  <button
+                    type="button"
+                    className={`${classNames.root}-image-thumb-remove`}
+                    onClick={() => removeImage(index)}
+                    title="移除图片"
+                    aria-label={`移除图片 ${file.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
-        <textarea
-          {...textField}
-          className="xm-video-input__card-textarea"
-          placeholder={labels.placeholder}
-          rows={4}
-          aria-invalid={Boolean(errors.text || errors.imageFiles)}
-          aria-describedby={describedBy}
-        />
+          <textarea
+            {...textField}
+            className={`${classNames.root}-textarea`}
+            placeholder={labels.placeholder}
+            rows={4}
+            aria-invalid={Boolean(errors.text || errors.imageFiles)}
+            aria-describedby={describedBy}
+          />
 
-        {errors.text?.message && (
-          <p
-            id="video-input-text-error"
-            className="mt-1 px-1 text-xs text-destructive"
-            role="alert"
-          >
-            {errors.text.message}
-          </p>
-        )}
+          {errors.text?.message ? (
+            <p
+              id="video-input-text-error"
+              className="mt-1 px-1 text-xs text-destructive"
+              role="alert"
+            >
+              {errors.text.message}
+            </p>
+          ) : null}
 
-        {errors.imageFiles?.message && (
-          <p
-            id="video-input-image-error"
-            className="mt-1 px-1 text-xs text-destructive"
-            role="alert"
-          >
-            {errors.imageFiles.message}
-          </p>
-        )}
-      </div>
-
-      <div className="xm-video-input__card-toolbar">
-        <div className="xm-video-input__card-tools">
+          {errors.imageFiles?.message ? (
+            <p
+              id="video-input-image-error"
+              className="mt-1 px-1 text-xs text-destructive"
+              role="alert"
+            >
+              {errors.imageFiles.message}
+            </p>
+          ) : null}
+        </>
+      }
+      tools={
+        <>
           <input
             type="file"
             className="hidden"
@@ -292,7 +281,7 @@ export function VideoInputCard({
           />
           <button
             type="button"
-            className="xm-video-input__card-tool-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)]"
+            className={`${toolButtonClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)]`}
             title={labels.toolUploadImage}
             aria-label={labels.toolUploadImage}
             onClick={triggerSelect}
@@ -302,8 +291,8 @@ export function VideoInputCard({
           <button
             type="button"
             className={cn(
-              'xm-video-input__card-tool-btn relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)]',
-              isRecording && 'text-primary bg-[color:var(--xm-color-brand-50)]',
+              `${toolButtonClassName} relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)]`,
+              isRecording && 'text-primary bg-[color:var(--xm-color-brand-50)]'
             )}
             title={labels.toolVoiceInput}
             aria-label={labels.toolVoiceInput}
@@ -318,17 +307,18 @@ export function VideoInputCard({
             ) : (
               <Mic className="h-4 w-4" />
             )}
-            {isRecording && (
+            {isRecording ? (
               <span className="absolute inset-0 rounded-md bg-[color:var(--xm-color-brand-500)] opacity-20 animate-ping" />
-            )}
+            ) : null}
           </button>
-        </div>
-
+        </>
+      }
+      submitAction={
         <button
           type="submit"
           className={cn(
-            'xm-video-input__card-submit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)] focus-visible:ring-offset-2',
-            isSubmitting && 'opacity-70 cursor-not-allowed',
+            `${submitClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-focus-ring)] focus-visible:ring-offset-2`,
+            isSubmitting && 'opacity-70 cursor-not-allowed'
           )}
           disabled={isSubmitting}
           aria-busy={isSubmitting}
@@ -345,7 +335,7 @@ export function VideoInputCard({
             </>
           )}
         </button>
-      </div>
-    </div>
+      }
+    />
   );
 }

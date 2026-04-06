@@ -9,7 +9,7 @@ import {
   LockKeyhole,
   UserRound
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -26,6 +26,7 @@ import {
   createRegisterFormSchema,
   type RegisterFormValues
 } from '@/features/auth/schemas/auth-form-schemas';
+import { useAuthCaptcha } from '@/features/auth/hooks/use-auth-captcha';
 import {
   useAuthFieldCopy,
   useAuthPageCopy,
@@ -40,12 +41,6 @@ type RegisterFormProps = {
   onRegistered: (username: string) => void;
   onSwitchToLogin: () => void;
   onSceneZoneChange: (zone: AuthInteractionZone) => void;
-};
-
-type CaptchaState = {
-  captchaEnabled: boolean;
-  imageBase64?: string;
-  uuid?: string;
 };
 
 /**
@@ -64,10 +59,6 @@ export function RegisterForm({
   const authFieldCopy = useAuthFieldCopy();
   const authPageCopy = useAuthPageCopy();
   const [formError, setFormError] = useState<string | null>(null);
-  const [captchaLoading, setCaptchaLoading] = useState(false);
-  const [captchaState, setCaptchaState] = useState<CaptchaState>({
-    captchaEnabled: false
-  });
   const {
     control,
     register,
@@ -83,32 +74,17 @@ export function RegisterForm({
     reValidateMode: 'onChange'
   });
 
-  const refreshCaptcha = useCallback(async () => {
-    setCaptchaLoading(true);
-
-    try {
-      const nextCaptcha = await service.getCaptcha();
-
-      setCaptchaState({
-        captchaEnabled: nextCaptcha.captchaEnabled,
-        imageBase64: nextCaptcha.imageBase64,
-        uuid: nextCaptcha.uuid
-      });
+  const { captchaLoading, captchaState, refreshCaptcha } = useAuthCaptcha({
+    service,
+    bootstrapErrorMessage: t('auth.feedback.bootstrapFailed'),
+    onBootstrapError: setFormError,
+    resetCode: () => {
       setValue('code', '');
+    },
+    clearCodeError: () => {
       clearErrors('code');
-    } catch (error) {
-      setCaptchaState({ captchaEnabled: false });
-      setFormError(
-        getAuthFeedbackMessage(error, t('auth.feedback.bootstrapFailed'))
-      );
-    } finally {
-      setCaptchaLoading(false);
     }
-  }, [clearErrors, service, setValue, t]);
-
-  useEffect(() => {
-    void refreshCaptcha();
-  }, [refreshCaptcha]);
+  });
 
   const submitForm = handleSubmit(async values => {
     setFormError(null);
