@@ -1,13 +1,13 @@
+from app.core.errors import IntegrationError
+from app.features.knowledge.schemas import KnowledgeBootstrapResponse
 from pydantic import ValidationError
 
-from app.features.companion.long_term_records import (
+from app.shared.long_term_records import (
     KnowledgeChatCreateRequest,
     KnowledgeChatSnapshot,
     knowledge_chat_from_ruoyi_data,
     knowledge_chat_to_ruoyi_payload,
 )
-from app.features.knowledge.schemas import KnowledgeBootstrapResponse
-from app.core.errors import IntegrationError
 from app.shared.ruoyi_client import RuoYiClient
 
 

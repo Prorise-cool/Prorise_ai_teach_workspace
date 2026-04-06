@@ -5,7 +5,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-import app.features.learning.routes as learning_routes
+from app.features.learning.routes import get_learning_service
 from app.features.learning.service import LearningService
 from app.main import create_app
 from app.shared.ruoyi_client import RuoYiClient
@@ -25,7 +25,7 @@ def _build_client_factory(handler):
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, list[dict[str, object]], list[str]]:
+def client() -> tuple[TestClient, list[dict[str, object]], list[str]]:
     captured_payloads: list[dict[str, object]] = []
     captured_paths: list[str] = []
 
@@ -59,8 +59,9 @@ def client(monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, list[dict[str, 
             },
         )
 
-    monkeypatch.setattr(learning_routes, "service", LearningService(client_factory=_build_client_factory(handler)))
-    return TestClient(create_app()), captured_payloads, captured_paths
+    app = create_app()
+    app.dependency_overrides[get_learning_service] = lambda: LearningService(client_factory=_build_client_factory(handler))
+    return TestClient(app), captured_payloads, captured_paths
 
 
 def test_learning_persistence_preview_covers_all_result_types() -> None:

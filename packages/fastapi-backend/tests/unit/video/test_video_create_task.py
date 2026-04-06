@@ -13,6 +13,7 @@ from app.core.security import (
     RuoYiAccessProfile,
     get_security_runtime_store,
 )
+from app.features.video.routes import get_video_service
 from app.features.video.create_task_models import CreateVideoTaskRequest
 from app.features.video.service import VideoService
 from app.features.video.services.create_task import (
@@ -252,9 +253,9 @@ def test_video_metadata_route_moves_to_tasks_metadata(monkeypatch) -> None:
     }
     fake_service = MagicMock(spec=VideoService)
     fake_service.persist_task = AsyncMock(return_value=fake_metadata_response)
-    monkeypatch.setattr("app.features.video.routes.service", fake_service)
 
     with video_client(monkeypatch) as (client, _):
+        client.app.dependency_overrides[get_video_service] = lambda: fake_service
         response = client.post(
             "/api/v1/video/tasks/metadata",
             json={

@@ -1,8 +1,11 @@
+from functools import lru_cache
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Header, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.api.routes.tasks import get_task_events as get_shared_task_events
+from app.api.routes.tasks import get_task_status as get_shared_task_status
 from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.video.create_task_models import (
@@ -25,13 +28,21 @@ from app.features.video.services.create_task import (
     ensure_video_task_create_permission,
 )
 from app.features.video.services.preprocess import PreprocessService
-from app.schemas.common import build_success_envelope
+from app.schemas.common import ErrorResponseEnvelope, TaskSnapshotResponseEnvelope, build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus
 
 router = APIRouter(prefix="/video", tags=["video"])
-service = VideoService()
-preprocess_service = PreprocessService()
+
+
+@lru_cache
+def get_video_service() -> VideoService:
+    return VideoService()
+
+
+@lru_cache
+def get_video_preprocess_service() -> PreprocessService:
+    return PreprocessService()
 
 
 @router.get(
@@ -44,7 +55,9 @@ preprocess_service = PreprocessService()
         }
     }
 )
-async def video_bootstrap() -> dict[str, object]:
+async def video_bootstrap(
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
@@ -56,6 +69,7 @@ async def video_bootstrap() -> dict[str, object]:
 )
 async def preprocess_image(
     file: UploadFile = File(..., description="图片文件（JPEG/PNG/WebP，最大 10MB）"),
+    preprocess_service: PreprocessService = Depends(get_video_preprocess_service),
 ) -> dict[str, object]:
     result = await preprocess_service.preprocess(
         file_bytes=await file.read(),
@@ -77,6 +91,7 @@ async def create_video_task_endpoint(
     payload: CreateVideoTaskRequest,
     request: Request,
     access_context: AccessContext = Depends(get_access_context),
+    metadata_service: VideoService = Depends(get_video_service),
 ) -> dict[str, object] | JSONResponse:
     ensure_video_task_create_permission(access_context)
     result = await create_video_task(
@@ -84,7 +99,7 @@ async def create_video_task_endpoint(
         access_context=access_context,
         runtime_store=request.app.state.runtime_store,
         scheduler=request.app.state.task_scheduler,
-        metadata_service=service,
+        metadata_service=metadata_service,
     )
     if isinstance(result, IdempotentConflictPayload):
         return JSONResponse(
@@ -97,7 +112,10 @@ async def create_video_task_endpoint(
 
 
 @router.post("/tasks/metadata", response_model=VideoTaskMetadataPreviewResponse)
-async def create_video_task_metadata(payload: VideoTaskMetadataCreateRequest) -> VideoTaskMetadataPreviewResponse:
+async def create_video_task_metadata(
+    payload: VideoTaskMetadataCreateRequest,
+    service: VideoService = Depends(get_video_service),
+) -> VideoTaskMetadataPreviewResponse:
     return await service.persist_task(payload)
 
 
@@ -109,7 +127,8 @@ async def list_video_tasks(
     updated_from: datetime | None = Query(default=None, alias="updatedFrom"),
     updated_to: datetime | None = Query(default=None, alias="updatedTo"),
     page_num: int = Query(default=1, alias="pageNum", ge=1),
-    page_size: int = Query(default=10, alias="pageSize", ge=1, le=100)
+    page_size: int = Query(default=10, alias="pageSize", ge=1, le=100),
+    service: VideoService = Depends(get_video_service),
 ) -> VideoTaskMetadataPageResponse:
     return await service.list_tasks(
         status=status,
@@ -123,13 +142,63 @@ async def list_video_tasks(
 
 
 @router.get("/tasks/{task_id}", response_model=VideoTaskMetadataSnapshot)
-async def get_video_task(task_id: str) -> VideoTaskMetadataSnapshot:
+async def get_video_task(
+    task_id: str,
+    service: VideoService = Depends(get_video_service),
+) -> VideoTaskMetadataSnapshot:
     snapshot = await service.get_task(task_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Video task not found")
     return snapshot
 
 
+@router.get(
+    "/tasks/{task_id}/status",
+    response_model=TaskSnapshotResponseEnvelope,
+    responses={
+        404: {
+            "model": ErrorResponseEnvelope,
+            "description": "任务不存在或运行态已过期",
+        }
+    },
+)
+async def get_video_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+    return await get_shared_task_status(task_id, request)
+
+
+@router.get(
+    "/tasks/{task_id}/events",
+    response_model=None,
+    responses={
+        200: {
+            "description": "按需补发 `Last-Event-ID` 之后缺失的任务事件",
+            "content": {
+                "text/event-stream": {
+                    "example": (
+                        "id: video_20260329161500_ab12cd34:evt:000004\n"
+                        "event: progress\n"
+                        "data: {\"taskId\":\"video_20260329161500_ab12cd34\"}\n\n"
+                    )
+                }
+            },
+        },
+        404: {
+            "model": ErrorResponseEnvelope,
+            "description": "任务不存在或运行态已过期",
+        },
+    },
+)
+async def get_video_task_events(
+    task_id: str,
+    request: Request,
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+) -> Response:
+    return await get_shared_task_events(task_id, request, last_event_id)
+
+
 @router.get("/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse)
-async def replay_video_session(session_id: str) -> VideoTaskMetadataPageResponse:
+async def replay_video_session(
+    session_id: str,
+    service: VideoService = Depends(get_video_service),
+) -> VideoTaskMetadataPageResponse:
     return await service.replay_session(session_id)
