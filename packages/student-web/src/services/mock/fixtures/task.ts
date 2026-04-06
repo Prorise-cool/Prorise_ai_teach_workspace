@@ -17,6 +17,7 @@ import { readNumber, readRecord, readString } from "@/lib/type-guards";
 
 const FIXTURE_TIMESTAMP = "2026-03-30T13:05:00Z";
 const TASK_TYPE = "video";
+const VIDEO_TASK_ID_PREFIX = "vtask_";
 
 type TaskFixtureError = {
   status: number;
@@ -268,6 +269,16 @@ function resolveDetailFixtureById(taskId: string) {
 
   if (taskId === taskDetails.cancelled.id) {
     return taskDetails.cancelled;
+  }
+
+  if (taskId.startsWith(VIDEO_TASK_ID_PREFIX)) {
+    return buildTaskDetail(
+      taskId,
+      "processing",
+      42,
+      `req_${taskId}`,
+      "任务处理中状态已同步",
+    );
   }
 
   return null;
