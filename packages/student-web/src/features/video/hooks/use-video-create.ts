@@ -63,7 +63,7 @@ export function useVideoCreate() {
       return videoTaskAdapter.createTask(request);
     },
     onSuccess: (result) => {
-      void navigate(`/video/${result.taskId}/generating`);
+      void navigate(`/video/${result.taskId}/generating`, { replace: true });
     },
     onError: (error) => {
       notify({
