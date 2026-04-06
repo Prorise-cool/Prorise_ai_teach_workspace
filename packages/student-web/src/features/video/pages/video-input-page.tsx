@@ -57,7 +57,7 @@ export function VideoInputPage() {
     defaultValues: {
       inputType: 'text',
       text: '',
-      imageFile: null,
+      imageFiles: [],
     },
     mode: 'onSubmit',
   });
@@ -69,9 +69,9 @@ export function VideoInputPage() {
       setValue('text', transcript, { shouldValidate: false });
     }
   });
-  const imageFile = useWatch({
+  const imageFiles = useWatch({
     control,
-    name: 'imageFile',
+    name: 'imageFiles',
   });
   const navLinks = t('entryNav.landingLinks', {
     returnObjects: true
@@ -178,7 +178,7 @@ export function VideoInputPage() {
         noValidate
       >
         {/* 标题区 */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full flex justify-center">
           <InputPageHeader
             className="xm-theme-video-header"
             badgeIcon={Sparkles}
@@ -189,7 +189,7 @@ export function VideoInputPage() {
         </motion.div>
 
         {/* 核心输入卡片 */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full flex justify-center">
           <VideoInputCard
             form={form}
             errors={formState.errors}
@@ -209,14 +209,14 @@ export function VideoInputPage() {
         </motion.div>
 
         {/* 建议标签 */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="w-full flex justify-center">
           <InputPageSuggestions
             label={suggestionsLabel}
             pills={suggestions}
             onSelect={(pill) => {
               setValue('text', pill, { shouldValidate: false });
 
-              if (!imageFile) {
+              if (imageFiles.length === 0) {
                 setValue('inputType', 'text');
               }
             }}
@@ -225,12 +225,12 @@ export function VideoInputPage() {
       </form>
 
       {/* 引导卡片 */}
-      <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants} className="w-full flex justify-center">
         <InputPageGuideCards cards={guideCards} />
       </motion.div>
 
       {/* 社区瀑布流 */}
-      <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants} className="w-full max-w-7xl mx-auto">
         <CommunityFeed
           title={feedTitle}
           description={feedDesc}

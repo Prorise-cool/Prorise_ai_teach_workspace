@@ -30,8 +30,8 @@ export function useVideoCreate() {
       const clientRequestId = `video_${nanoid(12)}`;
       let request: VideoTaskCreateRequest;
 
-      if (values.inputType === 'image' && values.imageFile) {
-        const preprocessResult = await videoPreprocessAdapter.preprocessImage(values.imageFile);
+      if (values.inputType === 'image' && values.imageFiles.length > 0) {
+        const preprocessResult = await videoPreprocessAdapter.preprocessImage(values.imageFiles[0]);
 
         if (preprocessResult.errorCode) {
           notify({

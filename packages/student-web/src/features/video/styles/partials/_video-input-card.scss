@@ -51,7 +51,7 @@
   }
 
   &-body {
-    padding: 1.25rem;
+    padding: 2.5rem 1.5rem;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -67,7 +67,7 @@
     line-height: 1.625;
     color: var(--xm-color-text-primary);
     font-weight: 500;
-    min-height: 100px;
+    min-height: 120px;
 
     &::placeholder {
       color: var(--xm-color-text-muted);
@@ -121,6 +121,51 @@
     height: 1.25rem;
     background: var(--xm-color-border);
     margin: 0 0.25rem;
+  }
+
+  /* 多图 grid 预览区 */
+  &-image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &-image-thumb {
+    position: relative;
+    width: 5rem;
+    height: 5rem;
+    border-radius: var(--xm-radius-md);
+    overflow: hidden;
+    border: 1px solid var(--xm-color-border);
+    flex-shrink: 0;
+
+    &-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &-remove {
+      position: absolute;
+      top: 0.25rem;
+      right: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: var(--xm-radius-full);
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    &:hover &-remove {
+      opacity: 1;
+    }
   }
 
   &-submit {

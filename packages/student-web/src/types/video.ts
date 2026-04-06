@@ -40,7 +40,7 @@ export const VIDEO_TEXT_MIN_LENGTH = 10;
 export const VIDEO_TEXT_MAX_LENGTH = 5000;
 
 /** 图片最大体积（字节）。 */
-export const VIDEO_IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+export const VIDEO_IMAGE_MAX_SIZE_BYTES = 30 * 1024 * 1024;
 
 /** 支持的图片 MIME 类型。 */
 export const VIDEO_IMAGE_ACCEPTED_TYPES = [
