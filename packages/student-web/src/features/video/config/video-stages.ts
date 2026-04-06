@@ -1,53 +1,77 @@
 /**
- * 文件说明：视频生成六阶段映射配置。
- * 定义 progress 区间到阶段名称、图标标识与 i18n 键的对应关系。
+ * 文件说明：视频流水线 8 阶段映射配置（对齐 Story 4.1 pipeline-stages 契约）。
+ * 定义 stage 枚举到 displayLabel、progress 区间与预估时长的对应关系。
  */
+import type { VideoPipelineStage } from '@/types/video';
 
-/** 视频生成阶段定义。 */
-export interface VideoStage {
-  /** 阶段标识键。 */
-  key: string;
+/** 视频流水线阶段配置。 */
+export interface VideoStageConfig {
+  /** 阶段枚举值。 */
+  key: VideoPipelineStage;
   /** 阶段中文名称。 */
   label: string;
   /** progress 区间起点（含）。 */
-  min: number;
+  progressStart: number;
   /** progress 区间终点（含）。 */
-  max: number;
-  /** 对应日志标签。 */
+  progressEnd: number;
+  /** 预估时长范围（秒）。 */
+  estimatedDuration: string;
+  /** 是否为条件阶段。 */
+  conditional: boolean;
+  /** 日志标签。 */
   tag: string;
 }
 
 /**
- * 视频生成六阶段配置。
+ * 视频流水线 8 阶段配置（Story 4.1 冻结）。
  *
- * 区间定义：
- * - 题目理解：0–10%
- * - 分镜生成：10–30%
- * - 动画生成：30–50%
- * - 沙箱渲染：50–60%
- * - 语音合成：60–80%
- * - 视频合成：80–100%
+ * 区间定义（连续不重叠，总覆盖 0–100）：
+ * - understanding:  0–12
+ * - storyboard:    13–25
+ * - manim_gen:     26–45
+ * - manim_fix:     46–55 (conditional)
+ * - render:        56–70
+ * - tts:           71–84
+ * - compose:       85–94
+ * - upload:        95–100
  */
-export const VIDEO_STAGES: readonly VideoStage[] = [
-  { key: 'understanding', label: '题目理解与知识库检索', min: 0, max: 10, tag: 'Understanding' },
-  { key: 'storyboard', label: '分镜与代码生成', min: 10, max: 30, tag: 'Storyboard' },
-  { key: 'animation', label: '动画生成', min: 30, max: 50, tag: 'Animation' },
-  { key: 'sandbox', label: '沙箱渲染', min: 50, max: 60, tag: 'Sandbox' },
-  { key: 'tts', label: '语音合成', min: 60, max: 80, tag: 'TTS' },
-  { key: 'compositing', label: '视频合成', min: 80, max: 100, tag: 'Compositing' },
+export const VIDEO_STAGES: readonly VideoStageConfig[] = [
+  { key: 'understanding', label: '理解题目', progressStart: 0, progressEnd: 12, estimatedDuration: '3-8s', conditional: false, tag: 'Understanding' },
+  { key: 'storyboard', label: '生成分镜', progressStart: 13, progressEnd: 25, estimatedDuration: '5-10s', conditional: false, tag: 'Storyboard' },
+  { key: 'manim_gen', label: '生成动画脚本', progressStart: 26, progressEnd: 45, estimatedDuration: '8-20s', conditional: false, tag: 'Manim Gen' },
+  { key: 'manim_fix', label: '修复动画脚本', progressStart: 46, progressEnd: 55, estimatedDuration: '5-15s', conditional: true, tag: 'Auto-Fix' },
+  { key: 'render', label: '渲染动画', progressStart: 56, progressEnd: 70, estimatedDuration: '15-40s', conditional: false, tag: 'Render' },
+  { key: 'tts', label: '生成旁白', progressStart: 71, progressEnd: 84, estimatedDuration: '8-20s', conditional: false, tag: 'TTS' },
+  { key: 'compose', label: '合成视频', progressStart: 85, progressEnd: 94, estimatedDuration: '5-12s', conditional: false, tag: 'Compose' },
+  { key: 'upload', label: '上传结果', progressStart: 95, progressEnd: 100, estimatedDuration: '3-10s', conditional: false, tag: 'Upload' },
 ] as const;
+
+/** stage 枚举到配置的查找表。 */
+const STAGE_MAP = new Map<VideoPipelineStage, VideoStageConfig>(
+  VIDEO_STAGES.map((s) => [s.key, s]),
+);
+
+/**
+ * 根据 stage 枚举值查找阶段配置。
+ *
+ * @param stage - 阶段枚举值。
+ * @returns 匹配的阶段配置；未匹配时返回 null。
+ */
+export function getStageConfig(stage: VideoPipelineStage): VideoStageConfig | null {
+  return STAGE_MAP.get(stage) ?? null;
+}
 
 /**
  * 根据进度值查找当前所在阶段。
  *
  * @param progress - 当前进度（0–100）。
- * @returns 匹配的阶段定义；未匹配时返回最后一个阶段。
+ * @returns 匹配的阶段配置；未匹配时返回最后一个阶段。
  */
-export function resolveVideoStage(progress: number): VideoStage {
+export function resolveVideoStage(progress: number): VideoStageConfig {
   const clamped = Math.max(0, Math.min(100, progress));
 
   for (const stage of VIDEO_STAGES) {
-    if (clamped >= stage.min && clamped <= stage.max) {
+    if (clamped >= stage.progressStart && clamped <= stage.progressEnd) {
       return stage;
     }
   }
@@ -83,4 +107,13 @@ export function estimateEtaText(progress: number): string {
   }
 
   return '初始化中，即将开始任务...';
+}
+
+/**
+ * 获取非条件阶段列表（用于日志渲染时排除条件阶段）。
+ *
+ * @returns 非条件阶段配置列表。
+ */
+export function getRequiredStages(): VideoStageConfig[] {
+  return VIDEO_STAGES.filter((s) => !s.conditional);
 }

@@ -1,182 +1,118 @@
 /**
- * 文件说明：封装视频等待页的 SSE 事件流消费 hook。
- * 使用 services/sse 统一 parser，将 SSE 事件映射为视频阶段进度状态。
+ * 文件说明：封装视频等待页的 SSE 事件流消费 hook（Story 4.7 重构）。
+ * 使用 services/sse 统一 parser，将 SSE 事件映射到 zustand store。
+ * 支持视频流水线专属 stage 字段和修复上下文。
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
-import type { GeneratingLogItem } from '@/components/generating/task-generating-view';
 import { resolveTaskEventStream } from '@/services/sse';
-import type { TaskErrorCode, TaskLifecycleStatus, TaskStreamEventPayload } from '@/types/task';
+import type { TaskStreamEventPayload } from '@/types/task';
+import type { VideoPipelineStage } from '@/types/video';
 
-import { estimateEtaText, resolveVideoStage, VIDEO_STAGES } from '../config/video-stages';
-
-/** SSE 驱动的视频等待页状态。 */
-export interface VideoTaskSseState {
-  /** 当前任务生命周期状态。 */
-  status: TaskLifecycleStatus;
-  /** 进度值（0–100）。 */
-  progress: number;
-  /** 当前阶段标题。 */
-  stageTitle: string;
-  /** 预估剩余时间文案。 */
-  etaText: string;
-  /** 日志条目列表。 */
-  logs: GeneratingLogItem[];
-  /** 错误码（仅 failed 时有值）。 */
-  errorCode: TaskErrorCode | null;
-  /** 错误消息（仅 failed 时有值）。 */
-  errorMessage: string | null;
-  /** SSE 是否已连接。 */
-  connected: boolean;
-}
-
-const INITIAL_STATE: VideoTaskSseState = {
-  status: 'pending',
-  progress: 0,
-  stageTitle: '准备生成视频',
-  etaText: '初始化中，即将开始任务...',
-  logs: [],
-  errorCode: null,
-  errorMessage: null,
-  connected: false,
-};
+import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
 /**
- * 根据当前进度生成已完成阶段和当前阶段的日志条目。
+ * 从 SSE 事件中提取视频流水线扩展字段。
  *
- * @param progress - 当前进度。
- * @returns 日志条目列表。
+ * @param event - SSE 事件 payload。
+ * @returns 扩展字段对象。
  */
-function buildLogsFromProgress(progress: number): GeneratingLogItem[] {
-  const currentStage = resolveVideoStage(progress);
-  const logs: GeneratingLogItem[] = [];
+function extractPipelineFields(event: TaskStreamEventPayload) {
+  const raw = event as unknown as Record<string, unknown>;
 
-  for (const stage of VIDEO_STAGES) {
-    if (progress > stage.max) {
-      logs.push({
-        id: stage.key,
-        status: 'success',
-        text: `${stage.label}完成`,
-        tag: stage.tag,
-      });
-    } else if (stage.key === currentStage.key) {
-      logs.push({
-        id: stage.key,
-        status: 'pending',
-        text: `正在${stage.label}...`,
-        tag: stage.tag,
-      });
-    }
-  }
-
-  return logs;
+  return {
+    currentStage: (raw.currentStage as VideoPipelineStage) ?? null,
+    stageLabel: (raw.stageLabel as string) ?? null,
+    stageProgress: (raw.stageProgress as number) ?? null,
+    attemptNo: ((raw.context as Record<string, unknown>)?.attemptNo as number) ?? null,
+    fixEvent: ((raw.context as Record<string, unknown>)?.fixEvent as string) ?? null,
+    failure: (raw.context as Record<string, unknown>)?.failure as Record<string, unknown> | null ?? null,
+  };
 }
 
 /**
- * 消费任务 SSE 事件流并驱动等待页 UI 状态。
+ * 消费任务 SSE 事件流并驱动 zustand store 状态。
  *
  * @param taskId - 任务 ID；为空时不连接。
  * @param options - 可选配置。
- * @returns 等待页 SSE 状态与控制句柄。
  */
 export function useVideoTaskSse(
   taskId: string | undefined,
   options?: { enabled?: boolean },
 ) {
-  const [state, setState] = useState<VideoTaskSseState>(INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
+  const store = useVideoGeneratingStore;
 
   const handleEvent = useCallback((event: TaskStreamEventPayload) => {
-    setState((prev) => {
-      const stage = resolveVideoStage(event.progress);
+    const pipeline = extractPipelineFields(event);
+    const state = store.getState();
 
-      if (event.event === 'connected') {
-        return { ...prev, connected: true };
-      }
+    if (event.event === 'connected') {
+      state.setSseConnected(true);
+      return;
+    }
 
-      if (event.event === 'failed') {
-        return {
-          ...prev,
-          status: 'failed',
+    if (event.event === 'failed') {
+      const failedStage = (pipeline.failure?.failedStage as VideoPipelineStage)
+        ?? pipeline.currentStage
+        ?? state.currentStage;
+
+      state.setFailed({
+        errorCode: event.errorCode ?? (pipeline.failure?.errorCode as string) ?? null,
+        errorMessage: event.message ?? (pipeline.failure?.errorMessage as string) ?? null,
+        failedStage: failedStage ?? null,
+        retryable: (pipeline.failure?.retryable as boolean) ?? false,
+      });
+      return;
+    }
+
+    if (event.event === 'completed') {
+      state.setCompleted();
+      return;
+    }
+
+    if (event.event === 'cancelled') {
+      state.setFailed({
+        errorCode: event.errorCode ?? 'TASK_CANCELLED',
+        errorMessage: event.message ?? '任务已取消',
+        failedStage: null,
+        retryable: false,
+      });
+      return;
+    }
+
+    if (event.event === 'snapshot') {
+      if (pipeline.currentStage) {
+        state.updateStage({
+          currentStage: pipeline.currentStage,
+          stageLabel: pipeline.stageLabel ?? pipeline.currentStage,
           progress: event.progress,
-          stageTitle: '生成失败',
-          etaText: '',
-          errorCode: event.errorCode ?? null,
-          errorMessage: event.message,
-          logs: [
-            ...buildLogsFromProgress(event.progress),
-            {
-              id: 'failed',
-              status: 'error',
-              text: event.message || '任务执行失败',
-            },
-          ],
-        };
-      }
-
-      if (event.event === 'cancelled') {
-        return {
-          ...prev,
-          status: 'cancelled',
+          fixAttempt: pipeline.attemptNo ?? 0,
+        });
+      } else {
+        state.updateProgress({
           progress: event.progress,
-          stageTitle: '任务已取消',
-          etaText: '',
-          errorCode: event.errorCode ?? null,
-          errorMessage: event.message,
-          logs: [
-            ...buildLogsFromProgress(event.progress),
-            {
-              id: 'cancelled',
-              status: 'warning',
-              text: '任务已取消',
-            },
-          ],
-        };
+          message: event.message,
+        });
       }
+      return;
+    }
 
-      if (event.event === 'completed') {
-        const completedLogs = VIDEO_STAGES.map((s) => ({
-          id: s.key,
-          status: 'success' as const,
-          text: `${s.label}完成`,
-          tag: s.tag,
-        }));
-
-        return {
-          ...prev,
-          status: 'completed',
-          progress: 100,
-          stageTitle: '生成完毕',
-          etaText: '正在跳转到结果页...',
-          logs: completedLogs,
-        };
-      }
-
-      if (event.event === 'provider_switch') {
-        return {
-          ...prev,
-          logs: [
-            ...prev.logs.filter((l) => l.id !== 'provider_switch'),
-            {
-              id: 'provider_switch',
-              status: 'warning' as const,
-              text: `服务切换：${event.reason || '正在切换到备用服务'}`,
-            },
-          ],
-        };
-      }
-
-      // progress / snapshot / heartbeat
-      return {
-        ...prev,
-        status: event.status,
+    // progress / heartbeat / provider_switch
+    if (pipeline.currentStage) {
+      state.updateStage({
+        currentStage: pipeline.currentStage,
+        stageLabel: pipeline.stageLabel ?? pipeline.currentStage,
         progress: event.progress,
-        stageTitle: stage.label,
-        etaText: estimateEtaText(event.progress),
-        logs: buildLogsFromProgress(event.progress),
-      };
-    });
-  }, []);
+        fixAttempt: pipeline.attemptNo ?? undefined,
+      });
+    } else {
+      state.updateProgress({
+        progress: event.progress,
+        message: event.message,
+      });
+    }
+  }, [store]);
 
   const startStream = useCallback(
     async (id: string, signal: AbortSignal) => {
@@ -204,35 +140,25 @@ export function useVideoTaskSse(
     const controller = new AbortController();
 
     abortRef.current = controller;
-    setState(INITIAL_STATE);
+    store.getState().resetState(taskId);
 
     startStream(taskId, controller.signal).catch((err) => {
       if (controller.signal.aborted) {
         return;
       }
 
-      setState((prev) => ({
-        ...prev,
-        status: 'failed',
-        stageTitle: '连接失败',
-        etaText: '',
+      store.getState().setFailed({
+        errorCode: null,
         errorMessage: err instanceof Error ? err.message : 'SSE 连接异常',
-        logs: [
-          ...prev.logs,
-          {
-            id: 'connection_error',
-            status: 'error',
-            text: 'SSE 连接失败，请刷新页面重试',
-          },
-        ],
-      }));
+        failedStage: null,
+        retryable: true,
+      });
+      store.getState().setSseConnected(false);
     });
 
     return () => {
       controller.abort();
       abortRef.current = null;
     };
-  }, [taskId, options?.enabled, startStream]);
-
-  return state;
+  }, [taskId, options?.enabled, startStream, store]);
 }

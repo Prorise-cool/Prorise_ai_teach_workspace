@@ -1,0 +1,135 @@
+/**
+ * 文件说明：视频等待页状态机 store（Story 4.7）。
+ * 使用 zustand 管理等待页全部 UI 状态，包括 SSE 驱动的阶段进度、
+ * 修复指示器、降级轮询标志和终态信息。
+ * 不使用 persist 中间件——状态恢复依赖 SSE snapshot 或 status 查询。
+ */
+import { create } from 'zustand';
+
+import type { TaskLifecycleStatus } from '@/types/task';
+import type { VideoPipelineStage } from '@/types/video';
+
+/** 等待页任务错误信息。 */
+export interface VideoGeneratingError {
+  /** 错误码。 */
+  errorCode: string | null;
+  /** 用户可读错误消息。 */
+  errorMessage: string | null;
+  /** 失败所在阶段。 */
+  failedStage: VideoPipelineStage | null;
+  /** 是否可重试。 */
+  retryable: boolean;
+}
+
+/** 等待页状态机状态。 */
+export interface VideoGeneratingState {
+  /** 当前任务 ID。 */
+  taskId: string | null;
+  /** 当前流水线阶段。 */
+  currentStage: VideoPipelineStage | null;
+  /** 当前阶段中文显示名。 */
+  stageLabel: string;
+  /** 全局进度（0–100）。 */
+  progress: number;
+  /** 任务生命周期状态。 */
+  status: TaskLifecycleStatus;
+  /** 错误信息（仅 failed 时有值）。 */
+  error: VideoGeneratingError | null;
+  /** SSE 是否已连接。 */
+  sseConnected: boolean;
+  /** 是否已降级到轮询。 */
+  degradedToPolling: boolean;
+  /** 当前修复尝试次数（manim_fix 阶段）。 */
+  fixAttempt: number;
+  /** 修复尝试上限。 */
+  fixTotal: number;
+}
+
+/** 等待页状态机 actions。 */
+export interface VideoGeneratingActions {
+  /** 更新进度和阶段信息。 */
+  updateProgress: (payload: {
+    progress: number;
+    currentStage?: VideoPipelineStage | null;
+    stageLabel?: string;
+    message?: string;
+  }) => void;
+  /** 更新阶段（含修复上下文）。 */
+  updateStage: (payload: {
+    currentStage: VideoPipelineStage;
+    stageLabel: string;
+    progress: number;
+    fixAttempt?: number;
+    fixTotal?: number;
+  }) => void;
+  /** 标记任务失败。 */
+  setFailed: (error: VideoGeneratingError) => void;
+  /** 标记任务完成。 */
+  setCompleted: () => void;
+  /** 标记已降级到轮询。 */
+  setDegradedPolling: (degraded: boolean) => void;
+  /** 标记 SSE 连接状态。 */
+  setSseConnected: (connected: boolean) => void;
+  /** 重置为初始状态。 */
+  resetState: (taskId?: string) => void;
+}
+
+const INITIAL_STATE: VideoGeneratingState = {
+  taskId: null,
+  currentStage: null,
+  stageLabel: '准备生成视频',
+  progress: 0,
+  status: 'pending',
+  error: null,
+  sseConnected: false,
+  degradedToPolling: false,
+  fixAttempt: 0,
+  fixTotal: 2,
+};
+
+/** 视频等待页状态机 store。 */
+export const useVideoGeneratingStore = create<
+  VideoGeneratingState & VideoGeneratingActions
+>()((set) => ({
+  ...INITIAL_STATE,
+
+  updateProgress: (payload) =>
+    set((state) => ({
+      status: 'processing',
+      progress: payload.progress,
+      currentStage: payload.currentStage ?? state.currentStage,
+      stageLabel: payload.stageLabel ?? state.stageLabel,
+    })),
+
+  updateStage: (payload) =>
+    set({
+      status: 'processing',
+      currentStage: payload.currentStage,
+      stageLabel: payload.stageLabel,
+      progress: payload.progress,
+      fixAttempt: payload.fixAttempt ?? 0,
+      fixTotal: payload.fixTotal ?? 2,
+    }),
+
+  setFailed: (error) =>
+    set({
+      status: 'failed',
+      error,
+    }),
+
+  setCompleted: () =>
+    set({
+      status: 'completed',
+      progress: 100,
+      stageLabel: '生成完毕',
+    }),
+
+  setDegradedPolling: (degraded) =>
+    set({ degradedToPolling: degraded }),
+
+  setSseConnected: (connected) =>
+    set({ sseConnected: connected }),
+
+  resetState: (taskId) =>
+    set({ ...INITIAL_STATE, taskId: taskId ?? null }),
+}));
