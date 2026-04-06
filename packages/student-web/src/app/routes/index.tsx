@@ -153,12 +153,12 @@ async function loadVideoInputRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadVideoGeneratingRoute() {
-  const { VideoGeneratingPlaceholder } = await import(
-    '@/features/video/pages/video-generating-placeholder'
+  const { VideoGeneratingPage } = await import(
+    '@/features/video/pages/video-generating-page'
   );
 
   return {
-    Component: VideoGeneratingPlaceholder
+    Component: VideoGeneratingPage
   };
 }
 

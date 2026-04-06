@@ -171,7 +171,7 @@ export function ClassroomInputPage() {
 
 			<div className="xm-classroom-input__content">
 				{/* 标题区 */}
-				<motion.div variants={itemVariants}>
+				<motion.div variants={itemVariants} className="w-full flex justify-center">
 					<InputPageHeader
 						badgeIcon={LayoutTemplate}
 						badgeLabel={badgeLabel}
@@ -181,7 +181,7 @@ export function ClassroomInputPage() {
 				</motion.div>
 
 				{/* 核心输入卡片 */}
-				<motion.div variants={itemVariants} className="xm-classroom-input__card">
+				<motion.div variants={itemVariants} className="xm-classroom-input__card" style={{ margin: '0 auto' }}>
 					{/* 智能匹配提示栏 */}
 					<div className="xm-classroom-input__card-hints">
 						<div className="xm-classroom-input__card-hint xm-classroom-input__card-hint--accent">
@@ -317,7 +317,7 @@ export function ClassroomInputPage() {
 				</motion.div>
 
 				{/* 建议标签 */}
-				<motion.div variants={itemVariants}>
+				<motion.div variants={itemVariants} className="w-full flex justify-center">
 					<InputPageSuggestions
 						label={suggestionsLabel}
 						pills={suggestions}
@@ -330,12 +330,12 @@ export function ClassroomInputPage() {
 			</div>
 
 			{/* 引导卡片 */}
-			<motion.div variants={itemVariants}>
+			<motion.div variants={itemVariants} className="w-full flex justify-center">
 				<InputPageGuideCards cards={guideCards} />
 			</motion.div>
 
 			{/* 社区瀑布流 */}
-			<motion.div variants={itemVariants}>
+			<motion.div variants={itemVariants} className="w-full max-w-7xl mx-auto">
 				<CommunityFeed
 					title={feedTitle}
 					description={feedDesc}
