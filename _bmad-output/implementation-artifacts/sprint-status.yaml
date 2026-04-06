@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-06 00:27:55 +0800
+last_updated: 2026-04-06 16:30:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -69,37 +69,37 @@ development_status:
   2-7-provider-protocol工厂与优先级注册骨架: done
   2-8-provider-健康检查failover-与缓存策略: done
   epic-2-retrospective: optional
-  epic-3: backlog
-  3-1-视频任务创建契约与-mock-task-基线: backlog
-  3-2-视频输入页壳层与多模态输入交互: backlog
-  3-3-图片-ocr-前置预处理接口: backlog
-  3-4-视频任务创建接口与初始化运行态: backlog
-  3-5-创建后跳转等待页与任务上下文承接: backlog
-  3-6-视频输入页公开视频广场与复用入口: backlog
+  epic-3: in-progress
+  3-1-视频任务创建契约与-mock-task-基线: ready-for-dev
+  3-2-视频输入页壳层与多模态输入交互: ready-for-dev
+  3-3-图片-ocr-前置预处理接口: ready-for-dev
+  3-4-视频任务创建接口与初始化运行态: ready-for-dev
+  3-5-创建后跳转等待页与任务上下文承接: ready-for-dev
+  3-6-视频输入页公开视频广场与复用入口: ready-for-dev
   epic-3-retrospective: optional
-  epic-4: backlog
-  4-1-视频流水线阶段进度区间与结果契约冻结: backlog
-  4-2-题目理解与分镜生成服务: backlog
-  4-3-manim-代码生成与自动修复链: backlog
-  4-4-manim-沙箱执行与资源限制: backlog
-  4-5-tts-合成与-provider-failover-落地: backlog
-  4-6-ffmpeg-合成cos-上传与完成结果回写: backlog
-  4-7-视频等待页前端状态机恢复与降级: backlog
-  4-8-视频结果页播放器与结果操作: backlog
-  4-9-视频侧-sessionartifactgraph-回写: backlog
-  4-10-视频结果公开发布与输入页复用卡片: backlog
+  epic-4: in-progress
+  4-1-视频流水线阶段进度区间与结果契约冻结: ready-for-dev
+  4-2-题目理解与分镜生成服务: ready-for-dev
+  4-3-manim-代码生成与自动修复链: ready-for-dev
+  4-4-manim-沙箱执行与资源限制: ready-for-dev
+  4-5-tts-合成与-provider-failover-落地: ready-for-dev
+  4-6-ffmpeg-合成cos-上传与完成结果回写: ready-for-dev
+  4-7-视频等待页前端状态机恢复与降级: ready-for-dev
+  4-8-视频结果页播放器与结果操作: ready-for-dev
+  4-9-视频侧-sessionartifactgraph-回写: ready-for-dev
+  4-10-视频结果公开发布与输入页复用卡片: ready-for-dev
   epic-4-retrospective: optional
-  epic-5: backlog
-  5-1-课堂任务契约结果-schema-与-mock-session-基线: backlog
-  5-2-主题输入与课堂任务创建: backlog
-  5-3-课堂等待页与统一进度复用: backlog
-  5-4-课堂生成服务与多-agent-讨论结果: backlog
-  5-5-白板布局与基础可读性规则: backlog
-  5-6-课堂结果页中的幻灯片讨论与白板浏览: backlog
-  5-7-会话结束信号与课后触发出口: backlog
-  5-8-课堂侧-sessionartifactgraph-回写: backlog
-  5-9-课堂输入页联网搜索增强与证据范围配置: backlog
-  5-10-课堂结果导出与分享产物: backlog
+  epic-5: in-progress
+  5-1-课堂任务契约结果-schema-与-mock-session-基线: ready-for-dev
+  5-2-主题输入与课堂任务创建: ready-for-dev
+  5-3-课堂等待页与统一进度复用: ready-for-dev
+  5-4-课堂生成服务与多-agent-讨论结果: ready-for-dev
+  5-5-白板布局与基础可读性规则: ready-for-dev
+  5-6-课堂结果页中的幻灯片讨论与白板浏览: ready-for-dev
+  5-7-会话结束信号与课后触发出口: ready-for-dev
+  5-8-课堂侧-sessionartifactgraph-回写: ready-for-dev
+  5-9-课堂输入页联网搜索增强与证据范围配置: ready-for-dev
+  5-10-课堂结果导出与分享产物: ready-for-dev
   epic-5-retrospective: optional
   epic-6: backlog
   6-1-timeanchorturn-schema-与-mock-companion-turns-基线: backlog
