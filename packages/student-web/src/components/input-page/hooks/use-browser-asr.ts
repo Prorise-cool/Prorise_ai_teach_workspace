@@ -87,13 +87,43 @@ export function useBrowserAsr(onResultWrapper?: (text: string) => void) {
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech recognition error', event.error);
+      const errorType = event.error;
+
+      setIsRecording(false);
+
+      /* network 错误通常由本地开发环境无法连通语音识别服务导致，静默降级避免重复弹窗 */
+      if (errorType === 'network') {
+        console.warn('[ASR] 语音识别网络不可用，已自动停止');
+        notify({
+          title: '语音识别不可用',
+          description: '当前网络环境不支持在线语音识别，请使用文字输入。',
+          tone: 'warning',
+        });
+        return;
+      }
+
+      /* not-allowed / service-not-allowed: 用户拒绝麦克风权限 */
+      if (errorType === 'not-allowed' || errorType === 'service-not-allowed') {
+        notify({
+          title: '麦克风权限被拒绝',
+          description: '请在浏览器设置中允许使用麦克风后重试。',
+          tone: 'error',
+        });
+        return;
+      }
+
+      /* aborted: 用户主动停止，无需提示 */
+      if (errorType === 'aborted') {
+        return;
+      }
+
+      /* 其他错误：audio-capture / no-speech 等 */
+      console.error('Speech recognition error', errorType);
       notify({
         title: '语音识别出错',
         description: '麦克风调用失败或浏览器不支持。',
-        tone: 'error'
+        tone: 'error',
       });
-      setIsRecording(false);
     };
 
     recognition.onend = () => {
