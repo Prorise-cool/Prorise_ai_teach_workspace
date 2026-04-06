@@ -1,31 +1,32 @@
 /**
- * 文件说明：视频流水线 stage → 中文失败说明映射（Story 4.7）。
- * 集中管理 failedStage → 用户可读中文说明，便于后续 i18n 扩展。
+ * 文件说明：视频流水线 stage → i18n 失败说明 key 映射（Story 4.7）。
+ * 集中管理 failedStage → i18n key，由调用方通过 t(key) 获取翻译文本。
  */
 import type { VideoPipelineStage } from '@/types/video';
 
-/** failedStage → 用户可读中文失败说明。 */
-const STAGE_FAILURE_LABELS: Record<VideoPipelineStage, string> = {
-  understanding: '题目理解失败',
-  storyboard: '分镜生成失败',
-  manim_gen: '动画脚本生成失败',
-  manim_fix: '动画脚本修复失败',
-  render: '动画渲染失败',
-  tts: '语音合成失败',
-  compose: '视频合成失败',
-  upload: '视频上传失败',
+/** failedStage → i18n key 映射。 */
+const STAGE_FAILURE_KEYS: Record<VideoPipelineStage, string> = {
+  understanding: 'video.stageFailures.understanding',
+  storyboard: 'video.stageFailures.storyboard',
+  manim_gen: 'video.stageFailures.manim_gen',
+  manim_fix: 'video.stageFailures.manim_fix',
+  render: 'video.stageFailures.render',
+  tts: 'video.stageFailures.tts',
+  compose: 'video.stageFailures.compose',
+  upload: 'video.stageFailures.upload',
 };
 
 /**
- * 根据失败阶段返回用户可读中文说明。
+ * 根据失败阶段返回对应的 i18n key。
+ * 调用方使用 t(key) 获取翻译文本。
  *
  * @param failedStage - 失败所在阶段。
- * @returns 中文失败说明；未匹配时返回通用说明。
+ * @returns i18n key；未匹配时返回通用失败 key。
  */
-export function getStageFailureLabel(failedStage: VideoPipelineStage | null | undefined): string {
+export function getStageFailureKey(failedStage: VideoPipelineStage | null | undefined): string {
   if (!failedStage) {
-    return '视频生成失败';
+    return 'video.stageFailures.fallback';
   }
 
-  return STAGE_FAILURE_LABELS[failedStage] ?? '视频生成失败';
+  return STAGE_FAILURE_KEYS[failedStage] ?? 'video.stageFailures.fallback';
 }

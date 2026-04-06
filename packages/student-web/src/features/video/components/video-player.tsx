@@ -40,9 +40,17 @@ export function VideoPlayer({ videoUrl, posterUrl, className }: VideoPlayerProps
       return;
     }
 
+    /** 防止 videoUrl 快速变更导致 stale effect 追加 DOM 节点。 */
+    let cancelled = false;
+
     const videoElement = document.createElement('video-js');
 
     videoElement.classList.add('vjs-big-play-centered');
+
+    if (cancelled) {
+      return;
+    }
+
     videoRef.current.appendChild(videoElement);
 
     const player = videojs(videoElement, {
@@ -62,6 +70,7 @@ export function VideoPlayer({ videoUrl, posterUrl, className }: VideoPlayerProps
     playerRef.current = player;
 
     return () => {
+      cancelled = true;
       if (playerRef.current) {
         playerRef.current.dispose();
         playerRef.current = null;

@@ -4,12 +4,13 @@
  */
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 import { getTaskErrorMessage } from '@/lib/error-messages';
 import { cn } from '@/lib/utils';
 import type { VideoPipelineStage } from '@/types/video';
 
-import { getStageFailureLabel } from '../constants/stage-labels';
+import { getStageFailureKey } from '../constants/stage-labels';
 
 export interface GeneratingFailureCardProps {
   /** 错误码。 */
@@ -43,8 +44,9 @@ export function GeneratingFailureCard({
   onReturn,
   className,
 }: GeneratingFailureCardProps) {
-  const stageLabel = getStageFailureLabel(failedStage);
-  const errorDetail = getTaskErrorMessage(errorCode) ?? errorMessage ?? '任务处理异常，请稍后重试';
+  const { t } = useAppTranslation();
+  const stageLabel = t(getStageFailureKey(failedStage));
+  const errorDetail = getTaskErrorMessage(errorCode) ?? errorMessage ?? t('video.errors.fallback');
 
   return (
     <div
@@ -68,13 +70,13 @@ export function GeneratingFailureCard({
         {retryable && onRetry && (
           <Button variant="default" onClick={onRetry} className="gap-2">
             <RefreshCw className="w-4 h-4" />
-            重新生成
+            {t('video.common.regenerate')}
           </Button>
         )}
         {onReturn && (
           <Button variant="outline" onClick={onReturn} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
-            返回输入页
+            {t('video.common.returnToInput')}
           </Button>
         )}
       </div>

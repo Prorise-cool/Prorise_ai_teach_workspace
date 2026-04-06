@@ -4,6 +4,7 @@
  */
 import { Bot, Sparkles } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 export interface ResultSummaryCardProps {
@@ -48,13 +49,15 @@ export function ResultSummaryCard({
   aiContentFlag,
   className,
 }: ResultSummaryCardProps) {
+  const { t } = useAppTranslation();
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* AI 内容标识 */}
       {aiContentFlag && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Bot className="w-3.5 h-3.5" />
-          <span>AI 生成内容</span>
+          <span>{t('video.common.aiGenerated')}</span>
         </div>
       )}
 
@@ -63,7 +66,7 @@ export function ResultSummaryCard({
 
       {/* 时长 */}
       <p className="text-sm text-muted-foreground">
-        时长 {formatDuration(duration)}
+        {t('video.common.duration')} {formatDuration(duration)}
       </p>
 
       {/* 摘要 */}
@@ -74,7 +77,7 @@ export function ResultSummaryCard({
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            知识点
+            {t('video.common.knowledgePoints')}
           </h3>
           <div className="flex flex-wrap gap-2">
             {knowledgePoints.map((point) => (

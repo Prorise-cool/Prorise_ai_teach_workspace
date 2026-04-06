@@ -7,6 +7,7 @@ import { Copy, Globe, Repeat, Loader2 } from 'lucide-react';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';
@@ -40,17 +41,18 @@ export function ResultActionsBar({
   onUnpublish,
   className,
 }: ResultActionsBarProps) {
+  const { t } = useAppTranslation();
   const navigate = useNavigate();
   const { notify } = useFeedback();
 
   const handleCopyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      notify({ tone: 'success', title: '已复制链接' });
+      notify({ tone: 'success', title: t('video.result.copyLinkSuccess') });
     } catch {
-      notify({ tone: 'error', title: '复制失败，请手动复制地址栏链接' });
+      notify({ tone: 'error', title: t('video.result.copyLinkFailed') });
     }
-  }, [notify]);
+  }, [notify, t]);
 
   const handleRegenerate = useCallback(() => {
     void navigate(`/video/input?reuseTaskId=${taskId}`);
@@ -72,7 +74,7 @@ export function ResultActionsBar({
           ) : (
             <Globe className="w-3.5 h-3.5" />
           )}
-          取消公开
+          {t('video.result.unpublishAction')}
         </Button>
       ) : (
         <Button
@@ -87,7 +89,7 @@ export function ResultActionsBar({
           ) : (
             <Globe className="w-3.5 h-3.5" />
           )}
-          公开发布
+          {t('video.result.publishAction')}
         </Button>
       )}
 
@@ -99,7 +101,7 @@ export function ResultActionsBar({
         className="gap-1.5"
       >
         <Repeat className="w-3.5 h-3.5" />
-        使用此题目重新生成
+        {t('video.result.reuseAction')}
       </Button>
 
       {/* 复制链接 */}
@@ -110,7 +112,7 @@ export function ResultActionsBar({
         className="gap-1.5"
       >
         <Copy className="w-3.5 h-3.5" />
-        复制链接
+        {t('video.result.copyLink')}
       </Button>
     </div>
   );
