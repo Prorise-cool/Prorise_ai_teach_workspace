@@ -1,0 +1,74 @@
+/**
+ * 文件说明：视频结果页布局样式（Story 4.8）。
+ * 管理播放器区域响应式布局与 Video.js 皮肤定制。
+ */
+
+.video-result-page {
+  --vr-sidebar-width: 380px;
+  --vr-gap: var(--xm-space-6, 1.5rem);
+
+  &__layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--vr-gap);
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--xm-space-6, 1.5rem);
+
+    @media (min-width: 1024px) {
+      grid-template-columns: 1fr var(--vr-sidebar-width);
+    }
+  }
+
+  &__player-area {
+    min-width: 0;
+  }
+
+  &__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--xm-space-4, 1rem);
+  }
+}
+
+/* Video.js 皮肤定制 */
+.video-player-container {
+  .video-js {
+    border-radius: var(--xm-radius-lg, 0.75rem);
+    overflow: hidden;
+    background-color: var(--xm-color-surface-1, #000);
+
+    .vjs-control-bar {
+      background: linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.7) 0%,
+        transparent 100%
+      );
+    }
+
+    .vjs-play-progress {
+      background-color: var(--xm-color-brand, #f5c547);
+    }
+
+    .vjs-big-play-button {
+      border: 2px solid var(--xm-color-brand, #f5c547);
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 3rem;
+      height: 3rem;
+      line-height: 3rem;
+      margin-top: -1.5rem;
+      margin-left: -1.5rem;
+
+      .vjs-icon-placeholder::before {
+        font-size: 1.5rem;
+      }
+    }
+
+    &:hover .vjs-big-play-button {
+      background-color: var(--xm-color-brand, #f5c547);
+      color: #000;
+    }
+  }
+}
