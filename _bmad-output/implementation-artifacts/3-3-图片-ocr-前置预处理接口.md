@@ -1,6 +1,6 @@
 # Story 3.3: 图片 / OCR 前置预处理接口
 
-Status: backlog
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

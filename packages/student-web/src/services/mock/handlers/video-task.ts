@@ -26,6 +26,17 @@ function readVideoMockScenario(request: Request): VideoTaskMockScenario | null {
   return isVideoTaskMockScenario(scenario) ? scenario : null;
 }
 
+function createVideoTaskHttpError(
+  status: number,
+  code: string,
+  message: string,
+) {
+  return Object.assign(new Error(message), {
+    status,
+    code,
+  });
+}
+
 /**
  * 从请求体中解析视频任务创建请求。
  *
@@ -37,31 +48,83 @@ function parseVideoTaskCreateRequest(payload: unknown): VideoTaskCreateRequest {
   const body = readRecord(payload);
 
   if (!body) {
-    throw new Error('视频任务创建请求体必须是 JSON 对象');
+    throw createVideoTaskHttpError(
+      422,
+      'TASK_INVALID_INPUT',
+      '视频任务创建请求体必须是 JSON 对象',
+    );
   }
 
   const inputType = readString(body.inputType);
 
   if (inputType !== 'text' && inputType !== 'image') {
-    throw new Error('inputType 必须是 text 或 image');
+    throw createVideoTaskHttpError(
+      422,
+      'TASK_INVALID_INPUT',
+      'inputType 必须是 text 或 image',
+    );
   }
 
   const clientRequestId = readString(body.clientRequestId);
 
   if (!clientRequestId) {
-    throw new Error('clientRequestId 不能为空');
+    throw createVideoTaskHttpError(
+      422,
+      'TASK_INVALID_INPUT',
+      'clientRequestId 不能为空',
+    );
   }
 
   const sourcePayload = readRecord(body.sourcePayload);
 
   if (!sourcePayload) {
-    throw new Error('sourcePayload 必须是 JSON 对象');
+    throw createVideoTaskHttpError(
+      422,
+      'TASK_INVALID_INPUT',
+      'sourcePayload 必须是 JSON 对象',
+    );
   }
 
+  const userProfile = readRecord(body.userProfile) ?? undefined;
+
+  if (inputType === 'text') {
+    const text = readString(sourcePayload.text)?.trim();
+
+    if (!text) {
+      throw createVideoTaskHttpError(
+        422,
+        'VIDEO_INPUT_EMPTY',
+        '输入内容为空，请填写后重新提交',
+      );
+    }
+
+    return {
+      inputType: 'text',
+      sourcePayload: { text },
+      userProfile,
+      clientRequestId,
+    };
+  }
+
+  const imageRef = readString(sourcePayload.imageRef)?.trim();
+
+  if (!imageRef) {
+    throw createVideoTaskHttpError(
+      422,
+      'TASK_INVALID_INPUT',
+      '图片输入缺少 imageRef',
+    );
+  }
+
+  const ocrText = readString(sourcePayload.ocrText)?.trim();
+
   return {
-    inputType,
-    sourcePayload: sourcePayload as unknown as VideoTaskCreateRequest['sourcePayload'],
-    userProfile: readRecord(body.userProfile) as Record<string, unknown> | undefined,
+    inputType: 'image',
+    sourcePayload: {
+      imageRef,
+      ocrText: ocrText || undefined,
+    },
+    userProfile,
     clientRequestId,
   };
 }
@@ -79,7 +142,13 @@ function toVideoTaskHttpErrorResponse(error: unknown) {
     {
       code: mockError.status,
       msg: mockError.message,
-      data: null,
+      data: {
+        errorCode: mockError.code,
+        retryable: false,
+        requestId: null,
+        taskId: null,
+        details: {},
+      },
     },
     { status: mockError.status },
   );

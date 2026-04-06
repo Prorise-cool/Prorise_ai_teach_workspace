@@ -9,7 +9,6 @@ import {
 } from '@/services/api/client';
 import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
 import {
-  getMockVideoTaskCreateError,
   getMockVideoTaskCreateSuccess,
   getVideoTaskFixtureError,
   throwVideoTaskFixtureError,
@@ -18,43 +17,26 @@ import type {
   VideoTaskCreateRequest,
   VideoTaskCreateResult,
   VideoTaskCreateSuccessEnvelope,
-  VideoTaskCreateErrorEnvelope,
   VideoTaskMockScenario,
 } from '@/types/video';
+import {
+  createVideoTaskAdapterError,
+  VideoTaskAdapterError,
+} from '@/services/api/adapters/video-task-error';
 
 import { pickAdapterImplementation } from './base-adapter';
+
+export {
+  createVideoTaskAdapterError,
+  isVideoTaskAdapterError,
+  VideoTaskAdapterError,
+} from './video-task-error';
 
 const fastapiClient = createApiClient({
   baseURL: resolveFastapiBaseUrl(),
 });
 
 /* ---------- 错误类型 ---------- */
-
-/** 视频任务 adapter 统一错误。 */
-export class VideoTaskAdapterError extends Error {
-  name = 'VideoTaskAdapterError' as const;
-
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-}
-
-/**
- * 判断异常是否为视频任务 adapter 错误。
- *
- * @param error - 待判断异常。
- * @returns 是否为 VideoTaskAdapterError。
- */
-export function isVideoTaskAdapterError(
-  error: unknown,
-): error is VideoTaskAdapterError {
-  return error instanceof VideoTaskAdapterError;
-}
 
 /* ---------- 类型定义 ---------- */
 
@@ -95,8 +77,14 @@ function createVideoTaskError(
   status: number,
   code: string,
   message: string,
+  extras: {
+    retryable?: boolean;
+    requestId?: string | null;
+    taskId?: string | null;
+    details?: Record<string, unknown>;
+  } = {},
 ) {
-  return new VideoTaskAdapterError(status, code, message);
+  return createVideoTaskAdapterError(status, code, message, extras);
 }
 
 /**
@@ -110,13 +98,43 @@ function mapVideoTaskApiClientError(
 ): VideoTaskAdapterError {
   if (isApiClientError(error)) {
     const payload = error.data as
-      | { code?: number | string; msg?: string; data?: { errorCode?: string } }
+      | {
+        code?: number | string;
+        msg?: string;
+        data?: {
+          errorCode?: string;
+          error_code?: string;
+          retryable?: boolean;
+          requestId?: string | null;
+          request_id?: string | null;
+          taskId?: string | null;
+          task_id?: string | null;
+          details?: Record<string, unknown>;
+        };
+      }
       | undefined;
 
     return createVideoTaskError(
       error.status,
-      String(payload?.data?.errorCode ?? payload?.code ?? error.status),
+      String(
+        payload?.data?.errorCode ??
+        payload?.data?.error_code ??
+        payload?.code ??
+        error.status,
+      ),
       payload?.msg ?? error.message,
+      {
+        retryable: payload?.data?.retryable,
+        requestId:
+          payload?.data?.requestId ??
+          payload?.data?.request_id ??
+          null,
+        taskId:
+          payload?.data?.taskId ??
+          payload?.data?.task_id ??
+          null,
+        details: payload?.data?.details,
+      },
     );
   }
 
@@ -126,7 +144,7 @@ function mapVideoTaskApiClientError(
 
   return createVideoTaskError(
     500,
-    '500',
+    'TASK_UNHANDLED_EXCEPTION',
     error instanceof Error ? error.message : '未知视频任务适配错误',
   );
 }

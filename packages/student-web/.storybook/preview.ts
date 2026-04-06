@@ -1,8 +1,11 @@
-import { definePreview } from '@storybook/react-vite';
+/**
+ * 文件说明：Storybook 全局预览配置。
+ */
+import type { Preview } from '@storybook/react-vite';
 
 import '../src/styles/globals.css';
 
-const preview = definePreview({
+const preview: Preview = {
   parameters: {
     actions: { argTypesRegex: '^on[A-Z].*' },
     controls: {
@@ -13,6 +16,6 @@ const preview = definePreview({
     },
     layout: 'fullscreen'
   }
-});
+};
 
 export default preview;

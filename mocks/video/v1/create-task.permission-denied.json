@@ -2,7 +2,7 @@
   "code": 403,
   "msg": "当前账号暂无视频任务创建权限",
   "data": {
-    "errorCode": "TASK_INVALID_INPUT",
+    "errorCode": "AUTH_PERMISSION_DENIED",
     "retryable": false,
     "requestId": "req_mock_permission_denied",
     "taskId": null,
