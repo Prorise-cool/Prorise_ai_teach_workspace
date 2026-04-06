@@ -1,4 +1,3 @@
-import { useState, type MouseEvent } from 'react';
 import {
 	ChevronDown,
 	Languages,
@@ -8,8 +7,8 @@ import {
 	X
 } from 'lucide-react';
 
-import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { useTopNavControls } from '@/components/navigation/use-top-nav-controls';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -22,7 +21,6 @@ import {
 	PopoverContent,
 	PopoverTrigger
 } from '@/components/ui/popover';
-import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import { scrollToLandingSection } from '@/features/home/shared/landing-utils';
 
 export type LandingNavLink = {
@@ -37,33 +35,27 @@ export type LandingFeaturePreview = {
 
 export function LandingTopNav() {
 	const { t } = useAppTranslation();
-	const { themeMode, toggleThemeMode } = useThemeMode();
+	const {
+		closeLabel,
+		closeMobileMenu,
+		handleLocaleToggle,
+		localeToggleLabel,
+		mobileMenuOpen,
+		openMenuLabel,
+		setMobileMenuOpen,
+		themeMode,
+		themeModeLabel,
+		toggleThemeMode
+	} = useTopNavControls();
 	
 	const brandLabel = t('entryNav.brand');
 	const links = t('entryNav.landingLinks', { returnObjects: true }) as LandingNavLink[];
 	const featureLabel = t('entryNav.featureLabel');
 	const featurePreview = t('entryNav.featurePreview', { returnObjects: true }) as LandingFeaturePreview[];
-	const localeLabel = t('entryNav.localeToggle');
-	const openMenuLabel = t('common.openMenu');
-	const closeLabel = t('common.close');
-	const themeLabel = themeMode === 'dark' ? t('common.themeLight') : t('common.themeDark');
-
-	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-	function closeMobileMenu() {
-		setMobileMenuOpen(false);
-	}
 
 	function handleSectionNavigation(href: string) {
 		closeMobileMenu();
 		scrollToLandingSection(href);
-	}
-
-	function handleLocaleClick(event: MouseEvent<HTMLButtonElement>) {
-		event.preventDefault();
-		event.stopPropagation();
-		const nextLocale = appI18n.resolvedLanguage === 'zh-CN' ? 'en-US' : 'zh-CN';
-		void appI18n.changeLanguage(nextLocale);
 	}
 
 	return (
@@ -156,7 +148,7 @@ export function LandingTopNav() {
 							variant="ghost"
 							size="icon"
 							className="rounded-full hover:bg-muted/70"
-							aria-label={themeLabel}
+							aria-label={themeModeLabel}
 							onClick={toggleThemeMode}
 						>
 							{themeMode === 'dark' ? (
@@ -170,11 +162,11 @@ export function LandingTopNav() {
 							type="button"
 							variant="ghost"
 							className="min-w-10 rounded-full px-3 py-2 text-sm font-semibold hover:bg-muted/70"
-							aria-label={localeLabel}
-							onClick={handleLocaleClick}
+							aria-label={localeToggleLabel}
+							onClick={handleLocaleToggle}
 						>
 							<Languages className="h-4 w-4" />
-							<span>{localeLabel}</span>
+							<span>{localeToggleLabel}</span>
 						</Button>
 					</div>
 
@@ -183,10 +175,10 @@ export function LandingTopNav() {
 							type="button"
 							variant="ghost"
 							className="min-w-10 rounded-full px-3 py-2 text-sm font-semibold hover:bg-muted/70"
-							aria-label={localeLabel}
-							onClick={handleLocaleClick}
+							aria-label={localeToggleLabel}
+							onClick={handleLocaleToggle}
 						>
-							{localeLabel}
+							{localeToggleLabel}
 						</Button>
 
 						<DialogTrigger asChild>
@@ -266,7 +258,7 @@ export function LandingTopNav() {
 								type="button"
 								variant="ghost"
 								className="justify-start rounded-[var(--xm-radius-lg)] px-4 py-3 hover:bg-muted/70"
-								aria-label={themeLabel}
+								aria-label={themeModeLabel}
 								onClick={toggleThemeMode}
 							>
 								{themeMode === 'dark' ? (

@@ -1,24 +1,22 @@
 /**
  * 文件说明：视频讲解输入页容器。
- * 页面容器负责表单装配、mutation 提交和路由跳转，输入交互下沉到 VideoInputCard。
+ * 页面容器负责表单装配与提交，公共输入页壳层由共享组件承接。
  */
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PackageSearch, ShieldAlert, Sparkles, WifiOff } from 'lucide-react';
-import { motion } from 'motion/react';
-import type { Variants } from 'motion/react';
+import { Sparkles } from 'lucide-react';
 import { useCallback, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { CommunityFeed, VIDEO_FEED_MOCK_CARDS } from '@/components/community-feed';
 import {
-  InputPageGuideCards,
-  InputPageHeader,
-  InputPageSuggestions,
+  INPUT_PAGE_GUIDE_CARD_ICONS,
+  type InputWorkspaceNavLink,
+  type InputWorkspaceRoute,
   useBrowserAsr,
   type GuideCardItem,
+  WorkspaceInputShell,
 } from '@/components/input-page';
-import { GlobalTopNav } from '@/components/navigation/global-top-nav';
+import { VIDEO_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
 import {
@@ -28,22 +26,6 @@ import {
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/video/styles/video-input-page.scss';
-
-/** 导航链接类型。 */
-type EntryNavLink = {
-  href: string;
-  label: string;
-};
-
-/** 工作区路由类型。 */
-type WorkspaceRoute = {
-  href: string;
-  label: string;
-  icon: string;
-};
-
-/** 引导卡片图标映射（图标不走 i18n）。 */
-const GUIDE_CARD_ICONS = [PackageSearch, ShieldAlert, WifiOff] as const;
 
 /**
  * 渲染视频讲解输入页。
@@ -75,10 +57,10 @@ export function VideoInputPage() {
   });
   const navLinks = t('entryNav.landingLinks', {
     returnObjects: true
-  }) as EntryNavLink[];
+  }) as InputWorkspaceNavLink[];
   const wsRoutes = t('entryNav.workspaceRoutes', {
     returnObjects: true
-  }) as WorkspaceRoute[];
+  }) as InputWorkspaceRoute[];
 
   const badgeLabel = t('videoInput.badgeLabel');
   const titleLine1 = t('videoInput.titleLine1');
@@ -108,7 +90,7 @@ export function VideoInputPage() {
   }) as Array<{ title: string; desc: string }>;
 
   const guideCards: GuideCardItem[] = guideCardsData.map((card, i) => ({
-    icon: GUIDE_CARD_ICONS[i],
+    icon: INPUT_PAGE_GUIDE_CARD_ICONS[i],
     title: card.title,
     desc: card.desc
   }));
@@ -126,120 +108,56 @@ export function VideoInputPage() {
     [handleSubmit, onFormSubmit],
   );
 
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.08, delayChildren: 0.05 }
-    }
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, x: 20, filter: 'blur(8px)', scale: 0.98 },
-    visible: { 
-      opacity: 1, 
-      x: 0, 
-      filter: 'blur(0px)', 
-      scale: 1, 
-      transition: { type: 'spring', bounce: 0, duration: 0.7 } 
-    }
-  };
-
   return (
-    <motion.main 
-      className="xm-video-input"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      {/* 顶部导航区全局高光 */}
-      <div 
-        className="absolute top-0 left-0 w-full h-[600px] pointer-events-none -z-10" 
-        style={{
-          background: 'radial-gradient(ellipse 70% 50% at 50% -10%, var(--xm-color-primary) 0%, transparent 100%)',
-          opacity: 0.25,
-          mixBlendMode: 'color-dodge'
-        }}
-      />
-
-      <GlobalTopNav
-        links={navLinks}
-        variant="workspace"
-        workspaceRoutes={wsRoutes}
-        showAuthAction
-        showBrandIcon
-        showLocaleToggle
-        className="xm-landing-glass-nav"
-      />
-
-      <form
-        className="xm-video-input__content"
-        onSubmit={handlePageSubmit}
-        noValidate
-      >
-        {/* 标题区 */}
-        <motion.div variants={itemVariants} className="w-full flex justify-center">
-          <InputPageHeader
-            className="xm-theme-video-header"
-            badgeIcon={Sparkles}
-            badgeLabel={badgeLabel}
-            titleLine1={titleLine1}
-            titleGradient={titleGradient}
-          />
-        </motion.div>
-
-        {/* 核心输入卡片 */}
-        <motion.div variants={itemVariants} className="w-full flex justify-center">
-          <VideoInputCard
-            form={form}
-            errors={formState.errors}
-            isSubmitting={createMutation.isPending}
-            isRecording={isRecording}
-            onToggleRecording={toggleRecording}
-            labels={{
-              smartMatchHint,
-              smartMatchDesc,
-              multiAgentHint,
-              placeholder,
-              submitLabel,
-              toolUploadImage,
-              toolVoiceInput,
-            }}
-          />
-        </motion.div>
-
-        {/* 建议标签 */}
-        <motion.div variants={itemVariants} className="w-full flex justify-center">
-          <InputPageSuggestions
-            label={suggestionsLabel}
-            pills={suggestions}
-            onSelect={(pill) => {
-              setValue('text', pill, { shouldValidate: false });
-
-              if (imageFiles.length === 0) {
-                setValue('inputType', 'text');
-              }
-            }}
-          />
-        </motion.div>
-      </form>
-
-      {/* 引导卡片 */}
-      <motion.div variants={itemVariants} className="w-full flex justify-center">
-        <InputPageGuideCards cards={guideCards} />
-      </motion.div>
-
-      {/* 社区瀑布流 */}
-      <motion.div variants={itemVariants} className="w-full max-w-7xl mx-auto">
-        <CommunityFeed
-          title={feedTitle}
-          description={feedDesc}
-          categories={feedCategories}
-          cards={VIDEO_FEED_MOCK_CARDS}
-          loadMoreLabel={feedLoadMore}
-          loadingLabel={feedLoading}
+    <WorkspaceInputShell
+      rootClassName="xm-video-input"
+      navLinks={navLinks}
+      workspaceRoutes={wsRoutes}
+      content={{
+        as: 'form',
+        className: 'xm-video-input__content',
+        onSubmit: handlePageSubmit,
+        noValidate: true,
+      }}
+      badgeIcon={Sparkles}
+      badgeLabel={badgeLabel}
+      titleLine1={titleLine1}
+      titleGradient={titleGradient}
+      headerClassName="xm-theme-video-header"
+      card={
+        <VideoInputCard
+          form={form}
+          errors={formState.errors}
+          isSubmitting={createMutation.isPending}
+          isRecording={isRecording}
+          onToggleRecording={toggleRecording}
+          labels={{
+            smartMatchHint,
+            smartMatchDesc,
+            multiAgentHint,
+            placeholder,
+            submitLabel,
+            toolUploadImage,
+            toolVoiceInput,
+          }}
         />
-      </motion.div>
-    </motion.main>
+      }
+      suggestionsLabel={suggestionsLabel}
+      suggestions={suggestions}
+      onSuggestionSelect={(pill) => {
+        setValue('text', pill, { shouldValidate: false });
+
+        if (imageFiles.length === 0) {
+          setValue('inputType', 'text');
+        }
+      }}
+      guideCards={guideCards}
+      feedTitle={feedTitle}
+      feedDescription={feedDesc}
+      feedCategories={feedCategories}
+      feedCards={VIDEO_FEED_MOCK_CARDS}
+      feedLoadMoreLabel={feedLoadMore}
+      feedLoadingLabel={feedLoading}
+    />
   );
 }
