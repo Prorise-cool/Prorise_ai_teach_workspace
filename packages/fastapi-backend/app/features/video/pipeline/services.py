@@ -1242,8 +1242,10 @@ class VideoPipelineService:
         if not isinstance(detail_ref, str):
             return
         detail = self.asset_store.read_result_detail(detail_ref)
+        artifact_ref: str | None = None
+        artifact_sync_failed = False
         try:
-            _, artifact_ref = artifact_service.execute(
+            graph, artifact_ref = artifact_service.execute(
                 task_id=video_result.task_id,
                 understanding=understanding,
                 storyboard=storyboard,
@@ -1251,6 +1253,10 @@ class VideoPipelineService:
                 manim_code=manim_code,
             )
             runtime.save_value("artifact_ref", artifact_ref)
+            try:
+                await self.metadata_service.sync_artifact_graph(graph, artifact_ref=artifact_ref)
+            except Exception:  # noqa: BLE001
+                artifact_sync_failed = True
             metadata_request = self.metadata_service.build_task_request(
                 task_id=context.task_id,
                 user_id=context.user_id or "anonymous",
@@ -1264,6 +1270,12 @@ class VideoPipelineService:
                 updated_at=_utc_now(),
             )
             await self.metadata_service.persist_task(metadata_request)
+            if artifact_sync_failed:
+                updated_detail = detail.model_copy(update={"artifact_writeback_failed": True})
+                self.asset_store.write_json(
+                    _result_storage_key(video_result.task_id),
+                    updated_detail.model_dump(mode="json", by_alias=True),
+                )
         except Exception:  # noqa: BLE001
             updated_detail = detail.model_copy(update={"artifact_writeback_failed": True})
             self.asset_store.write_json(

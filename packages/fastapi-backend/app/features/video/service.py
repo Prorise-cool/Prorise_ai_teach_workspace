@@ -1,13 +1,22 @@
+import asyncio
 from datetime import UTC, datetime
 
-from app.core.errors import AppError
+from app.core.errors import AppError, IntegrationError
+from app.core.logging import get_logger
 from app.core.security import AccessContext
+from app.features.video.long_term_records import (
+    VideoPublicationSnapshot,
+    VideoPublicationSyncRequest,
+    build_session_artifact_batch_request,
+)
+from app.features.video.long_term_service import VideoArtifactIndexService, VideoPublicationService
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.models import (
     PublishedVideoCard,
     PublishedVideoCardPage,
     PublishOperationResult,
     PublishState,
+    VideoArtifactGraph,
     VideoResultDetail,
 )
 from app.features.video.pipeline.runtime import build_video_runtime_key
@@ -16,6 +25,8 @@ from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import TaskType
 from app.shared.task_metadata_service import BaseTaskMetadataService
+
+logger = get_logger("app.features.video.service")
 
 
 class VideoService(BaseTaskMetadataService):
@@ -30,9 +41,15 @@ class VideoService(BaseTaskMetadataService):
         client_factory=None,
         *,
         asset_store: LocalAssetStore | None = None,
+        publication_service: VideoPublicationService | None = None,
+        artifact_index_service: VideoArtifactIndexService | None = None,
     ) -> None:
         super().__init__(repository=repository, client_factory=client_factory)
         self._asset_store = asset_store or LocalAssetStore.from_settings()
+        self._publication_service = publication_service or VideoPublicationService(client_factory=self._client_factory)
+        self._artifact_index_service = artifact_index_service or VideoArtifactIndexService(
+            client_factory=self._client_factory
+        )
 
     async def bootstrap_status(self) -> VideoBootstrapResponse:
         return VideoBootstrapResponse()
@@ -90,7 +107,18 @@ class VideoService(BaseTaskMetadataService):
             )
 
         if snapshot.detail_ref and self._asset_store.exists(snapshot.detail_ref):
-            return self._asset_store.read_result_detail(snapshot.detail_ref)
+            detail = self._asset_store.read_result_detail(snapshot.detail_ref)
+            try:
+                publication = await self._publication_service.get_publication(task_id)
+            except IntegrationError:
+                logger.warning(
+                    "Video publication overlay lookup failed; falling back to local publish state task_id=%s",
+                    task_id,
+                )
+                return detail
+            return detail.model_copy(
+                update={"publish_state": self._resolve_publish_state(detail.publish_state, publication)}
+            )
 
         if runtime_store is not None:
             state = runtime_store.get_task_state(task_id)
@@ -119,16 +147,26 @@ class VideoService(BaseTaskMetadataService):
         if detail.result is None:
             raise AppError(code="TASK_INVALID_INPUT", message="结果详情缺失，暂不可公开", status_code=400, task_id=task_id)
 
-        publish_state = PublishState(
-            published=True,
-            published_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        publication = await self._publication_service.sync_publication(
+            VideoPublicationSyncRequest(
+                user_id=snapshot.user_id,
+                task_ref_id=snapshot.task_id,
+                title=detail.result.title,
+                description=detail.result.summary,
+                cover_url=detail.result.cover_url,
+                is_public=True,
+            )
+        )
+        publish_state = self._resolve_publish_state(
+            detail.publish_state,
+            publication,
             author_name=access_context.username,
         )
         updated_detail = detail.model_copy(update={"publish_state": publish_state})
         detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
         self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
 
-        updated_at = datetime.now(UTC)
+        updated_at = publication.updated_at or datetime.now(UTC)
         await self.persist_task(
             self.build_task_request(
                 task_id=snapshot.task_id,
@@ -148,7 +186,7 @@ class VideoService(BaseTaskMetadataService):
         self._invalidate_published_cache(runtime_store)
         return PublishOperationResult(
             task_id=task_id,
-            published=True,
+            published=publish_state.published,
             published_at=publish_state.published_at,
             card=self._build_published_card(updated_detail),
         )
@@ -165,13 +203,37 @@ class VideoService(BaseTaskMetadataService):
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
         if snapshot.user_id != access_context.user_id:
             raise AppError(code="AUTH_PERMISSION_DENIED", message="仅任务创建者可取消公开", status_code=403, task_id=task_id)
-        if snapshot.detail_ref is None or not self._asset_store.exists(snapshot.detail_ref):
+
+        detail = None
+        if snapshot.detail_ref is not None and self._asset_store.exists(snapshot.detail_ref):
+            detail = self._asset_store.read_result_detail(snapshot.detail_ref)
+
+        publication = await self._publication_service.get_publication(task_id)
+        if publication is None:
+            if detail is not None:
+                updated_detail = detail.model_copy(update={"publish_state": PublishState()})
+                detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
+                self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+            self._invalidate_published_cache(runtime_store)
             return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
-        detail = self._asset_store.read_result_detail(snapshot.detail_ref)
-        updated_detail = detail.model_copy(update={"publish_state": PublishState()})
-        detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
-        self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+        await self._publication_service.sync_publication(
+            VideoPublicationSyncRequest(
+                user_id=snapshot.user_id,
+                task_ref_id=snapshot.task_id,
+                title=detail.result.title if detail and detail.result else publication.title,
+                description=detail.result.summary if detail and detail.result else publication.description,
+                cover_url=detail.result.cover_url if detail and detail.result else publication.cover_url,
+                is_public=False,
+                status=publication.status,
+            )
+        )
+
+        if detail is not None:
+            updated_detail = detail.model_copy(update={"publish_state": PublishState()})
+            detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
+            self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+
         updated_at = datetime.now(UTC)
         await self.persist_task(
             self.build_task_request(
@@ -205,28 +267,30 @@ class VideoService(BaseTaskMetadataService):
                 cards = [PublishedVideoCard.model_validate(item) for item in cached]
                 return self._paginate_cards(cards, page=page, page_size=page_size)
 
+        cards: list[PublishedVideoCard] = []
         page_num = 1
         page_size_scan = 100
-        cards: list[PublishedVideoCard] = []
         total_seen = 0
         while True:
-            metadata_page = await self.list_tasks(
-                status=TaskStatus.COMPLETED,
-                page_num=page_num,
-                page_size=page_size_scan,
+            publication_page = await self._publication_service.list_publications(page=page_num, page_size=page_size_scan)
+            total_seen += len(publication_page.rows)
+            snapshots = await asyncio.gather(
+                *(self.get_task(item.task_ref_id) for item in publication_page.rows)
             )
-            total_seen += len(metadata_page.rows)
-            for row in metadata_page.rows:
-                if row.detail_ref is None:
+            for publication, snapshot in zip(publication_page.rows, snapshots, strict=False):
+                if snapshot is None or snapshot.detail_ref is None:
                     continue
-                if not self._asset_store.exists(row.detail_ref):
+                if not self._asset_store.exists(snapshot.detail_ref):
                     continue
-                detail = self._asset_store.read_result_detail(row.detail_ref)
-                if not detail.publish_state.published or detail.result is None:
+                detail = self._asset_store.read_result_detail(snapshot.detail_ref)
+                if detail.result is None:
                     continue
-                cards.append(self._build_published_card(detail))
+                detail = detail.model_copy(
+                    update={"publish_state": self._resolve_publish_state(detail.publish_state, publication)}
+                )
+                cards.append(self._build_published_card(detail, publication=publication))
 
-            if total_seen >= metadata_page.total or not metadata_page.rows:
+            if total_seen >= publication_page.total or not publication_page.rows:
                 break
             page_num += 1
 
@@ -239,8 +303,28 @@ class VideoService(BaseTaskMetadataService):
             )
         return self._paginate_cards(cards, page=page, page_size=page_size)
 
-    def _build_published_card(self, detail: VideoResultDetail) -> PublishedVideoCard:
-        if detail.result is None or detail.publish_state.published_at is None:
+    async def sync_artifact_graph(
+        self,
+        graph: VideoArtifactGraph,
+        *,
+        artifact_ref: str,
+    ):
+        return await self._artifact_index_service.sync_artifact_batch(
+            build_session_artifact_batch_request(
+                graph,
+                object_key=self._asset_store.ref_to_key(artifact_ref),
+                payload_ref=artifact_ref,
+            )
+        )
+
+    def _build_published_card(
+        self,
+        detail: VideoResultDetail,
+        *,
+        publication: VideoPublicationSnapshot | None = None,
+    ) -> PublishedVideoCard:
+        published_at = self._published_at_from(publication, fallback=detail.publish_state.published_at)
+        if detail.result is None or published_at is None:
             raise ValueError("published detail requires result and published_at")
         return PublishedVideoCard(
             result_id=detail.result.result_id,
@@ -249,7 +333,7 @@ class VideoService(BaseTaskMetadataService):
             knowledge_points=detail.result.knowledge_points,
             cover_url=detail.result.cover_url,
             duration=detail.result.duration,
-            published_at=detail.publish_state.published_at,
+            published_at=published_at,
             author_name=detail.publish_state.author_name,
         )
 
@@ -269,3 +353,32 @@ class VideoService(BaseTaskMetadataService):
         if runtime_store is None:
             return
         runtime_store.delete_runtime_value(build_video_runtime_key("published", "index"))
+
+    def _resolve_publish_state(
+        self,
+        current_state: PublishState,
+        publication: VideoPublicationSnapshot | None,
+        *,
+        author_name: str | None = None,
+    ) -> PublishState:
+        if publication is None or not publication.is_public:
+            return PublishState()
+        return PublishState(
+            published=True,
+            published_at=self._published_at_from(publication, fallback=current_state.published_at),
+            author_name=author_name or current_state.author_name,
+        )
+
+    @staticmethod
+    def _published_at_from(
+        publication: VideoPublicationSnapshot | None,
+        *,
+        fallback: str | None = None,
+    ) -> str | None:
+        if publication is None:
+            return fallback
+        published_at = publication.published_at or publication.updated_at or publication.created_at
+        if published_at is None:
+            return fallback
+        normalized = published_at.astimezone(UTC) if published_at.tzinfo is not None else published_at
+        return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")

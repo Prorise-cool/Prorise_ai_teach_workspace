@@ -122,24 +122,37 @@ GPT-5 Codex
 
 ### Debug Log References
 
-- `pytest -q packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
-- `pytest -q packages/fastapi-backend/tests/integration/test_video_pipeline_api.py`
+- `pytest -q packages/fastapi-backend/tests`
+- `mvn -pl ruoyi-modules/ruoyi-xiaomai -am -DskipTests=false -Dtest=XmPersistenceSyncServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`
 
 ### Completion Notes List
 
 - 已定义 `VideoArtifactGraph`、artifact 类型枚举与对应 JSON 结构，并把图谱写入独立 artifact 资产文件。
 - 已把 artifact 回写挂到视频任务完成后的尽力而为流程，失败时仅回写 `artifactWritebackFailed` 标记，不阻断视频可用性。
-- 已补充 artifact 图谱组装与类型完整性的后端单测。
+- 已将 artifact graph 通过 `/internal/xiaomai/video/session-artifacts` 真实同步到 `xm_session_artifact`，字段对齐 `/Users/prorise/Downloads/xm_dev.sql`。
+- 已补充 artifact 图谱组装、RuoYi 防腐层映射与类型完整性的后端单测。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/4-9-视频侧-sessionartifactgraph-回写.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `contracts/video/v1/video-artifact-graph.md`
+- `packages/fastapi-backend/app/features/video/long_term_records.py`
+- `packages/fastapi-backend/app/features/video/long_term_service.py`
+- `packages/fastapi-backend/app/features/video/service.py`
 - `packages/fastapi-backend/app/features/video/pipeline/models.py`
 - `packages/fastapi-backend/app/features/video/pipeline/services.py`
+- `packages/fastapi-backend/tests/unit/video/test_video_long_term_records.py`
 - `packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
 - `packages/fastapi-backend/tests/integration/test_video_pipeline_api.py`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/domain/bo/XmPersistenceSyncBo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/domain/vo/XmPersistenceSyncVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/controller/internal/XmPersistenceSyncController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/service/XmPersistenceSyncService.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/mapper/SessionArtifactMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/integration/SessionArtifactMapper.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/integration/service/XmPersistenceSyncServiceTest.java`
 
 ## Change Log
 
-- 2026-04-06：完成 Story 4.9 后端 artifact graph 组装、结果元数据降级标记与测试补齐，状态更新为 `review`。
+- 2026-04-06：完成 Story 4.9 后端 artifact graph 组装、`xm_session_artifact` 长期回写、结果元数据降级标记与测试补齐，状态保持 `review`。
