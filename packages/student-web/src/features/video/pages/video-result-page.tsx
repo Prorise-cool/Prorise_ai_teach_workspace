@@ -13,6 +13,7 @@ import { FutureActionsBar } from '../components/future-actions-bar';
 import { ResultActionsBar } from '../components/result-actions-bar';
 import { ResultSummaryCard } from '../components/result-summary-card';
 import { VideoPlayer } from '../components/video-player';
+import { useVideoPublish } from '../hooks/use-video-publish';
 import { useVideoResult } from '../hooks/use-video-result';
 
 import '../styles/_result.scss';
@@ -82,6 +83,7 @@ export function VideoResultPage() {
   const { id: taskId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, viewStatus, refetch } = useVideoResult(taskId);
+  const { publish, unpublish, isLoading: publishLoading } = useVideoPublish(taskId ?? '');
 
   const handleReturn = () => void navigate('/video/input');
 
@@ -210,6 +212,9 @@ export function VideoResultPage() {
           <ResultActionsBar
             taskId={taskId!}
             published={result.published}
+            publishLoading={publishLoading}
+            onPublish={publish}
+            onUnpublish={unpublish}
           />
 
           {/* 分隔线 */}

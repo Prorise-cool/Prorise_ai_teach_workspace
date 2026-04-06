@@ -5,6 +5,7 @@ import { authHandlers } from './handlers/auth';
 import { taskHandlers } from './handlers/task';
 import { videoPipelineHandlers } from './handlers/video-pipeline';
 import { videoPreprocessHandlers } from './handlers/video-preprocess';
+import { videoPublishHandlers } from './handlers/video-publish';
 import { videoTaskHandlers } from './handlers/video-task';
 
 export { authMockFixtures } from './fixtures/auth';
@@ -16,6 +17,7 @@ export { authHandlers } from './handlers/auth';
 export { taskHandlers } from './handlers/task';
 export { videoPipelineHandlers } from './handlers/video-pipeline';
 export { videoPreprocessHandlers } from './handlers/video-preprocess';
+export { videoPublishHandlers } from './handlers/video-publish';
 export { videoTaskHandlers } from './handlers/video-task';
 
 let mockWorkerStartPromise: Promise<boolean> | null = null;
@@ -57,5 +59,6 @@ export const mockHandlers = [
   ...taskHandlers,
   ...videoPipelineHandlers,
   ...videoPreprocessHandlers,
+  ...videoPublishHandlers,
   ...videoTaskHandlers,
 ];
