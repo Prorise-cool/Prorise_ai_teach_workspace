@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/create-task-response.schema.json",
+  "title": "CreateVideoTaskResponse",
+  "description": "Story 3.4: POST /api/v1/video/tasks 202 响应体契约。",
+  "type": "object",
+  "required": [
+    "code",
+    "msg",
+    "data"
+  ],
+  "properties": {
+    "code": {
+      "type": "integer",
+      "const": 202
+    },
+    "msg": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "taskType",
+        "status",
+        "createdAt"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^vtask_",
+          "description": "任务唯一标识"
+        },
+        "taskType": {
+          "type": "string",
+          "const": "video"
+        },
+        "status": {
+          "type": "string",
+          "const": "pending"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "任务创建时间 UTC ISO 8601"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

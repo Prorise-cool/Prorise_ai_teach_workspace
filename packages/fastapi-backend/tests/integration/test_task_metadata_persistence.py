@@ -100,7 +100,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 def test_task_metadata_routes_persist_query_and_replay_with_ruoyi_time_format(client: TestClient) -> None:
     video_create = client.post(
-        "/api/v1/video/tasks",
+        "/api/v1/video/tasks/metadata",
         json={
             "task_id": "video_route_001",
             "user_id": "student_100",
@@ -163,7 +163,7 @@ def test_task_metadata_routes_persist_query_and_replay_with_ruoyi_time_format(cl
 
 def test_failed_task_stays_visible_when_filtered_by_status(client: TestClient) -> None:
     client.post(
-        "/api/v1/video/tasks",
+        "/api/v1/video/tasks/metadata",
         json={
             "task_id": "video_route_002",
             "user_id": "student_200",
@@ -176,7 +176,7 @@ def test_failed_task_stays_visible_when_filtered_by_status(client: TestClient) -
         }
     )
     client.post(
-        "/api/v1/video/tasks",
+        "/api/v1/video/tasks/metadata",
         json={
             "task_id": "video_route_003",
             "user_id": "student_200",
@@ -200,7 +200,7 @@ def test_failed_task_stays_visible_when_filtered_by_status(client: TestClient) -
 
 def test_video_task_filters_use_exact_session_match_and_single_sided_time_window(client: TestClient) -> None:
     client.post(
-        "/api/v1/video/tasks",
+        "/api/v1/video/tasks/metadata",
         json={
             "task_id": "video_route_010",
             "user_id": "student_300",
@@ -212,7 +212,7 @@ def test_video_task_filters_use_exact_session_match_and_single_sided_time_window
         }
     )
     client.post(
-        "/api/v1/video/tasks",
+        "/api/v1/video/tasks/metadata",
         json={
             "task_id": "video_route_011",
             "user_id": "student_300",

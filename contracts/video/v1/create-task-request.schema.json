@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/create-task-request.schema.json",
+  "title": "CreateVideoTaskRequest",
+  "description": "Story 3.4: POST /api/v1/video/tasks 请求体契约。",
+  "type": "object",
+  "required": [
+    "inputType",
+    "sourcePayload"
+  ],
+  "properties": {
+    "inputType": {
+      "type": "string",
+      "enum": ["text", "image", "document"],
+      "description": "输入类型"
+    },
+    "sourcePayload": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50000,
+      "description": "原始输入内容"
+    },
+    "clientRequestId": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "客户端幂等键"
+    },
+    "userProfile": {
+      "type": ["object", "null"],
+      "description": "用户偏好配置",
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "maxLength": 500,
+      "description": "用户自定义任务摘要"
+    }
+  },
+  "additionalProperties": false
+}
