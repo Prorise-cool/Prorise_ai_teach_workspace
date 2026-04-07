@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import json
 from collections.abc import Callable
 from datetime import datetime
 
@@ -18,7 +20,9 @@ def _run(coro):
 def _build_client(
     handler: Callable[[httpx.Request], httpx.Response | None | object],
     *,
-    retry_attempts: int = 1
+    retry_attempts: int = 1,
+    access_token: str | None = None,
+    client_id: str | None = None,
 ) -> RuoYiClient:
     transport = httpx.MockTransport(handler)
     return RuoYiClient(
@@ -26,8 +30,17 @@ def _build_client(
         transport=transport,
         timeout_seconds=0.01,
         retry_attempts=retry_attempts,
-        retry_delay_seconds=0.0
+        retry_delay_seconds=0.0,
+        access_token=access_token,
+        client_id=client_id,
     )
+
+
+def _build_jwt_like_token(payload: dict[str, object]) -> str:
+    encoded_payload = base64.urlsafe_b64encode(
+        json.dumps(payload).encode("utf-8")
+    ).decode("utf-8").rstrip("=")
+    return f"header.{encoded_payload}.signature"
 
 
 def test_ruoyi_client_unwraps_single_response_and_applies_mapper() -> None:
@@ -74,6 +87,71 @@ def test_ruoyi_client_unwraps_single_response_and_applies_mapper() -> None:
         "status": "processing",
         "updated_at": datetime(2026, 3, 29, 10, 30, 0)
     }
+
+    _run(client.aclose())
+
+
+def test_ruoyi_client_infers_clientid_header_from_access_token() -> None:
+    access_token = _build_jwt_like_token({"clientid": "ruoyi-client-id"})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == f"Bearer {access_token}"
+        assert request.headers["clientid"] == "ruoyi-client-id"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "查询成功",
+                "data": {"id": "video_1001"},
+            },
+        )
+
+    client = _build_client(handler, retry_attempts=0, access_token=access_token)
+
+    result = _run(
+        client.get_single(
+            "/api/v1/video/tasks/1001",
+            resource="video-task",
+            operation="query",
+        )
+    )
+
+    assert result.data == {"id": "video_1001"}
+
+    _run(client.aclose())
+
+
+def test_ruoyi_client_prefers_explicit_clientid_header_over_access_token_claim() -> None:
+    access_token = _build_jwt_like_token({"clientid": "jwt-client-id"})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == f"Bearer {access_token}"
+        assert request.headers["clientid"] == "explicit-client-id"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "查询成功",
+                "data": {"id": "video_1001"},
+            },
+        )
+
+    client = _build_client(
+        handler,
+        retry_attempts=0,
+        access_token=access_token,
+        client_id="explicit-client-id",
+    )
+
+    result = _run(
+        client.get_single(
+            "/api/v1/video/tasks/1001",
+            resource="video-task",
+            operation="query",
+        )
+    )
+
+    assert result.data == {"id": "video_1001"}
 
     _run(client.aclose())
 
@@ -166,6 +244,34 @@ def test_ruoyi_client_rejects_single_response_when_data_is_not_object() -> None:
     error = exc_info.value
     assert error.code == "RUOYI_INVALID_RESPONSE"
     assert error.details["reason"] == "data is not an object"
+
+    _run(client.aclose())
+
+
+def test_ruoyi_client_accepts_ack_response_without_data_payload() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "操作成功",
+            },
+        )
+
+    client = _build_client(handler, retry_attempts=0)
+
+    result = _run(
+        client.post_ack(
+            "/api/v1/video/tasks",
+            resource="video-task",
+            operation="create",
+            json_body={"taskId": "video_1001"},
+        )
+    )
+
+    assert result.code == 200
+    assert result.msg == "操作成功"
+    assert result.raw == {"code": 200, "msg": "操作成功"}
 
     _run(client.aclose())
 

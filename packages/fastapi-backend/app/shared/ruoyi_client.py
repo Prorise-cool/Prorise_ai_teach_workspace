@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Generic, Mapping, TypeVar
@@ -35,11 +37,45 @@ class RuoYiPageResponse(Generic[T]):
     raw: dict[str, Any]
 
 
+@dataclass(slots=True)
+class RuoYiAckResponse:
+    code: int
+    msg: str
+    raw: dict[str, Any]
+
+
 def _coerce_status_code(value: Any) -> int | None:
     if isinstance(value, int):
         return value
     if isinstance(value, str) and value.isdigit():
         return int(value)
+    return None
+
+
+def _extract_client_id_from_access_token(access_token: str | None) -> str | None:
+    if access_token is None:
+        return None
+
+    token_parts = access_token.split(".")
+    if len(token_parts) != 3:
+        return None
+
+    payload_segment = token_parts[1]
+    padding = "=" * (-len(payload_segment) % 4)
+
+    try:
+        decoded_payload = base64.urlsafe_b64decode(f"{payload_segment}{padding}")
+        payload = json.loads(decoded_payload.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(payload, Mapping):
+        return None
+
+    client_id = payload.get("clientid") or payload.get("clientId")
+    if isinstance(client_id, str):
+        stripped = client_id.strip()
+        return stripped or None
     return None
 
 
@@ -106,12 +142,16 @@ class RuoYiClient:
         retry_attempts: int = 2,
         retry_delay_seconds: float = 0.1,
         access_token: str | None = None,
+        client_id: str | None = None,
         default_headers: Mapping[str, str] | None = None,
         transport: httpx.BaseTransport | httpx.AsyncBaseTransport | None = None
     ) -> None:
         headers = dict(default_headers or {})
         if access_token:
             headers.setdefault("Authorization", f"Bearer {access_token}")
+        resolved_client_id = client_id or _extract_client_id_from_access_token(access_token)
+        if resolved_client_id:
+            headers.setdefault("Clientid", resolved_client_id)
 
         self.base_url = base_url
         self.timeout_seconds = timeout_seconds
@@ -132,7 +172,8 @@ class RuoYiClient:
             timeout_seconds=settings.ruoyi_timeout_seconds,
             retry_attempts=settings.ruoyi_retry_attempts,
             retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
-            access_token=settings.ruoyi_access_token
+            access_token=settings.ruoyi_access_token,
+            client_id=settings.ruoyi_client_id,
         )
 
     async def __aenter__(self) -> "RuoYiClient":
@@ -186,6 +227,26 @@ class RuoYiClient:
             retry_enabled=retry_enabled
         )
 
+    async def post_ack(
+        self,
+        path: str,
+        *,
+        resource: str,
+        operation: str,
+        json_body: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+        retry_enabled: bool | None = None,
+    ) -> RuoYiAckResponse:
+        return await self.request_ack(
+            "POST",
+            path,
+            resource=resource,
+            operation=operation,
+            json_body=json_body,
+            headers=headers,
+            retry_enabled=retry_enabled,
+        )
+
     async def put_single(
         self,
         path: str,
@@ -206,6 +267,26 @@ class RuoYiClient:
             headers=headers,
             mapper=mapper,
             retry_enabled=retry_enabled
+        )
+
+    async def put_ack(
+        self,
+        path: str,
+        *,
+        resource: str,
+        operation: str,
+        json_body: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+        retry_enabled: bool | None = None,
+    ) -> RuoYiAckResponse:
+        return await self.request_ack(
+            "PUT",
+            path,
+            resource=resource,
+            operation=operation,
+            json_body=json_body,
+            headers=headers,
+            retry_enabled=retry_enabled,
         )
 
     async def get_page(
@@ -331,6 +412,34 @@ class RuoYiClient:
             rows=rows,
             total=total,
             raw=payload
+        )
+
+    async def request_ack(
+        self,
+        method: str,
+        path: str,
+        *,
+        resource: str,
+        operation: str,
+        params: Mapping[str, Any] | None = None,
+        json_body: Mapping[str, Any] | None = None,
+        headers: Mapping[str, str] | None = None,
+        retry_enabled: bool | None = None,
+    ) -> RuoYiAckResponse:
+        payload = await self._request_json(
+            method,
+            path,
+            resource=resource,
+            operation=operation,
+            params=params,
+            json_body=json_body,
+            headers=headers,
+            retry_enabled=retry_enabled,
+        )
+        return RuoYiAckResponse(
+            code=payload["code"],
+            msg=payload["msg"],
+            raw=payload,
         )
 
     async def _request_json(

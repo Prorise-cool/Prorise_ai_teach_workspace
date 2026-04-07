@@ -126,17 +126,18 @@ def test_extract_image_metadata_reads_png_and_jpeg() -> None:
     assert jpeg.format == "jpeg"
 
 
-@pytest.mark.asyncio
-async def test_preprocess_returns_success_result() -> None:
+def test_preprocess_returns_success_result() -> None:
     service = PreprocessService(
         image_storage=InMemoryImageStorage(),
         ocr_provider=FixedOcrProvider(OcrResult(text="一道数学题", confidence=0.93)),
     )
 
-    result = await service.preprocess(
-        file_bytes=_make_png(640, 480),
-        filename="normal.png",
-        content_type="image/png",
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(640, 480),
+            filename="normal.png",
+            content_type="image/png",
+        )
     )
 
     assert isinstance(result, VideoPreprocessResult)
@@ -147,34 +148,36 @@ async def test_preprocess_returns_success_result() -> None:
     assert result.suggestions == []
 
 
-@pytest.mark.asyncio
-async def test_preprocess_returns_low_confidence_suggestions() -> None:
+def test_preprocess_returns_low_confidence_suggestions() -> None:
     service = PreprocessService(
         image_storage=InMemoryImageStorage(),
         ocr_provider=FixedOcrProvider(OcrResult(text="模糊结果", confidence=0.4)),
     )
 
-    result = await service.preprocess(
-        file_bytes=_make_png(),
-        filename="low-confidence.png",
-        content_type="image/png",
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="low-confidence.png",
+            content_type="image/png",
+        )
     )
 
     assert result.error_code is None
     assert result.suggestions == ["OCR 识别置信度较低，建议核对识别结果并补充修正"]
 
 
-@pytest.mark.asyncio
-async def test_preprocess_returns_machine_readable_ocr_failure() -> None:
+def test_preprocess_returns_machine_readable_ocr_failure() -> None:
     service = PreprocessService(
         image_storage=InMemoryImageStorage(),
         ocr_provider=FixedOcrProvider(OcrResult(error="provider failed")),
     )
 
-    result = await service.preprocess(
-        file_bytes=_make_png(),
-        filename="ocr-failed.png",
-        content_type="image/png",
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="ocr-failed.png",
+            content_type="image/png",
+        )
     )
 
     assert result.image_ref.startswith("local://")
@@ -182,18 +185,19 @@ async def test_preprocess_returns_machine_readable_ocr_failure() -> None:
     assert result.suggestions == ["OCR 识别失败，建议手动输入题目文本"]
 
 
-@pytest.mark.asyncio
-async def test_preprocess_returns_machine_readable_timeout() -> None:
+def test_preprocess_returns_machine_readable_timeout() -> None:
     service = PreprocessService(
         image_storage=InMemoryImageStorage(),
         ocr_provider=SlowOcrProvider(),
         ocr_timeout=0.01,
     )
 
-    result = await service.preprocess(
-        file_bytes=_make_png(),
-        filename="ocr-timeout.png",
-        content_type="image/png",
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="ocr-timeout.png",
+            content_type="image/png",
+        )
     )
 
     assert result.image_ref.startswith("local://")
@@ -201,18 +205,19 @@ async def test_preprocess_returns_machine_readable_timeout() -> None:
     assert result.suggestions == ["OCR 识别超时，建议手动输入题目文本"]
 
 
-@pytest.mark.asyncio
-async def test_preprocess_raises_storage_failed_error() -> None:
+def test_preprocess_raises_storage_failed_error() -> None:
     service = PreprocessService(
         image_storage=FailingImageStorage(),
         ocr_provider=FixedOcrProvider(OcrResult(text="ok", confidence=1)),
     )
 
     with pytest.raises(AppError) as exc_info:
-        await service.preprocess(
-            file_bytes=_make_png(),
-            filename="storage-failed.png",
-            content_type="image/png",
+        asyncio.run(
+            service.preprocess(
+                file_bytes=_make_png(),
+                filename="storage-failed.png",
+                content_type="image/png",
+            )
         )
 
     assert exc_info.value.code == "VIDEO_STORAGE_FAILED"

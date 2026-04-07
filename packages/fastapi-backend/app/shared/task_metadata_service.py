@@ -48,7 +48,7 @@ class BaseTaskMetadataService:
             snapshot = self._build_snapshot(request, existing_snapshot)
             ruoyi_payload = snapshot.to_ruoyi_payload()
             if existing_row is None:
-                await client.post_single(
+                await client.post_ack(
                     self._WRITE_ENDPOINT,
                     resource=self._RESOURCE,
                     operation="create",
@@ -56,7 +56,7 @@ class BaseTaskMetadataService:
                     retry_enabled=False,
                 )
             else:
-                await client.put_single(
+                await client.put_ack(
                     self._WRITE_ENDPOINT,
                     resource=self._RESOURCE,
                     operation="update",

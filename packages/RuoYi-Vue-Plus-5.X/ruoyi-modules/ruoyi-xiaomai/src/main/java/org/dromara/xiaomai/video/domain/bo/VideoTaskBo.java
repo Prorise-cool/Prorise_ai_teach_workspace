@@ -40,8 +40,8 @@ public class VideoTaskBo extends BaseEntity {
     /**
      * 用户归属。
      */
-    @NotBlank(message = "用户归属不能为空", groups = {AddGroup.class, EditGroup.class})
-    private String userId;
+    @NotNull(message = "用户归属不能为空", groups = {AddGroup.class, EditGroup.class})
+    private Long userId;
 
     /**
      * 任务类型。

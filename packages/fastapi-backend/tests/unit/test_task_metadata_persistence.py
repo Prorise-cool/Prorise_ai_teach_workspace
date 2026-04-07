@@ -130,6 +130,23 @@ def test_snapshot_from_ruoyi_row_restores_video_task_shape() -> None:
     assert snapshot.status == TaskStatus.COMPLETED
 
 
+def test_snapshot_from_ruoyi_row_coerces_integer_user_id_to_string() -> None:
+    snapshot = snapshot_from_ruoyi_row(
+        {
+            "id": 10,
+            "taskId": "video_010",
+            "userId": 1,
+            "taskType": "video",
+            "taskState": "failed",
+            "summary": "视频任务失败",
+            "createTime": "2026-03-29 12:10:00",
+            "updateTime": "2026-03-29 12:11:00",
+        }
+    )
+
+    assert snapshot.user_id == "1"
+
+
 def test_snapshot_from_ruoyi_row_rejects_unknown_task_type() -> None:
     with pytest.raises(ValueError, match="unsupported task_type"):
         snapshot_from_ruoyi_row(
@@ -269,6 +286,71 @@ def test_video_service_replay_session_fetches_all_pages() -> None:
         ("/video/task/list", 1, 100),
         ("/video/task/list", 2, 100)
     ]
+
+
+def test_video_service_accepts_ack_only_write_response() -> None:
+    calls: list[tuple[str, str, dict | None]] = []
+    stored_rows: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content.decode("utf-8")) if request.content else None
+        calls.append((request.method, request.url.path, payload))
+        if request.method == "GET":
+            return httpx.Response(200, json={"code": 200, "msg": "ok", "rows": stored_rows, "total": len(stored_rows)})
+        if request.method == "POST":
+            stored_rows[:] = [{"id": 1, **(payload or {})}]
+            return httpx.Response(200, json={"code": 200, "msg": "ok"})
+        if request.method == "PUT":
+            stored_rows[:] = [{"id": payload["id"], **{k: v for k, v in (payload or {}).items() if k != "id"}}]
+            return httpx.Response(200, json={"code": 200, "msg": "ok"})
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    def client_factory() -> RuoYiClient:
+        return RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0
+        )
+
+    service = VideoService(client_factory=client_factory)
+
+    created = asyncio.run(
+        service.persist_task(
+            VideoTaskMetadataCreateRequest(
+                task_id="video_ack_001",
+                user_id="student_ack_001",
+                status=TaskStatus.PROCESSING,
+                summary="视频任务处理中",
+                source_session_id="session_ack_001",
+                created_at=datetime(2026, 3, 29, 12, 0, 0),
+                updated_at=datetime(2026, 3, 29, 12, 1, 0),
+            )
+        )
+    )
+
+    updated = asyncio.run(
+        service.persist_task(
+            VideoTaskMetadataCreateRequest(
+                task_id="video_ack_001",
+                user_id="student_ack_001",
+                status=TaskStatus.COMPLETED,
+                summary="视频任务完成",
+                result_ref="cos://video/ack-001/result.json",
+                source_session_id="session_ack_001",
+                created_at=datetime(2026, 3, 29, 12, 0, 0),
+                updated_at=datetime(2026, 3, 29, 12, 3, 0),
+            )
+        )
+    )
+
+    assert created.task.task_id == "video_ack_001"
+    assert updated.task.status == TaskStatus.COMPLETED
+    assert calls[0][:2] == ("GET", "/video/task/list")
+    assert calls[1][:2] == ("POST", "/video/task")
+    assert calls[2][:2] == ("GET", "/video/task/list")
+    assert calls[3][:2] == ("PUT", "/video/task")
 
 
 def test_video_service_rejects_unknown_task_type_from_ruoyi() -> None:

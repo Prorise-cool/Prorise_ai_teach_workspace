@@ -45,6 +45,7 @@
 ## CRUD / 查询扩展策略
 
 - 标准单表：视频任务、课堂会话优先通过 `RuoYi Generator` 生成 `Controller/Service/Mapper/Bo/Vo`。
+- AI 运行配置域按 `xm_ai_module / xm_ai_provider / xm_ai_resource / xm_ai_module_binding` 多表拆分承接，只保留软关联，不建立物理外键；该域默认仅管理员可维护。
 - 聚合查询：学习记录、收藏、问答日志、Learning Coach 结果、审计中心统一走手写查询。
 - 导出与审计：统一要求 `@SaCheckPermission` + `@Log(..., BusinessType.EXPORT)`。
 - 查询类能力默认后台可见；学习收藏允许后台清理；学习记录和问答日志默认不开放后台新增或编辑。

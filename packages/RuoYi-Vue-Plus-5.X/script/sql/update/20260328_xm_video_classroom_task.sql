@@ -7,8 +7,9 @@
 
 CREATE TABLE IF NOT EXISTS xm_video_task (
     id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    tenant_id varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
     task_id varchar(64) NOT NULL COMMENT '任务ID',
-    user_id varchar(64) NOT NULL COMMENT '用户归属',
+    user_id bigint(20) NOT NULL COMMENT '用户ID（关联 sys_user.user_id）',
     task_type varchar(32) NOT NULL COMMENT '任务类型',
     task_state varchar(20) NOT NULL COMMENT '任务状态',
     summary varchar(512) NOT NULL COMMENT '任务摘要',
@@ -26,16 +27,18 @@ CREATE TABLE IF NOT EXISTS xm_video_task (
     create_time datetime DEFAULT NULL COMMENT '创建时间',
     update_by bigint(20) DEFAULT NULL COMMENT '更新者',
     update_time datetime DEFAULT NULL COMMENT '更新时间',
+    del_flag char(1) NOT NULL DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_xm_video_task_task_id (task_id),
-    KEY idx_xm_video_task_user_state_time (user_id, task_state, update_time),
-    KEY idx_xm_video_task_session (source_session_id)
+    UNIQUE KEY uk_xm_video_task_task_id (tenant_id, task_id),
+    KEY idx_xm_video_task_user_state_time (tenant_id, user_id, task_state, update_time),
+    KEY idx_xm_video_task_session (tenant_id, source_session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='视频任务元数据长期表';
 
 CREATE TABLE IF NOT EXISTS xm_classroom_session (
     id bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    tenant_id varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
     task_id varchar(64) NOT NULL COMMENT '任务ID',
-    user_id varchar(64) NOT NULL COMMENT '用户归属',
+    user_id bigint(20) NOT NULL COMMENT '用户ID（关联 sys_user.user_id）',
     task_type varchar(32) NOT NULL COMMENT '任务类型',
     task_state varchar(20) NOT NULL COMMENT '任务状态',
     summary varchar(512) NOT NULL COMMENT '任务摘要',
@@ -53,8 +56,9 @@ CREATE TABLE IF NOT EXISTS xm_classroom_session (
     create_time datetime DEFAULT NULL COMMENT '创建时间',
     update_by bigint(20) DEFAULT NULL COMMENT '更新者',
     update_time datetime DEFAULT NULL COMMENT '更新时间',
+    del_flag char(1) NOT NULL DEFAULT '0' COMMENT '删除标志（0代表存在 1代表删除）',
     PRIMARY KEY (id),
-    UNIQUE KEY uk_xm_classroom_session_task_id (task_id),
-    KEY idx_xm_classroom_session_user_state_time (user_id, task_state, update_time),
-    KEY idx_xm_classroom_session_session (source_session_id)
+    UNIQUE KEY uk_xm_classroom_session_task_id (tenant_id, task_id),
+    KEY idx_xm_classroom_session_user_state_time (tenant_id, user_id, task_state, update_time),
+    KEY idx_xm_classroom_session_session (tenant_id, source_session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课堂会话摘要长期表';

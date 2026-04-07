@@ -208,6 +208,8 @@ class VoiceConfig(VideoCamelModel):
     format: str = "mp3"
     sample_rate: int = 44100
     bitrate: str = "192k"
+    volume_ratio: float = 1.0
+    pitch_ratio: float = 1.0
 
 
 class TTSResult(VideoCamelModel):

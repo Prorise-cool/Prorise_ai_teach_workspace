@@ -6,12 +6,13 @@ from datetime import UTC, datetime
 
 from app.core.errors import AppError
 from app.core.logging import format_trace_timestamp, get_logger
-from app.core.security import AccessContext
+from app.core.security import AccessContext, has_permission
 from app.features.video.create_task_models import (
     CreateVideoTaskAcceptedPayload,
     CreateVideoTaskRequest,
     IdempotentConflictPayload,
 )
+from app.features.video.runtime_auth import delete_video_runtime_auth, save_video_runtime_auth
 from app.features.video.schemas import VideoTaskMetadataCreateRequest
 from app.features.video.service import VideoService
 from app.infra.redis_client import RuntimeStore
@@ -28,7 +29,7 @@ IDEMPOTENCY_KEY_PREFIX = "xm_idempotent:video"
 
 
 def ensure_video_task_create_permission(access_context: AccessContext) -> None:
-    if VIDEO_TASK_CREATE_PERMISSION in access_context.permissions:
+    if has_permission(access_context.permissions, VIDEO_TASK_CREATE_PERMISSION):
         return
 
     raise AppError(
@@ -99,6 +100,18 @@ def validate_create_request(request: CreateVideoTaskRequest) -> dict[str, object
     }
 
 
+def normalize_voice_preference(request: CreateVideoTaskRequest) -> dict[str, str] | None:
+    if request.voice_preference is None:
+        return None
+    payload = request.voice_preference.model_dump(mode="json", by_alias=True, exclude_none=True)
+    normalized = {
+        str(key): str(value).strip()
+        for key, value in payload.items()
+        if isinstance(value, str) and value.strip()
+    }
+    return normalized or None
+
+
 def initialize_task_runtime_state(
     runtime_store: RuntimeStore,
     *,
@@ -106,7 +119,11 @@ def initialize_task_runtime_state(
     created_at: str,
     request_id: str | None,
     source_payload: dict[str, object],
+    voice_preference: dict[str, str] | None = None,
 ) -> dict[str, object]:
+    context = {"sourcePayload": source_payload}
+    if voice_preference is not None:
+        context["voicePreference"] = voice_preference
     return runtime_store.set_task_state(
         task_id=task_id,
         task_type=VIDEO_TASK_TYPE,
@@ -115,7 +132,7 @@ def initialize_task_runtime_state(
         progress=0,
         request_id=request_id,
         source="video.create_task",
-        context={"sourcePayload": source_payload},
+        context=context,
         created_at=created_at,
     )
 
@@ -205,6 +222,7 @@ async def create_video_task(
     metadata_service: VideoService,
 ) -> CreateVideoTaskAcceptedPayload | IdempotentConflictPayload:
     source_payload = validate_create_request(request)
+    voice_preference = normalize_voice_preference(request)
     idempotency_key = build_idempotency_key(access_context.user_id, request.client_request_id)
 
     conflict = read_idempotent_conflict(runtime_store, key=idempotency_key)
@@ -236,6 +254,12 @@ async def create_video_task(
         created_at=created_at,
         request_id=access_context.request_id,
         source_payload=source_payload,
+        voice_preference=voice_preference,
+    )
+    save_video_runtime_auth(
+        runtime_store,
+        task_id=task_id,
+        access_context=access_context,
     )
     await persist_video_task_metadata(
         metadata_service,
@@ -256,6 +280,7 @@ async def create_video_task(
             "inputType": request.input_type,
             "sourcePayload": source_payload,
             "userProfile": request.user_profile or {},
+            "voicePreference": voice_preference or {},
         },
         created_at=created_at,
     )
@@ -270,6 +295,7 @@ async def create_video_task(
             created_at=created_at,
             request_id=access_context.request_id,
         )
+        delete_video_runtime_auth(runtime_store, task_id=task_id)
         runtime_store.delete_runtime_value(idempotency_key)
         raise AppError(
             code=TaskErrorCode.VIDEO_DISPATCH_FAILED.value,

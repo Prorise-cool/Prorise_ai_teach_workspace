@@ -36,13 +36,21 @@ class FakeFailoverService:
     def __init__(self, *, generate_results=None, synthesize_results=None) -> None:
         self._generate_results = list(generate_results or [])
         self._synthesize_results = list(synthesize_results or [])
+        self.synthesize_calls: list[dict[str, object]] = []
 
     async def generate(self, providers, prompt: str, emit_switch=None):  # noqa: ANN001
         if not self._generate_results:
             raise AssertionError("missing fake generate result")
         return self._generate_results.pop(0)
 
-    async def synthesize(self, providers, text: str, emit_switch=None):  # noqa: ANN001
+    async def synthesize(self, providers, text: str, voice_config=None, emit_switch=None):  # noqa: ANN001
+        self.synthesize_calls.append(
+            {
+                "provider_ids": [provider.provider_id for provider in providers],
+                "text": text,
+                "voice_config": voice_config,
+            }
+        )
         if not self._synthesize_results:
             raise AssertionError("missing fake synthesize result")
         return self._synthesize_results.pop(0)
@@ -181,6 +189,36 @@ def test_storyboard_service_normalizes_scene_duration_to_target_range() -> None:
     assert persisted.total_duration == 120
 
 
+def test_storyboard_service_tolerates_partial_scene_fields_from_real_llm_output() -> None:
+    runtime = _build_runtime("video_storyboard_partial_case")
+    service = StoryboardService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        '{"scenes":['
+                        '{"sceneId":"scene_1","narration":"先回顾平方差公式","content":"展示公式 a²-b²=(a+b)(a-b)"},'
+                        '{"sceneId":"scene_2","voiceover":"再用例题演示","description":"代入 x²-9"}'
+                        '],"totalDuration":60,"targetDuration":120}'
+                    ),
+                )
+            ]
+        ),
+        runtime=runtime,
+        settings=_build_settings(video_target_duration_seconds=120),
+    )
+
+    result = asyncio.run(service.execute(understanding=_build_understanding()))
+
+    assert len(result.scenes) == 2
+    assert result.scenes[0].title == "步骤 1"
+    assert result.scenes[0].visual_description == "展示公式 a²-b²=(a+b)(a-b)"
+    assert result.scenes[1].narration == "再用例题演示"
+    assert result.scenes[1].duration_hint >= 1
+
+
 def test_rule_based_fixer_wraps_script_with_safe_scene_defaults() -> None:
     fixer = RuleBasedFixer()
 
@@ -260,25 +298,143 @@ def test_tts_service_marks_failover_and_persists_segments() -> None:
     assert len(result.audio_segments) == 3
     assert result.failover_occurred is True
     assert result.provider_used == ["primary-tts", "backup-tts", "backup-tts"]
+    assert Path(result.audio_segments[0].audio_path).suffix == ".wav"
+    assert Path(result.audio_segments[0].audio_path).read_bytes()[:4] == b"RIFF"
     persisted = runtime.load_value("tts_result")
     assert isinstance(persisted, dict)
+
+
+def test_tts_service_prefers_base64_audio_payload_when_provider_returns_real_audio() -> None:
+    runtime = _build_runtime("video_tts_real_audio_case")
+    service = TTSService(
+        providers=[SimpleNamespace(provider_id="primary-tts")],
+        failover_service=FakeFailoverService(
+            synthesize_results=[
+                SimpleNamespace(
+                    provider="primary-tts",
+                    content="ignored transcript",
+                    metadata={"audioBase64": "SUQz", "audioFormat": "mp3"},
+                ),
+                SimpleNamespace(
+                    provider="primary-tts",
+                    content="ignored transcript",
+                    metadata={"audioBase64": "SUQz", "audioFormat": "mp3"},
+                ),
+                SimpleNamespace(
+                    provider="primary-tts",
+                    content="ignored transcript",
+                    metadata={"audioBase64": "SUQz", "audioFormat": "mp3"},
+                ),
+            ]
+        ),
+        runtime=runtime,
+        settings=_build_settings(),
+    )
+
+    result = asyncio.run(service.execute(task_id="video_tts_real_audio_case", storyboard=_build_storyboard()))
+
+    first_segment = Path(result.audio_segments[0].audio_path)
+    assert first_segment.suffix == ".mp3"
+    assert first_segment.read_bytes() == b"ID3"
+
+
+def test_tts_service_filters_provider_chain_by_requested_voice_preference() -> None:
+    runtime = _build_runtime("video_tts_voice_preference_case")
+    failover = FakeFailoverService(
+        synthesize_results=[
+            SimpleNamespace(provider="volcengine-zh_female_yingyujiaoxue_uranus_bigtts", content="audio-1"),
+            SimpleNamespace(provider="volcengine-zh_female_yingyujiaoxue_uranus_bigtts", content="audio-2"),
+            SimpleNamespace(provider="volcengine-zh_female_yingyujiaoxue_uranus_bigtts", content="audio-3"),
+        ]
+    )
+    service = TTSService(
+        providers=[
+            SimpleNamespace(
+                provider_id="volcengine-bv001",
+                config=SimpleNamespace(settings={"voice_code": "BV001", "resource_name": "标准女声 BV001"}),
+            ),
+            SimpleNamespace(
+                provider_id="volcengine-zh_female_yingyujiaoxue_uranus_bigtts",
+                config=SimpleNamespace(
+                    settings={
+                        "voice_code": "zh_female_yingyujiaoxue_uranus_bigtts",
+                        "resource_name": "tina老师 2.0",
+                        "provider_name": "豆包标准语音播报",
+                        "resource_code": "doubao-voice-tina-2-0",
+                    }
+                ),
+            ),
+        ],
+        failover_service=failover,
+        runtime=runtime,
+        settings=_build_settings(),
+    )
+
+    result = asyncio.run(
+        service.execute(
+            task_id="video_tts_voice_preference_case",
+            storyboard=_build_storyboard(),
+            voice_preference={"voiceCode": "zh_female_yingyujiaoxue_uranus_bigtts"},
+        )
+    )
+
+    assert result.failover_occurred is False
+    assert all(call["provider_ids"] == ["volcengine-zh_female_yingyujiaoxue_uranus_bigtts"] for call in failover.synthesize_calls)
+    assert failover.synthesize_calls[0]["voice_config"].voice_id == "zh_female_yingyujiaoxue_uranus_bigtts"
+    selected_voice = runtime.load_value("tts_selected_voice")
+    assert selected_voice["voiceCode"] == "zh_female_yingyujiaoxue_uranus_bigtts"
+    assert selected_voice["resourceCode"] == "doubao-voice-tina-2-0"
 
 
 def test_compose_service_builds_expected_ffmpeg_commands() -> None:
     service = ComposeService(settings=_build_settings(), runtime=_build_runtime("video_compose_case"))
 
-    compose_command = service.build_compose_command("video.mp4", "audio.mp3", "output.mp4")
+    concat_command = service.build_audio_concat_command(["scene-1.mp3", "scene-2.mp3"], "narration.m4a")
+    compose_command = service.build_compose_command(
+        "video.mp4",
+        "narration.m4a",
+        "output.mp4",
+        subtitle_path="subtitles.ass",
+        extend_seconds=2.5,
+    )
     cover_command = service.build_cover_command("output.mp4", "cover.jpg")
 
+    assert concat_command == [
+        "ffmpeg",
+        "-y",
+        "-i",
+        "scene-1.mp3",
+        "-i",
+        "scene-2.mp3",
+        "-filter_complex",
+        "[0:a]aresample=44100,aformat=sample_rates=44100:channel_layouts=mono,asetpts=N/SR/TB[a0];"
+        "[1:a]aresample=44100,aformat=sample_rates=44100:channel_layouts=mono,asetpts=N/SR/TB[a1];"
+        "[a0][a1]concat=n=2:v=0:a=1[aout]",
+        "-map",
+        "[aout]",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "narration.m4a",
+    ]
     assert compose_command == [
         "ffmpeg",
         "-y",
         "-i",
         "video.mp4",
         "-i",
-        "audio.mp3",
+        "narration.m4a",
+        "-vf",
+        "tpad=stop_mode=clone:stop_duration=2.500,ass=subtitles.ass",
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
         "-c:v",
         "libx264",
+        "-pix_fmt",
+        "yuv420p",
         "-c:a",
         "aac",
         "-movflags",
@@ -298,6 +454,27 @@ def test_compose_service_builds_expected_ffmpeg_commands() -> None:
         "2",
         "cover.jpg",
     ]
+
+
+def test_compose_service_builds_subtitle_entries_and_writes_srt(tmp_path) -> None:
+    service = ComposeService(settings=_build_settings(), runtime=_build_runtime("video_compose_subtitle_case"))
+
+    entries = service.build_subtitle_entries(
+        storyboard=_build_storyboard(),
+        scene_durations=[4.2, 5.0, 3.1],
+        max_chars_per_line=32,
+    )
+    srt_path = tmp_path / "subtitles.srt"
+    service.write_srt(entries, srt_path)
+
+    assert len(entries) == 3
+    assert entries[0].start_seconds == pytest.approx(0.0)
+    assert entries[0].end_seconds == pytest.approx(4.2)
+    assert entries[1].start_seconds == pytest.approx(4.2)
+    assert entries[1].end_seconds == pytest.approx(9.2)
+    assert entries[2].start_seconds == pytest.approx(9.2)
+    assert entries[2].end_seconds == pytest.approx(12.3)
+    assert "00:00:00,000 --> 00:00:04,200" in srt_path.read_text(encoding="utf-8")
 
 
 def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -11,11 +12,16 @@ import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 from app.core.config import Settings, get_settings
 from app.core.logging import format_trace_timestamp, get_logger
+from app.features.video.pipeline.audio import decode_audio_payload, write_silent_wav
 from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.pipeline.constants import (
+    VIDEO_ARTIFACT_GRAPH_TEMPLATE,
+    VIDEO_RESULT_DETAIL_TEMPLATE,
+)
 from app.features.video.pipeline.models import (
     ArtifactPayload,
     ArtifactType,
@@ -48,6 +54,8 @@ from app.features.video.pipeline.runtime import (
     build_failure,
     build_stage_context,
 )
+from app.features.video.runtime_auth import delete_video_runtime_auth, load_video_runtime_auth
+from app.features.video.pipeline.script_templates import build_default_fix_script, build_default_manim_script
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
@@ -57,6 +65,7 @@ from app.features.video.pipeline.sandbox import (
 from app.features.video.service import VideoService
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
 from app.providers.factory import ProviderFactory, get_provider_factory
+from app.providers.runtime_config_service import ProviderRuntimeResolver
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import (
@@ -69,6 +78,17 @@ from app.shared.task_framework.status import (
 logger = get_logger("app.features.video.pipeline")
 JSON_OBJECT_PATTERN = re.compile(r"\{.*\}", re.DOTALL)
 CODE_BLOCK_PATTERN = re.compile(r"```(?:python)?\s*(.*?)```", re.DOTALL | re.IGNORECASE)
+FAKE_RENDER_BYTES = b"FAKE_MP4_DATA"
+SUBTITLE_MAX_CHARS_PER_LINE = 20
+SUBTITLE_FONT_NAME = "Source Han Sans CN"
+SUBTITLE_FONT_SIZE = 24
+
+
+@dataclass(slots=True)
+class SubtitleEntry:
+    start_seconds: float
+    end_seconds: float
+    text: str
 
 
 def _utc_now() -> datetime:
@@ -111,6 +131,141 @@ def _unique_preserve_order(values: Iterable[str]) -> list[str]:
         seen.add(normalized)
         results.append(normalized)
     return results
+
+
+def _read_text(*values: object) -> str | None:
+    for value in values:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if normalized:
+                return normalized
+    return None
+
+
+def _read_mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in mapping:
+            value = mapping[key]
+            if value is not None:
+                return value
+    return None
+
+
+def _provider_settings(provider: Any) -> Mapping[str, Any]:
+    config = getattr(provider, "config", None)
+    settings = getattr(config, "settings", None)
+    return settings if isinstance(settings, Mapping) else {}
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_int(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _is_fake_render_video(path: Path) -> bool:
+    try:
+        if path.stat().st_size != len(FAKE_RENDER_BYTES):
+            return False
+        with path.open("rb") as file:
+            return file.read(len(FAKE_RENDER_BYTES)) == FAKE_RENDER_BYTES
+    except OSError:
+        return False
+
+
+def _probe_media_duration_seconds(path: Path) -> float | None:
+    if shutil.which("ffprobe") is None or not path.exists():
+        return None
+
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(path),
+    ]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=10, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    try:
+        duration = float(completed.stdout.strip())
+    except ValueError:
+        return None
+    return duration if duration > 0 else None
+
+
+def _round_duration_seconds(duration_seconds: float) -> int:
+    return max(int(math.ceil(duration_seconds)), 1)
+
+
+def _format_srt_timestamp(duration_seconds: float) -> str:
+    total_milliseconds = max(int(round(duration_seconds * 1000)), 0)
+    hours, remainder = divmod(total_milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    seconds, milliseconds = divmod(remainder, 1_000)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+
+
+def _split_subtitle_text(text: str, *, max_chars_per_line: int) -> list[str]:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    if len(normalized) <= max_chars_per_line:
+        return [normalized] if normalized else []
+
+    segments: list[str] = []
+    current_segment = ""
+    primary_punctuation = ["。", "？", "！", "!", "；", ";"]
+    secondary_punctuation = ["，", "、", "：", ":", ",", " "]
+
+    for char in normalized:
+        current_segment += char
+        if len(current_segment) < max_chars_per_line:
+            continue
+
+        latest_primary = max((current_segment.rfind(symbol) for symbol in primary_punctuation), default=-1)
+        if latest_primary > max_chars_per_line // 2:
+            segments.append(current_segment[: latest_primary + 1].strip())
+            current_segment = current_segment[latest_primary + 1 :].strip()
+            continue
+
+        latest_secondary = max((current_segment.rfind(symbol) for symbol in secondary_punctuation), default=-1)
+        if latest_secondary > max_chars_per_line // 2:
+            segments.append(current_segment[: latest_secondary + 1].strip())
+            current_segment = current_segment[latest_secondary + 1 :].strip()
+            continue
+
+        segments.append(current_segment.strip())
+        current_segment = ""
+
+    if current_segment:
+        segments.append(current_segment.strip())
+    return [segment for segment in segments if segment]
+
+
+def _escape_ass_text(text: str) -> str:
+    return text.replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}")
+
+
+def _escape_ffmpeg_filter_path(path: str) -> str:
+    return (
+        path.replace("\\", r"\\")
+        .replace(":", r"\:")
+        .replace(",", r"\,")
+        .replace("'", r"\'")
+    )
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -268,48 +423,47 @@ def _build_default_storyboard(
     )
 
 
-def _build_default_manim_script(storyboard: Storyboard) -> str:
-    lines = [
-        "from manim import *",
-        "",
-        "",
-        "class GeneratedLesson(Scene):",
-        "    def construct(self):",
-    ]
-    for index, scene in enumerate(storyboard.scenes, start=1):
-        title = scene.title.replace('"', '\\"')
-        narration = scene.narration.replace('"', '\\"')
-        lines.extend(
-            [
-                f"        # {scene.scene_id}",
-                f'        title_{index} = Text("{title}", font_size=32)',
-                f'        body_{index} = Text("{narration[:48]}", font_size=26)',
-                f"        group_{index} = VGroup(title_{index}, body_{index}).arrange(DOWN, buff=0.5)",
-                f"        self.add(group_{index})",
-                f"        self.wait({max(scene.duration_hint / 8, 0.5):.2f})",
-                f"        self.clear()",
-                "",
-            ]
-        )
-    return "\n".join(lines).strip() + "\n"
+def _normalize_scene_payload(scene: dict[str, Any], index: int) -> dict[str, Any]:
+    title = scene.get("title") or scene.get("name") or scene.get("topic") or f"步骤 {index + 1}"
+    narration = scene.get("narration") or scene.get("voiceover") or scene.get("explanation") or scene.get("dialogue")
+    visual_description = (
+        scene.get("visualDescription")
+        or scene.get("visual")
+        or scene.get("sceneDescription")
+        or scene.get("content")
+        or scene.get("description")
+    )
+    duration_hint = (
+        scene.get("durationHint")
+        or scene.get("duration")
+        or scene.get("durationSeconds")
+        or scene.get("estimatedDuration")
+    )
 
+    normalized_narration = str(narration or title).strip()
+    normalized_visual = str(visual_description or normalized_narration).strip()
+    try:
+        normalized_duration = max(1, int(float(duration_hint))) if duration_hint is not None else 20
+    except (TypeError, ValueError):
+        normalized_duration = 20
 
-def _build_default_fix_script(script_content: str) -> str:
-    fixed_script = script_content.replace("ShowCreation", "Create")
-    if "from manim import *" not in fixed_script:
-        fixed_script = "from manim import *\n\n" + fixed_script
-    if "class " not in fixed_script or "(Scene)" not in fixed_script:
-        indented = "\n".join(f"    {line}" for line in fixed_script.splitlines() if line.strip())
-        fixed_script = "from manim import *\n\nclass FixedLesson(Scene):\n" + indented + "\n"
-    return fixed_script
+    return {
+        **scene,
+        "sceneId": scene.get("sceneId") or scene.get("scene_id") or f"scene_{index + 1}",
+        "title": str(title).strip() or f"步骤 {index + 1}",
+        "narration": normalized_narration,
+        "visualDescription": normalized_visual,
+        "durationHint": normalized_duration,
+        "order": int(scene.get("order") or index + 1),
+    }
 
 
 def _result_storage_key(task_id: str) -> str:
-    return f"video/{task_id}/result-detail.json"
+    return VIDEO_RESULT_DETAIL_TEMPLATE.format(task_id=task_id)
 
 
 def _artifact_storage_key(task_id: str) -> str:
-    return f"video/{task_id}/artifact-graph.json"
+    return VIDEO_ARTIFACT_GRAPH_TEMPLATE.format(task_id=task_id)
 
 
 class VideoPipelineError(Exception):
@@ -423,21 +577,32 @@ class StoryboardService:
 
         parsed = _extract_json_object(provider_result.content)
         if parsed is not None and isinstance(parsed.get("scenes"), list):
-            scenes = [
-                Scene.model_validate({**scene, "order": scene.get("order", index + 1)})
-                for index, scene in enumerate(parsed["scenes"])
-                if isinstance(scene, dict)
-            ]
-            scenes = normalize_storyboard_duration(scenes, target_duration=target_duration)
-            storyboard = Storyboard(
-                scenes=scenes,
-                total_duration=sum(scene.duration_hint for scene in scenes),
-                target_duration=max(
-                    self.settings.video_min_duration_seconds,
-                    min(target_duration, self.settings.video_max_duration_seconds),
-                ),
-                provider_used=provider_result.provider,
-            )
+            try:
+                scenes = [
+                    Scene.model_validate(_normalize_scene_payload(scene, index))
+                    for index, scene in enumerate(parsed["scenes"])
+                    if isinstance(scene, dict)
+                ]
+            except Exception:  # noqa: BLE001
+                scenes = []
+
+            if scenes:
+                scenes = normalize_storyboard_duration(scenes, target_duration=target_duration)
+                storyboard = Storyboard(
+                    scenes=scenes,
+                    total_duration=sum(scene.duration_hint for scene in scenes),
+                    target_duration=max(
+                        self.settings.video_min_duration_seconds,
+                        min(target_duration, self.settings.video_max_duration_seconds),
+                    ),
+                    provider_used=provider_result.provider,
+                )
+            else:
+                storyboard = _build_default_storyboard(
+                    understanding=understanding,
+                    target_duration=target_duration,
+                    provider_used=provider_result.provider,
+                )
         else:
             storyboard = _build_default_storyboard(
                 understanding=understanding,
@@ -478,9 +643,9 @@ class ManimGenerationService:
                 message=str(exc),
             ) from exc
 
-        script_content = _extract_code(provider_result.content) or _build_default_manim_script(storyboard)
+        script_content = _extract_code(provider_result.content) or build_default_manim_script(storyboard)
         if "class " not in script_content:
-            script_content = _build_default_manim_script(storyboard)
+            script_content = build_default_manim_script(storyboard)
 
         mappings: list[SceneCodeMapping] = []
         current_line = 5
@@ -506,7 +671,7 @@ class ManimGenerationService:
 
 class RuleBasedFixer:
     def fix(self, *, script_content: str, error_log: str) -> FixResult:
-        fixed_script = _build_default_fix_script(script_content)
+        fixed_script = build_default_fix_script(script_content)
         success = fixed_script != script_content or "syntax" in error_log.lower()
         return FixResult(
             fixed=success,
@@ -550,7 +715,7 @@ class LLMBasedFixer:
                 notes="LLM fix provider chain exhausted.",
             )
 
-        fixed_script = _extract_code(provider_result.content) or _build_default_manim_script(storyboard)
+        fixed_script = _extract_code(provider_result.content) or build_default_manim_script(storyboard)
         return FixResult(
             fixed=bool(fixed_script.strip()),
             fixed_script=fixed_script,
@@ -572,24 +737,50 @@ class TTSService:
         *,
         task_id: str,
         storyboard: Storyboard,
+        voice_preference: Mapping[str, Any] | None = None,
         emit_switch=None,
         on_scene_completed=None,
     ) -> TTSResult:
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_tts_{task_id}_"))
-        voice_config = VoiceConfig(
-            format=self.settings.video_output_audio_format,
-            sample_rate=self.settings.video_output_audio_sample_rate,
-            bitrate=self.settings.video_output_audio_bitrate,
+        selected_providers = self._select_providers(voice_preference)
+        if not selected_providers:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            raise VideoPipelineError(
+                stage=VideoStage.TTS,
+                error_code=TaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                message="未配置可用的 TTS Provider",
+            )
+        voice_config = self._build_voice_config(selected_providers, voice_preference)
+        self.runtime.save_value(
+            "tts_selected_voice",
+            {
+                "voiceCode": voice_config.voice_id,
+                "voiceName": _read_text(
+                    _read_mapping_value(_provider_settings(selected_providers[0]), "resource_name", "resourceName"),
+                    voice_config.voice_id,
+                ),
+                "providerId": selected_providers[0].provider_id,
+                "providerName": _read_text(
+                    _read_mapping_value(_provider_settings(selected_providers[0]), "provider_name", "providerName"),
+                    selected_providers[0].provider_id,
+                ),
+                "resourceCode": _read_text(
+                    _read_mapping_value(_provider_settings(selected_providers[0]), "resource_code", "resourceCode"),
+                    selected_providers[0].provider_id,
+                ),
+            },
         )
         audio_segments: list[AudioSegment] = []
         provider_used: list[str] = []
         failover_occurred = False
+        primary_provider_id = selected_providers[0].provider_id
 
         for index, scene in enumerate(storyboard.scenes, start=1):
             try:
                 result = await self.failover_service.synthesize(
-                    self.providers,
+                    selected_providers,
                     scene.narration,
+                    voice_config=voice_config,
                     emit_switch=emit_switch,
                 )
             except ProviderAllFailedError as exc:
@@ -602,16 +793,36 @@ class TTSService:
                 ) from exc
 
             provider_used.append(result.provider)
-            if result.provider != self.providers[0].provider_id:
+            if result.provider != primary_provider_id:
                 failover_occurred = True
-            audio_path = temp_dir / f"{task_id}_{scene.scene_id}.{voice_config.format}"
-            audio_path.write_bytes(result.content.encode("utf-8"))
+            decoded_audio = decode_audio_payload(getattr(result, "metadata", None))
+            if decoded_audio is not None:
+                audio_bytes, audio_format = decoded_audio
+                audio_path = temp_dir / f"{task_id}_{scene.scene_id}.{audio_format}"
+                audio_path.write_bytes(audio_bytes)
+            else:
+                audio_format = "wav"
+                audio_path = temp_dir / f"{task_id}_{scene.scene_id}.{audio_format}"
+                write_silent_wav(
+                    audio_path,
+                    duration_seconds=max(scene.duration_hint, 1),
+                    sample_rate=voice_config.sample_rate,
+                )
+                logger.warning(
+                    "TTS provider returned non-audio payload; generated silent fallback track",
+                    extra={
+                        "taskId": task_id,
+                        "sceneId": scene.scene_id,
+                        "providerId": result.provider,
+                    },
+                )
+            audio_duration_seconds = _probe_media_duration_seconds(audio_path) or float(scene.duration_hint)
             audio_segments.append(
                 AudioSegment(
                     scene_id=scene.scene_id,
                     audio_path=str(audio_path),
-                    duration=scene.duration_hint,
-                    format=voice_config.format,
+                    duration=_round_duration_seconds(audio_duration_seconds),
+                    format=audio_format,
                 )
             )
             if on_scene_completed is not None:
@@ -626,28 +837,200 @@ class TTSService:
         self.runtime.save_model("tts_result", tts_result)
         return tts_result
 
+    def _select_providers(self, voice_preference: Mapping[str, Any] | None) -> tuple[Any, ...]:
+        provider_chain = tuple(self.providers)
+        if not provider_chain:
+            return ()
+        if voice_preference is None:
+            return provider_chain
+
+        requested_voice_code = _read_text(
+            _read_mapping_value(voice_preference, "voiceCode", "voice_code"),
+        )
+        requested_provider_id = _read_text(
+            _read_mapping_value(voice_preference, "providerId", "provider_id"),
+        )
+        matched = [
+            provider
+            for provider in provider_chain
+            if self._matches_voice_preference(
+                provider,
+                requested_voice_code=requested_voice_code,
+                requested_provider_id=requested_provider_id,
+            )
+        ]
+        if matched:
+            return tuple(matched)
+
+        criteria = requested_voice_code or requested_provider_id or "unknown"
+        raise VideoPipelineError(
+            stage=VideoStage.TTS,
+            error_code=TaskErrorCode.INVALID_INPUT,
+            message=f"未找到可用音色配置：{criteria}",
+        )
+
+    def _matches_voice_preference(
+        self,
+        provider: Any,
+        *,
+        requested_voice_code: str | None,
+        requested_provider_id: str | None,
+    ) -> bool:
+        settings = _provider_settings(provider)
+        provider_voice_code = _read_text(
+            _read_mapping_value(settings, "voice_code", "voiceCode"),
+        )
+        if requested_voice_code and provider_voice_code != requested_voice_code:
+            return False
+        if requested_provider_id and provider.provider_id != requested_provider_id:
+            return False
+        return True
+
+    def _build_voice_config(
+        self,
+        providers: Sequence[Any],
+        voice_preference: Mapping[str, Any] | None,
+    ) -> VoiceConfig:
+        settings = _provider_settings(providers[0]) if providers else {}
+        requested_voice_code = None
+        if voice_preference is not None:
+            requested_voice_code = _read_text(
+                _read_mapping_value(voice_preference, "voiceCode", "voice_code"),
+            )
+
+        sample_rate = _coerce_int(
+            _read_mapping_value(settings, "sample_rate", "sampleRate"),
+            self.settings.video_output_audio_sample_rate,
+        )
+        bitrate = _read_text(
+            _read_mapping_value(settings, "bitrate", "audio_bitrate", "audioBitrate"),
+            self.settings.video_output_audio_bitrate,
+        ) or self.settings.video_output_audio_bitrate
+        return VoiceConfig(
+            language=_read_text(
+                _read_mapping_value(settings, "language_code", "languageCode"),
+                "zh-CN",
+            ) or "zh-CN",
+            voice_id=requested_voice_code
+            or _read_text(_read_mapping_value(settings, "voice_code", "voiceCode"), "demo-voice")
+            or "demo-voice",
+            speed=_coerce_float(
+                _read_mapping_value(settings, "speed_ratio", "speedRatio", "speed"),
+                1.0,
+            ),
+            format=_read_text(
+                _read_mapping_value(settings, "encoding", "audio_format", "audioFormat"),
+                self.settings.video_output_audio_format,
+            ) or self.settings.video_output_audio_format,
+            sample_rate=sample_rate,
+            bitrate=bitrate,
+            volume_ratio=_coerce_float(
+                _read_mapping_value(settings, "volume_ratio", "volumeRatio"),
+                1.0,
+            ),
+            pitch_ratio=_coerce_float(
+                _read_mapping_value(settings, "pitch_ratio", "pitchRatio"),
+                1.0,
+            ),
+        )
+
 
 @dataclass(slots=True)
 class ComposeService:
     settings: Settings
     runtime: VideoRuntimeStateStore
 
-    def build_compose_command(self, video_path: str, audio_path: str, output_path: str) -> list[str]:
+    def build_audio_concat_command(self, audio_paths: Sequence[str], output_path: str) -> list[str]:
+        if len(audio_paths) == 1:
+            return [
+                "ffmpeg",
+                "-y",
+                "-i",
+                audio_paths[0],
+                "-vn",
+                "-ar",
+                str(self.settings.video_output_audio_sample_rate),
+                "-ac",
+                "1",
+                "-c:a",
+                "aac",
+                "-b:a",
+                self.settings.video_output_audio_bitrate,
+                output_path,
+            ]
+
+        input_args: list[str] = []
+        filter_parts: list[str] = []
+        concat_inputs: list[str] = []
+        for index, audio_path in enumerate(audio_paths):
+            input_args.extend(["-i", audio_path])
+            filter_parts.append(
+                (
+                    f"[{index}:a]aresample={self.settings.video_output_audio_sample_rate},"
+                    f"aformat=sample_rates={self.settings.video_output_audio_sample_rate}:channel_layouts=mono,"
+                    f"asetpts=N/SR/TB[a{index}]"
+                )
+            )
+            concat_inputs.append(f"[a{index}]")
+
+        filter_parts.append(f"{''.join(concat_inputs)}concat=n={len(audio_paths)}:v=0:a=1[aout]")
         return [
+            "ffmpeg",
+            "-y",
+            *input_args,
+            "-filter_complex",
+            ";".join(filter_parts),
+            "-map",
+            "[aout]",
+            "-c:a",
+            "aac",
+            "-b:a",
+            self.settings.video_output_audio_bitrate,
+            output_path,
+        ]
+
+    def build_compose_command(
+        self,
+        video_path: str,
+        audio_path: str,
+        output_path: str,
+        *,
+        subtitle_path: str | None = None,
+        extend_seconds: float = 0.0,
+    ) -> list[str]:
+        command = [
             "ffmpeg",
             "-y",
             "-i",
             video_path,
             "-i",
             audio_path,
-            "-c:v",
-            "libx264",
-            "-c:a",
-            "aac",
-            "-movflags",
-            "+faststart",
-            output_path,
         ]
+        filters: list[str] = []
+        if extend_seconds > 0.01:
+            filters.append(f"tpad=stop_mode=clone:stop_duration={extend_seconds:.3f}")
+        if subtitle_path:
+            filters.append(f"ass={_escape_ffmpeg_filter_path(subtitle_path)}")
+        if filters:
+            command.extend(["-vf", ",".join(filters)])
+        command.extend(
+            [
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                "-movflags",
+                "+faststart",
+                output_path,
+            ]
+        )
+        return command
 
     def build_cover_command(self, video_path: str, cover_path: str) -> list[str]:
         return [
@@ -664,10 +1047,118 @@ class ComposeService:
             cover_path,
         ]
 
+    def build_subtitle_entries(
+        self,
+        *,
+        storyboard: Storyboard,
+        scene_durations: Sequence[float],
+        max_chars_per_line: int = SUBTITLE_MAX_CHARS_PER_LINE,
+    ) -> list[SubtitleEntry]:
+        entries: list[SubtitleEntry] = []
+        current_start = 0.0
+        for index, scene in enumerate(storyboard.scenes):
+            duration = scene_durations[index] if index < len(scene_durations) else float(scene.duration_hint)
+            duration = max(duration, 0.1)
+            scene_text = re.sub(r"\s+", " ", scene.narration).strip() or scene.title.strip() or f"场景 {index + 1}"
+            segments = _split_subtitle_text(scene_text, max_chars_per_line=max_chars_per_line) or [scene_text]
+            segment_duration = duration / max(len(segments), 1)
+            segment_start = current_start
+            for segment_index, segment in enumerate(segments):
+                segment_end = (
+                    current_start + duration
+                    if segment_index == len(segments) - 1
+                    else segment_start + segment_duration
+                )
+                entries.append(
+                    SubtitleEntry(
+                        start_seconds=segment_start,
+                        end_seconds=max(segment_end, segment_start + 0.1),
+                        text=segment,
+                    )
+                )
+                segment_start = segment_end
+            current_start += duration
+        return entries
+
+    def write_srt(self, entries: Sequence[SubtitleEntry], output_path: Path) -> None:
+        lines: list[str] = []
+        for index, entry in enumerate(entries, start=1):
+            lines.extend(
+                [
+                    str(index),
+                    f"{_format_srt_timestamp(entry.start_seconds)} --> {_format_srt_timestamp(entry.end_seconds)}",
+                    entry.text,
+                    "",
+                ]
+            )
+        output_path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+
+    def write_ass_from_srt(
+        self,
+        *,
+        srt_path: Path,
+        ass_path: Path,
+        font_name: str = SUBTITLE_FONT_NAME,
+        font_size: int = SUBTITLE_FONT_SIZE,
+    ) -> None:
+        content = srt_path.read_text(encoding="utf-8")
+        pattern = re.compile(
+            r"(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n([\s\S]*?)(?=\n\n|\Z)",
+            re.MULTILINE,
+        )
+        ass_header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font_name},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,0,2,24,24,28,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+        events: list[str] = []
+        for _, start, end, text in pattern.findall(content):
+            start_time = start.replace(",", ".")[:-1]
+            end_time = end.replace(",", ".")[:-1]
+            normalized_text = _escape_ass_text(text.strip().replace("\n", r"\N"))
+            events.append(f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{normalized_text}")
+        ass_path.write_text(ass_header + "\n".join(events) + "\n", encoding="utf-8")
+
+    def resolve_scene_durations(self, *, storyboard: Storyboard, tts_result: TTSResult) -> list[float]:
+        duration_by_scene: dict[str, float] = {}
+        for segment in tts_result.audio_segments:
+            duration_by_scene[segment.scene_id] = _probe_media_duration_seconds(Path(segment.audio_path)) or float(segment.duration)
+
+        return [
+            max(duration_by_scene.get(scene.scene_id, float(scene.duration_hint)), 0.1)
+            for scene in storyboard.scenes
+        ]
+
+    async def _run_ffmpeg(self, command: Sequence[str]) -> None:
+        try:
+            await asyncio.to_thread(
+                subprocess.run,
+                list(command),
+                capture_output=True,
+                text=True,
+                timeout=self.settings.video_ffmpeg_timeout_seconds,
+                check=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise VideoPipelineError(
+                stage=VideoStage.COMPOSE,
+                error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
+                message=str(exc),
+            ) from exc
+
     async def execute(
         self,
         *,
         task_id: str,
+        storyboard: Storyboard,
         render_result: ExecutionResult,
         tts_result: TTSResult,
     ) -> ComposeResult:
@@ -677,51 +1168,60 @@ class ComposeService:
                 error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
                 message="render output is missing",
             )
+        if not tts_result.audio_segments:
+            raise VideoPipelineError(
+                stage=VideoStage.COMPOSE,
+                error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
+                message="tts output is missing",
+            )
 
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_compose_{task_id}_"))
         output_path = temp_dir / "output.mp4"
         cover_path = temp_dir / "cover.jpg"
+        mixed_audio_path = temp_dir / "narration.m4a"
+        subtitle_srt_path = temp_dir / "subtitles.srt"
+        subtitle_ass_path = temp_dir / "subtitles.ass"
         source_video_path = Path(render_result.output_path)
-        first_audio = Path(tts_result.audio_segments[0].audio_path)
+        audio_paths = [segment.audio_path for segment in tts_result.audio_segments]
+        scene_durations = self.resolve_scene_durations(storyboard=storyboard, tts_result=tts_result)
+        subtitle_entries = self.build_subtitle_entries(storyboard=storyboard, scene_durations=scene_durations)
+        self.write_srt(subtitle_entries, subtitle_srt_path)
+        self.write_ass_from_srt(srt_path=subtitle_srt_path, ass_path=subtitle_ass_path)
 
-        if shutil.which("ffmpeg") and source_video_path.read_bytes() != b"FAKE_MP4_DATA":
+        output_duration_seconds = max(sum(scene_durations), float(tts_result.total_duration), 1.0)
+        if shutil.which("ffmpeg") and not _is_fake_render_video(source_video_path):
+            concat_command = self.build_audio_concat_command(audio_paths, str(mixed_audio_path))
+            await self._run_ffmpeg(concat_command)
+
+            merged_audio_duration = _probe_media_duration_seconds(mixed_audio_path) or output_duration_seconds
+            source_video_duration = _probe_media_duration_seconds(source_video_path) or max(render_result.duration_seconds, 0.0)
+            output_duration_seconds = max(merged_audio_duration, source_video_duration, 1.0)
+            extend_seconds = max(merged_audio_duration - source_video_duration, 0.0)
             compose_command = self.build_compose_command(
                 str(source_video_path),
-                str(first_audio),
+                str(mixed_audio_path),
                 str(output_path),
+                subtitle_path=str(subtitle_ass_path),
+                extend_seconds=extend_seconds,
             )
             cover_command = self.build_cover_command(str(output_path), str(cover_path))
-            try:
-                await asyncio.to_thread(
-                    subprocess.run,
-                    compose_command,
-                    capture_output=True,
-                    text=True,
-                    timeout=self.settings.video_ffmpeg_timeout_seconds,
-                    check=True,
-                )
-                await asyncio.to_thread(
-                    subprocess.run,
-                    cover_command,
-                    capture_output=True,
-                    text=True,
-                    timeout=self.settings.video_ffmpeg_timeout_seconds,
-                    check=True,
-                )
-            except Exception as exc:  # noqa: BLE001
-                raise VideoPipelineError(
-                    stage=VideoStage.COMPOSE,
-                    error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
-                    message=str(exc),
-                ) from exc
+            await self._run_ffmpeg(compose_command)
+            await self._run_ffmpeg(cover_command)
         else:
             output_path.write_bytes(b"COMPOSED_FAKE_MP4")
             cover_path.write_bytes(b"FAKE_COVER")
 
+        self.runtime.save_value(
+            "compose_subtitles",
+            {
+                "srtPath": str(subtitle_srt_path),
+                "assPath": str(subtitle_ass_path),
+            },
+        )
         compose_result = ComposeResult(
             video_path=str(output_path),
             cover_path=str(cover_path),
-            duration=max(tts_result.total_duration, 1),
+            duration=_round_duration_seconds(output_duration_seconds),
             file_size=output_path.stat().st_size,
         )
         self.runtime.save_model("compose_result", compose_result)
@@ -838,6 +1338,7 @@ class VideoPipelineService:
         settings: Settings,
         asset_store: LocalAssetStore,
         sandbox_executor: SandboxExecutor | None = None,
+        provider_runtime_resolver: ProviderRuntimeResolver | None = None,
     ) -> None:
         self.runtime_store = runtime_store
         self.metadata_service = metadata_service
@@ -845,22 +1346,49 @@ class VideoPipelineService:
         self.settings = settings
         self.asset_store = asset_store
         self.sandbox_executor = sandbox_executor or DockerSandboxExecutor()
-        self.provider_assembly = provider_factory.assemble_from_settings(settings)
+        self.provider_runtime_resolver = provider_runtime_resolver or ProviderRuntimeResolver(
+            settings=settings,
+            provider_factory=provider_factory,
+        )
         self.failover_service = provider_factory.create_failover_service(runtime_store)
 
     async def run(self, task: BaseTask) -> TaskResult:
         runtime = VideoRuntimeStateStore(self.runtime_store, task.context.task_id)
-        understanding_service = UnderstandingService(self.provider_assembly.llm, self.failover_service, runtime)
+        runtime_access_token, runtime_client_id = load_video_runtime_auth(
+            self.runtime_store,
+            task_id=task.context.task_id,
+        )
+        try:
+            provider_runtime = await self.provider_runtime_resolver.resolve_video_pipeline(
+                access_token=runtime_access_token,
+                client_id=runtime_client_id,
+            )
+        finally:
+            delete_video_runtime_auth(self.runtime_store, task_id=task.context.task_id)
+        understanding_service = UnderstandingService(
+            provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
+            self.failover_service,
+            runtime,
+        )
         storyboard_service = StoryboardService(
-            self.provider_assembly.llm,
+            provider_runtime.llm_for(VideoStage.STORYBOARD.value),
             self.failover_service,
             runtime,
             self.settings,
         )
-        manim_service = ManimGenerationService(self.provider_assembly.llm, self.failover_service, runtime)
+        manim_service = ManimGenerationService(
+            provider_runtime.llm_for(VideoStage.MANIM_GEN.value),
+            self.failover_service,
+            runtime,
+        )
         rule_fixer = RuleBasedFixer()
-        llm_fixer = LLMBasedFixer(self.provider_assembly.llm, self.failover_service)
-        tts_service = TTSService(self.provider_assembly.tts, self.failover_service, runtime, self.settings)
+        llm_fixer = LLMBasedFixer(provider_runtime.llm_for(VideoStage.MANIM_FIX.value), self.failover_service)
+        tts_service = TTSService(
+            provider_runtime.tts_for(VideoStage.TTS.value),
+            self.failover_service,
+            runtime,
+            self.settings,
+        )
         compose_service = ComposeService(self.settings, runtime)
         upload_service = UploadService(self.asset_store, self.settings, runtime)
         artifact_service = ArtifactWritebackService(self.asset_store)
@@ -889,7 +1417,13 @@ class VideoPipelineService:
                 llm_fixer=llm_fixer,
             )
             tts_result = await self._run_tts(task, tts_service, storyboard=storyboard)
-            compose_result = await self._run_compose(task, compose_service, render_result=render_result, tts_result=tts_result)
+            compose_result = await self._run_compose(
+                task,
+                compose_service,
+                storyboard=storyboard,
+                render_result=render_result,
+                tts_result=tts_result,
+            )
             upload_result = await self._run_upload(task, upload_service, compose_result=compose_result)
             video_result = await self._write_completed_result(
                 task.context,
@@ -897,10 +1431,7 @@ class VideoPipelineService:
                 understanding=understanding,
                 upload_result=upload_result,
                 compose_result=compose_result,
-                providers={
-                    "llm": list(self._collect_unique_providers(self.provider_assembly.llm)),
-                    "tts": list(self._collect_unique_providers(self.provider_assembly.tts)),
-                },
+                providers=provider_runtime.provider_summary(),
             )
             await self._write_artifact_graph(
                 runtime,
@@ -1118,6 +1649,7 @@ class VideoPipelineService:
         storyboard: Storyboard,
     ) -> TTSResult:
         await self._emit_stage(task, VideoStage.TTS, 0.0, "正在生成旁白")
+        voice_preference = task.context.metadata.get("voicePreference")
 
         async def on_scene_completed(current_scene: int, total_scenes: int, provider: str, failover_occurred: bool) -> None:
             ratio = current_scene / max(total_scenes, 1)
@@ -1137,6 +1669,7 @@ class VideoPipelineService:
         tts_result = await service.execute(
             task_id=task.context.task_id,
             storyboard=storyboard,
+            voice_preference=voice_preference if isinstance(voice_preference, Mapping) else None,
             emit_switch=self._build_switch_emitter(task, VideoStage.TTS, 0.5),
             on_scene_completed=on_scene_completed,
         )
@@ -1148,12 +1681,14 @@ class VideoPipelineService:
         task: BaseTask,
         service: ComposeService,
         *,
+        storyboard: Storyboard,
         render_result: ExecutionResult,
         tts_result: TTSResult,
     ) -> ComposeResult:
         await self._emit_stage(task, VideoStage.COMPOSE, 0.0, "正在合成视频")
         compose_result = await service.execute(
             task_id=task.context.task_id,
+            storyboard=storyboard,
             render_result=render_result,
             tts_result=tts_result,
         )
@@ -1198,6 +1733,10 @@ class VideoPipelineService:
         providers: dict[str, Any],
     ) -> VideoResult:
         completed_at = format_trace_timestamp()
+        provider_payload = dict(providers)
+        selected_voice = runtime.load_value("tts_selected_voice")
+        if isinstance(selected_voice, Mapping):
+            provider_payload["ttsVoice"] = dict(selected_voice)
         video_result = VideoResult(
             task_id=context.task_id,
             video_url=upload_result.video_url,
@@ -1209,7 +1748,7 @@ class VideoPipelineService:
             completed_at=completed_at,
             ai_content_flag=True,
             title=_build_title(understanding.topic_summary),
-            provider_used=providers,
+            provider_used=provider_payload,
         )
         runtime.save_model("result", video_result)
         detail = VideoResultDetail(

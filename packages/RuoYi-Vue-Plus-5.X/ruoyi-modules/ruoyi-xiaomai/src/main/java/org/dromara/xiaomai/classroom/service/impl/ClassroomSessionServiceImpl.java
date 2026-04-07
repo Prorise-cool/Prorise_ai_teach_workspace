@@ -87,7 +87,7 @@ public class ClassroomSessionServiceImpl implements IClassroomSessionService {
         LambdaQueryWrapper<ClassroomSession> lqw = Wrappers.lambdaQuery();
         lqw.eq(bo.getId() != null, ClassroomSession::getId, bo.getId());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskId()), ClassroomSession::getTaskId, bo.getTaskId());
-        lqw.eq(StringUtils.isNotBlank(bo.getUserId()), ClassroomSession::getUserId, bo.getUserId());
+        lqw.eq(bo.getUserId() != null, ClassroomSession::getUserId, bo.getUserId());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskType()), ClassroomSession::getTaskType, bo.getTaskType());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskState()), ClassroomSession::getTaskState, bo.getTaskState());
         lqw.like(StringUtils.isNotBlank(bo.getSummary()), ClassroomSession::getSummary, bo.getSummary());

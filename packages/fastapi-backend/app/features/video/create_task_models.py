@@ -5,12 +5,14 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, field_validator
 
 from app.features.video.modeling import VideoCamelModel
+from app.features.video.voice_models import VideoVoicePreference
 
 
 class CreateVideoTaskRequest(VideoCamelModel):
     input_type: str = Field(pattern="^(text|image)$")
     source_payload: dict[str, object]
     user_profile: dict[str, object] | None = None
+    voice_preference: VideoVoicePreference | None = None
     client_request_id: str = Field(
         min_length=1,
         max_length=128,

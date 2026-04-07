@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.xiaomai.ai.runtime.mapper.XmAiRuntimeConfigMapper">
+
+    <select id="selectModuleRuntimeBindings" resultType="org.dromara.xiaomai.ai.runtime.domain.vo.XmAiRuntimeBindingRowVo">
+        SELECT
+            m.module_code AS moduleCode,
+            m.module_name AS moduleName,
+            b.stage_code AS stageCode,
+            b.capability AS capability,
+            b.role_code AS roleCode,
+            r.runtime_provider_id AS providerId,
+            b.priority AS priority,
+            b.timeout_seconds AS timeoutSeconds,
+            b.retry_attempts AS retryAttempts,
+            b.health_source AS healthSource,
+            b.is_default AS isDefault,
+            b.runtime_settings_json AS runtimeSettingsJson,
+            r.resource_code AS resourceCode,
+            r.resource_name AS resourceName,
+            r.resource_type AS resourceType,
+            r.model_name AS modelName,
+            r.voice_code AS voiceCode,
+            r.language_code AS languageCode,
+            r.resource_settings_json AS resourceSettingsJson,
+            p.provider_code AS providerCode,
+            p.provider_name AS providerName,
+            p.vendor_code AS vendorCode,
+            p.auth_type AS authType,
+            p.endpoint_url AS endpointUrl,
+            p.app_id AS appId,
+            p.api_key AS apiKey,
+            p.api_secret AS apiSecret,
+            p.access_token AS accessToken,
+            p.extra_auth_json AS extraAuthJson
+        FROM xm_ai_module_binding b
+        INNER JOIN xm_ai_module m
+            ON m.id = b.module_id
+            AND m.tenant_id = b.tenant_id
+        INNER JOIN xm_ai_resource r
+            ON r.id = b.resource_id
+            AND r.tenant_id = b.tenant_id
+        INNER JOIN xm_ai_provider p
+            ON p.id = r.provider_id
+            AND p.tenant_id = b.tenant_id
+        WHERE b.tenant_id = #{tenantId}
+          AND m.module_code = #{moduleCode}
+          AND m.status = '0'
+          AND b.status = '0'
+          AND r.status = '0'
+          AND p.status = '0'
+          AND m.del_flag = '0'
+          AND b.del_flag = '0'
+          AND r.del_flag = '0'
+          AND p.del_flag = '0'
+        ORDER BY b.stage_code ASC, b.capability ASC, b.priority ASC, b.id ASC
+    </select>
+</mapper>

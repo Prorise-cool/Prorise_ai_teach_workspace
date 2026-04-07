@@ -24,7 +24,7 @@ public class VideoTaskVo extends BaseEntity implements Serializable {
 
     private String taskId;
 
-    private String userId;
+    private Long userId;
 
     private String taskType;
 
