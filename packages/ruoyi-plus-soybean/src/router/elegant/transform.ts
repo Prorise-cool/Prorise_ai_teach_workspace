@@ -201,8 +201,14 @@ const routeMap: RouteMap = {
   "tool_gen": "/tool/gen",
   "user-center": "/user-center",
   "xiaomai": "/xiaomai",
+  "xiaomai_ai-module": "/xiaomai/ai-module",
+  "xiaomai_ai-module-binding": "/xiaomai/ai-module-binding",
+  "xiaomai_ai-provider": "/xiaomai/ai-provider",
+  "xiaomai_ai-resource": "/xiaomai/ai-resource",
   "xiaomai_landing-lead": "/xiaomai/landing-lead",
-  "xiaomai_user-profile": "/xiaomai/user-profile"
+  "xiaomai_user-profile": "/xiaomai/user-profile",
+  "xiaomai_user-work": "/xiaomai/user-work",
+  "xiaomai_video-task": "/xiaomai/video-task"
 };
 
 /**

@@ -20,6 +20,19 @@
 | `VIDEO_OCR_TIMEOUT` | `200` | `true` | 可重试预处理或直接手动输入文本 | OCR 超时降级 |
 | `VIDEO_STORAGE_FAILED` | `500` | `true` | 稍后重试 | 图片存储失败 |
 | `VIDEO_DISPATCH_FAILED` | `500` | `true` | 稍后重新提交 | 视频任务创建后消息分发失败 |
+| `VIDEO_UNDERSTANDING_FAILED` | `500` | `true` | 稍后重试 | 题目理解阶段失败 |
+| `VIDEO_STORYBOARD_FAILED` | `500` | `true` | 稍后重试 | 分镜生成阶段失败 |
+| `VIDEO_MANIM_GEN_FAILED` | `500` | `true` | 稍后重试 | Manim 代码生成或修复失败 |
+| `VIDEO_RENDER_FAILED` | `500` | `true` | 稍后重试 | Manim 渲染失败 |
+| `VIDEO_RENDER_TIMEOUT` | `504` | `true` | 稍后重试 | Manim 渲染超时 |
+| `VIDEO_RENDER_OOM` | `500` | `true` | 稍后重试 | 渲染进程内存耗尽 |
+| `VIDEO_RENDER_DISK_FULL` | `500` | `true` | 稍后重试 | 渲染临时磁盘空间耗尽 |
+| `VIDEO_TTS_ALL_PROVIDERS_FAILED` | `503` | `true` | 稍后重试 | 所有 TTS Provider 都失败 |
+| `VIDEO_COMPOSE_FAILED` | `500` | `true` | 稍后重试 | FFmpeg 合成失败 |
+| `VIDEO_UPLOAD_FAILED` | `500` | `true` | 稍后重试 | 视频或封面上传失败 |
+| `SANDBOX_NETWORK_VIOLATION` | `500` | `false` | 调整脚本后重新生成 | 沙箱检测到非法网络访问 |
+| `SANDBOX_FS_VIOLATION` | `500` | `false` | 调整脚本后重新生成 | 沙箱检测到文件系统越界访问 |
+| `SANDBOX_PROCESS_VIOLATION` | `500` | `false` | 调整脚本后重新生成 | 沙箱检测到非法子进程或动态执行 |
 
 ## 追踪字段语义
 

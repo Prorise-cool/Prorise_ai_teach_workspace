@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<Props>(), {
   immediate: false
 });
 
-const value = defineModel<string | null>('value', { required: false });
+const value = defineModel<string | number | null>('value', { required: false });
 
 const { options } = useDict(props.dictCode, props.immediate);
 </script>

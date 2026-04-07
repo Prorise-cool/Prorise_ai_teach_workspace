@@ -95,6 +95,51 @@ public final class XmPersistenceSyncVo {
     }
 
     @Data
+    public static class VideoPublicationSyncVo {
+        private String tableName = "xm_user_work";
+        private Long workId;
+        private String workType;
+        private String taskRefId;
+        private String userId;
+        private String title;
+        private String description;
+        private String coverUrl;
+        private Boolean isPublic;
+        private String status;
+        private Date publishedAt;
+        private Date createdAt;
+        private Date updatedAt;
+        private Integer version;
+    }
+
+    @Data
+    public static class SessionArtifactSyncVo {
+        private String tableName = "xm_session_artifact";
+        private String sessionType;
+        private String sessionRefId;
+        private String artifactType;
+        private String anchorType;
+        private String anchorKey;
+        private Integer sequenceNo;
+        private String title;
+        private String summary;
+        private String objectKey;
+        private String payloadRef;
+        private Map<String, Object> metadata = new LinkedHashMap<>();
+        private Date occurredAt;
+    }
+
+    @Data
+    public static class SessionArtifactBatchSyncVo {
+        private String tableName = "xm_session_artifact";
+        private String sessionType;
+        private String sessionRefId;
+        private String payloadRef;
+        private Integer syncedCount;
+        private List<SessionArtifactSyncVo> artifacts = new ArrayList<>();
+    }
+
+    @Data
     public static class SessionReplaySyncVo {
         private String sessionId;
         private List<String> storageTables = new ArrayList<>(List.of(

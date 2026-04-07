@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Mapping
 
 from app.core.config import get_settings
 from app.providers.demo_provider import DemoLLMProvider
+from app.providers.llm.openai_compatible_provider import OpenAICompatibleLLMProvider
 from app.providers.llm.stub_provider import StubLLMProvider
 from app.providers.protocols import LLMProvider, ProviderCapability, ProviderRuntimeConfig
 from app.providers.registry import ProviderRegistry
@@ -26,6 +27,13 @@ def register_llm_providers(registry: ProviderRegistry) -> None:
         DemoLLMProvider,
         default_priority=10,
         description="演示用 LLM provider"
+    )
+    registry.register(
+        ProviderCapability.LLM,
+        "openai-compatible",
+        OpenAICompatibleLLMProvider,
+        default_priority=20,
+        description="OpenAI compatible chat completions provider"
     )
 
 

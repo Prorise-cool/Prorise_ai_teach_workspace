@@ -10,9 +10,22 @@ from app.shared.task_framework.status import TaskErrorCode, TaskStatus
 if TYPE_CHECKING:
     from app.core.sse import TaskProgressEvent
     from app.providers.failover import ProviderSwitch
+    from app.shared.task_framework.runtime import TaskRuntimeSnapshot
+    from app.shared.task_framework.status import TaskInternalStatus
 
 
 TaskRuntimeEventEmitter = Callable[["TaskProgressEvent"], Any]
+TaskRuntimeSnapshotEmitter = Callable[
+    [
+        "TaskInternalStatus",
+        int,
+        str,
+        TaskErrorCode | None,
+        dict[str, object] | None,
+        str | None,
+    ],
+    "TaskRuntimeSnapshot",
+]
 
 
 @dataclass(slots=True)
@@ -71,6 +84,7 @@ class BaseTask(ABC):
         self.logger = get_logger(f"app.tasks.{context.task_type}")
         self._lifecycle_state = TaskLifecycleState()
         self._runtime_event_emitter: TaskRuntimeEventEmitter | None = None
+        self._runtime_snapshot_emitter: TaskRuntimeSnapshotEmitter | None = None
 
     async def prepare(self) -> None:
         return None
@@ -94,11 +108,42 @@ class BaseTask(ABC):
     def bind_runtime_event_emitter(self, emitter: TaskRuntimeEventEmitter | None) -> None:
         self._runtime_event_emitter = emitter
 
+    def bind_runtime_snapshot_emitter(
+        self,
+        emitter: TaskRuntimeSnapshotEmitter | None,
+    ) -> None:
+        self._runtime_snapshot_emitter = emitter
+
     async def emit_runtime_event(self, event: "TaskProgressEvent") -> "TaskProgressEvent | None":
         if self._runtime_event_emitter is None:
             return None
 
         maybe_result = self._runtime_event_emitter(event)
+        if isawaitable(maybe_result):
+            return await maybe_result
+        return maybe_result
+
+    async def emit_runtime_snapshot(
+        self,
+        *,
+        internal_status: "TaskInternalStatus",
+        progress: int,
+        message: str,
+        error_code: TaskErrorCode | None = None,
+        context: dict[str, object] | None = None,
+        event: str | None = "progress",
+    ) -> "TaskRuntimeSnapshot | None":
+        if self._runtime_snapshot_emitter is None:
+            return None
+
+        maybe_result = self._runtime_snapshot_emitter(
+            internal_status,
+            progress,
+            message,
+            error_code,
+            context,
+            event,
+        )
         if isawaitable(maybe_result):
             return await maybe_result
         return maybe_result

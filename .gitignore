@@ -146,6 +146,8 @@ packages/fastapi-backend/.pytest_cache/
 packages/fastapi-backend/.mypy_cache/
 packages/fastapi-backend/htmlcov/
 packages/fastapi-backend/.coverage
+packages/fastapi-backend/.runtime/
+*.local.sql
 
 # ===========================================
 # OpenMAIC Reference (references/openmaic)

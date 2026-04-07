@@ -87,7 +87,7 @@ public class VideoTaskServiceImpl implements IVideoTaskService {
         LambdaQueryWrapper<VideoTask> lqw = Wrappers.lambdaQuery();
         lqw.eq(bo.getId() != null, VideoTask::getId, bo.getId());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskId()), VideoTask::getTaskId, bo.getTaskId());
-        lqw.eq(StringUtils.isNotBlank(bo.getUserId()), VideoTask::getUserId, bo.getUserId());
+        lqw.eq(bo.getUserId() != null, VideoTask::getUserId, bo.getUserId());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskType()), VideoTask::getTaskType, bo.getTaskType());
         lqw.eq(StringUtils.isNotBlank(bo.getTaskState()), VideoTask::getTaskState, bo.getTaskState());
         lqw.like(StringUtils.isNotBlank(bo.getSummary()), VideoTask::getSummary, bo.getSummary());

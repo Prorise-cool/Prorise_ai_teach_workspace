@@ -2,12 +2,16 @@ package org.dromara.xiaomai.integration.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
+import org.dromara.common.mybatis.core.page.PageQuery;
+import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.utils.IdGeneratorUtil;
 import org.dromara.xiaomai.companion.domain.XmCompanionTurn;
 import org.dromara.xiaomai.companion.domain.XmWhiteboardActionLog;
@@ -15,6 +19,8 @@ import org.dromara.xiaomai.companion.mapper.XmCompanionTurnMapper;
 import org.dromara.xiaomai.companion.mapper.XmWhiteboardActionLogMapper;
 import org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo;
 import org.dromara.xiaomai.integration.domain.vo.XmPersistenceSyncVo;
+import org.dromara.xiaomai.integration.mapper.SessionArtifactMapper;
+import org.dromara.xiaomai.integration.mapper.VideoPublicationMapper;
 import org.dromara.xiaomai.knowledge.domain.XmKnowledgeChatLog;
 import org.dromara.xiaomai.knowledge.mapper.XmKnowledgeChatLogMapper;
 import org.dromara.xiaomai.learning.mapper.LearningResultMapper;
@@ -45,12 +51,14 @@ public class XmPersistenceSyncService {
     private final XmWhiteboardActionLogMapper whiteboardActionLogMapper;
     private final XmKnowledgeChatLogMapper knowledgeChatLogMapper;
     private final LearningResultMapper learningResultMapper;
+    private final VideoPublicationMapper videoPublicationMapper;
+    private final SessionArtifactMapper sessionArtifactMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public XmPersistenceSyncVo.CompanionTurnSyncVo syncCompanionTurn(XmPersistenceSyncBo.CompanionTurnSyncBo bo) {
         Date now = new Date();
         XmCompanionTurn entity = new XmCompanionTurn();
-        entity.setTurnId(IdGeneratorUtil.nextIdWithPrefix("turn_"));
+        entity.setTurnId(nextIdWithPrefix("turn_"));
         entity.setTenantId("000000");
         entity.setUserId(bo.getUserId());
         entity.setSessionId(bo.getSessionId());
@@ -74,7 +82,7 @@ public class XmPersistenceSyncService {
         List<XmWhiteboardActionLog> actions = new ArrayList<>();
         for (XmPersistenceSyncBo.WhiteboardActionBo actionBo : safeList(bo.getWhiteboardActions())) {
             XmWhiteboardActionLog action = new XmWhiteboardActionLog();
-            action.setActionId(IdGeneratorUtil.nextIdWithPrefix("wb_"));
+            action.setActionId(nextIdWithPrefix("wb_"));
             action.setTenantId("000000");
             action.setTurnId(entity.getTurnId());
             action.setUserId(entity.getUserId());
@@ -136,7 +144,7 @@ public class XmPersistenceSyncService {
     public XmPersistenceSyncVo.KnowledgeChatSyncVo syncKnowledgeChat(XmPersistenceSyncBo.KnowledgeChatSyncBo bo) {
         Date now = new Date();
         XmKnowledgeChatLog entity = new XmKnowledgeChatLog();
-        entity.setChatLogId(IdGeneratorUtil.nextIdWithPrefix("chat_"));
+        entity.setChatLogId(nextIdWithPrefix("chat_"));
         entity.setTenantId("000000");
         entity.setUserId(bo.getUserId());
         entity.setSessionId(bo.getSessionId());
@@ -164,6 +172,73 @@ public class XmPersistenceSyncService {
             return null;
         }
         return toKnowledgeChatVo(entity);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public XmPersistenceSyncVo.VideoPublicationSyncVo syncVideoPublication(XmPersistenceSyncBo.VideoPublicationSyncBo bo) {
+        XmPersistenceSyncVo.VideoPublicationSyncVo existing = videoPublicationMapper.selectByTaskRefId(
+            normalizeWorkType(bo.getWorkType()),
+            bo.getTaskRefId()
+        );
+        XmPersistenceSyncBo.VideoPublicationSyncBo record = normalizeVideoPublication(bo, existing);
+        if (existing == null) {
+            int inserted = videoPublicationMapper.insertPublication(record);
+            if (inserted != 1) {
+                throw new ServiceException("视频公开记录写入失败");
+            }
+        } else {
+            int updated = videoPublicationMapper.updatePublication(record);
+            if (updated != 1) {
+                throw new ServiceException("视频公开记录版本冲突，请重试");
+            }
+        }
+        return getVideoPublication(record.getTaskRefId());
+    }
+
+    public XmPersistenceSyncVo.VideoPublicationSyncVo getVideoPublication(String taskRefId) {
+        return videoPublicationMapper.selectByTaskRefId("video", taskRefId);
+    }
+
+    public TableDataInfo<XmPersistenceSyncVo.VideoPublicationSyncVo> listVideoPublications(
+        XmPersistenceSyncBo.VideoPublicationQueryBo bo,
+        PageQuery pageQuery
+    ) {
+        XmPersistenceSyncBo.VideoPublicationQueryBo query = bo == null ? new XmPersistenceSyncBo.VideoPublicationQueryBo() : bo;
+        query.setWorkType(normalizeWorkType(query.getWorkType()));
+        PageQuery resolvedPageQuery = pageQuery == null ? new PageQuery(PageQuery.DEFAULT_PAGE_SIZE, PageQuery.DEFAULT_PAGE_NUM) : pageQuery;
+        Page<?> page = resolvedPageQuery.build();
+        long total = videoPublicationMapper.countPublications(query);
+        if (total <= 0) {
+            return new TableDataInfo<>(List.of(), 0);
+        }
+        long offset = (page.getCurrent() - 1) * page.getSize();
+        List<XmPersistenceSyncVo.VideoPublicationSyncVo> rows = videoPublicationMapper.selectPublications(
+            query,
+            offset,
+            page.getSize()
+        );
+        return new TableDataInfo<>(rows, total);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public XmPersistenceSyncVo.SessionArtifactBatchSyncVo syncSessionArtifacts(XmPersistenceSyncBo.SessionArtifactBatchSyncBo bo) {
+        XmPersistenceSyncBo.SessionArtifactBatchSyncBo batch = normalizeSessionArtifacts(bo);
+        sessionArtifactMapper.deleteBySession(batch.getSessionType(), batch.getSessionRefId());
+        if (!safeList(batch.getArtifacts()).isEmpty()) {
+            sessionArtifactMapper.insertBatch(batch.getArtifacts());
+        }
+
+        XmPersistenceSyncVo.SessionArtifactBatchSyncVo response = new XmPersistenceSyncVo.SessionArtifactBatchSyncVo();
+        response.setSessionType(batch.getSessionType());
+        response.setSessionRefId(batch.getSessionRefId());
+        response.setPayloadRef(batch.getPayloadRef());
+        response.setSyncedCount(safeList(batch.getArtifacts()).size());
+        response.setArtifacts(
+            safeList(batch.getArtifacts()).stream()
+                .map(this::toSessionArtifactVo)
+                .toList()
+        );
+        return response;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -201,7 +276,7 @@ public class XmPersistenceSyncService {
     private void persistCheckpointRecord(XmPersistenceSyncBo.LearningResultSyncItemBo record) {
         XmPersistenceSyncBo.LearningResultSyncItemBo existing = selectExistingAggregate(record);
         if (existing == null) {
-            record.setRecordId(IdGeneratorUtil.nextLongId());
+            record.setRecordId(nextLongId());
             learningResultMapper.insertCheckpointRecord(record);
             return;
         }
@@ -213,7 +288,7 @@ public class XmPersistenceSyncService {
         upsertAggregateRecord(record);
         XmPersistenceSyncBo.LearningResultSyncItemBo existingDetail = learningResultMapper.selectQuizRecordByRecordId(record.getRecordId());
         if (existingDetail == null) {
-            record.setGeneratedId(IdGeneratorUtil.nextLongId());
+            record.setGeneratedId(nextLongId());
             learningResultMapper.insertQuizRecord(record);
             return;
         }
@@ -225,7 +300,7 @@ public class XmPersistenceSyncService {
         upsertAggregateRecord(record);
         XmPersistenceSyncBo.LearningResultSyncItemBo existingDetail = learningResultMapper.selectWrongbookRecordByRecordId(record.getRecordId());
         if (existingDetail == null) {
-            record.setGeneratedId(IdGeneratorUtil.nextLongId());
+            record.setGeneratedId(nextLongId());
             learningResultMapper.insertWrongbookRecord(record);
             return;
         }
@@ -237,7 +312,7 @@ public class XmPersistenceSyncService {
         upsertAggregateRecord(record);
         XmPersistenceSyncBo.LearningResultSyncItemBo existingDetail = learningResultMapper.selectRecommendationRecordByRecordId(record.getRecordId());
         if (existingDetail == null) {
-            record.setGeneratedId(IdGeneratorUtil.nextLongId());
+            record.setGeneratedId(nextLongId());
             learningResultMapper.insertRecommendationRecord(record);
             return;
         }
@@ -253,12 +328,12 @@ public class XmPersistenceSyncService {
             record.setUpdatedAt(latestDate(existing.getUpdatedAt(), record.getUpdatedAt()));
             record.setOccurredAt(latestDate(existing.getOccurredAt(), record.getOccurredAt()));
         } else {
-            record.setRecordId(IdGeneratorUtil.nextLongId());
+            record.setRecordId(nextLongId());
             learningResultMapper.insertAggregateRecord(record);
         }
         XmPersistenceSyncBo.LearningResultSyncItemBo existingDetail = learningResultMapper.selectPathRecordByRecordId(record.getRecordId());
         if (existingDetail == null) {
-            record.setGeneratedId(IdGeneratorUtil.nextLongId());
+            record.setGeneratedId(nextLongId());
             learningResultMapper.insertPathRecord(record);
             if (existing != null) {
                 learningResultMapper.updateAggregateRecord(record);
@@ -275,7 +350,7 @@ public class XmPersistenceSyncService {
     private void upsertAggregateRecord(XmPersistenceSyncBo.LearningResultSyncItemBo record) {
         XmPersistenceSyncBo.LearningResultSyncItemBo existing = selectExistingAggregate(record);
         if (existing == null) {
-            record.setRecordId(IdGeneratorUtil.nextLongId());
+            record.setRecordId(nextLongId());
             learningResultMapper.insertAggregateRecord(record);
             return;
         }
@@ -381,6 +456,94 @@ public class XmPersistenceSyncService {
             case "path" -> "路径记录必须保留版本信息，不能简单覆盖。";
             default -> resultType;
         };
+    }
+
+    private XmPersistenceSyncBo.VideoPublicationSyncBo normalizeVideoPublication(
+        XmPersistenceSyncBo.VideoPublicationSyncBo source,
+        XmPersistenceSyncVo.VideoPublicationSyncVo existing
+    ) {
+        Date now = new Date();
+        if (source == null || StringUtils.isBlank(source.getTaskRefId())) {
+            throw new ServiceException("视频公开记录缺少 taskRefId");
+        }
+        XmPersistenceSyncBo.VideoPublicationSyncBo record = new XmPersistenceSyncBo.VideoPublicationSyncBo();
+        Long userId = source.getUserId() == null
+            ? (existing == null ? null : requireNumericUserId(existing.getUserId()))
+            : source.getUserId();
+        if (userId == null) {
+            throw new ServiceException("视频公开记录缺少 userId");
+        }
+        record.setId(existing == null ? nextLongId() : existing.getWorkId());
+        record.setUserId(userId);
+        record.setWorkType(normalizeWorkType(source.getWorkType()));
+        record.setTaskRefId(source.getTaskRefId());
+        record.setTitle(firstNotBlank(source.getTitle(), existing == null ? null : existing.getTitle(), source.getTaskRefId()));
+        record.setDescription(firstNotBlank(source.getDescription(), existing == null ? null : existing.getDescription()));
+        record.setCoverUrl(firstNotBlank(source.getCoverUrl(), existing == null ? null : existing.getCoverUrl()));
+        record.setIsPublic(Boolean.TRUE.equals(source.getIsPublic()));
+        record.setStatus(firstNotBlank(source.getStatus(), existing == null ? null : existing.getStatus(), "normal"));
+        record.setCreateBy(existing == null ? userId : null);
+        record.setUpdateBy(userId);
+        record.setCreatedAt(existing == null ? now : (existing.getCreatedAt() == null ? now : existing.getCreatedAt()));
+        record.setUpdatedAt(now);
+        Integer previousVersion = existing == null ? null : (existing.getVersion() == null ? 0 : existing.getVersion());
+        record.setPreviousVersion(previousVersion);
+        record.setVersion(existing == null ? 0 : (previousVersion + 1));
+        return record;
+    }
+
+    private XmPersistenceSyncBo.SessionArtifactBatchSyncBo normalizeSessionArtifacts(
+        XmPersistenceSyncBo.SessionArtifactBatchSyncBo source
+    ) {
+        if (source == null || StringUtils.isBlank(source.getSessionRefId())) {
+            throw new ServiceException("Session artifact 缺少 sessionRefId");
+        }
+        XmPersistenceSyncBo.SessionArtifactBatchSyncBo batch = new XmPersistenceSyncBo.SessionArtifactBatchSyncBo();
+        Date occurredAt = source.getOccurredAt() == null ? new Date() : source.getOccurredAt();
+        batch.setSessionType(StringUtils.defaultIfBlank(source.getSessionType(), "video"));
+        batch.setSessionRefId(source.getSessionRefId());
+        batch.setObjectKey(source.getObjectKey());
+        batch.setPayloadRef(source.getPayloadRef());
+        batch.setOccurredAt(occurredAt);
+
+        List<XmPersistenceSyncBo.SessionArtifactItemBo> items = new ArrayList<>();
+        for (XmPersistenceSyncBo.SessionArtifactItemBo item : safeList(source.getArtifacts())) {
+            XmPersistenceSyncBo.SessionArtifactItemBo normalized = new XmPersistenceSyncBo.SessionArtifactItemBo();
+            normalized.setId(nextLongId());
+            normalized.setSessionType(batch.getSessionType());
+            normalized.setSessionRefId(batch.getSessionRefId());
+            normalized.setArtifactType(item.getArtifactType());
+            normalized.setAnchorType(item.getAnchorType());
+            normalized.setAnchorKey(item.getAnchorKey());
+            normalized.setSequenceNo(item.getSequenceNo());
+            normalized.setTitle(item.getTitle());
+            normalized.setSummary(item.getSummary());
+            normalized.setObjectKey(firstNotBlank(item.getObjectKey(), batch.getObjectKey()));
+            normalized.setPayloadRef(firstNotBlank(item.getPayloadRef(), batch.getPayloadRef()));
+            normalized.setMetadata(item.getMetadata() == null ? Map.of() : item.getMetadata());
+            normalized.setMetadataJson(writeJson(normalized.getMetadata()));
+            normalized.setOccurredAt(item.getOccurredAt() == null ? occurredAt : item.getOccurredAt());
+            items.add(normalized);
+        }
+        batch.setArtifacts(items);
+        return batch;
+    }
+
+    private XmPersistenceSyncVo.SessionArtifactSyncVo toSessionArtifactVo(XmPersistenceSyncBo.SessionArtifactItemBo record) {
+        XmPersistenceSyncVo.SessionArtifactSyncVo vo = new XmPersistenceSyncVo.SessionArtifactSyncVo();
+        vo.setSessionType(record.getSessionType());
+        vo.setSessionRefId(record.getSessionRefId());
+        vo.setArtifactType(record.getArtifactType());
+        vo.setAnchorType(record.getAnchorType());
+        vo.setAnchorKey(record.getAnchorKey());
+        vo.setSequenceNo(record.getSequenceNo());
+        vo.setTitle(record.getTitle());
+        vo.setSummary(record.getSummary());
+        vo.setObjectKey(record.getObjectKey());
+        vo.setPayloadRef(record.getPayloadRef());
+        vo.setMetadata(record.getMetadata() == null ? Map.of() : record.getMetadata());
+        vo.setOccurredAt(record.getOccurredAt());
+        return vo;
     }
 
     private XmPersistenceSyncVo.CompanionTurnSyncVo toCompanionVo(XmCompanionTurn entity, List<XmWhiteboardActionLog> actions) {
@@ -576,6 +739,37 @@ public class XmPersistenceSyncService {
             }
         }
         return null;
+    }
+
+    private Long nextLongId() {
+        try {
+            return IdGeneratorUtil.nextLongId();
+        } catch (Throwable ignored) {
+            return IdWorker.getId();
+        }
+    }
+
+    private String nextIdWithPrefix(String prefix) {
+        try {
+            return IdGeneratorUtil.nextIdWithPrefix(prefix);
+        } catch (Throwable ignored) {
+            return prefix + IdWorker.getIdStr();
+        }
+    }
+
+    private String normalizeWorkType(String workType) {
+        return StringUtils.isBlank(workType) ? "video" : workType;
+    }
+
+    private Long requireNumericUserId(String userId) {
+        if (StringUtils.isBlank(userId)) {
+            return null;
+        }
+        try {
+            return Long.valueOf(userId);
+        } catch (NumberFormatException ex) {
+            throw new ServiceException("视频公开记录 userId 必须为数字: " + userId);
+        }
     }
 
     private Integer maxVersion(Integer first, Integer second) {

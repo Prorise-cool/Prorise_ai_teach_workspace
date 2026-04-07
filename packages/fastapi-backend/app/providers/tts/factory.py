@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.providers.demo_provider import DemoTTSProvider
 from app.providers.protocols import ProviderCapability, ProviderRuntimeConfig, TTSProvider
 from app.providers.registry import ProviderRegistry
+from app.providers.tts.doubao_provider import DoubaoTTSProvider
 from app.providers.tts.stub_provider import StubTTSProvider
 
 if TYPE_CHECKING:
@@ -26,6 +27,13 @@ def register_tts_providers(registry: ProviderRegistry) -> None:
         DemoTTSProvider,
         default_priority=10,
         description="演示用 TTS provider"
+    )
+    registry.register(
+        ProviderCapability.TTS,
+        "doubao-tts",
+        DoubaoTTSProvider,
+        default_priority=20,
+        description="豆包 / 火山引擎 TTS provider"
     )
 
 

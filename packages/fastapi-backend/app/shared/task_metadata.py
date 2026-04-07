@@ -156,6 +156,8 @@ def snapshot_from_ruoyi_row(
 ) -> TaskMetadataSnapshot:
     normalized = TASK_METADATA_RUOYI_MAPPER.from_ruoyi(row)
     normalized.pop("id", None)
+    if "user_id" in normalized and normalized["user_id"] is not None:
+        normalized["user_id"] = str(normalized["user_id"])
     task_type = _require_task_type(normalized.get("task_type"), expected_task_type=expected_task_type)
     normalized["task_type"] = task_type.value
     normalized["table_name"] = TASK_TABLE_BY_TYPE[task_type.value]

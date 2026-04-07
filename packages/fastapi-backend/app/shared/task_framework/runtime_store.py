@@ -28,6 +28,9 @@ def build_task_event(
     event_context = dict(context or {})
     raw_stage = event_context.get("stage")
     raw_result = event_context.get("result")
+    raw_current_stage = event_context.get("currentStage")
+    raw_stage_label = event_context.get("stageLabel")
+    raw_stage_progress = event_context.get("stageProgress")
 
     return TaskProgressEvent(
         event=event,
@@ -40,5 +43,11 @@ def build_task_event(
         error_code=snapshot.error_code,
         context=event_context,
         stage=raw_stage if isinstance(raw_stage, str) else None,
+        current_stage=(
+            raw_current_stage if isinstance(raw_current_stage, str)
+            else (raw_stage if isinstance(raw_stage, str) else None)
+        ),
+        stage_label=raw_stage_label if isinstance(raw_stage_label, str) else None,
+        stage_progress=raw_stage_progress if isinstance(raw_stage_progress, int) else None,
         result=raw_result if isinstance(raw_result, dict) else None
     )

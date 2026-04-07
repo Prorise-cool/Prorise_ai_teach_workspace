@@ -30,3 +30,6 @@ class TaskContractPayload(CamelCaseModel):
     )
     request_id: str | None
     error_code: str | None
+    current_stage: str | None = None
+    stage_label: str | None = None
+    stage_progress: int | None = Field(default=None, ge=0, le=100)

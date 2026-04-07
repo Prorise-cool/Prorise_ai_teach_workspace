@@ -1,0 +1,8 @@
+{
+  "taskId": "video_pipeline_fail_001",
+  "errorCode": "VIDEO_RENDER_TIMEOUT",
+  "errorMessage": "render timed out",
+  "failedStage": "render",
+  "failedAt": "2026-04-06T12:20:38Z",
+  "retryable": true
+}

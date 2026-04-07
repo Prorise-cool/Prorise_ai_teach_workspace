@@ -1,0 +1,88 @@
+<script setup lang="ts">
+import { toRaw } from 'vue';
+import { jsonClone } from '@sa/utils';
+import { useNaiveForm } from '@/hooks/common/form';
+import { $t } from '@/locales';
+
+defineOptions({
+  name: 'AiProviderSearch'
+});
+
+interface Emits {
+  (e: 'search'): void;
+}
+
+const emit = defineEmits<Emits>();
+
+const { formRef, validate, restoreValidation } = useNaiveForm();
+const model = defineModel<Api.Xiaomai.AiProviderSearchParams>('model', { required: true });
+const defaultModel = jsonClone(toRaw(model.value));
+
+function resetModel() {
+  Object.assign(model.value, defaultModel);
+}
+
+async function reset() {
+  await restoreValidation();
+  resetModel();
+  emit('search');
+}
+
+async function search() {
+  await validate();
+  emit('search');
+}
+</script>
+
+<template>
+  <NCard :bordered="false" size="small" class="card-wrapper">
+    <NCollapse>
+      <NCollapseItem :title="$t('common.search')" name="xiaomai-ai-provider-search">
+        <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
+          <NGrid responsive="screen" item-responsive>
+            <NFormItemGi span="24 s:12 m:6" label="Provider 编码" label-width="auto" path="providerCode" class="pr-24px">
+              <NInput v-model:value="model.providerCode" placeholder="请输入 Provider 编码" />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="Provider 名称" label-width="auto" path="providerName" class="pr-24px">
+              <NInput v-model:value="model.providerName" placeholder="请输入 Provider 名称" />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="供应商" label-width="auto" path="vendorCode" class="pr-24px">
+              <DictSelect v-model:value="model.vendorCode" placeholder="请选择供应商" dict-code="xm_ai_vendor_code" clearable />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="鉴权类型" label-width="auto" path="authType" class="pr-24px">
+              <DictSelect v-model:value="model.authType" placeholder="请选择鉴权类型" dict-code="xm_ai_auth_type" clearable />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="请求地址" label-width="auto" path="endpointUrl" class="pr-24px">
+              <NInput v-model:value="model.endpointUrl" placeholder="请输入请求地址" />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="应用 ID" label-width="auto" path="appId" class="pr-24px">
+              <NInput v-model:value="model.appId" placeholder="请输入应用 ID" />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
+              <DictSelect v-model:value="model.status" placeholder="请选择状态" dict-code="sys_normal_disable" clearable />
+            </NFormItemGi>
+            <NFormItemGi span="24 s:12 m:6" label="排序号" label-width="auto" path="sortOrder" class="pr-24px">
+              <NInputNumber v-model:value="model.sortOrder" placeholder="请输入排序号" class="w-full" />
+            </NFormItemGi>
+            <NFormItemGi :show-feedback="false" span="24" class="pr-24px">
+              <NSpace class="w-full" justify="end">
+                <NButton @click="reset">
+                  <template #icon>
+                    <icon-ic-round-refresh class="text-icon" />
+                  </template>
+                  {{ $t('common.reset') }}
+                </NButton>
+                <NButton type="primary" ghost @click="search">
+                  <template #icon>
+                    <icon-ic-round-search class="text-icon" />
+                  </template>
+                  {{ $t('common.search') }}
+                </NButton>
+              </NSpace>
+            </NFormItemGi>
+          </NGrid>
+        </NForm>
+      </NCollapseItem>
+    </NCollapse>
+  </NCard>
+</template>
