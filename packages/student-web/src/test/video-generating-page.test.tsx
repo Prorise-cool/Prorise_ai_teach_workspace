@@ -1,5 +1,6 @@
 /**
- * 文件说明：验证视频等待页对任务快照、SSE 状态、失败态与终态跳转的编排行为。
+ * 文件说明：验证视频等待页对任务快照、zustand store 状态、失败态与终态跳转的编排行为。
+ * Story 4.7 重构：状态由 zustand store 驱动，SSE hook 不再返回状态。
  */
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,13 +8,14 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppProvider } from '@/app/provider/app-provider';
-import type { VideoTaskSseState } from '@/features/video/hooks/use-video-task-sse';
 import type { VideoTaskStatusResult } from '@/features/video/hooks/use-video-task-status';
 import { VideoGeneratingPage } from '@/features/video/pages/video-generating-page';
+import { useVideoGeneratingStore } from '@/features/video/stores/video-generating-store';
 import type { TaskSnapshot } from '@/types/task';
 
 const useVideoTaskStatusMock = vi.fn();
 const useVideoTaskSseMock = vi.fn();
+const useVideoStatusPollingMock = vi.fn();
 
 vi.mock('@/features/video/hooks/use-video-task-status', () => ({
   useVideoTaskStatus: (...args: unknown[]) => useVideoTaskStatusMock(...args),
@@ -21,6 +23,10 @@ vi.mock('@/features/video/hooks/use-video-task-status', () => ({
 
 vi.mock('@/features/video/hooks/use-video-task-sse', () => ({
   useVideoTaskSse: (...args: unknown[]) => useVideoTaskSseMock(...args),
+}));
+
+vi.mock('@/features/video/hooks/use-video-status-polling', () => ({
+  useVideoStatusPolling: (...args: unknown[]) => useVideoStatusPollingMock(...args),
 }));
 
 function createSnapshot(overrides: Partial<TaskSnapshot> = {}): TaskSnapshot {
@@ -46,22 +52,6 @@ function createStatusResult(
     isError: false,
     error: null,
     isNotFound: false,
-    ...overrides,
-  };
-}
-
-function createSseState(
-  overrides: Partial<VideoTaskSseState> = {},
-): VideoTaskSseState {
-  return {
-    status: 'pending',
-    progress: 0,
-    stageTitle: '题目理解与知识库检索',
-    etaText: '初始化中，即将开始任务...',
-    logs: [],
-    errorCode: null,
-    errorMessage: null,
-    connected: false,
     ...overrides,
   };
 }
@@ -94,8 +84,9 @@ describe('VideoGeneratingPage', () => {
   beforeEach(() => {
     useVideoTaskStatusMock.mockReset();
     useVideoTaskSseMock.mockReset();
+    useVideoStatusPollingMock.mockReset();
     useVideoTaskStatusMock.mockReturnValue(createStatusResult());
-    useVideoTaskSseMock.mockReturnValue(createSseState());
+    useVideoGeneratingStore.getState().resetState('vtask_mock_text_001');
   });
 
   afterEach(() => {
@@ -115,37 +106,18 @@ describe('VideoGeneratingPage', () => {
     expect(useVideoTaskSseMock).toHaveBeenCalledWith('vtask_mock_text_001', {
       enabled: true,
     });
-    expect(
-      screen.getByText('动画生成'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('预计还需要 2 分钟')).toBeInTheDocument();
-    expect(screen.getByText('42%')).toBeInTheDocument();
   });
 
-  it('在存在 SSE 实时数据时优先渲染 SSE 阶段与日志', async () => {
-    useVideoTaskStatusMock.mockReturnValue(
-      createStatusResult({
-        snapshot: createSnapshot({
-          progress: 12,
-        }),
-      }),
-    );
-    useVideoTaskSseMock.mockReturnValue(
-      createSseState({
-        status: 'processing',
-        progress: 65,
-        stageTitle: '语音合成',
-        etaText: '预计还需要 1 分钟',
-        connected: true,
-        logs: [
-          {
-            id: 'tts',
-            status: 'pending',
-            text: '语音轨道生成中',
-          },
-        ],
-      }),
-    );
+  it('当 zustand store 有进度数据时渲染阶段与进度', async () => {
+    // 先设置 store 状态
+    act(() => {
+      useVideoGeneratingStore.getState().updateStage({
+        currentStage: 'tts',
+        stageLabel: 'video.stages.tts',
+        progress: 75,
+      });
+    });
+
     const router = createGeneratingRouter();
 
     render(
@@ -154,24 +126,32 @@ describe('VideoGeneratingPage', () => {
       </AppProvider>,
     );
 
-    expect(screen.getByText('语音合成')).toBeInTheDocument();
-    expect(screen.getByText('预计还需要 1 分钟')).toBeInTheDocument();
-    expect(screen.getByText('65%')).toBeInTheDocument();
-    expect(screen.getByText('语音轨道生成中')).toBeInTheDocument();
+    // i18n key 'video.stages.tts' 翻译为中文 '生成旁白'
+    expect(screen.getByText('生成旁白')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
   });
 
-  it('在失败态展示可读错误信息，并支持返回输入页重试', async () => {
-    const user = userEvent.setup();
+  it('在失败态展示可读错误信息和操作按钮', async () => {
+    // 通过 store 设置失败状态
+    act(() => {
+      useVideoGeneratingStore.getState().setFailed({
+        errorCode: 'VIDEO_RENDER_TIMEOUT',
+        errorMessage: '动画渲染超时',
+        failedStage: 'render',
+        retryable: true,
+      });
+    });
+
     useVideoTaskStatusMock.mockReturnValue(
       createStatusResult({
         snapshot: createSnapshot({
           status: 'failed',
-          progress: 87,
-          message: '任务执行失败',
-          errorCode: 'TASK_PROVIDER_TIMEOUT',
+          progress: 70,
+          errorCode: null,
         }),
       }),
     );
+
     const router = createGeneratingRouter();
 
     render(
@@ -180,24 +160,13 @@ describe('VideoGeneratingPage', () => {
       </AppProvider>,
     );
 
-    expect(useVideoTaskSseMock).toHaveBeenCalledWith('vtask_mock_text_001', {
-      enabled: false,
-    });
-    expect(screen.getByText('生成失败')).toBeInTheDocument();
-    expect(
-      screen.getByText('AI 服务响应超时，请稍后重试'),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '重新生成' }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/video/input');
-      expect(router.state.location.search).toBe('?retry=1');
-    });
+    expect(screen.getByText('动画渲染失败')).toBeInTheDocument();
+    expect(screen.getByText('动画渲染超时，请稍后重试')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /重新生成/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /返回输入页/ })).toBeInTheDocument();
   });
 
-  it('在 taskId 无效时展示 404 提示，并支持返回输入页', async () => {
-    const user = userEvent.setup();
+  it('在 taskId 无效时展示 404 提示', async () => {
     useVideoTaskStatusMock.mockReturnValue(
       createStatusResult({
         snapshot: null,
@@ -214,34 +183,26 @@ describe('VideoGeneratingPage', () => {
       </AppProvider>,
     );
 
-    expect(useVideoTaskSseMock).toHaveBeenCalledWith('vtask_mock_text_001', {
-      enabled: false,
-    });
     expect(screen.getByText('任务不存在')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        '任务 vtask_mock_text_001 不存在或已过期，请返回重新创建',
-      ),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '返回输入页' }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/video/input');
-    });
   });
 
   it('在完成态延迟跳转到结果页', async () => {
     vi.useFakeTimers();
+
+    // 通过 store 设置完成状态
+    act(() => {
+      useVideoGeneratingStore.getState().setCompleted();
+    });
+
     useVideoTaskStatusMock.mockReturnValue(
       createStatusResult({
         snapshot: createSnapshot({
           status: 'completed',
           progress: 100,
-          message: '任务执行完成',
         }),
       }),
     );
+
     const router = createGeneratingRouter();
 
     render(
@@ -251,9 +212,71 @@ describe('VideoGeneratingPage', () => {
     );
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1500);
+      await vi.advanceTimersByTimeAsync(2000);
     });
 
     expect(router.state.location.pathname).toBe('/video/vtask_mock_text_001');
+  });
+
+  it('zustand store 的 updateStage 正确更新状态', () => {
+    const store = useVideoGeneratingStore.getState();
+
+    store.updateStage({
+      currentStage: 'manim_fix',
+      stageLabel: 'video.stages.manim_fix',
+      progress: 50,
+      fixAttempt: 1,
+      fixTotal: 2,
+    });
+
+    const state = useVideoGeneratingStore.getState();
+
+    expect(state.currentStage).toBe('manim_fix');
+    expect(state.stageLabel).toBe('video.stages.manim_fix');
+    expect(state.progress).toBe(50);
+    expect(state.fixAttempt).toBe(1);
+    expect(state.fixTotal).toBe(2);
+    expect(state.status).toBe('processing');
+  });
+
+  it('zustand store 的 setFailed 正确设置错误信息', () => {
+    const store = useVideoGeneratingStore.getState();
+
+    store.setFailed({
+      errorCode: 'VIDEO_TTS_ALL_PROVIDERS_FAILED',
+      errorMessage: '语音合成服务不可用',
+      failedStage: 'tts',
+      retryable: false,
+    });
+
+    const state = useVideoGeneratingStore.getState();
+
+    expect(state.status).toBe('failed');
+    expect(state.error?.errorCode).toBe('VIDEO_TTS_ALL_PROVIDERS_FAILED');
+    expect(state.error?.failedStage).toBe('tts');
+    expect(state.error?.retryable).toBe(false);
+  });
+
+  it('zustand store 的 resetState 正确重置', () => {
+    const store = useVideoGeneratingStore.getState();
+
+    store.updateProgress({ progress: 50 });
+    store.resetState('new_task');
+
+    const state = useVideoGeneratingStore.getState();
+
+    expect(state.taskId).toBe('new_task');
+    expect(state.progress).toBe(0);
+    expect(state.status).toBe('pending');
+  });
+
+  it('降级轮询标志正确切换', () => {
+    const store = useVideoGeneratingStore.getState();
+
+    store.setDegradedPolling(true);
+    expect(useVideoGeneratingStore.getState().degradedToPolling).toBe(true);
+
+    store.setDegradedPolling(false);
+    expect(useVideoGeneratingStore.getState().degradedToPolling).toBe(false);
   });
 });

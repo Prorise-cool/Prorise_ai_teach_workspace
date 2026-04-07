@@ -189,6 +189,100 @@ export function isVideoPublicMockScenario(
   return VIDEO_PUBLIC_MOCK_SCENARIO_VALUES.some((scenario) => scenario === value);
 }
 
+/* ---------- 流水线阶段枚举 ---------- */
+
+/** 视频流水线阶段枚举值。 */
+export const VIDEO_PIPELINE_STAGE_VALUES = [
+  'understanding',
+  'storyboard',
+  'manim_gen',
+  'manim_fix',
+  'render',
+  'tts',
+  'compose',
+  'upload',
+] as const;
+
+/** 视频流水线阶段枚举类型。 */
+export type VideoPipelineStage = (typeof VIDEO_PIPELINE_STAGE_VALUES)[number];
+
+/** 视频流水线阶段错误码。 */
+export const VIDEO_PIPELINE_ERROR_CODE_VALUES = [
+  'VIDEO_UNDERSTANDING_FAILED',
+  'VIDEO_STORYBOARD_FAILED',
+  'VIDEO_MANIM_GEN_FAILED',
+  'VIDEO_RENDER_FAILED',
+  'VIDEO_RENDER_TIMEOUT',
+  'VIDEO_RENDER_OOM',
+  'VIDEO_RENDER_DISK_FULL',
+  'VIDEO_TTS_ALL_PROVIDERS_FAILED',
+  'VIDEO_COMPOSE_FAILED',
+  'VIDEO_UPLOAD_FAILED',
+  'SANDBOX_NETWORK_VIOLATION',
+  'SANDBOX_FS_VIOLATION',
+  'SANDBOX_PROCESS_VIOLATION',
+] as const;
+
+/** 视频流水线错误码类型。 */
+export type VideoPipelineErrorCode = (typeof VIDEO_PIPELINE_ERROR_CODE_VALUES)[number];
+
+/* ---------- 成功结果 ---------- */
+
+/** 视频任务成功结果。 */
+export interface VideoResult {
+  taskId: string;
+  taskType: 'video';
+  videoUrl: string;
+  coverUrl: string;
+  duration: number;
+  summary: string;
+  knowledgePoints: string[];
+  resultId: string;
+  completedAt: string;
+  aiContentFlag: boolean;
+  title: string;
+  providerUsed?: Record<string, string[]>;
+  /** 公开发布状态（Story 4.10）。 */
+  published?: boolean;
+}
+
+/* ---------- 失败结果 ---------- */
+
+/** 视频任务失败结果。 */
+export interface VideoFailure {
+  taskId: string;
+  errorCode: string;
+  errorMessage: string;
+  failedStage: VideoPipelineStage;
+  failedAt: string;
+  retryable: boolean;
+}
+
+/* ---------- 流水线 Mock 场景 ---------- */
+
+/** 视频流水线 mock 场景。 */
+export const VIDEO_PIPELINE_MOCK_SCENARIO_VALUES = [
+  'success',
+  'fix',
+  'failure',
+] as const;
+
+/** 视频流水线 mock 场景类型。 */
+export type VideoPipelineMockScenario =
+  (typeof VIDEO_PIPELINE_MOCK_SCENARIO_VALUES)[number];
+
+/**
+ * 判断值是否为受支持的视频流水线 mock 场景。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `VideoPipelineMockScenario`。
+ */
+export function isVideoPipelineMockScenario(
+  value: unknown,
+): value is VideoPipelineMockScenario {
+  return VIDEO_PIPELINE_MOCK_SCENARIO_VALUES.some((s) => s === value);
+}
+
 /* ---------- Mock 场景 ---------- */
 
 /** 视频任务创建 mock 场景。 */
