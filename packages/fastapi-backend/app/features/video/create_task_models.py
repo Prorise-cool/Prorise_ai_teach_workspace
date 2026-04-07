@@ -2,26 +2,17 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
+
+from app.features.video.modeling import VideoCamelModel
+from app.features.video.voice_models import VideoVoicePreference
 
 
-def _to_camel_case(value: str) -> str:
-    head, *tail = value.split("_")
-    return head + "".join(segment.capitalize() for segment in tail)
-
-
-class CamelCaseModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=_to_camel_case,
-        populate_by_name=True,
-        serialize_by_alias=True,
-    )
-
-
-class CreateVideoTaskRequest(CamelCaseModel):
+class CreateVideoTaskRequest(VideoCamelModel):
     input_type: str = Field(pattern="^(text|image)$")
     source_payload: dict[str, object]
     user_profile: dict[str, object] | None = None
+    voice_preference: VideoVoicePreference | None = None
     client_request_id: str = Field(
         min_length=1,
         max_length=128,
@@ -36,14 +27,14 @@ class CreateVideoTaskRequest(CamelCaseModel):
         return value
 
 
-class CreateVideoTaskAcceptedPayload(CamelCaseModel):
+class CreateVideoTaskAcceptedPayload(VideoCamelModel):
     task_id: str
     task_type: str = "video"
     status: str = "pending"
     created_at: str
 
 
-class IdempotentConflictPayload(CamelCaseModel):
+class IdempotentConflictPayload(VideoCamelModel):
     task_id: str
     task_type: str = "video"
     status: str

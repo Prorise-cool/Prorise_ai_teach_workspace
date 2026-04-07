@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "msg": "查询成功",
+  "data": {
+    "rows": [
+      {
+        "resultId": "video_result_video_pipeline_api_001",
+        "title": "证明勾股定理",
+        "summary": "证明勾股定理，并解释为什么这个方法成立。",
+        "knowledgePoints": ["math 核心概念", "题干信息提取"],
+        "coverUrl": "https://cos.example.local/video/video_pipeline_api_001/cover.jpg",
+        "duration": 120,
+        "publishedAt": "2026-04-06T12:10:00Z",
+        "authorName": "student_demo"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "pageSize": 12
+  }
+}

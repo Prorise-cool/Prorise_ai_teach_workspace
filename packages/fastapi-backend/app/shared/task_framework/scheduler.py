@@ -143,6 +143,7 @@ class TaskScheduler:
         )
         try:
             task.bind_runtime_event_emitter(self.publish_runtime_event)
+            task.bind_runtime_snapshot_emitter(self._build_snapshot_emitter(task.context))
             try:
                 if emit_queued_snapshot:
                     self._emit_snapshot(
@@ -186,6 +187,7 @@ class TaskScheduler:
             return result
         finally:
             task.bind_runtime_event_emitter(None)
+            task.bind_runtime_snapshot_emitter(None)
             reset_trace_context(tokens)
 
     def enqueue_task(self, *, task_type: str, context: TaskContext) -> TaskDispatchReceipt:
@@ -311,6 +313,33 @@ class TaskScheduler:
             logger.info("Task event published task_type=%s event=%s", context.task_type, event)
 
         return snapshot
+
+    def _build_snapshot_emitter(
+        self,
+        context: TaskContext,
+    ) -> Callable[
+        [TaskInternalStatus, int, str, TaskErrorCode | None, dict[str, object] | None, str | None],
+        TaskRuntimeSnapshot,
+    ]:
+        def emit(
+            internal_status: TaskInternalStatus,
+            progress: int,
+            message: str,
+            error_code: TaskErrorCode | None = None,
+            payload: dict[str, object] | None = None,
+            event: str | None = "progress",
+        ) -> TaskRuntimeSnapshot:
+            return self._emit_snapshot(
+                context=context,
+                internal_status=internal_status,
+                progress=progress,
+                message=message,
+                error_code=error_code,
+                event=event,
+                payload=payload,
+            )
+
+        return emit
 
     def _log_task_result(self, context: TaskContext, result: TaskResult) -> None:
         if result.status == TaskStatus.FAILED:

@@ -16,6 +16,6 @@ class StubLLMProvider:
                 "priority": self.config.priority,
                 "timeoutSeconds": self.config.timeout_seconds,
                 "retryAttempts": self.config.retry_attempts,
-                "healthSource": self.config.health_source
-            }
+                "healthSource": self.config.health_source,
+            },
         )

@@ -63,6 +63,7 @@ so that 长期数据、查询与审计能够在既有框架内稳定落位。
 - 严禁修改 RuoYi 核心认证、Sa-Token / 权限主干逻辑来适配小麦业务。
 - 所有权限标识都必须遵循 `模块:资源:操作`，并由 RuoYi RBAC 统一承载。
 - 标准业务 CRUD 优先落在 RuoYi 管理端 / 业务表，FastAPI 不重复建设完整后台 CRUD 面。
+- AI 运行配置域采用 `xm_ai_module`、`xm_ai_provider`、`xm_ai_resource`、`xm_ai_module_binding` 多表软关联，不建立物理外键；该域只允许管理员在 RuoYi 后台维护。
 - 对导出、审计和查询类操作要预留权限与操作日志挂点，避免后期补日志导致接口返工。
 - 模块命名、包结构与生成代码模式应尽量贴近当前 RuoYi 现有模块与 Generator 模板。
 
@@ -114,6 +115,7 @@ GPT-5 Codex
 - 已新增 `ruoyi-xiaomai` 模块聚合注册、`ruoyi-admin` 依赖接线和 `SpringDoc` 分组，保持 `RuoYi` 核心认证与权限框架不变。
 - 已通过 `XmModuleBoundaryController`、`XmModuleBoundaryService` 和结构化文档冻结模块边界、资源规划、Generator / 手写查询策略及审计扩展点。
 - 已新增 `20260328_xm_module_bootstrap.sql` 与 `20260328_xm_menu_permission.sql`，冻结小麦根菜单、模块规划菜单和 Epic 10 资源权限清单。
+- 2026-04-07 补记：AI 运行配置域按管理员配置场景落地为 `module/provider/resource/binding` 多表软关联，不建立物理外键；后续 Generator / CRUD 仅承接后台配置，不把该域扩展成新的关系型强约束子系统。
 - 已新增 Python 结构测试并跑通 `packages/fastapi-backend` 全量 `pytest`，结果为 `22 passed`。
 - `ruoyi-xiaomai` 和 `ruoyi-admin` 的 Maven 编译链路已验证通过；当前仓库的 `surefire` 配置会编译测试类但未实际执行新增 JUnit 用例，后续如需 Java 侧执行断言需继续对齐该仓库测试筛选规则。
 

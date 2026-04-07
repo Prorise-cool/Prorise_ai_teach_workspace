@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -79,6 +80,61 @@ public final class XmPersistenceSyncBo {
         private Boolean referenceMissing;
         private Boolean overallFailed;
         private String persistenceStatus;
+    }
+
+    @Data
+    public static class VideoPublicationSyncBo {
+        private Long id;
+        private Long userId;
+        private String workType = "video";
+        private String taskRefId;
+        private String title;
+        private String description;
+        private String coverUrl;
+        private Boolean isPublic;
+        private String status;
+        private Long createBy;
+        private Long updateBy;
+        private Date createdAt;
+        private Date updatedAt;
+        private Integer previousVersion;
+        private Integer version;
+    }
+
+    @Data
+    public static class VideoPublicationQueryBo {
+        private String workType = "video";
+        private String taskRefId;
+        private Integer isPublic;
+        private String status;
+    }
+
+    @Data
+    public static class SessionArtifactBatchSyncBo {
+        private String sessionType = "video";
+        private String sessionRefId;
+        private String objectKey;
+        private String payloadRef;
+        private Date occurredAt;
+        private List<SessionArtifactItemBo> artifacts = new ArrayList<>();
+    }
+
+    @Data
+    public static class SessionArtifactItemBo {
+        private Long id;
+        private String sessionType;
+        private String sessionRefId;
+        private String artifactType;
+        private String anchorType;
+        private String anchorKey;
+        private Integer sequenceNo;
+        private String title;
+        private String summary;
+        private String objectKey;
+        private String payloadRef;
+        private Map<String, Object> metadata = new LinkedHashMap<>();
+        private String metadataJson;
+        private Date occurredAt;
     }
 
     @Data

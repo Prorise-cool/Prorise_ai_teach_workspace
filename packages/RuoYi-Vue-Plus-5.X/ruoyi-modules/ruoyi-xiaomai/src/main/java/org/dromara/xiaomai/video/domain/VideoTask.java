@@ -1,6 +1,7 @@
 package org.dromara.xiaomai.video.domain;
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,6 +29,11 @@ public class VideoTask extends BaseEntity {
     private Long id;
 
     /**
+     * 租户编号。
+     */
+    private String tenantId;
+
+    /**
      * 任务 ID。
      */
     private String taskId;
@@ -35,7 +41,7 @@ public class VideoTask extends BaseEntity {
     /**
      * 用户归属。
      */
-    private String userId;
+    private Long userId;
 
     /**
      * 任务类型。
@@ -96,4 +102,10 @@ public class VideoTask extends BaseEntity {
      * 失败时间。
      */
     private java.util.Date failTime;
+
+    /**
+     * 删除标志。
+     */
+    @TableLogic
+    private String delFlag;
 }

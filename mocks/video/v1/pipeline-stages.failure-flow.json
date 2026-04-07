@@ -1,0 +1,43 @@
+[
+  {
+    "event": "progress",
+    "taskId": "video_pipeline_fail_001",
+    "taskType": "video",
+    "status": "processing",
+    "progress": 70,
+    "message": "正在渲染动画",
+    "timestamp": "2026-04-06T12:20:18Z",
+    "requestId": "req_video_pipeline_fail_001",
+    "errorCode": null,
+    "stage": "render",
+    "currentStage": "render",
+    "stageLabel": "渲染动画",
+    "stageProgress": 0
+  },
+  {
+    "event": "failed",
+    "taskId": "video_pipeline_fail_001",
+    "taskType": "video",
+    "status": "failed",
+    "progress": 70,
+    "message": "render timed out",
+    "timestamp": "2026-04-06T12:20:38Z",
+    "requestId": "req_video_pipeline_fail_001",
+    "errorCode": "VIDEO_RENDER_TIMEOUT",
+    "stage": "render",
+    "currentStage": "render",
+    "stageLabel": "渲染动画",
+    "stageProgress": 100,
+    "context": {
+      "failedStage": "render",
+      "failure": {
+        "taskId": "video_pipeline_fail_001",
+        "errorCode": "VIDEO_RENDER_TIMEOUT",
+        "errorMessage": "render timed out",
+        "failedStage": "render",
+        "failedAt": "2026-04-06T12:20:38Z",
+        "retryable": true
+      }
+    }
+  }
+]

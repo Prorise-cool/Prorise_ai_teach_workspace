@@ -1,6 +1,6 @@
 # Story 4.9: 视频侧 SessionArtifactGraph 回写
 
-Status: backlog
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -20,33 +20,33 @@ so that Companion 不需要反向依赖视频流水线内部实现。
 
 ## Tasks / Subtasks
 
-- [ ] 定义 VideoArtifactGraph schema（AC: 1, 2, 3）
-  - [ ] 在 `packages/fastapi-backend/app/domains/video/schemas/` 下创建 `artifact.py`。
-  - [ ] 定义 `VideoArtifactGraph`（实现 `SessionArtifactGraph` 接口）。
-  - [ ] 定义 `Artifact` 类型枚举：`timeline`、`storyboard`、`narration`、`knowledge_points`、`solution_steps`、`manim_code`。
-  - [ ] 每个 artifact 包含 `artifactType`、`data`（JSON 结构）、`version`、`createdAt`。
-  - [ ] `timeline` artifact 结构：`scenes: list[{ sceneId, startTime, endTime, title }]`。
-  - [ ] `narration` artifact 结构：`segments: list[{ sceneId, text, startTime, endTime }]`。
-- [ ] 实现 artifact 回写 service（AC: 1, 4, 5）
-  - [ ] 在 `packages/fastapi-backend/app/domains/video/services/` 下创建 `artifact_writeback_service.py`。
-  - [ ] 从 Redis 运行态收集理解结果、分镜、旁白、渲染信息等中间产物。
-  - [ ] 组装 `VideoArtifactGraph`。
-  - [ ] 通过 RuoYi 防腐层客户端写入长期存储。
-  - [ ] 回写成功 → 在结果元数据中标记 `artifactWritebackSuccess: true`。
-  - [ ] 回写失败 → 记录 ERROR 日志，标记 `artifactWritebackFailed: true`，不阻断主流程。
-- [ ] 集成到视频任务完成流程（AC: 1, 4）
-  - [ ] 在 `video_worker.py` 的任务完成后（`task:completed` 事件之后）触发 artifact 回写。
-  - [ ] 回写作为"尽力而为"操作，不阻塞 `task:completed` 事件的发送。
-  - [ ] 回写失败时更新 Redis 中的 result 元数据标记。
-- [ ] 实现 Companion 消费说明与接口对齐（AC: 2）
-  - [ ] 在 `contracts/video/v1/` 下补充 `video-artifact-graph.md`，说明 artifact 结构与 Companion 消费方式。
-  - [ ] 确保 `sessionId` 映射 `taskId`，`sessionType` 为 `video`。
-  - [ ] 确保 artifact 查询接口与 Story 10.5 Companion 问答承接的数据源一致。
-- [ ] 建立测试（AC: 1, 2, 3, 4, 5）
-  - [ ] VideoArtifactGraph 组装测试：验证从 Redis 中间产物组装出完整 graph。
-  - [ ] 回写成功测试：mock 防腐层客户端，验证写入数据结构正确。
-  - [ ] 回写失败降级测试：防腐层客户端 raise → 日志 ERROR → `artifactWritebackFailed: true` → 主流程不中断。
-  - [ ] Artifact 类型完整性测试：验证至少包含 timeline、storyboard、narration、knowledge_points、solution_steps 五种类型。
+- [x] 定义 VideoArtifactGraph schema（AC: 1, 2, 3）
+  - [x] 在 `packages/fastapi-backend/app/domains/video/schemas/` 下创建 `artifact.py`。
+  - [x] 定义 `VideoArtifactGraph`（实现 `SessionArtifactGraph` 接口）。
+  - [x] 定义 `Artifact` 类型枚举：`timeline`、`storyboard`、`narration`、`knowledge_points`、`solution_steps`、`manim_code`。
+  - [x] 每个 artifact 包含 `artifactType`、`data`（JSON 结构）、`version`、`createdAt`。
+  - [x] `timeline` artifact 结构：`scenes: list[{ sceneId, startTime, endTime, title }]`。
+  - [x] `narration` artifact 结构：`segments: list[{ sceneId, text, startTime, endTime }]`。
+- [x] 实现 artifact 回写 service（AC: 1, 4, 5）
+  - [x] 在 `packages/fastapi-backend/app/domains/video/services/` 下创建 `artifact_writeback_service.py`。
+  - [x] 从 Redis 运行态收集理解结果、分镜、旁白、渲染信息等中间产物。
+  - [x] 组装 `VideoArtifactGraph`。
+  - [x] 通过 RuoYi 防腐层客户端写入长期存储。
+  - [x] 回写成功 → 在结果元数据中标记 `artifactWritebackSuccess: true`。
+  - [x] 回写失败 → 记录 ERROR 日志，标记 `artifactWritebackFailed: true`，不阻断主流程。
+- [x] 集成到视频任务完成流程（AC: 1, 4）
+  - [x] 在 `video_worker.py` 的任务完成后（`task:completed` 事件之后）触发 artifact 回写。
+  - [x] 回写作为"尽力而为"操作，不阻塞 `task:completed` 事件的发送。
+  - [x] 回写失败时更新 Redis 中的 result 元数据标记。
+- [x] 实现 Companion 消费说明与接口对齐（AC: 2）
+  - [x] 在 `contracts/video/v1/` 下补充 `video-artifact-graph.md`，说明 artifact 结构与 Companion 消费方式。
+  - [x] 确保 `sessionId` 映射 `taskId`，`sessionType` 为 `video`。
+  - [x] 确保 artifact 查询接口与 Story 10.5 Companion 问答承接的数据源一致。
+- [x] 建立测试（AC: 1, 2, 3, 4, 5）
+  - [x] VideoArtifactGraph 组装测试：验证从 Redis 中间产物组装出完整 graph。
+  - [x] 回写成功测试：mock 防腐层客户端，验证写入数据结构正确。
+  - [x] 回写失败降级测试：防腐层客户端 raise → 日志 ERROR → `artifactWritebackFailed: true` → 主流程不中断。
+  - [x] Artifact 类型完整性测试：验证至少包含 timeline、storyboard、narration、knowledge_points、solution_steps 五种类型。
 
 ## Dev Notes
 
@@ -113,3 +113,46 @@ so that Companion 不需要反向依赖视频流水线内部实现。
 - `_bmad-output/implementation-artifacts/10-3-fastapi-与-ruoyi-防腐层客户端.md`：防腐层客户端。
 - `_bmad-output/implementation-artifacts/10-5-companion-与-evidence-问答长期承接.md`：Companion 数据承接。
 - `_bmad-output/planning-artifacts/architecture/06-6-数据分层与存储策略.md`：数据分层策略。
+
+## Dev Agent Record
+
+### Agent Model Used
+
+GPT-5 Codex
+
+### Debug Log References
+
+- `pytest -q packages/fastapi-backend/tests`
+- `mvn -pl ruoyi-modules/ruoyi-xiaomai -am -DskipTests=false -Dtest=XmPersistenceSyncServiceTest -Dsurefire.failIfNoSpecifiedTests=false test`
+
+### Completion Notes List
+
+- 已定义 `VideoArtifactGraph`、artifact 类型枚举与对应 JSON 结构，并把图谱写入独立 artifact 资产文件。
+- 已把 artifact 回写挂到视频任务完成后的尽力而为流程，失败时仅回写 `artifactWritebackFailed` 标记，不阻断视频可用性。
+- 已将 artifact graph 通过 `/internal/xiaomai/video/session-artifacts` 真实同步到 `xm_session_artifact`，字段对齐 `/Users/prorise/Downloads/xm_dev.sql`。
+- 已补充 artifact 图谱组装、RuoYi 防腐层映射与类型完整性的后端单测。
+
+### File List
+
+- `_bmad-output/implementation-artifacts/4-9-视频侧-sessionartifactgraph-回写.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `contracts/video/v1/video-artifact-graph.md`
+- `packages/fastapi-backend/app/features/video/long_term_records.py`
+- `packages/fastapi-backend/app/features/video/long_term_service.py`
+- `packages/fastapi-backend/app/features/video/service.py`
+- `packages/fastapi-backend/app/features/video/pipeline/models.py`
+- `packages/fastapi-backend/app/features/video/pipeline/services.py`
+- `packages/fastapi-backend/tests/unit/video/test_video_long_term_records.py`
+- `packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
+- `packages/fastapi-backend/tests/integration/test_video_pipeline_api.py`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/domain/bo/XmPersistenceSyncBo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/domain/vo/XmPersistenceSyncVo.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/controller/internal/XmPersistenceSyncController.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/service/XmPersistenceSyncService.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/integration/mapper/SessionArtifactMapper.java`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/integration/SessionArtifactMapper.xml`
+- `packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/test/java/org/dromara/xiaomai/integration/service/XmPersistenceSyncServiceTest.java`
+
+## Change Log
+
+- 2026-04-06：完成 Story 4.9 后端 artifact graph 组装、`xm_session_artifact` 长期回写、结果元数据降级标记与测试补齐，状态保持 `review`。

@@ -31,8 +31,8 @@ public class ClassroomSessionBo extends BaseEntity {
     @NotBlank(message = "任务 ID 不能为空", groups = {AddGroup.class, EditGroup.class})
     private String taskId;
 
-    @NotBlank(message = "用户归属不能为空", groups = {AddGroup.class, EditGroup.class})
-    private String userId;
+    @NotNull(message = "用户归属不能为空", groups = {AddGroup.class, EditGroup.class})
+    private Long userId;
 
     @NotBlank(message = "任务类型不能为空", groups = {AddGroup.class, EditGroup.class})
     private String taskType;

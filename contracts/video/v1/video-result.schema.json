@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/video-result.schema.json",
+  "title": "VideoResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId",
+    "taskType",
+    "videoUrl",
+    "coverUrl",
+    "duration",
+    "summary",
+    "knowledgePoints",
+    "resultId",
+    "completedAt",
+    "aiContentFlag",
+    "title",
+    "providerUsed"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taskType": {
+      "type": "string",
+      "const": "video"
+    },
+    "videoUrl": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverUrl": {
+      "type": "string",
+      "minLength": 1
+    },
+    "duration": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "knowledgePoints": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "resultId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aiContentFlag": {
+      "type": "boolean",
+      "const": true
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "providerUsed": {
+      "type": "object"
+    }
+  }
+}

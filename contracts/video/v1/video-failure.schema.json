@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/video/v1/video-failure.schema.json",
+  "title": "VideoFailure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId",
+    "errorCode",
+    "errorMessage",
+    "failedStage",
+    "failedAt",
+    "retryable"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "errorCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "errorMessage": {
+      "type": "string",
+      "minLength": 1
+    },
+    "failedStage": {
+      "type": "string",
+      "enum": [
+        "understanding",
+        "storyboard",
+        "manim_gen",
+        "manim_fix",
+        "render",
+        "tts",
+        "compose",
+        "upload"
+      ]
+    },
+    "failedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retryable": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.core.errors import AppError
-from app.core.security import AccessContext, get_access_context
+from app.core.security import AccessContext, get_access_context, has_permission
 from app.schemas.common import (
     ErrorResponseEnvelope,
     PermissionProbePayload,
@@ -185,7 +185,7 @@ async def get_permission_probe(
     permission: str = Query(..., min_length=1),
     access_context: AccessContext = Depends(get_access_context)
 ) -> dict[str, object]:
-    if permission not in access_context.permissions:
+    if not has_permission(access_context.permissions, permission):
         raise AppError(
             code="AUTH_PERMISSION_DENIED",
             message=f"当前账号缺少权限：{permission}",

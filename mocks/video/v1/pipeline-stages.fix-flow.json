@@ -1,0 +1,70 @@
+[
+  {
+    "event": "progress",
+    "taskId": "video_pipeline_fix_001",
+    "taskType": "video",
+    "status": "processing",
+    "progress": 45,
+    "message": "动画脚本生成完成",
+    "timestamp": "2026-04-06T12:10:18Z",
+    "requestId": "req_video_pipeline_fix_001",
+    "errorCode": null,
+    "stage": "manim_gen",
+    "currentStage": "manim_gen",
+    "stageLabel": "生成动画脚本",
+    "stageProgress": 100
+  },
+  {
+    "event": "progress",
+    "taskId": "video_pipeline_fix_001",
+    "taskType": "video",
+    "status": "processing",
+    "progress": 50,
+    "message": "开始第 1 次自动修复",
+    "timestamp": "2026-04-06T12:10:24Z",
+    "requestId": "req_video_pipeline_fix_001",
+    "errorCode": null,
+    "stage": "manim_fix",
+    "currentStage": "manim_fix",
+    "stageLabel": "修复动画脚本",
+    "stageProgress": 40,
+    "context": {
+      "attemptNo": 1,
+      "fixEvent": "fix_attempt_start"
+    }
+  },
+  {
+    "event": "progress",
+    "taskId": "video_pipeline_fix_001",
+    "taskType": "video",
+    "status": "processing",
+    "progress": 55,
+    "message": "LLM 修复成功，重新进入渲染",
+    "timestamp": "2026-04-06T12:10:31Z",
+    "requestId": "req_video_pipeline_fix_001",
+    "errorCode": null,
+    "stage": "manim_fix",
+    "currentStage": "manim_fix",
+    "stageLabel": "修复动画脚本",
+    "stageProgress": 100,
+    "context": {
+      "attemptNo": 1,
+      "fixEvent": "fix_attempt_success"
+    }
+  },
+  {
+    "event": "completed",
+    "taskId": "video_pipeline_fix_001",
+    "taskType": "video",
+    "status": "completed",
+    "progress": 100,
+    "message": "视频生成完成",
+    "timestamp": "2026-04-06T12:10:50Z",
+    "requestId": "req_video_pipeline_fix_001",
+    "errorCode": null,
+    "stage": "upload",
+    "currentStage": "upload",
+    "stageLabel": "上传结果",
+    "stageProgress": 100
+  }
+]

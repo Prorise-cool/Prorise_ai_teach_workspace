@@ -14,6 +14,7 @@ from app.infra.redis_client import RuntimeStore, create_runtime_store
 from app.shared.ruoyi_client import RuoYiClient
 
 AUTH_BEARER_PREFIX = "Bearer "
+SUPER_ADMIN_PERMISSION = "*:*:*"
 
 
 @dataclass(slots=True, frozen=True)
@@ -23,6 +24,7 @@ class AccessContext:
     roles: tuple[str, ...]
     permissions: tuple[str, ...]
     token: str
+    client_id: str | None
     request_id: str | None
     online_ttl_seconds: int | None
 
@@ -90,6 +92,31 @@ def extract_access_token_claims(access_token: str) -> AccessTokenClaims:
         tenant_id=str(tenant_id) if tenant_id else None,
         client_id=str(client_id) if client_id else None,
     )
+
+
+def has_permission(granted_permissions: tuple[str, ...], required_permission: str) -> bool:
+    normalized_required = required_permission.strip()
+    if not normalized_required:
+        return False
+
+    required_parts = normalized_required.split(":")
+
+    for granted_permission in granted_permissions:
+        normalized_granted = granted_permission.strip()
+        if not normalized_granted:
+            continue
+        if normalized_granted in {"*", SUPER_ADMIN_PERMISSION}:
+            return True
+        if normalized_granted == normalized_required:
+            return True
+
+        granted_parts = normalized_granted.split(":")
+        if len(granted_parts) != len(required_parts):
+            continue
+        if all(granted == "*" or granted == required for granted, required in zip(granted_parts, required_parts)):
+            return True
+
+    return False
 
 
 @lru_cache
@@ -213,6 +240,7 @@ async def get_access_context(
         roles=profile.roles,
         permissions=profile.permissions,
         token=token,
+        client_id=token_claims.client_id,
         request_id=request_id,
         online_ttl_seconds=online_ttl_seconds if online_ttl_seconds >= 0 else None,
     )

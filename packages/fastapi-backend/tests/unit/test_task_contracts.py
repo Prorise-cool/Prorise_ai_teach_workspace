@@ -70,6 +70,9 @@ def test_task_contract_models_serialize_public_fields_in_camel_case() -> None:
         "requestId": "req_task_snapshot_001",
         "errorCode": None,
         "stage": "script_generation",
+        "currentStage": None,
+        "stageLabel": None,
+        "stageProgress": None,
         "context": {"source": "status-polling"},
         "resumeFrom": "video_20260330130500_ab12cd34:evt:000003",
         "lastEventId": "video_20260330130500_ab12cd34:evt:000003"

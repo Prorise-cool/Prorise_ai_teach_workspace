@@ -3,6 +3,8 @@ package org.dromara.xiaomai.integration.controller.internal;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.constant.HttpStatus;
 import org.dromara.common.core.domain.R;
+import org.dromara.common.mybatis.core.page.PageQuery;
+import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo;
 import org.dromara.xiaomai.integration.domain.vo.XmPersistenceSyncVo;
 import org.dromara.xiaomai.integration.service.XmPersistenceSyncService;
@@ -54,6 +56,32 @@ public class XmPersistenceSyncController {
     public R<XmPersistenceSyncVo.KnowledgeChatSyncVo> getKnowledgeChat(@PathVariable String chatLogId) {
         XmPersistenceSyncVo.KnowledgeChatSyncVo data = xmPersistenceSyncService.getKnowledgeChat(chatLogId);
         return data == null ? R.fail(HttpStatus.NOT_FOUND, "Knowledge chat log not found") : R.ok(data);
+    }
+
+    @PostMapping("/video/publications")
+    public R<XmPersistenceSyncVo.VideoPublicationSyncVo> syncVideoPublication(@RequestBody XmPersistenceSyncBo.VideoPublicationSyncBo bo) {
+        return R.ok(xmPersistenceSyncService.syncVideoPublication(bo));
+    }
+
+    @GetMapping("/video/publications/{taskRefId}")
+    public R<XmPersistenceSyncVo.VideoPublicationSyncVo> getVideoPublication(@PathVariable String taskRefId) {
+        XmPersistenceSyncVo.VideoPublicationSyncVo data = xmPersistenceSyncService.getVideoPublication(taskRefId);
+        return data == null ? R.fail(HttpStatus.NOT_FOUND, "Video publication not found") : R.ok(data);
+    }
+
+    @GetMapping("/video/publications")
+    public TableDataInfo<XmPersistenceSyncVo.VideoPublicationSyncVo> listVideoPublications(
+        XmPersistenceSyncBo.VideoPublicationQueryBo bo,
+        PageQuery pageQuery
+    ) {
+        return xmPersistenceSyncService.listVideoPublications(bo, pageQuery);
+    }
+
+    @PostMapping("/video/session-artifacts")
+    public R<XmPersistenceSyncVo.SessionArtifactBatchSyncVo> syncVideoSessionArtifacts(
+        @RequestBody XmPersistenceSyncBo.SessionArtifactBatchSyncBo bo
+    ) {
+        return R.ok(xmPersistenceSyncService.syncSessionArtifacts(bo));
     }
 
     @PostMapping("/learning/results")
