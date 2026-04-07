@@ -1,3 +1,5 @@
+"""学习结果持久化业务服务。"""
+
 from datetime import datetime, timezone
 from typing import Mapping
 
@@ -12,29 +14,36 @@ from app.features.learning.schemas import (
     LearningResultType
 )
 from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 
 
-class LearningService:
+class LearningService(RuoYiServiceMixin):
+    """学习结果持久化服务，与 RuoYi 批量交互。"""
     _RESOURCE = "learning-result"
     _OPERATION = "persist-batch"
     _ENDPOINT = "/internal/xiaomai/learning/results"
 
     def __init__(self, client_factory=None) -> None:
+        """初始化学习结果持久化服务。"""
         self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def bootstrap_status(self) -> LearningBootstrapResponse:
+        """返回学习功能域 bootstrap 状态。"""
         return LearningBootstrapResponse()
 
     def table_catalog(self) -> dict[str, str]:
+        """返回结果类型到数据库表名的映射。"""
         return {result_type.value: table_name for result_type, table_name in LONG_TERM_TABLE_BY_RESULT_TYPE.items()}
 
     def table_name_for(self, result_type: LearningResultType) -> str:
+        """根据结果类型获取对应的数据库表名。"""
         return LONG_TERM_TABLE_BY_RESULT_TYPE[result_type]
 
     async def prepare_persistence_preview(
         self,
         request: LearningPersistenceRequest
     ) -> LearningPersistenceResponse:
+        """预览学习结果的持久化映射（不写入远端）。"""
         records = [
             self._normalize_record(request.user_id, record)
             for record in request.records
@@ -49,6 +58,7 @@ class LearningService:
         self,
         request: LearningPersistenceRequest
     ) -> LearningPersistenceResponse:
+        """将学习结果批量写入远端并返回响应。"""
         preview = await self.prepare_persistence_preview(request)
         async with self._client_factory() as client:
             result = await client.post_single(
@@ -210,17 +220,16 @@ class LearningService:
             raise self._invalid_response_error("tableSummary is not an object")
         return {str(key): str(value) for key, value in table_summary.items()}
 
-    def _invalid_response_error(self, reason: str) -> IntegrationError:
-        return IntegrationError(
-            service="ruoyi",
-            resource=self._RESOURCE,
-            operation=self._OPERATION,
-            code="RUOYI_INVALID_RESPONSE",
-            message="RuoYi 响应格式异常",
-            status_code=502,
-            retryable=False,
-            details={
-                "endpoint": self._ENDPOINT,
-                "reason": reason,
-            }
+    def _invalid_response_error(  # type: ignore[override]
+        self,
+        reason: str = "",
+        *,
+        operation: str = "",
+        endpoint: str = "",
+    ) -> IntegrationError:
+        """简化包装：当仅传 reason 时自动使用类级 _OPERATION / _ENDPOINT。"""
+        return super()._invalid_response_error(
+            operation=operation or self._OPERATION,
+            endpoint=endpoint or self._ENDPOINT,
+            reason=reason,
         )

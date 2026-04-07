@@ -102,50 +102,82 @@ export const videoPipelineHandlers = [
 
   /* ── 任务状态查询 ── */
   http.get('*/api/v1/video/tasks/:taskId/status', ({ params, request }) => {
-    const taskId = String(params.taskId);
-    const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
-    const events = getVideoPipelineEventSequence(scenario, taskId);
+    try {
+      const taskId = String(params.taskId);
+      const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
+      const events = getVideoPipelineEventSequence(scenario, taskId);
 
-    // 取最后一个事件作为当前状态快照
-    const lastEvent = events[events.length - 1];
+      // 取最后一个事件作为当前状态快照
+      const lastEvent = events[events.length - 1];
 
-    if (!lastEvent) {
+      if (!lastEvent) {
+        return HttpResponse.json(
+          { code: 404, msg: '任务不存在', data: null },
+          { status: 404 },
+        );
+      }
+
+      /* SSE 事件中的视频专属扩展字段通过 unknown 中转读取 */
+      const raw = lastEvent as unknown as Record<string, unknown>;
+
+      const snapshot = {
+        taskId,
+        requestId: lastEvent.requestId,
+        taskType: 'video',
+        status: lastEvent.status,
+        progress: lastEvent.progress,
+        message: lastEvent.message,
+        timestamp: lastEvent.timestamp,
+        errorCode: lastEvent.errorCode ?? null,
+        currentStage: (raw.currentStage as string) ?? null,
+        stageLabel: (raw.stageLabel as string) ?? null,
+        stageProgress: (raw.stageProgress as number) ?? null,
+      };
+
       return HttpResponse.json(
-        { code: 404, msg: '任务不存在', data: null },
-        { status: 404 },
+        { code: 200, msg: '获取任务状态成功', data: snapshot },
+        { status: 200 },
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[mock] video status handler error:', err);
+      return HttpResponse.json(
+        { code: 500, msg: String(err), data: null },
+        { status: 500 },
       );
     }
-
-    /* SSE 事件中的视频专属扩展字段通过 unknown 中转读取 */
-    const raw = lastEvent as unknown as Record<string, unknown>;
-
-    const snapshot = {
-      taskId,
-      requestId: lastEvent.requestId,
-      taskType: 'video',
-      status: lastEvent.status,
-      progress: lastEvent.progress,
-      message: lastEvent.message,
-      timestamp: lastEvent.timestamp,
-      errorCode: lastEvent.errorCode ?? null,
-      currentStage: (raw.currentStage as string) ?? null,
-      stageLabel: (raw.stageLabel as string) ?? null,
-      stageProgress: (raw.stageProgress as number) ?? null,
-    };
-
-    return HttpResponse.json(
-      { code: 200, msg: '获取任务状态成功', data: snapshot },
-      { status: 200 },
-    );
   }),
 
   /* ── 视频任务结果查询 ── */
   http.get('*/api/v1/video/tasks/:taskId', ({ params, request }) => {
-    const taskId = String(params.taskId);
-    const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
+    try {
+      const taskId = String(params.taskId);
+      const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
 
-    if (scenario === 'failure') {
-      const failure = getMockVideoFailure(taskId);
+      if (scenario === 'failure') {
+        const failure = getMockVideoFailure(taskId);
+
+        return HttpResponse.json(
+          {
+            code: 200,
+            msg: '获取任务结果成功',
+            data: {
+              taskId,
+              taskType: 'video',
+              status: 'failed',
+              progress: 70,
+              message: failure.errorMessage,
+              timestamp: failure.failedAt,
+              errorCode: failure.errorCode,
+              result: null,
+              failure,
+            },
+          },
+          { status: 200 },
+        );
+      }
+
+      const result = getMockVideoResult(taskId);
 
       return HttpResponse.json(
         {
@@ -154,38 +186,24 @@ export const videoPipelineHandlers = [
           data: {
             taskId,
             taskType: 'video',
-            status: 'failed',
-            progress: 70,
-            message: failure.errorMessage,
-            timestamp: failure.failedAt,
-            errorCode: failure.errorCode,
-            result: null,
-            failure,
+            status: 'completed',
+            progress: 100,
+            message: '视频生成完成',
+            timestamp: result.completedAt,
+            errorCode: null,
+            result,
+            failure: null,
           },
         },
         { status: 200 },
       );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[mock] video result handler error:', err);
+      return HttpResponse.json(
+        { code: 500, msg: String(err), data: null },
+        { status: 500 },
+      );
     }
-
-    const result = getMockVideoResult(taskId);
-
-    return HttpResponse.json(
-      {
-        code: 200,
-        msg: '获取任务结果成功',
-        data: {
-          taskId,
-          taskType: 'video',
-          status: 'completed',
-          progress: 100,
-          message: '视频生成完成',
-          timestamp: result.completedAt,
-          errorCode: null,
-          result,
-          failure: null,
-        },
-      },
-      { status: 200 },
-    );
   }),
 ];

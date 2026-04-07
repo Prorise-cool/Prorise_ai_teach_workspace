@@ -1,18 +1,12 @@
-"""视频域共享的模型基类与序列化约定。"""
+"""视频域共享的模型基类与序列化约定。
+
+``VideoCamelModel`` 已统一到 ``app.schemas.common.CamelCaseModel``，
+本模块仅作兼容性重新导出，供视频域已有 import 路径继续工作。
+"""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from app.schemas.common import CamelCaseModel as VideoCamelModel  # noqa: F401
+from app.schemas.common import to_camel_case  # noqa: F401
 
-
-def to_camel_case(value: str) -> str:
-    head, *tail = value.split("_")
-    return head + "".join(segment.capitalize() for segment in tail)
-
-
-class VideoCamelModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel_case,
-        populate_by_name=True,
-        serialize_by_alias=True,
-    )
+__all__ = ["VideoCamelModel", "to_camel_case"]

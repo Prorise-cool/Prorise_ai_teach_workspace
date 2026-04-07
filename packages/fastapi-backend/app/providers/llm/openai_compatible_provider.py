@@ -1,11 +1,14 @@
+"""OpenAI Compatible LLM Provider 实现。"""
 from __future__ import annotations
+
 
 import json
 from typing import Any, Mapping
 
 import httpx
 
-from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
+from app.providers.http_utils import handle_provider_request_error, raise_for_provider_status, require_setting
+from app.providers.protocols import ProviderResult, ProviderRuntimeConfig
 
 
 def _extract_message_content(message: Any) -> str:
@@ -34,12 +37,13 @@ class OpenAICompatibleLLMProvider:
     """对接 OpenAI compatible chat completions 的 LLM Provider。"""
 
     def __init__(self, config: ProviderRuntimeConfig) -> None:
+        """初始化 OpenAI Compatible Provider。"""
         self.config = config
         self.provider_id = config.provider_id
 
-        self._base_url = self._require_setting("base_url")
-        self._api_key = self._require_setting("api_key")
-        self._model_name = self._require_setting("model_name")
+        self._base_url = require_setting(config, "base_url")
+        self._api_key = require_setting(config, "api_key")
+        self._model_name = require_setting(config, "model_name")
         self._request_path = str(config.settings.get("request_path", "/v1/chat/completions"))
         self._temperature = float(config.settings.get("temperature", 0.2))
         self._transport = config.settings.get("transport")
@@ -52,6 +56,7 @@ class OpenAICompatibleLLMProvider:
         self._extra_body = dict(extra_body) if isinstance(extra_body, Mapping) else {}
 
     async def generate(self, prompt: str) -> ProviderResult:
+        """调用 OpenAI compatible API 生成文本。"""
         payload = {
             "model": self._model_name,
             "messages": [{"role": "user", "content": prompt}],
@@ -67,17 +72,10 @@ class OpenAICompatibleLLMProvider:
                 transport=self._transport,
             ) as client:
                 response = await client.post(self._request_path, json=payload)
-        except httpx.TimeoutException as exc:
-            raise TimeoutError(f"{self.provider_id} request timed out") from exc
-        except httpx.RequestError as exc:
-            raise ConnectionError(f"{self.provider_id} request failed: {exc}") from exc
+        except Exception as exc:
+            handle_provider_request_error(self.provider_id, exc)
 
-        if response.status_code in {401, 403}:
-            raise ValueError(f"authentication failed: {response.text[:200]}")
-        if response.status_code == 429 or response.status_code >= 500:
-            raise ConnectionError(f"{self.provider_id} upstream status={response.status_code}: {response.text[:200]}")
-        if response.status_code >= 400:
-            raise ValueError(f"{self.provider_id} bad request status={response.status_code}: {response.text[:200]}")
+        raise_for_provider_status(self.provider_id, response)
 
         try:
             payload = response.json()
@@ -108,8 +106,3 @@ class OpenAICompatibleLLMProvider:
             },
         )
 
-    def _require_setting(self, key: str) -> str:
-        value = self.config.settings.get(key)
-        if not isinstance(value, str) or not value.strip():
-            raise ProviderConfigurationError(f"{self.provider_id} 缺少配置项：{key}")
-        return value.strip()

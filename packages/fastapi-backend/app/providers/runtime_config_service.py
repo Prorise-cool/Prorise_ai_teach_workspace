@@ -1,4 +1,6 @@
+"""Provider 运行时配置解析服务。"""
 from __future__ import annotations
+
 
 from dataclasses import dataclass, field
 from types import MappingProxyType
@@ -34,6 +36,7 @@ _DOUBAO_TTS_PROVIDER_TYPES = frozenset({"doubao-tts", "volcengine-tts", "bytedan
 
 @dataclass(slots=True, frozen=True)
 class TtsRuntimeVoiceDescriptor:
+    """TTS 音色运行时描述信息。"""
     voice_code: str
     voice_name: str
     provider_id: str
@@ -46,6 +49,7 @@ class TtsRuntimeVoiceDescriptor:
 
 @dataclass(slots=True, frozen=True)
 class VideoProviderRuntimeAssembly:
+    """视频流水线 Provider 运行时装配结果。"""
     llm_by_stage: Mapping[str, tuple[LLMProvider, ...]] = field(default_factory=dict)
     tts_by_stage: Mapping[str, tuple[TTSProvider, ...]] = field(default_factory=dict)
     default_llm: tuple[LLMProvider, ...] = field(default_factory=tuple)
@@ -57,12 +61,15 @@ class VideoProviderRuntimeAssembly:
         object.__setattr__(self, "tts_by_stage", MappingProxyType(dict(self.tts_by_stage)))
 
     def llm_for(self, stage: str) -> tuple[LLMProvider, ...]:
+        """获取指定阶段的 LLM Provider 链。"""
         return self.llm_by_stage.get(stage, self.default_llm)
 
     def tts_for(self, stage: str) -> tuple[TTSProvider, ...]:
+        """获取指定阶段的 TTS Provider 链。"""
         return self.tts_by_stage.get(stage, self.default_tts)
 
     def provider_summary(self) -> dict[str, Any]:
+        """返回 Provider 链的摘要信息。"""
         return {
             "source": self.source,
             "llm": {
@@ -88,6 +95,7 @@ class ProviderRuntimeResolver:
         provider_factory: ProviderFactory,
         ruoyi_runtime_client: RuoYiAiRuntimeClient | None = None,
     ) -> None:
+        """初始化运行时配置解析器。"""
         self._settings = settings
         self._provider_factory = provider_factory
         self._ruoyi_runtime_client = ruoyi_runtime_client or RuoYiAiRuntimeClient()
@@ -98,6 +106,7 @@ class ProviderRuntimeResolver:
         access_token: str | None = None,
         client_id: str | None = None,
     ) -> VideoProviderRuntimeAssembly:
+        """解析视频流水线 Provider 配置。"""
         fallback = self._build_from_settings()
         if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
             return fallback
@@ -130,6 +139,7 @@ class ProviderRuntimeResolver:
         access_token: str | None = None,
         client_id: str | None = None,
     ) -> tuple[TtsRuntimeVoiceDescriptor, ...]:
+        """解析视频可用 TTS 音色列表。"""
         fallback = self._build_tts_voice_descriptors_from_providers(self._build_from_settings().default_tts)
         if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
             return fallback

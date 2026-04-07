@@ -22,7 +22,9 @@ LOW_CONFIDENCE_THRESHOLD = 0.6
 
 
 class ImageValidationError(AppError):
+    """图片校验失败异常。"""
     def __init__(self, code: str, message: str, *, details: dict[str, object] | None = None) -> None:
+        """初始化预处理服务。"""
         super().__init__(
             code=code,
             message=message,
@@ -33,6 +35,7 @@ class ImageValidationError(AppError):
 
 
 class ImageMetadata(VideoPreprocessResult):
+    """提取的图片元数据。"""
     image_ref: str = "local://placeholder"
     ocr_text: str | None = None
     confidence: float = 0
@@ -41,6 +44,7 @@ class ImageMetadata(VideoPreprocessResult):
 
 
 def validate_file_type(content_type: str | None) -> str:
+    """校验文件 MIME 类型。"""
     normalized = (content_type or "").strip().lower()
     if normalized not in ALLOWED_MIME_TYPES:
         raise ImageValidationError(
@@ -52,6 +56,7 @@ def validate_file_type(content_type: str | None) -> str:
 
 
 def validate_file_size(file_bytes: bytes) -> None:
+    """校验文件大小是否超限。"""
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:
         raise ImageValidationError(
             code=TaskErrorCode.VIDEO_IMAGE_TOO_LARGE.value,
@@ -61,6 +66,7 @@ def validate_file_size(file_bytes: bytes) -> None:
 
 
 def validate_file_empty(file_bytes: bytes) -> None:
+    """校验文件是否为空。"""
     if not file_bytes:
         raise ImageValidationError(
             code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
@@ -69,6 +75,7 @@ def validate_file_empty(file_bytes: bytes) -> None:
 
 
 def extract_image_metadata(file_bytes: bytes, content_type: str) -> ImageMetadata:
+    """从图片二进制数据中提取宽高和格式。"""
     try:
         if content_type == "image/png":
             width, height = _parse_png_metadata(file_bytes)
@@ -160,6 +167,7 @@ def _parse_webp_metadata(file_bytes: bytes) -> tuple[int, int]:
 
 
 class PreprocessService:
+    """视频图片预处理服务，编排校验、存储与 OCR。"""
     def __init__(
         self,
         *,
@@ -167,6 +175,7 @@ class PreprocessService:
         ocr_provider: OcrProvider | None = None,
         ocr_timeout: float = OCR_TIMEOUT_SECONDS,
     ) -> None:
+        """初始化预处理服务。"""
         self._image_storage = image_storage or LocalImageStorage()
         self._ocr_provider = ocr_provider or MockOcrProvider()
         self._ocr_timeout = ocr_timeout
@@ -178,6 +187,7 @@ class PreprocessService:
         filename: str,
         content_type: str | None,
     ) -> VideoPreprocessResult:
+        """执行完整的图片预处理流程。"""
         normalized_content_type = validate_file_type(content_type)
         validate_file_size(file_bytes)
         validate_file_empty(file_bytes)

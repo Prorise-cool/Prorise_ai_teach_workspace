@@ -1,3 +1,5 @@
+"""RuoYi AI 运行时配置客户端，读取模块级 Provider 绑定与资源配置。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -14,6 +16,7 @@ def _immutable_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
 
 @dataclass(slots=True, frozen=True)
 class RuoYiAiRuntimeBinding:
+    """单个 AI Provider 运行时绑定配置（不可变）。"""
     stage_code: str
     capability: str
     role_code: str
@@ -51,6 +54,7 @@ class RuoYiAiRuntimeBinding:
 
 @dataclass(slots=True, frozen=True)
 class RuoYiAiRuntimeModule:
+    """AI 运行时模块配置，包含模块标识和绑定的 Provider 列表。"""
     module_code: str
     module_name: str
     bindings: tuple[RuoYiAiRuntimeBinding, ...]
@@ -60,6 +64,7 @@ class RuoYiAiRuntimeClient:
     """读取 RuoYi internal AI runtime 配置。"""
 
     def __init__(self, client_factory: Callable[..., RuoYiClient] | None = None) -> None:
+        """初始化客户端，可注入自定义的 RuoYiClient 工厂。"""
         self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def get_module_runtime(
@@ -69,6 +74,7 @@ class RuoYiAiRuntimeClient:
         access_token: str | None = None,
         client_id: str | None = None,
     ) -> RuoYiAiRuntimeModule:
+        """查询指定模块的 AI 运行时配置与 Provider 绑定列表。"""
         async with self._create_client(access_token=access_token, client_id=client_id) as client:
             response = await client.get_single(
                 f"/internal/xiaomai/ai/runtime-config/modules/{module_code}",

@@ -1,3 +1,5 @@
+"""任务元数据模型与内存仓库，管理视频/课堂任务的生命周期状态。"""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -12,6 +14,7 @@ from app.shared.task_framework.status import TaskStatus
 
 
 class TaskType(StrEnum):
+    """任务类型枚举：视频或课堂。"""
     VIDEO = "video"
     CLASSROOM = "classroom"
 
@@ -52,6 +55,7 @@ def _coerce_status(status: TaskStatus | str | None) -> TaskStatus | None:
 
 
 class TaskMetadataCreateRequest(BaseModel):
+    """任务元数据创建/更新请求。"""
     task_id: str = Field(min_length=1)
     user_id: str = Field(min_length=1)
     task_type: str | None = None
@@ -77,6 +81,7 @@ class TaskMetadataCreateRequest(BaseModel):
 
 
 class TaskMetadataSnapshot(BaseModel):
+    """任务元数据持久化快照。"""
     task_id: str
     user_id: str
     task_type: str
@@ -100,6 +105,7 @@ class TaskMetadataSnapshot(BaseModel):
         return _format_ruoyi_datetime(value)
 
     def to_ruoyi_payload(self) -> dict[str, Any]:
+        """将快照转换为 RuoYi camelCase 写入 payload。"""
         payload = self.model_dump(mode="python")
         for field_name in ("created_at", "started_at", "completed_at", "failed_at", "updated_at"):
             value = payload.get(field_name)
@@ -109,12 +115,14 @@ class TaskMetadataSnapshot(BaseModel):
 
 
 class TaskMetadataPreviewResponse(BaseModel):
+    """任务元数据持久化预览响应，含快照与 RuoYi payload。"""
     table_name: str
     task: TaskMetadataSnapshot
     ruoyi_payload: dict[str, Any]
 
 
 class TaskMetadataPageResponse(BaseModel):
+    """任务元数据分页查询响应。"""
     rows: list[TaskMetadataSnapshot]
     total: int = Field(ge=0)
 
@@ -154,6 +162,7 @@ def snapshot_from_ruoyi_row(
     *,
     expected_task_type: TaskType | None = None
 ) -> TaskMetadataSnapshot:
+    """从 RuoYi 数据行构建 TaskMetadataSnapshot。"""
     normalized = TASK_METADATA_RUOYI_MAPPER.from_ruoyi(row)
     normalized.pop("id", None)
     if "user_id" in normalized and normalized["user_id"] is not None:
@@ -165,15 +174,19 @@ def snapshot_from_ruoyi_row(
 
 
 class TaskMetadataRepository:
+    """任务元数据内存仓库，支持 CRUD、分页和会话回放。"""
+
     def __init__(self) -> None:
         self._lock = RLock()
         self._records: dict[str, TaskMetadataSnapshot] = {}
 
     def clear(self) -> None:
+        """清空所有内存记录。"""
         with self._lock:
             self._records.clear()
 
     def build_snapshot(self, request: TaskMetadataCreateRequest, *, default_task_type: TaskType) -> TaskMetadataSnapshot:
+        """从创建请求构建快照，合并已有记录的字段。"""
         now = datetime.now(UTC)
         with self._lock:
             existing = self._records.get(request.task_id)
@@ -226,15 +239,18 @@ class TaskMetadataRepository:
             )
 
     def upsert_snapshot(self, snapshot: TaskMetadataSnapshot) -> TaskMetadataSnapshot:
+        """插入或更新任务快照。"""
         with self._lock:
             self._records[snapshot.task_id] = snapshot
             return snapshot
 
     def save_task(self, request: TaskMetadataCreateRequest, *, default_task_type: TaskType) -> TaskMetadataSnapshot:
+        """构建并保存任务快照。"""
         snapshot = self.build_snapshot(request, default_task_type=default_task_type)
         return self.upsert_snapshot(snapshot)
 
     def get_task(self, task_id: str) -> TaskMetadataSnapshot | None:
+        """按 task_id 查询任务快照。"""
         with self._lock:
             return self._records.get(task_id)
 
@@ -248,6 +264,7 @@ class TaskMetadataRepository:
         updated_from: datetime | None = None,
         updated_to: datetime | None = None
     ) -> list[TaskMetadataSnapshot]:
+        """按条件筛选任务列表，按更新时间降序排列。"""
         normalized_status = _coerce_status(status)
         with self._lock:
             rows = list(self._records.values())
@@ -268,6 +285,7 @@ class TaskMetadataRepository:
         return sorted(rows, key=lambda item: (item.updated_at, item.task_id), reverse=True)
 
     def replay_session(self, session_id: str, *, task_type: str | None = None) -> TaskMetadataPageResponse:
+        """按会话 ID 回放关联的任务列表。"""
         rows = self.list_tasks(task_type=task_type, source_session_id=session_id)
         return TaskMetadataPageResponse(rows=rows, total=len(rows))
 
@@ -283,6 +301,7 @@ class TaskMetadataRepository:
         page_num: int = 1,
         page_size: int = 10
     ) -> TaskMetadataPageResponse:
+        """分页查询任务列表。"""
         rows = self.list_tasks(
             task_type=task_type,
             status=status,

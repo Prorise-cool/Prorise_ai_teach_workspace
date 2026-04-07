@@ -1,3 +1,5 @@
+"""任务运行态快照与记录器，捕获任务执行过程中的状态切面。"""
+
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -8,6 +10,7 @@ from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus, 
 
 @dataclass(slots=True)
 class TaskRuntimeSnapshot:
+    """任务运行态快照，记录某一时刻的任务状态、进度和上下文。"""
     task_id: str
     task_type: str
     request_id: str | None
@@ -34,6 +37,7 @@ class TaskRuntimeSnapshot:
         error_code: TaskErrorCode | None = None,
         payload: dict[str, object] | None = None
     ) -> "TaskRuntimeSnapshot":
+        """从 TaskContext 创建运行态快照的工厂方法。"""
         return cls(
             task_id=context.task_id,
             task_type=context.task_type,
@@ -51,16 +55,22 @@ class TaskRuntimeSnapshot:
 
 
 class TaskRuntimeRecorder(Protocol):
+    """任务运行态记录器协议。"""
+
     def record(self, snapshot: TaskRuntimeSnapshot) -> None:
-        """Persist or buffer task runtime snapshots."""
+        """持久化或缓存任务运行态快照。"""
 
 
 class InMemoryTaskRuntimeRecorder:
+    """内存运行态记录器，按 task_id 分组缓存快照，用于测试。"""
+
     def __init__(self) -> None:
         self._snapshots: dict[str, list[TaskRuntimeSnapshot]] = {}
 
     def record(self, snapshot: TaskRuntimeSnapshot) -> None:
+        """缓存一条运行态快照。"""
         self._snapshots.setdefault(snapshot.task_id, []).append(snapshot)
 
     def replay(self, task_id: str) -> list[TaskRuntimeSnapshot]:
+        """回放指定任务的所有快照。"""
         return list(self._snapshots.get(task_id, []))

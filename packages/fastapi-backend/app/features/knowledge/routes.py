@@ -1,3 +1,5 @@
+"""知识检索功能域路由模块。"""
+
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +15,7 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 @lru_cache
 def get_knowledge_service() -> KnowledgeService:
+    """获取缓存的知识检索服务单例。"""
     return KnowledgeService()
 
 
@@ -29,6 +32,7 @@ def get_knowledge_service() -> KnowledgeService:
 async def knowledge_bootstrap(
     service: KnowledgeService = Depends(get_knowledge_service),
 ) -> dict[str, object]:
+    """返回知识检索功能域 bootstrap 基线。"""
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
@@ -38,6 +42,7 @@ async def create_knowledge_chat_log(
     payload: KnowledgeChatCreateRequest,
     service: KnowledgeService = Depends(get_knowledge_service),
 ) -> KnowledgeChatSnapshot:
+    """创建知识检索对话记录。"""
     return await service.persist_chat_log(payload)
 
 
@@ -46,6 +51,7 @@ async def get_knowledge_chat_log(
     chat_log_id: str,
     service: KnowledgeService = Depends(get_knowledge_service),
 ) -> KnowledgeChatSnapshot:
+    """按 ID 查询知识检索对话记录。"""
     snapshot = await service.get_chat_log(chat_log_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Knowledge chat log not found")

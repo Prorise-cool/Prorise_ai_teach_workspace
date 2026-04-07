@@ -1,4 +1,6 @@
+"""Provider 注册表实现。"""
 from __future__ import annotations
+
 
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -19,6 +21,7 @@ ProviderBuilder = Callable[[ProviderRuntimeConfig], object]
 
 @dataclass(slots=True, frozen=True)
 class ProviderRegistration:
+    """Provider 注册元信息。"""
     capability: ProviderCapability
     provider_id: str
     builder: ProviderBuilder
@@ -31,6 +34,7 @@ class ProviderRegistry:
     """维护 Provider 注册、协议校验与默认优先级。"""
 
     def __init__(self) -> None:
+        """初始化 Provider 注册表。"""
         self._registrations: dict[ProviderCapability, dict[str, ProviderRegistration]] = {
             ProviderCapability.LLM: {},
             ProviderCapability.TTS: {}
@@ -52,6 +56,7 @@ class ProviderRegistry:
         aliases: tuple[str, ...] = (),
         description: str = ""
     ) -> ProviderRegistration:
+        """注册一个 Provider 构建器。"""
         capability_key = ProviderCapability(capability)
         canonical_id = validate_provider_id(provider_id)
         alias_ids = tuple(validate_provider_id(alias) for alias in aliases)
@@ -89,6 +94,7 @@ class ProviderRegistry:
         return registration
 
     def resolve_provider_id(self, capability: ProviderCapability | str, provider_id: str) -> str:
+        """解析 Provider ID（含别名解析）。"""
         capability_key = ProviderCapability(capability)
         normalized = validate_provider_id(provider_id)
         if normalized in self._registrations[capability_key]:
@@ -104,11 +110,13 @@ class ProviderRegistry:
         capability: ProviderCapability | str,
         provider_id: str
     ) -> ProviderRegistration:
+        """获取指定 Provider 的注册元信息。"""
         capability_key = ProviderCapability(capability)
         canonical_id = self.resolve_provider_id(capability_key, provider_id)
         return self._registrations[capability_key][canonical_id]
 
     def list_registered(self, capability: ProviderCapability | str) -> list[ProviderRegistration]:
+        """列出指定能力下的所有已注册 Provider。"""
         capability_key = ProviderCapability(capability)
         registrations = self._registrations[capability_key].values()
         return sorted(
@@ -124,6 +132,7 @@ class ProviderRegistry:
         capability: ProviderCapability | str,
         config: ProviderRuntimeConfig
     ) -> LLMProvider | TTSProvider:
+        """根据运行时配置构建 Provider 实例。"""
         registration = self.get_registration(capability, config.provider_id)
         instance = registration.builder(config)
         capability_key = ProviderCapability(capability)
@@ -149,6 +158,7 @@ class ProviderRegistry:
         health_source: str = "unconfigured",
         settings: dict[str, Any] | None = None
     ) -> ProviderRuntimeConfig:
+        """根据注册信息构建运行时配置。"""
         registration = self.get_registration(capability, provider_id)
         return ProviderRuntimeConfig(
             provider_id=registration.provider_id,

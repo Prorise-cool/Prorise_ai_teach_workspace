@@ -1,0 +1,129 @@
+/**
+ * 文件说明：视频结果页顶部 Header 样式。
+ * 极简 Header，含返回、标题、发布状态胶囊、侧栏控制。
+ */
+
+.xm-result-header {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--xm-spacing-10, 2.5rem);
+  flex-shrink: 0;
+  z-index: 20;
+  position: relative;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: var(--xm-spacing-4, 1rem);
+  }
+
+  &__back {
+    color: var(--xm-color-text-primary);
+    transition: color var(--xm-duration-fast) var(--xm-easing-standard),
+      transform var(--xm-duration-fast) var(--xm-easing-standard);
+
+    &:hover {
+      color: var(--xm-color-text-secondary);
+      transform: scale(1.05);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+
+  &__title {
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--xm-color-text-primary);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: var(--xm-spacing-3, 0.75rem);
+  }
+
+  &__publish-capsule {
+    display: none;
+    align-items: center;
+    gap: var(--xm-spacing-2, 0.5rem);
+    border-radius: var(--xm-radius-full, 9999px);
+    border: 1px solid var(--xm-color-border);
+    background: var(--xm-color-secondary, #f5ede1);
+    padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-2, 0.5rem);
+    box-shadow: var(--xm-shadow-sm);
+
+    @media (min-width: 1280px) {
+      display: flex;
+    }
+  }
+
+  &__status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--xm-spacing-1, 0.25rem);
+    padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-2, 0.5rem);
+    border-radius: var(--xm-radius-full, 9999px);
+    background: var(--xm-color-surface);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--xm-color-text-secondary);
+    border: 1px solid var(--xm-color-border);
+  }
+
+  &__action-btn {
+    padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-3, 0.75rem);
+    border-radius: var(--xm-radius-full, 9999px);
+    font-size: 12px;
+    font-weight: 700;
+    transition: opacity var(--xm-duration-fast) var(--xm-easing-standard);
+    cursor: pointer;
+    border: none;
+
+    &--primary {
+      background: var(--xm-color-primary);
+      color: var(--xm-color-primary-foreground);
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+
+    &--outline {
+      background: var(--xm-color-surface);
+      color: var(--xm-color-text-primary);
+      border: 1px solid var(--xm-color-border);
+
+      &:hover {
+        background: var(--xm-color-secondary);
+      }
+    }
+  }
+
+  &__icon-btn {
+    color: var(--xm-color-text-secondary);
+    transition: color var(--xm-duration-fast) var(--xm-easing-standard),
+      transform var(--xm-duration-fast) var(--xm-easing-standard);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+
+    &:hover {
+      color: var(--xm-color-text-primary);
+      transform: scale(1.05);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}

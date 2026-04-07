@@ -1,3 +1,5 @@
+"""API 路由注册入口。"""
+
 from fastapi import APIRouter
 
 from app.api.routes.contracts import router as contracts_router

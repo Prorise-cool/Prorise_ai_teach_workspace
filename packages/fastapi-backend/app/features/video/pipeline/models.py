@@ -13,6 +13,7 @@ from app.features.video.modeling import VideoCamelModel
 
 
 class VideoStage(StrEnum):
+    """视频流水线阶段枚举。"""
     UNDERSTANDING = "understanding"
     STORYBOARD = "storyboard"
     MANIM_GEN = "manim_gen"
@@ -24,6 +25,7 @@ class VideoStage(StrEnum):
 
 
 class VideoStageProfile(VideoCamelModel):
+    """视频阶段配置（进度范围与预估耗时）。"""
     stage: VideoStage
     display_label: str
     progress_start: int = Field(ge=0, le=100)
@@ -98,10 +100,12 @@ VIDEO_STAGE_PROFILE_MAP: dict[VideoStage, VideoStageProfile] = {
 
 
 def get_stage_profile(stage: VideoStage | str) -> VideoStageProfile:
+    """根据阶段名获取对应的阶段配置。"""
     return VIDEO_STAGE_PROFILE_MAP[VideoStage(stage)]
 
 
 def resolve_stage_progress(stage: VideoStage | str, ratio: float) -> tuple[int, int]:
+    """根据阶段和内部进度比例计算绝对进度值。"""
     profile = get_stage_profile(stage)
     normalized_ratio = max(0.0, min(float(ratio), 1.0))
     absolute_progress = round(
@@ -112,12 +116,14 @@ def resolve_stage_progress(stage: VideoStage | str, ratio: float) -> tuple[int, 
 
 
 class SolutionStep(VideoCamelModel):
+    """解题步骤数据。"""
     step_id: str
     title: str
     explanation: str
 
 
 class UnderstandingResult(VideoCamelModel):
+    """题目理解阶段输出。"""
     topic_summary: str
     knowledge_points: list[str]
     solution_steps: list[SolutionStep]
@@ -128,6 +134,7 @@ class UnderstandingResult(VideoCamelModel):
 
 
 class Scene(VideoCamelModel):
+    """分镜场景数据。"""
     scene_id: str
     title: str
     narration: str
@@ -137,6 +144,7 @@ class Scene(VideoCamelModel):
 
 
 class Storyboard(VideoCamelModel):
+    """完整分镜脚本。"""
     scenes: list[Scene]
     total_duration: int = Field(ge=1)
     target_duration: int = Field(ge=90, le=180)
@@ -145,6 +153,7 @@ class Storyboard(VideoCamelModel):
 
 
 class SceneCodeMapping(VideoCamelModel):
+    """场景与 Manim 脚本行号映射。"""
     scene_id: str
     title: str
     start_line: int = Field(ge=1)
@@ -152,6 +161,7 @@ class SceneCodeMapping(VideoCamelModel):
 
 
 class ManimCodeResult(VideoCamelModel):
+    """Manim 脚本生成结果。"""
     script_content: str
     scene_mapping: list[SceneCodeMapping]
     provider_used: str
@@ -159,6 +169,7 @@ class ManimCodeResult(VideoCamelModel):
 
 
 class FixResult(VideoCamelModel):
+    """脚本修复结果。"""
     fixed: bool
     fixed_script: str | None = None
     strategy: Literal["rule", "llm"]
@@ -167,6 +178,7 @@ class FixResult(VideoCamelModel):
 
 
 class FixLogEntry(VideoCamelModel):
+    """脚本修复日志条目。"""
     attempt_no: int = Field(ge=1)
     strategy: Literal["rule", "llm"]
     error_type: str
@@ -176,6 +188,7 @@ class FixLogEntry(VideoCamelModel):
 
 
 class ResourceLimits(VideoCamelModel):
+    """沙箱资源限制配置。"""
     cpu_count: float = Field(default=1.0, ge=1.0)
     memory_mb: int = Field(default=2048, ge=512)
     timeout_seconds: int = Field(default=120, ge=1)
@@ -185,6 +198,7 @@ class ResourceLimits(VideoCamelModel):
 
 
 class ExecutionResult(VideoCamelModel):
+    """沙箱执行结果。"""
     success: bool
     output_path: str | None = None
     stderr: str | None = None
@@ -195,6 +209,7 @@ class ExecutionResult(VideoCamelModel):
 
 
 class AudioSegment(VideoCamelModel):
+    """单场景音频片段。"""
     scene_id: str
     audio_path: str
     duration: int = Field(ge=1)
@@ -202,6 +217,7 @@ class AudioSegment(VideoCamelModel):
 
 
 class VoiceConfig(VideoCamelModel):
+    """TTS 音色与编码配置。"""
     language: str = "zh-CN"
     voice_id: str = "demo-voice"
     speed: float = 1.0
@@ -213,6 +229,7 @@ class VoiceConfig(VideoCamelModel):
 
 
 class TTSResult(VideoCamelModel):
+    """TTS 合成结果。"""
     audio_segments: list[AudioSegment]
     total_duration: int = Field(ge=1)
     provider_used: list[str]
@@ -221,6 +238,7 @@ class TTSResult(VideoCamelModel):
 
 
 class ComposeResult(VideoCamelModel):
+    """视频合成结果。"""
     video_path: str
     cover_path: str
     duration: int = Field(ge=1)
@@ -229,6 +247,7 @@ class ComposeResult(VideoCamelModel):
 
 
 class UploadResult(VideoCamelModel):
+    """视频上传结果。"""
     video_url: str
     cover_url: str
     expires_at: str | None = None
@@ -236,6 +255,7 @@ class UploadResult(VideoCamelModel):
 
 
 class VideoResult(VideoCamelModel):
+    """视频生成最终结果。"""
     task_id: str
     task_type: str = "video"
     video_url: str
@@ -251,6 +271,7 @@ class VideoResult(VideoCamelModel):
 
 
 class VideoFailure(VideoCamelModel):
+    """视频任务失败详情。"""
     task_id: str
     error_code: str
     error_message: str
@@ -260,6 +281,7 @@ class VideoFailure(VideoCamelModel):
 
 
 class ArtifactType(StrEnum):
+    """产物类型枚举。"""
     TIMELINE = "timeline"
     STORYBOARD = "storyboard"
     NARRATION = "narration"
@@ -269,6 +291,7 @@ class ArtifactType(StrEnum):
 
 
 class ArtifactPayload(VideoCamelModel):
+    """单条产物数据载体。"""
     artifact_type: ArtifactType
     data: dict[str, Any]
     version: str = "1.0"
@@ -276,6 +299,7 @@ class ArtifactPayload(VideoCamelModel):
 
 
 class VideoArtifactGraph(VideoCamelModel):
+    """视频产物图谱（聚合所有产物）。"""
     session_id: str
     session_type: Literal["video"] = "video"
     artifacts: list[ArtifactPayload]
@@ -284,12 +308,14 @@ class VideoArtifactGraph(VideoCamelModel):
 
 
 class PublishState(VideoCamelModel):
+    """公开发布状态数据。"""
     published: bool = False
     published_at: str | None = None
     author_name: str | None = None
 
 
 class VideoResultDetail(VideoCamelModel):
+    """视频任务完整结果详情。"""
     task_id: str
     status: Literal["processing", "completed", "failed"]
     result: VideoResult | None = None
@@ -301,6 +327,7 @@ class VideoResultDetail(VideoCamelModel):
 
 
 class PublishedVideoCard(VideoCamelModel):
+    """已发布视频卡片（列表展示用）。"""
     result_id: str
     title: str
     summary: str
@@ -312,6 +339,7 @@ class PublishedVideoCard(VideoCamelModel):
 
 
 class PublishedVideoCardPage(VideoCamelModel):
+    """已发布视频卡片分页。"""
     rows: list[PublishedVideoCard]
     total: int = Field(ge=0)
     page: int = Field(ge=1)
@@ -319,6 +347,7 @@ class PublishedVideoCardPage(VideoCamelModel):
 
 
 class PublishOperationResult(VideoCamelModel):
+    """发布/取消发布操作结果。"""
     task_id: str
     published: bool
     card: PublishedVideoCard | None = None
@@ -326,24 +355,28 @@ class PublishOperationResult(VideoCamelModel):
 
 
 class VideoResultDetailResponseEnvelope(VideoCamelModel):
+    """视频结果详情响应信封。"""
     code: int = 200
     msg: str = "查询成功"
     data: VideoResultDetail
 
 
 class PublishOperationResponseEnvelope(VideoCamelModel):
+    """发布操作响应信封。"""
     code: int = 200
     msg: str = "操作成功"
     data: PublishOperationResult
 
 
 class PublishedVideoPageResponseEnvelope(VideoCamelModel):
+    """已发布视频分页响应信封。"""
     code: int = 200
     msg: str = "查询成功"
     data: PublishedVideoCardPage
 
 
 class VideoStageSnapshot(VideoCamelModel):
+    """视频阶段进度快照。"""
     stage: VideoStage
     current_stage: VideoStage
     stage_label: str
@@ -352,6 +385,7 @@ class VideoStageSnapshot(VideoCamelModel):
 
 
 def build_stage_snapshot(stage: VideoStage | str, ratio: float) -> VideoStageSnapshot:
+    """构建阶段进度快照。"""
     normalized_stage = VideoStage(stage)
     absolute_progress, stage_progress = resolve_stage_progress(normalized_stage, ratio)
     profile = get_stage_profile(normalized_stage)
@@ -369,6 +403,7 @@ def normalize_storyboard_duration(
     *,
     target_duration: int,
 ) -> list[Scene]:
+    """将分镜场景时长缩放对齐到目标总时长。"""
     if not scenes:
         return []
 
@@ -406,6 +441,7 @@ def normalize_storyboard_duration(
 
 
 class JsonSchemaTimestampMixin(VideoCamelModel):
+    """带 generated_at 序列化的混入基类。"""
     generated_at: str = Field(default_factory=format_trace_timestamp)
 
     @field_serializer("generated_at", when_used="json")
@@ -414,4 +450,5 @@ class JsonSchemaTimestampMixin(VideoCamelModel):
 
 
 def utc_iso(dt: datetime) -> str:
+    """将 datetime 格式化为 UTC ISO 字符串。"""
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")

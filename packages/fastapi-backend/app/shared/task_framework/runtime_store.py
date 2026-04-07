@@ -1,3 +1,5 @@
+"""任务运行态恢复状态与事件构建工具。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,12 +10,14 @@ from app.shared.task_framework.runtime import TaskRuntimeSnapshot
 
 @dataclass(slots=True, frozen=True)
 class TaskRuntimeRecoveryState:
+    """任务运行态恢复状态，包含快照和事件列表，用于 SSE 断线重连。"""
     task_id: str
     snapshot: dict[str, object] | None
     events: tuple[TaskProgressEvent, ...]
 
     @property
     def latest_event_id(self) -> str | None:
+        """返回最新事件的 ID，无事件时返回 None。"""
         if not self.events:
             return None
         return self.events[-1].id
@@ -25,6 +29,7 @@ def build_task_event(
     snapshot: TaskRuntimeSnapshot,
     context: dict[str, object] | None = None
 ) -> TaskProgressEvent:
+    """从运行态快照构建 TaskProgressEvent。"""
     event_context = dict(context or {})
     raw_stage = event_context.get("stage")
     raw_result = event_context.get("result")

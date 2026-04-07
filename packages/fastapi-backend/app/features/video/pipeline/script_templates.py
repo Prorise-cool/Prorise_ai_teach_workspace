@@ -11,6 +11,7 @@ from app.features.video.pipeline.models import Storyboard
 
 
 def build_default_manim_script(storyboard: Storyboard) -> str:
+    """根据分镜生成默认的 Manim 脚本。"""
     lines = [
         MANIM_IMPORT_LINE,
         "",
@@ -37,6 +38,7 @@ def build_default_manim_script(storyboard: Storyboard) -> str:
 
 
 def build_default_fix_script(script_content: str) -> str:
+    """对 Manim 脚本执行基本的规则修复。"""
     fixed_script = script_content.replace("ShowCreation", "Create")
     if MANIM_IMPORT_LINE not in fixed_script:
         fixed_script = f"{MANIM_IMPORT_LINE}\n\n" + fixed_script

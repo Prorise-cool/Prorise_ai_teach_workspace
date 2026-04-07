@@ -1,8 +1,8 @@
 {
   "taskId": "video_pipeline_api_001",
   "taskType": "video",
-  "videoUrl": "https://cos.example.local/video/video_pipeline_api_001/output.mp4",
-  "coverUrl": "https://cos.example.local/video/video_pipeline_api_001/cover.jpg",
+  "videoUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "coverUrl": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
   "duration": 120,
   "summary": "证明勾股定理，并解释为什么这个方法成立。",
   "knowledgePoints": [

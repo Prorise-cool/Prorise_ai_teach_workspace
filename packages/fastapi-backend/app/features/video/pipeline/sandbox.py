@@ -40,12 +40,15 @@ FORBIDDEN_CALLS = {
 
 
 class ScriptSecurityViolation(ValueError):
+    """Manim 脚本安全扫描违规异常。"""
     def __init__(self, error_code: TaskErrorCode, message: str) -> None:
+        """初始化沙箱执行器。"""
         super().__init__(message)
         self.error_code = error_code
 
 
 def scan_script_safety(script: str) -> None:
+    """静态扫描 Manim 脚本中的危险导入和调用。"""
     try:
         tree = ast.parse(script)
     except SyntaxError as exc:
@@ -76,6 +79,7 @@ def scan_script_safety(script: str) -> None:
 
 
 class SandboxExecutor(ABC):
+    """沙箱执行器抽象基类。"""
     @abstractmethod
     async def execute(
         self,
@@ -84,10 +88,12 @@ class SandboxExecutor(ABC):
         script: str,
         resource_limits: ResourceLimits,
     ) -> ExecutionResult:
+        """在沙箱中执行 Manim 脚本。"""
         raise NotImplementedError
 
 
 class LocalSandboxExecutor(SandboxExecutor):
+    """本地沙箱执行器（用于开发和测试）。"""
     async def execute(
         self,
         *,
@@ -95,6 +101,7 @@ class LocalSandboxExecutor(SandboxExecutor):
         script: str,
         resource_limits: ResourceLimits,
     ) -> ExecutionResult:
+        """在沙箱中执行 Manim 脚本。"""
         start = time.perf_counter()
         scan_script_safety(script)
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_{task_id}_"))
@@ -156,7 +163,9 @@ class LocalSandboxExecutor(SandboxExecutor):
 
 
 class DockerSandboxExecutor(SandboxExecutor):
+    """Docker 容器沙箱执行器。"""
     def __init__(self, *, docker_image: str = "manim-sandbox:latest") -> None:
+        """初始化沙箱执行器。"""
         self.docker_image = docker_image
         self._fallback_executor = LocalSandboxExecutor()
 
@@ -167,6 +176,7 @@ class DockerSandboxExecutor(SandboxExecutor):
         script: str,
         resource_limits: ResourceLimits,
     ) -> ExecutionResult:
+        """在沙箱中执行 Manim 脚本。"""
         if shutil.which("docker") is None:
             return await self._fallback_executor.execute(
                 task_id=task_id,

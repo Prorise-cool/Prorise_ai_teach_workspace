@@ -1,14 +1,19 @@
+"""TTS Stub Provider（测试桩）。"""
 from __future__ import annotations
+
 
 from app.providers.protocols import ProviderResult, ProviderRuntimeConfig
 
 
 class StubTTSProvider:
+    """测试用 TTS Provider，直接回显文本。"""
     def __init__(self, config: ProviderRuntimeConfig) -> None:
+        """初始化 Stub TTS Provider。"""
         self.config = config
         self.provider_id = config.provider_id
 
     async def synthesize(self, text: str, voice_config: object | None = None) -> ProviderResult:
+        """返回 stub 前缀拼接文本的结果。"""
         voice_id = getattr(voice_config, "voice_id", None)
         metadata = {
             "priority": self.config.priority,

@@ -12,6 +12,7 @@ PROVIDER_ID_PATTERN = re.compile(r"^[a-z0-9]+-[a-z0-9][a-z0-9_-]*$")
 
 
 class ProviderCapability(StrEnum):
+    """Provider 能力类型枚举。"""
     LLM = "llm"
     TTS = "tts"
 
@@ -87,15 +88,24 @@ class ProviderResult:
 
 @runtime_checkable
 class ProviderProtocol(Protocol):
+    """Provider 基础运行时协议。"""
     provider_id: str
     config: ProviderRuntimeConfig
 
 
 @runtime_checkable
 class LLMProvider(ProviderProtocol, Protocol):
-    async def generate(self, prompt: str) -> ProviderResult: ...
+    """LLM Provider 运行时协议。"""
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        """LLM 文本生成接口。"""
+        ...
 
 
 @runtime_checkable
 class TTSProvider(ProviderProtocol, Protocol):
-    async def synthesize(self, text: str, voice_config: Any | None = None) -> ProviderResult: ...
+    """TTS Provider 运行时协议。"""
+
+    async def synthesize(self, text: str, voice_config: Any | None = None) -> ProviderResult:
+        """TTS 语音合成接口。"""
+        ...

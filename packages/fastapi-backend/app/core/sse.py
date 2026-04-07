@@ -56,6 +56,7 @@ class TaskProgressEvent(TaskContractPayload):
 
     @model_validator(mode="after")
     def validate_contract(self) -> "TaskProgressEvent":
+        """校验事件契约：确保 failed/provider_switch/snapshot 事件携带必需字段。"""
         if self.event == "failed" and self.error_code is None:
             raise ValueError("failed event requires error_code")
 
@@ -70,6 +71,7 @@ class TaskProgressEvent(TaskContractPayload):
         return self
 
     def with_identity(self, *, event_id: str, sequence: int) -> "TaskProgressEvent":
+        """返回填充了事件 ID 和序列号的副本。"""
         return self.model_copy(update={"id": event_id, "sequence": sequence})
 
 

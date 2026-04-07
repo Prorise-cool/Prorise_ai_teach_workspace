@@ -8,6 +8,7 @@ from app.features.video.modeling import VideoCamelModel
 
 
 class VideoVoicePreference(VideoCamelModel):
+    """用户音色偏好配置。"""
     voice_code: str = Field(min_length=1, max_length=128)
     provider_id: str | None = Field(default=None, min_length=1, max_length=64)
 
@@ -21,6 +22,7 @@ class VideoVoicePreference(VideoCamelModel):
 
 
 class VideoVoiceOption(VideoCamelModel):
+    """单个可选音色条目。"""
     voice_code: str
     voice_name: str
     provider_id: str
@@ -31,10 +33,12 @@ class VideoVoiceOption(VideoCamelModel):
 
 
 class VideoVoiceListPayload(VideoCamelModel):
+    """音色列表响应数据。"""
     voices: list[VideoVoiceOption]
 
 
 class VideoVoiceListResponseEnvelope(BaseModel):
+    """音色列表响应信封。"""
     code: int = 200
     msg: str = "查询成功"
     data: VideoVoiceListPayload

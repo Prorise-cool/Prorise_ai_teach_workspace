@@ -1,3 +1,14 @@
+"""视频任务业务服务模块。
+
+提供 ``VideoService``——视频功能域的核心服务类，承载视频任务元数据的
+CRUD、结果详情查询、公开发布/取消发布、已发布列表聚合、产物索引同步等业务逻辑。
+
+继承自 ``BaseTaskMetadataService``，通过 RuoYi 后台持久化任务元数据，
+并结合本地资产存储（``LocalAssetStore``）和发布服务（``VideoPublicationService``）
+实现完整的视频结果生命周期管理。
+"""
+from __future__ import annotations
+
 import asyncio
 from datetime import UTC, datetime
 
@@ -23,13 +34,20 @@ from app.features.video.pipeline.runtime import build_video_runtime_key
 from app.features.video.schemas import VideoBootstrapResponse, VideoTaskMetadataCreateRequest
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.status import TaskStatus
-from app.shared.task_metadata import TaskType
+from app.shared.task_metadata import TaskMetadataSnapshot, TaskType
 from app.shared.task_metadata_service import BaseTaskMetadataService
 
 logger = get_logger("app.features.video.service")
 
 
 class VideoService(BaseTaskMetadataService):
+    """视频任务业务服务。
+
+    继承 ``BaseTaskMetadataService``，扩展视频特有的结果详情、公开发布、
+    产物索引等业务能力。与 ``VideoPublicationService``、``VideoArtifactIndexService``、
+    ``LocalAssetStore`` 协作完成完整的视频结果生命周期管理。
+    """
+
     _RESOURCE = "video-task"
     _LIST_ENDPOINT = "/video/task/list"
     _WRITE_ENDPOINT = "/video/task"
@@ -44,6 +62,7 @@ class VideoService(BaseTaskMetadataService):
         publication_service: VideoPublicationService | None = None,
         artifact_index_service: VideoArtifactIndexService | None = None,
     ) -> None:
+        """初始化视频服务，注入资产存储、发布服务和产物索引服务依赖。"""
         super().__init__(repository=repository, client_factory=client_factory)
         self._asset_store = asset_store or LocalAssetStore.from_settings()
         self._publication_service = publication_service or VideoPublicationService(client_factory=self._client_factory)
@@ -52,6 +71,7 @@ class VideoService(BaseTaskMetadataService):
         )
 
     async def bootstrap_status(self) -> VideoBootstrapResponse:
+        """返回视频功能域的 bootstrap 基线信息。"""
         return VideoBootstrapResponse()
 
     def build_task_request(
@@ -73,6 +93,7 @@ class VideoService(BaseTaskMetadataService):
         failed_at: datetime | None = None,
         updated_at: datetime | None = None,
     ) -> VideoTaskMetadataCreateRequest:
+        """根据参数构建视频任务元数据创建请求。"""
         return VideoTaskMetadataCreateRequest(
             task_id=task_id,
             user_id=user_id,
@@ -97,6 +118,14 @@ class VideoService(BaseTaskMetadataService):
         *,
         runtime_store: RuntimeStore | None = None,
     ) -> VideoResultDetail:
+        """获取视频任务的完整结果详情。
+
+        优先从本地资产文件加载持久化详情并叠加远端发布状态；
+        若无本地详情则降级从 Redis 运行态读取实时进度。
+
+        Raises:
+            AppError: 404 — 任务不存在。
+        """
         snapshot = await self.get_task(task_id)
         if snapshot is None:
             raise AppError(
@@ -135,6 +164,14 @@ class VideoService(BaseTaskMetadataService):
         access_context: AccessContext,
         runtime_store: RuntimeStore | None = None,
     ) -> PublishOperationResult:
+        """将已完成的视频任务公开发布。
+
+        校验任务归属和完成状态后，同步发布记录到远端，更新本地详情文件的
+        publish_state，并刷新已发布列表缓存。
+
+        Raises:
+            AppError: 404/403/400 — 任务不存在/非创建者/未完成。
+        """
         snapshot = await self.get_task(task_id)
         if snapshot is None:
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
@@ -162,28 +199,10 @@ class VideoService(BaseTaskMetadataService):
             publication,
             author_name=access_context.username,
         )
-        updated_detail = detail.model_copy(update={"publish_state": publish_state})
-        detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
-        self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+        updated_detail = self._write_detail_state(snapshot.detail_ref, detail, publish_state)
 
         updated_at = publication.updated_at or datetime.now(UTC)
-        await self.persist_task(
-            self.build_task_request(
-                task_id=snapshot.task_id,
-                user_id=snapshot.user_id,
-                status=snapshot.status,
-                summary=snapshot.summary,
-                result_ref=snapshot.result_ref,
-                detail_ref=snapshot.detail_ref,
-                source_artifact_ref=snapshot.source_artifact_ref,
-                replay_hint=snapshot.replay_hint,
-                created_at=snapshot.created_at,
-                started_at=snapshot.started_at,
-                completed_at=snapshot.completed_at,
-                updated_at=updated_at,
-            )
-        )
-        self._invalidate_published_cache(runtime_store)
+        await self._persist_snapshot_and_invalidate(snapshot, updated_at=updated_at, runtime_store=runtime_store)
         return PublishOperationResult(
             task_id=task_id,
             published=publish_state.published,
@@ -198,6 +217,11 @@ class VideoService(BaseTaskMetadataService):
         access_context: AccessContext,
         runtime_store: RuntimeStore | None = None,
     ) -> PublishOperationResult:
+        """取消已公开发布的视频任务。
+
+        Raises:
+            AppError: 404/403 — 任务不存在/非创建者。
+        """
         snapshot = await self.get_task(task_id)
         if snapshot is None:
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
@@ -211,9 +235,7 @@ class VideoService(BaseTaskMetadataService):
         publication = await self._publication_service.get_publication(task_id)
         if publication is None:
             if detail is not None:
-                updated_detail = detail.model_copy(update={"publish_state": PublishState()})
-                detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
-                self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+                self._write_detail_state(snapshot.detail_ref, detail, PublishState())
             self._invalidate_published_cache(runtime_store)
             return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
@@ -230,28 +252,9 @@ class VideoService(BaseTaskMetadataService):
         )
 
         if detail is not None:
-            updated_detail = detail.model_copy(update={"publish_state": PublishState()})
-            detail_key = self._asset_store.ref_to_key(snapshot.detail_ref)
-            self._asset_store.write_json(detail_key, updated_detail.model_dump(mode="json", by_alias=True))
+            self._write_detail_state(snapshot.detail_ref, detail, PublishState())
 
-        updated_at = datetime.now(UTC)
-        await self.persist_task(
-            self.build_task_request(
-                task_id=snapshot.task_id,
-                user_id=snapshot.user_id,
-                status=snapshot.status,
-                summary=snapshot.summary,
-                result_ref=snapshot.result_ref,
-                detail_ref=snapshot.detail_ref,
-                source_artifact_ref=snapshot.source_artifact_ref,
-                replay_hint=snapshot.replay_hint,
-                created_at=snapshot.created_at,
-                started_at=snapshot.started_at,
-                completed_at=snapshot.completed_at,
-                updated_at=updated_at,
-            )
-        )
-        self._invalidate_published_cache(runtime_store)
+        await self._persist_snapshot_and_invalidate(snapshot, updated_at=datetime.now(UTC), runtime_store=runtime_store)
         return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
     async def list_published_tasks(
@@ -261,6 +264,11 @@ class VideoService(BaseTaskMetadataService):
         page_size: int = 12,
         runtime_store: RuntimeStore | None = None,
     ) -> PublishedVideoCardPage:
+        """分页查询所有已公开发布的视频卡片。
+
+        优先从 Redis 缓存读取；缓存未命中时全量扫描远端发布记录，
+        与本地产物交叉匹配后写入缓存。
+        """
         if runtime_store is not None:
             cached = runtime_store.get_runtime_value(build_video_runtime_key("published", "index"))
             if isinstance(cached, list):
@@ -309,6 +317,7 @@ class VideoService(BaseTaskMetadataService):
         *,
         artifact_ref: str,
     ):
+        """将视频产物图谱同步到远端产物索引服务。"""
         return await self._artifact_index_service.sync_artifact_batch(
             build_session_artifact_batch_request(
                 graph,
@@ -316,6 +325,44 @@ class VideoService(BaseTaskMetadataService):
                 payload_ref=artifact_ref,
             )
         )
+
+    def _write_detail_state(
+        self,
+        detail_ref: str,
+        detail: VideoResultDetail,
+        publish_state: PublishState,
+    ) -> VideoResultDetail:
+        """用新的 publish_state 更新 detail 并写回 asset store，返回更新后的 detail。"""
+        updated = detail.model_copy(update={"publish_state": publish_state})
+        detail_key = self._asset_store.ref_to_key(detail_ref)
+        self._asset_store.write_json(detail_key, updated.model_dump(mode="json", by_alias=True))
+        return updated
+
+    async def _persist_snapshot_and_invalidate(
+        self,
+        snapshot: TaskMetadataSnapshot,
+        *,
+        updated_at: datetime,
+        runtime_store: RuntimeStore | None = None,
+    ) -> None:
+        """重新持久化 snapshot 到 RuoYi 并刷新公开视频缓存。"""
+        await self.persist_task(
+            self.build_task_request(
+                task_id=snapshot.task_id,
+                user_id=snapshot.user_id,
+                status=snapshot.status,
+                summary=snapshot.summary,
+                result_ref=snapshot.result_ref,
+                detail_ref=snapshot.detail_ref,
+                source_artifact_ref=snapshot.source_artifact_ref,
+                replay_hint=snapshot.replay_hint,
+                created_at=snapshot.created_at,
+                started_at=snapshot.started_at,
+                completed_at=snapshot.completed_at,
+                updated_at=updated_at,
+            )
+        )
+        self._invalidate_published_cache(runtime_store)
 
     def _build_published_card(
         self,

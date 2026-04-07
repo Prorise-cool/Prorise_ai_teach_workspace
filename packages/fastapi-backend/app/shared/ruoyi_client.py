@@ -1,11 +1,16 @@
+"""RuoYi 平台异步 HTTP 客户端。
+
+本模块封装对 RuoYi 后台的所有 HTTP 请求，包括单条查询、分页查询、
+仅确认写入三种模式，并内置超时/网络异常重试、统一错误码映射与日志追踪。
+
+数据类与通用辅助函数定义在 ``ruoyi_models`` 模块中，此处 re-export
+以保持向后兼容。
+"""
+
 from __future__ import annotations
 
 import asyncio
-import base64
-import json
-import logging
-from dataclasses import dataclass
-from typing import Any, Generic, Mapping, TypeVar
+from typing import Any, Mapping
 
 import httpx
 
@@ -14,126 +19,38 @@ from app.core.errors import IntegrationError
 from app.core.logging import get_logger, get_request_id, get_task_id
 from app.shared.ruoyi_mapper import RuoYiMapper
 
-T = TypeVar("T")
+# Re-export 数据类和辅助函数，保持 ``from app.shared.ruoyi_client import X`` 兼容
+from app.shared.ruoyi_models import (  # noqa: F401 – re-export
+    RuoYiAckResponse,
+    RuoYiPageResponse,
+    RuoYiSingleResponse,
+    build_retry_details,
+    coerce_status_code,
+    extract_client_id_from_access_token,
+    format_headers,
+)
 
 logger = get_logger("app.shared.ruoyi_client")
 _SAFE_RETRY_METHODS = {"GET", "HEAD", "OPTIONS"}
 
-
-@dataclass(slots=True)
-class RuoYiSingleResponse(Generic[T]):
-    code: int
-    msg: str
-    data: T
-    raw: dict[str, Any]
-
-
-@dataclass(slots=True)
-class RuoYiPageResponse(Generic[T]):
-    code: int
-    msg: str
-    rows: list[T]
-    total: int
-    raw: dict[str, Any]
-
-
-@dataclass(slots=True)
-class RuoYiAckResponse:
-    code: int
-    msg: str
-    raw: dict[str, Any]
-
-
-def _coerce_status_code(value: Any) -> int | None:
-    if isinstance(value, int):
-        return value
-    if isinstance(value, str) and value.isdigit():
-        return int(value)
-    return None
-
-
-def _extract_client_id_from_access_token(access_token: str | None) -> str | None:
-    if access_token is None:
-        return None
-
-    token_parts = access_token.split(".")
-    if len(token_parts) != 3:
-        return None
-
-    payload_segment = token_parts[1]
-    padding = "=" * (-len(payload_segment) % 4)
-
-    try:
-        decoded_payload = base64.urlsafe_b64decode(f"{payload_segment}{padding}")
-        payload = json.loads(decoded_payload.decode("utf-8"))
-    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
-        return None
-
-    if not isinstance(payload, Mapping):
-        return None
-
-    client_id = payload.get("clientid") or payload.get("clientId")
-    if isinstance(client_id, str):
-        stripped = client_id.strip()
-        return stripped or None
-    return None
-
-
-def _format_headers(headers: Mapping[str, str] | None = None) -> dict[str, str]:
-    request_headers: dict[str, str] = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "X-Client-Name": "prorise-fastapi-backend"
-    }
-
-    request_id = get_request_id()
-    task_id = get_task_id()
-    if request_id is not None:
-        request_headers["X-Request-ID"] = request_id
-    if task_id is not None:
-        request_headers["X-Task-ID"] = task_id
-    if headers:
-        request_headers.update(headers)
-    return request_headers
-
-
-def _build_retry_details(
-    *,
-    service: str,
-    resource: str,
-    operation: str,
-    endpoint: str,
-    attempts: int,
-    request_id: str | None,
-    task_id: str | None,
-    upstream_status: int | None = None,
-    upstream_code: int | None = None,
-    upstream_message: str | None = None,
-    reason: str | None = None
-) -> dict[str, object]:
-    details: dict[str, object] = {
-        "service": service,
-        "resource": resource,
-        "operation": operation,
-        "endpoint": endpoint,
-        "attempts": attempts
-    }
-    if request_id is not None:
-        details["request_id"] = request_id
-    if task_id is not None:
-        details["task_id"] = task_id
-    if upstream_status is not None:
-        details["upstream_status"] = upstream_status
-    if upstream_code is not None:
-        details["upstream_code"] = upstream_code
-    if upstream_message is not None:
-        details["upstream_message"] = upstream_message
-    if reason is not None:
-        details["reason"] = reason
-    return details
+# 向后兼容：保留旧的下划线前缀别名
+_coerce_status_code = coerce_status_code
+_extract_client_id_from_access_token = extract_client_id_from_access_token
+_format_headers = format_headers
+_build_retry_details = build_retry_details
 
 
 class RuoYiClient:
+    """RuoYi 平台异步 HTTP 客户端。
+
+    提供三种请求模式：
+    - ``request_single``：单条记录查询，返回 ``RuoYiSingleResponse``。
+    - ``request_page``：分页列表查询，返回 ``RuoYiPageResponse``。
+    - ``request_ack``：仅确认写入，返回 ``RuoYiAckResponse``。
+
+    内置超时/网络异常自动重试、统一错误码映射和结构化日志追踪。
+    """
+
     def __init__(
         self,
         base_url: str,
@@ -149,7 +66,7 @@ class RuoYiClient:
         headers = dict(default_headers or {})
         if access_token:
             headers.setdefault("Authorization", f"Bearer {access_token}")
-        resolved_client_id = client_id or _extract_client_id_from_access_token(access_token)
+        resolved_client_id = client_id or extract_client_id_from_access_token(access_token)
         if resolved_client_id:
             headers.setdefault("Clientid", resolved_client_id)
 
@@ -166,6 +83,7 @@ class RuoYiClient:
 
     @classmethod
     def from_settings(cls) -> "RuoYiClient":
+        """从全局 ``Settings`` 创建客户端实例。"""
         settings = get_settings()
         return cls(
             base_url=settings.ruoyi_base_url,
@@ -183,7 +101,12 @@ class RuoYiClient:
         await self.aclose()
 
     async def aclose(self) -> None:
+        """关闭底层 HTTP 连接。"""
         await self._client.aclose()
+
+    # ------------------------------------------------------------------
+    # 快捷方法
+    # ------------------------------------------------------------------
 
     async def get_single(
         self,
@@ -195,14 +118,10 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         mapper: RuoYiMapper | None = None
     ) -> RuoYiSingleResponse[Any]:
+        """GET 单条记录。"""
         return await self.request_single(
-            "GET",
-            path,
-            resource=resource,
-            operation=operation,
-            params=params,
-            headers=headers,
-            mapper=mapper
+            "GET", path, resource=resource, operation=operation,
+            params=params, headers=headers, mapper=mapper
         )
 
     async def post_single(
@@ -216,14 +135,10 @@ class RuoYiClient:
         mapper: RuoYiMapper | None = None,
         retry_enabled: bool | None = None
     ) -> RuoYiSingleResponse[Any]:
+        """POST 单条记录。"""
         return await self.request_single(
-            "POST",
-            path,
-            resource=resource,
-            operation=operation,
-            json_body=json_body,
-            headers=headers,
-            mapper=mapper,
+            "POST", path, resource=resource, operation=operation,
+            json_body=json_body, headers=headers, mapper=mapper,
             retry_enabled=retry_enabled
         )
 
@@ -237,14 +152,10 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         retry_enabled: bool | None = None,
     ) -> RuoYiAckResponse:
+        """POST 仅确认写入。"""
         return await self.request_ack(
-            "POST",
-            path,
-            resource=resource,
-            operation=operation,
-            json_body=json_body,
-            headers=headers,
-            retry_enabled=retry_enabled,
+            "POST", path, resource=resource, operation=operation,
+            json_body=json_body, headers=headers, retry_enabled=retry_enabled,
         )
 
     async def put_single(
@@ -258,14 +169,10 @@ class RuoYiClient:
         mapper: RuoYiMapper | None = None,
         retry_enabled: bool | None = None
     ) -> RuoYiSingleResponse[Any]:
+        """PUT 单条记录。"""
         return await self.request_single(
-            "PUT",
-            path,
-            resource=resource,
-            operation=operation,
-            json_body=json_body,
-            headers=headers,
-            mapper=mapper,
+            "PUT", path, resource=resource, operation=operation,
+            json_body=json_body, headers=headers, mapper=mapper,
             retry_enabled=retry_enabled
         )
 
@@ -279,14 +186,10 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         retry_enabled: bool | None = None,
     ) -> RuoYiAckResponse:
+        """PUT 仅确认写入。"""
         return await self.request_ack(
-            "PUT",
-            path,
-            resource=resource,
-            operation=operation,
-            json_body=json_body,
-            headers=headers,
-            retry_enabled=retry_enabled,
+            "PUT", path, resource=resource, operation=operation,
+            json_body=json_body, headers=headers, retry_enabled=retry_enabled,
         )
 
     async def get_page(
@@ -299,15 +202,15 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         mapper: RuoYiMapper | None = None
     ) -> RuoYiPageResponse[Any]:
+        """GET 分页列表。"""
         return await self.request_page(
-            "GET",
-            path,
-            resource=resource,
-            operation=operation,
-            params=params,
-            headers=headers,
-            mapper=mapper
+            "GET", path, resource=resource, operation=operation,
+            params=params, headers=headers, mapper=mapper
         )
+
+    # ------------------------------------------------------------------
+    # 核心请求方法
+    # ------------------------------------------------------------------
 
     async def request_single(
         self,
@@ -322,32 +225,22 @@ class RuoYiClient:
         mapper: RuoYiMapper | None = None,
         retry_enabled: bool | None = None
     ) -> RuoYiSingleResponse[Any]:
+        """发起请求并解析为单条记录响应。"""
         payload = await self._request_json(
-            method,
-            path,
-            resource=resource,
-            operation=operation,
-            params=params,
-            json_body=json_body,
-            headers=headers,
+            method, path, resource=resource, operation=operation,
+            params=params, json_body=json_body, headers=headers,
             retry_enabled=retry_enabled
         )
 
         data = self._require_mapping_field(
-            payload,
-            field_name="data",
-            resource=resource,
-            operation=operation,
-            endpoint=path
+            payload, field_name="data",
+            resource=resource, operation=operation, endpoint=path
         )
         if mapper is not None and isinstance(data, Mapping):
             data = mapper.from_ruoyi(data)
 
         return RuoYiSingleResponse(
-            code=payload["code"],
-            msg=payload["msg"],
-            data=data,
-            raw=payload
+            code=payload["code"], msg=payload["msg"], data=data, raw=payload
         )
 
     async def request_page(
@@ -363,33 +256,25 @@ class RuoYiClient:
         mapper: RuoYiMapper | None = None,
         retry_enabled: bool | None = None
     ) -> RuoYiPageResponse[Any]:
+        """发起请求并解析为分页列表响应。"""
         payload = await self._request_json(
-            method,
-            path,
-            resource=resource,
-            operation=operation,
-            params=params,
-            json_body=json_body,
-            headers=headers,
+            method, path, resource=resource, operation=operation,
+            params=params, json_body=json_body, headers=headers,
             retry_enabled=retry_enabled
         )
 
         if "rows" not in payload or "total" not in payload:
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=path,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=path, payload=payload,
                 reason="missing rows or total field"
             )
 
         rows = payload["rows"]
         if not isinstance(rows, list):
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=path,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=path, payload=payload,
                 reason="rows is not a list"
             )
 
@@ -399,19 +284,14 @@ class RuoYiClient:
         total = payload["total"]
         if not isinstance(total, int):
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=path,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=path, payload=payload,
                 reason="total is not an int"
             )
 
         return RuoYiPageResponse(
-            code=payload["code"],
-            msg=payload["msg"],
-            rows=rows,
-            total=total,
-            raw=payload
+            code=payload["code"], msg=payload["msg"],
+            rows=rows, total=total, raw=payload
         )
 
     async def request_ack(
@@ -426,21 +306,19 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         retry_enabled: bool | None = None,
     ) -> RuoYiAckResponse:
+        """发起请求并解析为仅确认响应。"""
         payload = await self._request_json(
-            method,
-            path,
-            resource=resource,
-            operation=operation,
-            params=params,
-            json_body=json_body,
-            headers=headers,
+            method, path, resource=resource, operation=operation,
+            params=params, json_body=json_body, headers=headers,
             retry_enabled=retry_enabled,
         )
         return RuoYiAckResponse(
-            code=payload["code"],
-            msg=payload["msg"],
-            raw=payload,
+            code=payload["code"], msg=payload["msg"], raw=payload,
         )
+
+    # ------------------------------------------------------------------
+    # 内部实现
+    # ------------------------------------------------------------------
 
     async def _request_json(
         self,
@@ -454,7 +332,8 @@ class RuoYiClient:
         headers: Mapping[str, str] | None = None,
         retry_enabled: bool | None = None
     ) -> dict[str, Any]:
-        request_headers = _format_headers(headers)
+        """底层 HTTP 请求，包含重试、超时、错误码映射逻辑。"""
+        request_headers = format_headers(headers)
         request_id = get_request_id()
         task_id = get_task_id()
         resolved_retry_enabled = self._is_retry_enabled(method, retry_enabled)
@@ -463,127 +342,80 @@ class RuoYiClient:
         for attempt_index in range(1, attempts + 1):
             try:
                 response = await self._client.request(
-                    method,
-                    path,
-                    params=params,
-                    json=json_body,
-                    headers=request_headers
+                    method, path,
+                    params=params, json=json_body, headers=request_headers
                 )
             except httpx.TimeoutException as exc:
                 if attempt_index < attempts:
                     logger.warning(
                         "RuoYi request retry resource=%s operation=%s endpoint=%s attempt=%s/%s reason=timeout",
-                        resource,
-                        operation,
-                        path,
-                        attempt_index,
-                        attempts
+                        resource, operation, path, attempt_index, attempts
                     )
                     await asyncio.sleep(self.retry_delay_seconds)
                     continue
 
                 raise IntegrationError(
-                    service="ruoyi",
-                    resource=resource,
-                    operation=operation,
-                    code="RUOYI_TIMEOUT",
-                    message="RuoYi 请求超时",
-                    status_code=504,
-                    retryable=resolved_retry_enabled,
-                    details=_build_retry_details(
-                        service="ruoyi",
-                        resource=resource,
-                        operation=operation,
-                        endpoint=path,
-                        attempts=attempt_index,
-                        request_id=request_id,
-                        task_id=task_id,
-                        reason="timeout"
+                    service="ruoyi", resource=resource, operation=operation,
+                    code="RUOYI_TIMEOUT", message="RuoYi 请求超时",
+                    status_code=504, retryable=resolved_retry_enabled,
+                    details=build_retry_details(
+                        service="ruoyi", resource=resource, operation=operation,
+                        endpoint=path, attempts=attempt_index,
+                        request_id=request_id, task_id=task_id, reason="timeout"
                     )
                 ) from exc
             except httpx.RequestError as exc:
                 if attempt_index < attempts:
                     logger.warning(
                         "RuoYi request retry resource=%s operation=%s endpoint=%s attempt=%s/%s reason=network",
-                        resource,
-                        operation,
-                        path,
-                        attempt_index,
-                        attempts
+                        resource, operation, path, attempt_index, attempts
                     )
                     await asyncio.sleep(self.retry_delay_seconds)
                     continue
 
                 raise IntegrationError(
-                    service="ruoyi",
-                    resource=resource,
-                    operation=operation,
-                    code="RUOYI_NETWORK_ERROR",
-                    message="RuoYi 网络异常",
-                    status_code=503,
-                    retryable=resolved_retry_enabled,
-                    details=_build_retry_details(
-                        service="ruoyi",
-                        resource=resource,
-                        operation=operation,
-                        endpoint=path,
-                        attempts=attempt_index,
-                        request_id=request_id,
-                        task_id=task_id,
+                    service="ruoyi", resource=resource, operation=operation,
+                    code="RUOYI_NETWORK_ERROR", message="RuoYi 网络异常",
+                    status_code=503, retryable=resolved_retry_enabled,
+                    details=build_retry_details(
+                        service="ruoyi", resource=resource, operation=operation,
+                        endpoint=path, attempts=attempt_index,
+                        request_id=request_id, task_id=task_id,
                         reason=exc.__class__.__name__
                     )
                 ) from exc
 
             payload = self._parse_payload(response, resource=resource, operation=operation, endpoint=path)
-            payload_code = _coerce_status_code(payload.get("code"))
+            payload_code = coerce_status_code(payload.get("code"))
             effective_status = response.status_code if response.status_code >= 400 else (payload_code or 200)
 
             if effective_status != 200:
                 if resolved_retry_enabled and self._should_retry_status(effective_status) and attempt_index < attempts:
                     logger.warning(
                         "RuoYi request retry resource=%s operation=%s endpoint=%s attempt=%s/%s status=%s upstream_code=%s",
-                        resource,
-                        operation,
-                        path,
-                        attempt_index,
-                        attempts,
-                        effective_status,
-                        payload_code
+                        resource, operation, path, attempt_index, attempts,
+                        effective_status, payload_code
                     )
                     await asyncio.sleep(self.retry_delay_seconds)
                     continue
 
                 raise self._build_integration_error(
-                    resource=resource,
-                    operation=operation,
-                    endpoint=path,
-                    status_code=effective_status,
-                    upstream_code=payload_code,
-                    payload=payload,
-                    attempts=attempt_index,
-                    request_id=request_id,
-                    task_id=task_id
+                    resource=resource, operation=operation, endpoint=path,
+                    status_code=effective_status, upstream_code=payload_code,
+                    payload=payload, attempts=attempt_index,
+                    request_id=request_id, task_id=task_id
                 )
 
             logger.info(
                 "RuoYi request succeeded resource=%s operation=%s endpoint=%s attempts=%s",
-                resource,
-                operation,
-                path,
-                attempt_index
+                resource, operation, path, attempt_index
             )
             return payload
 
         raise self._build_integration_error(
-            resource=resource,
-            operation=operation,
-            endpoint=path,
-            status_code=502,
-            upstream_code=None,
-            payload={},
-            attempts=attempts,
-            request_id=request_id,
-            task_id=task_id,
+            resource=resource, operation=operation, endpoint=path,
+            status_code=502, upstream_code=None, payload={},
+            attempts=attempts, request_id=request_id, task_id=task_id,
             reason="retry loop exhausted"
         )
 
@@ -595,32 +427,27 @@ class RuoYiClient:
         operation: str,
         endpoint: str
     ) -> dict[str, Any]:
+        """解析并校验 HTTP 响应体。"""
         try:
             payload = response.json()
         except ValueError as exc:
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                payload={},
+                resource=resource, operation=operation,
+                endpoint=endpoint, payload={},
                 reason="response body is not valid JSON"
             ) from exc
 
         if not isinstance(payload, dict):
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                payload={},
+                resource=resource, operation=operation,
+                endpoint=endpoint, payload={},
                 reason="response payload is not an object"
             )
 
         if "code" not in payload:
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=endpoint, payload=payload,
                 reason="missing code field"
             )
 
@@ -635,24 +462,17 @@ class RuoYiClient:
         payload: Mapping[str, Any],
         reason: str
     ) -> IntegrationError:
+        """构建响应格式异常错误。"""
         request_id = get_request_id()
         task_id = get_task_id()
         return IntegrationError(
-            service="ruoyi",
-            resource=resource,
-            operation=operation,
-            code="RUOYI_INVALID_RESPONSE",
-            message="RuoYi 响应格式异常",
-            status_code=502,
-            retryable=False,
-            details=_build_retry_details(
-                service="ruoyi",
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                attempts=self.retry_attempts + 1,
-                request_id=request_id,
-                task_id=task_id,
+            service="ruoyi", resource=resource, operation=operation,
+            code="RUOYI_INVALID_RESPONSE", message="RuoYi 响应格式异常",
+            status_code=502, retryable=False,
+            details=build_retry_details(
+                service="ruoyi", resource=resource, operation=operation,
+                endpoint=endpoint, attempts=self.retry_attempts + 1,
+                request_id=request_id, task_id=task_id,
                 reason=reason,
                 upstream_message=str(payload.get("msg")) if payload else None
             )
@@ -667,22 +487,19 @@ class RuoYiClient:
         operation: str,
         endpoint: str
     ) -> dict[str, Any]:
+        """要求 payload 中包含指定的 Mapping 类型字段。"""
         if field_name not in payload:
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=endpoint, payload=payload,
                 reason=f"missing {field_name} field"
             )
 
         value = payload[field_name]
         if not isinstance(value, Mapping):
             raise self._invalid_response_error(
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                payload=payload,
+                resource=resource, operation=operation,
+                endpoint=endpoint, payload=payload,
                 reason=f"{field_name} is not an object"
             )
 
@@ -702,39 +519,26 @@ class RuoYiClient:
         task_id: str | None,
         reason: str | None = None
     ) -> IntegrationError:
+        """根据上游状态码构建统一 ``IntegrationError``。"""
         error_code, error_status, retryable = self._map_error_status(status_code)
         upstream_message = payload.get("msg")
         message = str(upstream_message) if upstream_message is not None else "RuoYi 请求失败"
 
         logger.error(
             "RuoYi request failed resource=%s operation=%s endpoint=%s status=%s upstream_code=%s attempts=%s reason=%s",
-            resource,
-            operation,
-            endpoint,
-            status_code,
-            upstream_code,
-            attempts,
-            reason or "upstream-error"
+            resource, operation, endpoint, status_code,
+            upstream_code, attempts, reason or "upstream-error"
         )
 
         return IntegrationError(
-            service="ruoyi",
-            resource=resource,
-            operation=operation,
-            code=error_code,
-            message=message,
-            status_code=error_status,
-            retryable=retryable,
-            details=_build_retry_details(
-                service="ruoyi",
-                resource=resource,
-                operation=operation,
-                endpoint=endpoint,
-                attempts=attempts,
-                request_id=request_id,
-                task_id=task_id,
-                upstream_status=status_code,
-                upstream_code=upstream_code,
+            service="ruoyi", resource=resource, operation=operation,
+            code=error_code, message=message,
+            status_code=error_status, retryable=retryable,
+            details=build_retry_details(
+                service="ruoyi", resource=resource, operation=operation,
+                endpoint=endpoint, attempts=attempts,
+                request_id=request_id, task_id=task_id,
+                upstream_status=status_code, upstream_code=upstream_code,
                 upstream_message=str(upstream_message) if upstream_message is not None else None,
                 reason=reason
             )
@@ -742,6 +546,7 @@ class RuoYiClient:
 
     @staticmethod
     def _map_error_status(status_code: int) -> tuple[str, int, bool]:
+        """将上游 HTTP 状态码映射为 ``(error_code, status, retryable)``。"""
         if status_code == 400:
             return "RUOYI_BAD_REQUEST", 400, False
         if status_code == 401:
@@ -764,10 +569,12 @@ class RuoYiClient:
 
     @staticmethod
     def _should_retry_status(status_code: int) -> bool:
+        """判断给定状态码是否值得重试。"""
         return status_code == 429 or status_code >= 500
 
     @staticmethod
     def _is_retry_enabled(method: str, retry_enabled: bool | None) -> bool:
+        """根据方法和显式开关决定是否启用重试。"""
         if retry_enabled is not None:
             return retry_enabled
         return method.upper() in _SAFE_RETRY_METHODS

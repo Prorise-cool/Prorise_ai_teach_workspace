@@ -1,3 +1,5 @@
+"""学习功能域路由模块。"""
+
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/learning", tags=["learning"])
 
 @lru_cache
 def get_learning_service() -> LearningService:
+    """获取缓存的学习服务单例。"""
     return LearningService()
 
 
@@ -32,6 +35,7 @@ def get_learning_service() -> LearningService:
 async def learning_bootstrap(
     service: LearningService = Depends(get_learning_service),
 ) -> dict[str, object]:
+    """返回学习功能域 bootstrap 基线。"""
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
@@ -41,6 +45,7 @@ async def learning_persistence_preview(
     request: LearningPersistenceRequest,
     service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
+    """预览学习结果的持久化映射。"""
     return await service.prepare_persistence_preview(request)
 
 
@@ -49,4 +54,5 @@ async def learning_persistence(
     request: LearningPersistenceRequest,
     service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
+    """提交学习结果并持久化到 RuoYi。"""
     return await service.persist_results(request)

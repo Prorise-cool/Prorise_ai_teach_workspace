@@ -1,4 +1,6 @@
+"""豆包 / 火山引擎 TTS Provider 实现。"""
 from __future__ import annotations
+
 
 import json
 from typing import Any, Mapping
@@ -6,6 +8,7 @@ from uuid import uuid4
 
 import httpx
 
+from app.providers.http_utils import handle_provider_request_error, raise_for_provider_status, require_setting
 from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
 
 _SUCCESS_CODES = {0, 3000}
@@ -50,11 +53,12 @@ class DoubaoTTSProvider:
     """对接豆包 / 火山引擎 OpenSpeech TTS 的 Provider。"""
 
     def __init__(self, config: ProviderRuntimeConfig) -> None:
+        """初始化豆包 TTS Provider。"""
         self.config = config
         self.provider_id = config.provider_id
 
-        self._endpoint_url = self._require_setting("base_url")
-        self._api_key = self._require_setting("api_key")
+        self._endpoint_url = require_setting(config, "base_url")
+        self._api_key = require_setting(config, "api_key")
         self._cluster = self._read_setting("cluster", default="volcano_tts")
         self._default_voice_code = self._read_setting("voice_code", "voiceCode")
         self._default_encoding = self._read_setting("encoding", default="mp3")
@@ -69,6 +73,7 @@ class DoubaoTTSProvider:
             self._headers.update({str(key): str(value) for key, value in extra_headers.items()})
 
     async def synthesize(self, text: str, voice_config: Any | None = None) -> ProviderResult:
+        """调用豆包 OpenSpeech API 合成语音。"""
         normalized_text = text.strip() if isinstance(text, str) else ""
         if not normalized_text:
             raise ValueError(f"{self.provider_id} synthesize text is empty")
@@ -125,17 +130,10 @@ class DoubaoTTSProvider:
                 transport=self._transport,
             ) as client:
                 response = await client.post(self._endpoint_url, json=payload, headers=self._headers)
-        except httpx.TimeoutException as exc:
-            raise TimeoutError(f"{self.provider_id} request timed out") from exc
-        except httpx.RequestError as exc:
-            raise ConnectionError(f"{self.provider_id} request failed: {exc}") from exc
+        except Exception as exc:
+            handle_provider_request_error(self.provider_id, exc)
 
-        if response.status_code in {401, 403}:
-            raise ValueError(f"authentication failed: {response.text[:200]}")
-        if response.status_code == 429 or response.status_code >= 500:
-            raise ConnectionError(f"{self.provider_id} upstream status={response.status_code}: {response.text[:200]}")
-        if response.status_code >= 400:
-            raise ValueError(f"{self.provider_id} bad request status={response.status_code}: {response.text[:200]}")
+        raise_for_provider_status(self.provider_id, response)
 
         try:
             response_payload = response.json()
@@ -165,11 +163,6 @@ class DoubaoTTSProvider:
             },
         )
 
-    def _require_setting(self, key: str) -> str:
-        value = self._read_setting(key)
-        if not value:
-            raise ProviderConfigurationError(f"{self.provider_id} 缺少配置项：{key}")
-        return value
 
     def _read_setting(self, *keys: str, default: str | None = None) -> str | None:
         value = _read_mapping_value(self.config.settings, *keys)

@@ -1,3 +1,5 @@
+"""任务元数据 RuoYi 持久化服务基类，统一管理任务的创建、更新、查询与会话回放。"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -5,6 +7,7 @@ from datetime import datetime
 from app.core.errors import IntegrationError
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.ruoyi_mapper import RUOYI_DATETIME_FORMAT
+from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import (
     TASK_METADATA_RUOYI_MAPPER,
@@ -18,7 +21,8 @@ from app.shared.task_metadata import (
 )
 
 
-class BaseTaskMetadataService:
+class BaseTaskMetadataService(RuoYiServiceMixin):
+    """任务元数据持久化服务基类，子类需指定 _RESOURCE、_LIST_ENDPOINT 等类属性。"""
     _REPLAY_PAGE_SIZE = 100
     _RESOURCE: str
     _LIST_ENDPOINT: str
@@ -30,10 +34,12 @@ class BaseTaskMetadataService:
         repository: TaskMetadataRepository | None = None,
         client_factory=None,
     ) -> None:
+        """初始化服务，可注入内存仓库和 RuoYi 客户端工厂。"""
         self._repository = repository
         self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def persist_task(self, request: TaskMetadataCreateRequest) -> TaskMetadataPreviewResponse:
+        """将任务元数据持久化到 RuoYi，自动判断新建或更新。"""
         async with self._client_factory() as client:
             existing_row = await self._query_existing_row(client, request.task_id)
             existing_snapshot = (
@@ -66,6 +72,7 @@ class BaseTaskMetadataService:
         return TaskMetadataPreviewResponse(table_name=snapshot.table_name, task=snapshot, ruoyi_payload=ruoyi_payload)
 
     async def get_task(self, task_id: str) -> TaskMetadataSnapshot | None:
+        """按 task_id 查询单条任务元数据。"""
         async with self._client_factory() as client:
             row = await self._query_existing_row(client, task_id)
         return (
@@ -89,6 +96,7 @@ class BaseTaskMetadataService:
         page_num: int = 1,
         page_size: int = 10,
     ) -> TaskMetadataPageResponse:
+        """分页查询任务元数据列表。"""
         async with self._client_factory() as client:
             result = await client.get_page(
                 self._LIST_ENDPOINT,
@@ -112,6 +120,7 @@ class BaseTaskMetadataService:
         return TaskMetadataPageResponse(rows=rows, total=result.total)
 
     async def replay_session(self, session_id: str) -> TaskMetadataPageResponse:
+        """按会话 ID 回放所有关联任务，自动分页遍历。"""
         rows: list[TaskMetadataSnapshot] = []
         page_num = 1
         total = 0
@@ -162,18 +171,6 @@ class BaseTaskMetadataService:
             return snapshot_from_ruoyi_row(row, expected_task_type=self._TASK_TYPE)
         except ValueError as exc:
             raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
-
-    def _invalid_response_error(self, *, operation: str, endpoint: str, reason: str) -> IntegrationError:
-        return IntegrationError(
-            service="ruoyi",
-            resource=self._RESOURCE,
-            operation=operation,
-            code="RUOYI_INVALID_RESPONSE",
-            message="RuoYi 响应格式异常",
-            status_code=502,
-            retryable=False,
-            details={"endpoint": endpoint, "reason": reason},
-        )
 
     @staticmethod
     def _format_query_datetime(value: datetime | None) -> str | None:

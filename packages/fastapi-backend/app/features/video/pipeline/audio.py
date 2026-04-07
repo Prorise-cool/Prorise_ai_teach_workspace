@@ -10,6 +10,7 @@ from typing import Any, Mapping
 
 
 def decode_audio_payload(metadata: Any) -> tuple[bytes, str] | None:
+    """从 metadata 中解码 base64 音频数据。"""
     if not isinstance(metadata, Mapping):
         return None
 
@@ -25,6 +26,7 @@ def decode_audio_payload(metadata: Any) -> tuple[bytes, str] | None:
 
 
 def write_silent_wav(path: Path, *, duration_seconds: int, sample_rate: int) -> None:
+    """生成指定时长的静音 WAV 文件。"""
     frame_count = max(int(duration_seconds * sample_rate), 1)
     chunk_size = max(sample_rate, 1)
     with wave.open(str(path), "wb") as wav_file:

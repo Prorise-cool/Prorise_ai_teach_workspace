@@ -1,3 +1,5 @@
+"""服务健康检查路由。"""
+
 from fastapi import APIRouter
 
 from app.schemas.common import ServiceHealthPayload, ServiceHealthResponseEnvelope, build_success_envelope

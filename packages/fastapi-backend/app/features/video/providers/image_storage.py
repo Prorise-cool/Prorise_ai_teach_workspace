@@ -16,25 +16,32 @@ logger = get_logger("app.features.video.image_storage")
 
 
 class ImageStorageResult(BaseModel):
+    """图片存储结果。"""
     image_ref: str
     relative_path: str
 
 
 class ImageStorage(ABC):
+    """图片存储抽象接口。"""
     @abstractmethod
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+        """上传图片。"""
         raise NotImplementedError
 
     @abstractmethod
     async def delete(self, image_ref: str) -> bool:
+        """删除图片。"""
         raise NotImplementedError
 
 
 class LocalImageStorage(ImageStorage):
+    """基于本地文件系统的图片存储实现。"""
     def __init__(self, base_dir: str | Path = "data/uploads/video") -> None:
+        """初始化图片存储。"""
         self._base_dir = Path(base_dir)
 
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+        """上传图片。"""
         date_prefix = datetime.now(UTC).strftime("%Y%m%d")
         extension = _extract_extension(filename, content_type)
         relative_path = f"{date_prefix}/{uuid.uuid4().hex}{extension}"
@@ -48,6 +55,7 @@ class LocalImageStorage(ImageStorage):
         return ImageStorageResult(image_ref=image_ref, relative_path=relative_path)
 
     async def delete(self, image_ref: str) -> bool:
+        """删除图片。"""
         if not image_ref.startswith("local://"):
             return False
 
@@ -62,14 +70,18 @@ class LocalImageStorage(ImageStorage):
 
 
 class CosImageStorage(ImageStorage):
+    """腾讯云 COS 图片存储实现（待完成）。"""
     def __init__(self, bucket: str = "xiaomai-video", region: str = "ap-guangzhou") -> None:
+        """初始化图片存储。"""
         self._bucket = bucket
         self._region = region
 
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+        """上传图片。"""
         raise NotImplementedError("COS 图片存储尚未实现，当前请使用 LocalImageStorage")
 
     async def delete(self, image_ref: str) -> bool:
+        """删除图片。"""
         raise NotImplementedError("COS 图片删除尚未实现，当前请使用 LocalImageStorage")
 
 
