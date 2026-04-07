@@ -25,6 +25,8 @@ Story 3.1 冻结的视频任务创建 mock 样例：
 | `publish-success.json` | Story 4.10 公开成功样例 | `200` |
 | `unpublish-success.json` | Story 4.10 取消公开成功样例 | `200` |
 | `published-list.json` | Story 4.10 公开列表样例 | `200` |
+| `public-videos.json` | 公开视频发现区列表成功 | `200` |
+| `public-videos.empty.json` | 公开视频发现区空列表 | `200` |
 
 ## 约定
 

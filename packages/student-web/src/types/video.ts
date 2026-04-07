@@ -124,6 +124,71 @@ export interface VideoTaskCreateErrorEnvelope {
   data: VideoTaskCreateError;
 }
 
+/* ---------- 公开视频发现 ---------- */
+
+/** 公开视频列表排序方式。 */
+export const VIDEO_PUBLIC_SORT_VALUES = ['latest', 'popular'] as const;
+
+/** 公开视频列表排序方式类型。 */
+export type VideoPublicSort = (typeof VIDEO_PUBLIC_SORT_VALUES)[number];
+
+/** 公开视频卡片最小数据单元。 */
+export interface VideoPublicCard {
+  videoId: string;
+  title: string;
+  summary: string;
+  thumbnail: string | null;
+  duration: string;
+  viewCount: number;
+  createdAt: string;
+  sourceText: string;
+  authorName: string;
+  authorAvatar?: string;
+  knowledgePoints?: string[];
+}
+
+/** 公开视频列表查询参数。 */
+export interface VideoPublicListQuery {
+  page: number;
+  pageSize: number;
+  sort: VideoPublicSort;
+}
+
+/** 公开视频列表响应数据。 */
+export interface VideoPublicListResult {
+  items: VideoPublicCard[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 公开视频列表成功响应包。 */
+export type VideoPublicListEnvelope = TaskDataEnvelope<VideoPublicListResult>;
+
+/** 公开视频列表 mock 场景。 */
+export const VIDEO_PUBLIC_MOCK_SCENARIO_VALUES = [
+  'default',
+  'empty',
+  'error',
+  'published-shape',
+] as const;
+
+/** 公开视频列表 mock 场景类型。 */
+export type VideoPublicMockScenario =
+  (typeof VIDEO_PUBLIC_MOCK_SCENARIO_VALUES)[number];
+
+/**
+ * 判断值是否为受支持的公开视频 mock 场景。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `VideoPublicMockScenario`。
+ */
+export function isVideoPublicMockScenario(
+  value: unknown,
+): value is VideoPublicMockScenario {
+  return VIDEO_PUBLIC_MOCK_SCENARIO_VALUES.some((scenario) => scenario === value);
+}
+
 /* ---------- Mock 场景 ---------- */
 
 /** 视频任务创建 mock 场景。 */

@@ -5,11 +5,21 @@
 import { http, HttpResponse } from 'msw';
 
 import {
+  getMockPublishedVideoListSuccess,
+  getMockVideoPublicListSuccess,
+  getVideoPublicFixtureError,
+  normalizeMockVideoPublicError,
+} from '@/services/mock/fixtures/video-public';
+import {
   getMockVideoTaskCreateError,
   getMockVideoTaskCreateSuccess,
   normalizeMockVideoTaskError,
 } from '@/services/mock/fixtures/video-task';
 import { isVideoTaskMockScenario } from '@/types/video';
+import {
+  isVideoPublicMockScenario,
+  type VideoPublicMockScenario,
+} from '@/types/video';
 import type { VideoTaskCreateRequest, VideoTaskMockScenario } from '@/types/video';
 import { readJsonBody, readRecord, readString } from '@/lib/type-guards';
 
@@ -24,6 +34,21 @@ function readVideoMockScenario(request: Request): VideoTaskMockScenario | null {
   const scenario = url.searchParams.get('scenario');
 
   return isVideoTaskMockScenario(scenario) ? scenario : null;
+}
+
+/**
+ * 从请求 URL 中提取公开视频 mock 场景参数。
+ *
+ * @param request - MSW 拦截的请求对象。
+ * @returns mock 场景标识或 null。
+ */
+function readVideoPublicMockScenario(
+  request: Request,
+): VideoPublicMockScenario | undefined {
+  const url = new URL(request.url);
+  const scenario = url.searchParams.get('scenario');
+
+  return isVideoPublicMockScenario(scenario) ? scenario : undefined;
 }
 
 function createVideoTaskHttpError(
@@ -154,8 +179,83 @@ function toVideoTaskHttpErrorResponse(error: unknown) {
   );
 }
 
+/**
+ * 将公开视频 mock 错误转为 HTTP 响应。
+ *
+ * @param error - 原始异常对象。
+ * @returns MSW HttpResponse。
+ */
+function toVideoPublicHttpErrorResponse(error: unknown) {
+  const mockError = normalizeMockVideoPublicError(error);
+
+  return HttpResponse.json(
+    {
+      code: mockError.status,
+      msg: mockError.message,
+      data: {
+        errorCode: mockError.code,
+        retryable: true,
+        details: mockError.details,
+      },
+    },
+    { status: mockError.status },
+  );
+}
+
 /** 视频任务 mock handlers 列表。 */
 export const videoTaskHandlers = [
+  http.get('*/api/v1/video/public', async ({ request }) => {
+    try {
+      const scenario = readVideoPublicMockScenario(request);
+      const fixtureError = getVideoPublicFixtureError(scenario);
+
+      if (fixtureError) {
+        throw fixtureError;
+      }
+
+      const url = new URL(request.url);
+      const page = Number(url.searchParams.get('page') ?? 1);
+      const pageSize = Number(url.searchParams.get('pageSize') ?? 12);
+      const sort = url.searchParams.get('sort') === 'popular' ? 'popular' : 'latest';
+      const envelope = getMockVideoPublicListSuccess(
+        scenario === 'empty' ? 'empty' : 'default',
+        {
+        page,
+        pageSize,
+        sort,
+      });
+
+      return HttpResponse.json(envelope, { status: 200 });
+    } catch (error) {
+      return toVideoPublicHttpErrorResponse(error);
+    }
+  }),
+  http.get('*/api/v1/video/published', async ({ request }) => {
+    try {
+      const scenario = readVideoPublicMockScenario(request);
+      const fixtureError = getVideoPublicFixtureError(
+        scenario === 'published-shape' ? undefined : scenario,
+      );
+
+      if (fixtureError) {
+        throw fixtureError;
+      }
+
+      const url = new URL(request.url);
+      const page = Number(url.searchParams.get('page') ?? 1);
+      const pageSize = Number(url.searchParams.get('pageSize') ?? 12);
+      const sort = url.searchParams.get('sort') === 'popular' ? 'popular' : 'latest';
+      const envelope = getMockPublishedVideoListSuccess({
+        page,
+        pageSize,
+        sort,
+      });
+
+      return HttpResponse.json(envelope, { status: 200 });
+    } catch (error) {
+      return toVideoPublicHttpErrorResponse(error);
+    }
+  }),
   http.post('*/api/v1/video/tasks', async ({ request }) => {
     try {
       const scenario = readVideoMockScenario(request);
