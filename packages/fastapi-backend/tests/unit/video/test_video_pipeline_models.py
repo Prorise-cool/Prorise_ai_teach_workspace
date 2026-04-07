@@ -1,7 +1,14 @@
 import asyncio
+import subprocess
+from pathlib import Path
 
 from app.features.video.pipeline.models import ResourceLimits, VIDEO_STAGE_PROFILES, VideoStage, build_stage_snapshot
-from app.features.video.pipeline.sandbox import LocalSandboxExecutor, ScriptSecurityViolation, scan_script_safety
+from app.features.video.pipeline.sandbox import (
+    DockerSandboxExecutor,
+    LocalSandboxExecutor,
+    ScriptSecurityViolation,
+    scan_script_safety,
+)
 from app.features.video.pipeline.services import _cleanup_pipeline_temp_dirs
 
 
@@ -63,6 +70,68 @@ def test_local_sandbox_maps_oom_and_disk_full_markers() -> None:
     assert oom_result.error_type == "VIDEO_RENDER_OOM"
     assert disk_full_result.success is False
     assert disk_full_result.error_type == "VIDEO_RENDER_DISK_FULL"
+
+
+def test_docker_sandbox_falls_back_to_local_executor_when_image_runtime_is_unavailable(monkeypatch) -> None:
+    executor = DockerSandboxExecutor(docker_image="manim-sandbox:latest")
+    limits = ResourceLimits()
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.shutil.which", lambda command: "/usr/bin/docker")
+
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=1,
+            stdout="",
+            stderr=(
+                "Unable to find image 'manim-sandbox:latest' locally\n"
+                "docker: Error response from daemon: tls: first record does not look like a TLS handshake"
+            ),
+        )
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.subprocess.run", fake_run)
+
+    result = asyncio.run(
+        executor.execute(task_id="video_docker_fallback_case", script="from manim import *", resource_limits=limits)
+    )
+
+    assert result.success is True
+    assert result.output_path is not None
+
+
+def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> None:
+    executor = DockerSandboxExecutor(docker_image="manim-sandbox:latest")
+    limits = ResourceLimits()
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.shutil.which", lambda command: "/usr/bin/docker")
+
+    def fake_run(command, **kwargs):  # noqa: ANN001
+        assert command[-2] == "/workspace/run_manim.py"
+        assert command[-1] == "DemoScene"
+        mount_arg = command[command.index("-v") + 1]
+        host_workspace = Path(mount_arg.split(":", 1)[0])
+        output_path = host_workspace / "output" / "rendered.mp4"
+        output_path.write_bytes(b"REAL_MP4_DATA")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.subprocess.run", fake_run)
+
+    result = asyncio.run(
+        executor.execute(
+            task_id="video_docker_success_case",
+            script=(
+                "from manim import *\n\n"
+                "class DemoScene(Scene):\n"
+                "    def construct(self):\n"
+                "        self.wait(1)\n"
+            ),
+            resource_limits=limits,
+        )
+    )
+
+    assert result.success is True
+    assert result.output_path is not None
+    assert Path(result.output_path).read_bytes() == b"REAL_MP4_DATA"
 
 
 def test_cleanup_pipeline_temp_dirs_removes_known_temp_roots(tmp_path) -> None:

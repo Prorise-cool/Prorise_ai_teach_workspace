@@ -44,6 +44,12 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   system_tenant: () => import("@/views/system/tenant/index.vue"),
   system_user: () => import("@/views/system/user/index.vue"),
   tool_gen: () => import("@/views/tool/gen/index.vue"),
+  "xiaomai_ai-module-binding": () => import("@/views/xiaomai/ai-module-binding/index.vue"),
+  "xiaomai_ai-module": () => import("@/views/xiaomai/ai-module/index.vue"),
+  "xiaomai_ai-provider": () => import("@/views/xiaomai/ai-provider/index.vue"),
+  "xiaomai_ai-resource": () => import("@/views/xiaomai/ai-resource/index.vue"),
   "xiaomai_landing-lead": () => import("@/views/xiaomai/landing-lead/index.vue"),
   "xiaomai_user-profile": () => import("@/views/xiaomai/user-profile/index.vue"),
+  "xiaomai_user-work": () => import("@/views/xiaomai/user-work/index.vue"),
+  "xiaomai_video-task": () => import("@/views/xiaomai/video-task/index.vue"),
 };

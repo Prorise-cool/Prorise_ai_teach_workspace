@@ -24,7 +24,7 @@ public class ClassroomSessionVo extends BaseEntity implements Serializable {
 
     private String taskId;
 
-    private String userId;
+    private Long userId;
 
     private String taskType;
 

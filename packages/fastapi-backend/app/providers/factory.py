@@ -132,6 +132,7 @@ class ProviderFactory:
         providers: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
         text: str,
         *,
+        voice_config: Any | None = None,
         runtime_store: RuntimeStore | None = None,
         emit_switch: Callable[[ProviderSwitch], Any] | None = None,
     ) -> ProviderResult:
@@ -139,6 +140,7 @@ class ProviderFactory:
         return await self.create_failover_service(runtime_store).synthesize(
             chain,
             text,
+            voice_config=voice_config,
             emit_switch=emit_switch,
         )
 

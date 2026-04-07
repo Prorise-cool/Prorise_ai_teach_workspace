@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.tasks import get_task_events as get_shared_task_events
 from app.api.routes.tasks import get_task_status as get_shared_task_status
+from app.core.config import get_settings
 from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.video.create_task_models import (
@@ -21,6 +22,7 @@ from app.features.video.pipeline.models import (
     VideoResultDetailResponseEnvelope,
 )
 from app.features.video.preprocess_models import VideoPreprocessSuccessEnvelope
+from app.features.video.services.voice_catalog import VideoVoiceCatalogService
 from app.features.video.schemas import (
     VideoTaskMetadataCreateRequest,
     VideoTaskMetadataPageResponse,
@@ -28,6 +30,9 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
+from app.features.video.voice_models import VideoVoiceListResponseEnvelope
+from app.providers.factory import get_provider_factory
+from app.providers.runtime_config_service import ProviderRuntimeResolver
 from app.features.video.services.create_task import (
     create_video_task,
     ensure_video_task_create_permission,
@@ -48,6 +53,16 @@ def get_video_service() -> VideoService:
 @lru_cache
 def get_video_preprocess_service() -> PreprocessService:
     return PreprocessService()
+
+
+@lru_cache
+def get_video_voice_catalog_service() -> VideoVoiceCatalogService:
+    return VideoVoiceCatalogService(
+        resolver=ProviderRuntimeResolver(
+            settings=get_settings(),
+            provider_factory=get_provider_factory(),
+        )
+    )
 
 
 @router.get(
@@ -82,6 +97,19 @@ async def preprocess_image(
         content_type=file.content_type,
     )
     return build_success_envelope(result, msg="预处理完成")
+
+
+@router.get("/voices", response_model=VideoVoiceListResponseEnvelope)
+async def list_video_voices(
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoVoiceCatalogService = Depends(get_video_voice_catalog_service),
+) -> dict[str, object]:
+    ensure_video_task_create_permission(access_context)
+    payload = await service.list_voices(
+        access_token=access_context.token,
+        client_id=access_context.client_id,
+    )
+    return VideoVoiceListResponseEnvelope(data=payload).model_dump(mode="json", by_alias=True)
 
 
 @router.post(

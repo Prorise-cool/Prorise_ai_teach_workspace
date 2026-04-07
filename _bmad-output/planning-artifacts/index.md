@@ -23,6 +23,7 @@
 ## Supporting Files
 
 - [product-brief-小麦-2026-03-22.md](./product-brief-小麦-2026-03-22.md) - 小麦项目产品简报
+- [sprint-change-proposal-2026-04-06-215829-epic10-task-schema-hotfix.md](./sprint-change-proposal-2026-04-06-215829-epic10-task-schema-hotfix.md) - Epic 10 / Story 10.4 任务表结构与 RuoYi-Plus 规范纠偏提案
 
 ## Research
 

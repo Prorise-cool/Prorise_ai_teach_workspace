@@ -1,6 +1,7 @@
 package org.dromara.xiaomai.classroom.domain;
 
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,9 +25,11 @@ public class ClassroomSession extends BaseEntity {
     @TableId(value = "id")
     private Long id;
 
+    private String tenantId;
+
     private String taskId;
 
-    private String userId;
+    private Long userId;
 
     private String taskType;
 
@@ -51,4 +54,7 @@ public class ClassroomSession extends BaseEntity {
     private java.util.Date completeTime;
 
     private java.util.Date failTime;
+
+    @TableLogic
+    private String delFlag;
 }

@@ -298,8 +298,14 @@ const local: App.I18n.Schema = {
     tool: '系统工具',
     tool_gen: '代码生成',
     xiaomai: '学生管理',
+    'xiaomai_ai-module': 'AI 配置模块',
+    'xiaomai_ai-module-binding': '模块资源绑定',
+    'xiaomai_ai-provider': 'AI Provider 实例',
+    'xiaomai_ai-resource': 'AI 资源配置',
     'xiaomai_landing-lead': '营销落地页线索',
+    'xiaomai_user-work': '用户作品管理',
     'xiaomai_user-profile': '用户配置',
+    'xiaomai_video-task': '视频任务',
     about: '关于'
   },
   menu: {

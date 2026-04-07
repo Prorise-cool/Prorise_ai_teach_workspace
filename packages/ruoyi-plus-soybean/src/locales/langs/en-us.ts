@@ -302,8 +302,14 @@ const local: App.I18n.Schema = {
     tool: 'System Tools',
     tool_gen: 'Code Generation',
     xiaomai: 'Student Management',
+    'xiaomai_ai-module': 'AI Modules',
+    'xiaomai_ai-module-binding': 'Module Bindings',
+    'xiaomai_ai-provider': 'AI Providers',
+    'xiaomai_ai-resource': 'AI Resources',
     'xiaomai_landing-lead': 'Landing Leads',
+    'xiaomai_user-work': 'User Works',
     'xiaomai_user-profile': 'User Profile',
+    'xiaomai_video-task': 'Video Tasks',
     about: 'About'
   },
   menu: {

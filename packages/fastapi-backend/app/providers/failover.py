@@ -134,11 +134,12 @@ class ProviderFailoverService:
         providers: Sequence[TTSProvider],
         text: str,
         *,
+        voice_config: Any | None = None,
         emit_switch: SwitchObserver | None = None,
     ) -> ProviderResult:
         return await self._run(
             providers,
-            lambda provider: provider.synthesize(text),
+            lambda provider: provider.synthesize(text, voice_config=voice_config),
             emit_switch=emit_switch,
         )
 

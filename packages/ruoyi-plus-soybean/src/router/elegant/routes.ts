@@ -353,6 +353,42 @@ export const generatedRoutes: GeneratedRoute[] = [
     },
     children: [
       {
+        name: 'xiaomai_ai-module',
+        path: '/xiaomai/ai-module',
+        component: 'view.xiaomai_ai-module',
+        meta: {
+          title: 'xiaomai_ai-module',
+          i18nKey: 'route.xiaomai_ai-module'
+        }
+      },
+      {
+        name: 'xiaomai_ai-module-binding',
+        path: '/xiaomai/ai-module-binding',
+        component: 'view.xiaomai_ai-module-binding',
+        meta: {
+          title: 'xiaomai_ai-module-binding',
+          i18nKey: 'route.xiaomai_ai-module-binding'
+        }
+      },
+      {
+        name: 'xiaomai_ai-provider',
+        path: '/xiaomai/ai-provider',
+        component: 'view.xiaomai_ai-provider',
+        meta: {
+          title: 'xiaomai_ai-provider',
+          i18nKey: 'route.xiaomai_ai-provider'
+        }
+      },
+      {
+        name: 'xiaomai_ai-resource',
+        path: '/xiaomai/ai-resource',
+        component: 'view.xiaomai_ai-resource',
+        meta: {
+          title: 'xiaomai_ai-resource',
+          i18nKey: 'route.xiaomai_ai-resource'
+        }
+      },
+      {
         name: 'xiaomai_landing-lead',
         path: '/xiaomai/landing-lead',
         component: 'view.xiaomai_landing-lead',
@@ -368,6 +404,24 @@ export const generatedRoutes: GeneratedRoute[] = [
         meta: {
           title: 'xiaomai_user-profile',
           i18nKey: 'route.xiaomai_user-profile'
+        }
+      },
+      {
+        name: 'xiaomai_user-work',
+        path: '/xiaomai/user-work',
+        component: 'view.xiaomai_user-work',
+        meta: {
+          title: 'xiaomai_user-work',
+          i18nKey: 'route.xiaomai_user-work'
+        }
+      },
+      {
+        name: 'xiaomai_video-task',
+        path: '/xiaomai/video-task',
+        component: 'view.xiaomai_video-task',
+        meta: {
+          title: 'xiaomai_video-task',
+          i18nKey: 'route.xiaomai_video-task'
         }
       }
     ]

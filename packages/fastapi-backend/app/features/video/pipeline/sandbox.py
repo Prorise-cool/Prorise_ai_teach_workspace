@@ -11,6 +11,16 @@ import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from app.features.video.pipeline.constants import (
+    DEFAULT_MANIM_SCENE_CLASS,
+    SANDBOX_ENV_VARS,
+    SANDBOX_INFRASTRUCTURE_ERROR_MARKERS,
+    SANDBOX_OUTPUT_DIR,
+    SANDBOX_RENDERED_FILE,
+    SANDBOX_RUNNER_SCRIPT,
+    SANDBOX_SCENE_SCRIPT,
+    SANDBOX_WORKSPACE_MOUNT,
+)
 from app.features.video.pipeline.models import ExecutionResult, ResourceLimits
 from app.shared.task_framework.status import TaskErrorCode
 
@@ -89,8 +99,8 @@ class LocalSandboxExecutor(SandboxExecutor):
         scan_script_safety(script)
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_{task_id}_"))
         try:
-            script_path = temp_dir / "scene.py"
-            output_path = temp_dir / "rendered.mp4"
+            script_path = temp_dir / SANDBOX_SCENE_SCRIPT
+            output_path = temp_dir / SANDBOX_RENDERED_FILE
             script_path.write_text(script, encoding="utf-8")
 
             if "FORCE_RENDER_TIMEOUT" in script:
@@ -140,7 +150,7 @@ class LocalSandboxExecutor(SandboxExecutor):
                 },
             )
         finally:
-            rendered_output = temp_dir / "rendered.mp4"
+            rendered_output = temp_dir / SANDBOX_RENDERED_FILE
             if not rendered_output.exists() and not any(temp_dir.glob("*.keep")):
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -166,11 +176,14 @@ class DockerSandboxExecutor(SandboxExecutor):
 
         scan_script_safety(script)
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_{task_id}_docker_"))
-        script_path = temp_dir / "scene.py"
-        output_dir = temp_dir / "output"
+        script_path = temp_dir / SANDBOX_SCENE_SCRIPT
+        runner_path = temp_dir / SANDBOX_RUNNER_SCRIPT
+        output_dir = temp_dir / SANDBOX_OUTPUT_DIR
         output_dir.mkdir(parents=True, exist_ok=True)
         script_path.write_text(script, encoding="utf-8")
-        command = [
+        runner_path.write_text(_build_manim_runner_script(), encoding="utf-8")
+        scene_class_name = _detect_scene_class_name(script) or DEFAULT_MANIM_SCENE_CLASS
+        docker_command = [
             "docker",
             "run",
             "--rm",
@@ -189,11 +202,15 @@ class DockerSandboxExecutor(SandboxExecutor):
             "ALL",
             "--security-opt",
             "no-new-privileges",
+        ]
+        command = [
+            *docker_command,
+            *_docker_env_args(),
             "-v",
-            f"{temp_dir}:/workspace:rw",
+            f"{temp_dir}:{SANDBOX_WORKSPACE_MOUNT}:rw",
             self.docker_image,
-            "python",
-            "/workspace/scene.py",
+            f"{SANDBOX_WORKSPACE_MOUNT}/{SANDBOX_RUNNER_SCRIPT}",
+            scene_class_name,
         ]
 
         def run_command() -> subprocess.CompletedProcess[str]:
@@ -218,7 +235,15 @@ class DockerSandboxExecutor(SandboxExecutor):
                 error_type=TaskErrorCode.VIDEO_RENDER_TIMEOUT.value,
             )
 
-        output_path = output_dir / "rendered.mp4"
+        if _should_fallback_to_local(process.stderr):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return await self._fallback_executor.execute(
+                task_id=task_id,
+                script=script,
+                resource_limits=resource_limits,
+            )
+
+        output_path = output_dir / SANDBOX_RENDERED_FILE
         if process.returncode != 0 or not output_path.exists():
             error_type = _map_sandbox_process_error(process.returncode, process.stderr)
             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -246,3 +271,94 @@ def _map_sandbox_process_error(return_code: int | None, stderr: str | None) -> T
     if "no space left" in lowered or "disk full" in lowered:
         return TaskErrorCode.VIDEO_RENDER_DISK_FULL
     return TaskErrorCode.VIDEO_RENDER_FAILED
+
+
+def _should_fallback_to_local(stderr: str | None) -> bool:
+    lowered = (stderr or "").lower()
+    return any(marker in lowered for marker in SANDBOX_INFRASTRUCTURE_ERROR_MARKERS)
+
+
+def _docker_env_args() -> list[str]:
+    env_args: list[str] = []
+    for env_var in SANDBOX_ENV_VARS:
+        env_args.extend(["--env", env_var])
+    return env_args
+
+
+def _detect_scene_class_name(script: str) -> str | None:
+    tree = ast.parse(script)
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for base in node.bases:
+            base_name = _read_base_name(base)
+            if base_name is not None and base_name.endswith("Scene"):
+                return node.name
+    return None
+
+
+def _read_base_name(node: ast.expr) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _build_manim_runner_script() -> str:
+    return """from __future__ import annotations
+
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+SCENE_PATH = Path("{workspace_mount}/{scene_script}")
+OUTPUT_DIR = Path("{workspace_mount}/{output_dir}")
+MEDIA_DIR = OUTPUT_DIR / "media"
+
+
+def main() -> int:
+    scene_class = sys.argv[1] if len(sys.argv) > 1 else "{default_scene_class}"
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+    command = [
+        "manim",
+        "-ql",
+        "--disable_caching",
+        "--media_dir",
+        str(MEDIA_DIR),
+        "-o",
+        "rendered",
+        str(SCENE_PATH),
+        scene_class,
+    ]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    sys.stdout.write(completed.stdout)
+    sys.stderr.write(completed.stderr)
+    if completed.returncode != 0:
+        return completed.returncode
+
+    candidates = sorted(
+        (path for path in MEDIA_DIR.rglob("*.mp4") if path.is_file()),
+        key=lambda path: path.stat().st_size,
+        reverse=True,
+    )
+    if not candidates:
+        sys.stderr.write("No mp4 artifact produced by manim\\n")
+        return 2
+
+    shutil.copyfile(candidates[0], OUTPUT_DIR / "{rendered_file}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+""".format(
+        default_scene_class=DEFAULT_MANIM_SCENE_CLASS,
+        output_dir=SANDBOX_OUTPUT_DIR,
+        rendered_file=SANDBOX_RENDERED_FILE,
+        scene_script=SANDBOX_SCENE_SCRIPT,
+        workspace_mount=SANDBOX_WORKSPACE_MOUNT,
+    )
