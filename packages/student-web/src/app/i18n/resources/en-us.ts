@@ -4,6 +4,7 @@
  */
 import { enUsEntryPageResources } from '@/app/i18n/resources/entry-page-content';
 import { enUsProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
+import { enUsVideoResources } from '@/app/i18n/resources/video-content';
 
 export const enUsResources = {
   auth: {
@@ -172,5 +173,6 @@ export const enUsResources = {
     sessionProbeErrorFallback: 'The protected access check failed. Please try again later.'
   },
   ...enUsProfileOnboardingResources,
-  ...enUsEntryPageResources
+  ...enUsEntryPageResources,
+  ...enUsVideoResources
 } as const;

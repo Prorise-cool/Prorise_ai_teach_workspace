@@ -78,16 +78,16 @@ development_status:
   3-6-视频输入页公开视频广场与复用入口: review
   epic-3-retrospective: optional
   epic-4: in-progress
-  4-1-视频流水线阶段进度区间与结果契约冻结: in-progress
+  4-1-视频流水线阶段进度区间与结果契约冻结: review
   4-2-题目理解与分镜生成服务: review
   4-3-manim-代码生成与自动修复链: review
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
-  4-7-视频等待页前端状态机恢复与降级: ready-for-dev
-  4-8-视频结果页播放器与结果操作: ready-for-dev
+  4-7-视频等待页前端状态机恢复与降级: review
+  4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
-  4-10-视频结果公开发布与输入页复用卡片: in-progress
+  4-10-视频结果公开发布与输入页复用卡片: review
   epic-4-retrospective: optional
   epic-5: in-progress
   5-1-课堂任务契约结果-schema-与-mock-session-基线: ready-for-dev

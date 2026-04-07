@@ -4,6 +4,7 @@
  */
 import { zhCnEntryPageResources } from '@/app/i18n/resources/entry-page-content';
 import { zhCnProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
+import { zhCnVideoResources } from '@/app/i18n/resources/video-content';
 
 export const zhCnResources = {
   auth: {
@@ -169,5 +170,6 @@ export const zhCnResources = {
     sessionProbeErrorFallback: '受保护访问校验失败，请稍后重试。'
   },
   ...zhCnProfileOnboardingResources,
-  ...zhCnEntryPageResources
+  ...zhCnEntryPageResources,
+  ...zhCnVideoResources
 } as const;

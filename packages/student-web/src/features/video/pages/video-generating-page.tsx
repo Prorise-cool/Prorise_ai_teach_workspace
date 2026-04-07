@@ -1,95 +1,120 @@
 /**
- * 文件说明：视频任务等待页（Story 3.5）。
- * 承接视频创建成功后的跳转，通过 SSE 消费任务进度事件并展示六阶段进度。
- * 支持页面刷新后通过 status API 恢复任务上下文。
+ * 文件说明：视频任务等待页（Story 4.7 重构）。
+ * 承接视频创建成功后的跳转，通过 SSE 消费 8 阶段进度事件。
+ * 支持 SSE 断线恢复、status 降级轮询、修复态展示、失败态展示。
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowLeft, Loader2, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
-import {
-  TaskGeneratingView,
-} from '@/components/generating/task-generating-view';
-import { VideoFailurePanel } from '../components/video-failure-panel';
-import { estimateEtaText, resolveVideoStage } from '../config/video-stages';
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { cn } from '@/lib/utils';
+import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import '@/components/generating/styles/task-generating-view.scss';
+
+import { FixAttemptIndicator } from '../components/fix-attempt-indicator';
+import { GeneratingFailureCard } from '../components/generating-failure-card';
+import { LogItemRow } from '../components/log-item-row';
+import { StageProgressBar } from '../components/stage-progress-bar';
+import { buildStageLog, estimateEtaText } from '../config/video-stages';
+import { useTipRotation } from '../hooks/use-tip-rotation';
+import { useVideoStatusPolling } from '../hooks/use-video-status-polling';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
+import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-/** 等待页底部轮播提示池。 */
-const TIPS = [
-  '小麦提示：生成完毕后，您还可以通过自然语言二次修改画面。',
-  '复杂的数学公式推导，小麦会自动为您添加高亮引导。',
-  '视频渲染过程需要在云端进行大量计算，感谢您的耐心等待。',
-  '您可以随时切换板书风格、讲师音色和教学节奏。',
-  '生成历史会自动保存在您的工作台，随时可以回来查看。',
-];
+import type { VideoPipelineStage } from '@/types/video';
 
 /** 完成后跳转结果页的延迟（毫秒）。 */
-const COMPLETED_REDIRECT_DELAY_MS = 1500;
+const COMPLETED_REDIRECT_DELAY_MS = 2000;
 
 /**
  * 渲染视频生成等待页。
- *
- * 页面生命周期：
- * 1. mount 时根据 URL `:id` 查询任务快照（status API），恢复当前进度。
- * 2. 若任务仍在执行，建立 SSE 连接持续消费进度事件。
- * 3. 若任务已完成，自动跳转到结果页。
- * 4. 若任务失败/取消，展示终态 UI 与重试入口。
- * 5. 若 taskId 无效（404），展示提示并引导返回输入页。
  *
  * @returns 视频等待页。
  */
 export function VideoGeneratingPage() {
   const { id: taskId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { themeMode, toggleThemeMode } = useThemeMode();
+  const { t } = useAppTranslation();
 
-  /* ── 1. 查询任务快照，恢复上下文 ── */
+  /* -- 1. zustand store 状态（shallow selector） -- */
+  const {
+    status, progress, currentStage, stageLabel, error,
+    degradedToPolling, fixAttempt, fixTotal, sseConnected,
+  } = useVideoGeneratingStore(useShallow((s) => ({
+    status: s.status,
+    progress: s.progress,
+    currentStage: s.currentStage,
+    stageLabel: s.stageLabel,
+    error: s.error,
+    degradedToPolling: s.degradedToPolling,
+    fixAttempt: s.fixAttempt,
+    fixTotal: s.fixTotal,
+    sseConnected: s.sseConnected,
+  })));
+
+  /* -- 2. 查询任务快照，恢复上下文 -- */
   const {
     snapshot,
     isLoading: isSnapshotLoading,
     isNotFound,
   } = useVideoTaskStatus(taskId);
 
-  /* ── 2. SSE 事件流驱动进度 ── */
-  // 仅在任务未处于终态时启用 SSE
+  /* -- 3. 从 snapshot 恢复 store 状态 -- */
+  useEffect(() => {
+    if (!snapshot || isSnapshotLoading || isNotFound) {
+      return;
+    }
+
+    const store = useVideoGeneratingStore.getState();
+
+    // 仅当 store 尚未收到 SSE 事件时才用 snapshot 恢复
+    if (store.progress === 0 && store.status === 'pending') {
+      const raw = snapshot as unknown as Record<string, unknown>;
+      const snapshotStage = (raw.currentStage as string) ?? null;
+      const snapshotStageLabel = (raw.stageLabel as string) ?? null;
+
+      if (snapshot.status === 'completed') {
+        store.setCompleted();
+      } else if (snapshot.status === 'failed') {
+        store.setFailed({
+          errorCode: snapshot.errorCode ?? null,
+          errorMessage: snapshot.message ?? null,
+          failedStage: (snapshotStage as VideoPipelineStage) ?? null,
+          retryable: false,
+        });
+      } else if (snapshotStage) {
+        store.updateStage({
+          currentStage: snapshotStage as VideoPipelineStage,
+          stageLabel: snapshotStageLabel ?? snapshotStage,
+          progress: snapshot.progress,
+        });
+      } else {
+        store.updateProgress({ progress: snapshot.progress });
+      }
+    }
+  }, [snapshot, isSnapshotLoading, isNotFound]);
+
+  /* -- 4. SSE 事件流 -- */
   const sseEnabled =
     !isSnapshotLoading &&
     !isNotFound &&
-    (snapshot === null ||
-      (snapshot.status !== 'completed' &&
-        snapshot.status !== 'failed' &&
-        snapshot.status !== 'cancelled'));
+    status !== 'completed' &&
+    status !== 'failed' &&
+    status !== 'cancelled';
 
-  const sseState = useVideoTaskSse(taskId, { enabled: sseEnabled });
+  useVideoTaskSse(taskId, { enabled: sseEnabled });
 
-  /* ── 3. 合并状态：SSE 有实际事件时优先，否则用 snapshot 兜底 ── */
-  const snapshotFallback = useMemo(() => {
-    if (!snapshot) return null;
-    const stage = resolveVideoStage(snapshot.progress);
-    return {
-      status: snapshot.status,
-      progress: snapshot.progress,
-      stageTitle: stage.label,
-      etaText: estimateEtaText(snapshot.progress),
-      errorCode: snapshot.errorCode ?? null,
-      errorMessage: snapshot.message ?? null,
-    };
-  }, [snapshot]);
+  /* -- 5. 降级轮询 -- */
+  useVideoStatusPolling(taskId);
 
-  // SSE 推送过实际进度事件时才采用 SSE 状态；仅 connected 不算（此时还没有进度数据，会覆盖 snapshot）
-  const hasSseData = sseState.progress > 0 || sseState.status === 'completed' || sseState.status === 'failed' || sseState.status === 'cancelled';
-  const effectiveStatus = hasSseData ? sseState.status : (snapshotFallback?.status ?? sseState.status);
-  const effectiveProgress = hasSseData ? sseState.progress : (snapshotFallback?.progress ?? sseState.progress);
-  const effectiveStageTitle = hasSseData ? sseState.stageTitle : (snapshotFallback?.stageTitle ?? sseState.stageTitle);
-  const effectiveEtaText = hasSseData ? sseState.etaText : (snapshotFallback?.etaText ?? sseState.etaText);
-  const effectiveLogs = sseState.logs;
-  const effectiveErrorCode = hasSseData ? sseState.errorCode : (snapshotFallback?.errorCode ?? sseState.errorCode);
-  const effectiveErrorMessage = hasSseData ? sseState.errorMessage : (snapshotFallback?.errorMessage ?? sseState.errorMessage);
-
-  /* ── 4. 终态处理 ── */
-
-  // 已完成 → 延迟跳转结果页（SSE 推送 completed 或 snapshot 恢复为 completed）
+  /* -- 6. 终态跳转 -- */
   useEffect(() => {
-    if (effectiveStatus !== 'completed' || !taskId) {
+    if (status !== 'completed' || !taskId) {
       return;
     }
 
@@ -98,81 +123,203 @@ export function VideoGeneratingPage() {
     }, COMPLETED_REDIRECT_DELAY_MS);
 
     return () => clearTimeout(timer);
-  }, [effectiveStatus, taskId, navigate]);
+  }, [status, taskId, navigate]);
 
-  /* ── 5. 操作回调 ── */
+  /* -- 7. Tips 轮播 -- */
+  const tips = t('video.generating.tips', { returnObjects: true }) as string[];
+  const currentTipIndex = useTipRotation(tips.length);
+
+  /* -- 8. 操作回调 -- */
   const handleRetry = useCallback(() => {
     void navigate('/video/input?retry=1', { replace: true });
   }, [navigate]);
-
-  const handleFeedback = useCallback(() => {
-    // TODO: 对接反馈弹窗或反馈页面
-  }, []);
 
   const handleReturn = useCallback(() => {
     void navigate('/video/input');
   }, [navigate]);
 
-  /* ── 6. 渲染 ── */
+  /* -- 9. 派生状态 -- */
+  const isFixing = currentStage === 'manim_fix' && fixAttempt > 0;
+  const etaText = t(estimateEtaText(progress));
+  const logs = buildStageLog(currentStage, progress, (label, completed) =>
+    completed
+      ? t('video.log.stageCompleted', { stage: t(label) })
+      : t('video.log.stageInProgress', { stage: t(label) }),
+  );
+
+  /* -- 10. 渲染 -- */
 
   // 加载中
   if (isSnapshotLoading) {
     return (
-      <TaskGeneratingView
-        title="加载任务状态..."
-        etaText="正在查询任务进度"
-        progress={0}
-        logs={[]}
-        tips={TIPS}
-        onReturn={handleReturn}
-      />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t('video.generating.loadingSubtitle')}
+        </p>
+      </div>
     );
   }
 
   // 无效 taskId（404）
   if (isNotFound) {
     return (
-      <TaskGeneratingView
-        title="任务不存在"
-        etaText="未找到该视频任务"
-        progress={0}
-        logs={[
-          {
-            id: 'not-found',
-            status: 'error',
-            text: `任务 ${taskId ?? ''} 不存在或已过期，请返回重新创建`,
-          },
-        ]}
-        tips={[]}
-        returnLabel="返回输入页"
-        onReturn={handleReturn}
-      />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 gap-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {t('video.generating.notFoundTitle')}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}
+        </p>
+        <button
+          onClick={handleReturn}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          {t('video.common.returnToInput')}
+        </button>
+      </div>
     );
   }
 
-  // 失败/取消态 → 展示错误面板与操作入口
-  if (effectiveStatus === 'failed' || effectiveStatus === 'cancelled') {
+  // 失败态
+  if (status === 'failed' || status === 'cancelled') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
-        <VideoFailurePanel
-          errorCode={effectiveErrorCode}
-          errorMessage={effectiveErrorMessage}
+        <GeneratingFailureCard
+          errorCode={error?.errorCode ?? null}
+          errorMessage={error?.errorMessage ?? null}
+          failedStage={error?.failedStage ?? null}
+          retryable={error?.retryable ?? false}
           onRetry={handleRetry}
-          onFeedback={handleFeedback}
+          onReturn={handleReturn}
         />
       </div>
     );
   }
 
-  // 正常进度状态（pending / processing / completed 过渡）
+  // 正常进度态（pending / processing / completed 过渡）
   return (
-    <TaskGeneratingView
-      title={effectiveStageTitle}
-      etaText={effectiveEtaText}
-      progress={effectiveProgress}
-      logs={effectiveLogs}
-      tips={TIPS}
-      onReturn={handleReturn}
-    />
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-background">
+      {/* 环境层 */}
+      <div className="xm-generating-ambient-glow" />
+      <div className="fixed inset-0 xm-generating-bg-grid pointer-events-none z-0" />
+
+      {/* 顶部导航 */}
+      <header className="w-full px-6 py-6 flex items-center justify-between relative z-20">
+        <button
+          onClick={handleReturn}
+          className="group flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center group-hover:bg-border/50 transition-colors backdrop-blur-md">
+            <ArrowLeft className="h-4 w-4" />
+          </div>
+          {t('video.common.returnToWorkbench')}
+        </button>
+
+        <div className="flex items-center gap-6">
+          {/* 连接状态指示器 */}
+          <div className="flex items-center gap-2">
+            {degradedToPolling ? (
+              <>
+                <WifiOff className="h-3.5 w-3.5 text-warning" />
+                <span className="text-xs font-semibold text-warning tracking-widest uppercase opacity-80">
+                  {t('video.generating.connectionPolling')}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase opacity-80">
+                  {t('video.generating.connectionActive')}
+                </span>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={toggleThemeMode}
+            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-border/50 transition-colors backdrop-blur-md"
+            aria-label={t('video.generating.toggleTheme')}
+          >
+            {themeMode === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+        </div>
+      </header>
+
+      {/* 主体 */}
+      <main className="flex-1 flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-6 relative z-10 -mt-8">
+        {/* GENERATING 文字动画 */}
+        <div className="mb-14 md:scale-105">
+          <div className="xm-generating-loader-wrapper" aria-label="Generating">
+            {'GENERATING'.split('').map((char, index) => (
+              <span key={index} className="xm-generating-loader-letter">
+                {char}
+              </span>
+            ))}
+            <div className="xm-generating-loader" />
+          </div>
+        </div>
+
+        {/* 阶段进度条 */}
+        <StageProgressBar
+          stageLabel={t(stageLabel)}
+          progress={progress}
+          etaText={etaText}
+          isWarning={isFixing}
+          isError={false}
+        />
+
+        {/* 修复指示器 */}
+        {isFixing && (
+          <div className="w-full max-w-2xl mb-4">
+            <FixAttemptIndicator attempt={fixAttempt} total={fixTotal} />
+          </div>
+        )}
+
+        {/* 降级轮询提示 */}
+        {degradedToPolling && (
+          <div className="w-full max-w-2xl mb-4 flex items-center gap-2 text-xs text-muted-foreground/60">
+            <WifiOff className="w-3 h-3" />
+            <span>{t('video.generating.degradedPollingHint')}</span>
+          </div>
+        )}
+
+        {/* 玻璃态日志面板 */}
+        <div className="w-full max-w-2xl h-36 xm-generating-glass-panel rounded-[1rem] relative font-mono text-[13px] shadow-sm">
+          <div className="xm-generating-log-container h-full w-full">
+            <div className="xm-generating-log-scroll h-full overflow-y-auto px-6 pb-6 pt-8 space-y-4 relative flex flex-col justify-end">
+              <div className="space-y-4 w-full">
+                <AnimatePresence initial={false}>
+                  {logs.map((log) => (
+                    <LogItemRow key={log.id} item={log} />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tips */}
+        <div className="mt-10 flex items-center justify-center gap-2.5 text-sm text-muted-foreground/80 font-medium h-6">
+          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+          <AnimatePresence mode="wait">
+            {tips.length > 0 && (
+              <motion.div
+                key={currentTipIndex}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.5 }}
+              >
+                {tips[currentTipIndex]}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+    </div>
   );
 }
