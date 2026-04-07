@@ -4,7 +4,7 @@
  */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Sparkles } from 'lucide-react';
-import { useCallback, type FormEvent } from 'react';
+import { useCallback, useRef, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -16,13 +16,15 @@ import {
   type GuideCardItem,
   WorkspaceInputShell,
 } from '@/components/input-page';
-import { VIDEO_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
+import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
 import {
   type VideoInputFormValues,
   videoInputFormSchema,
 } from '@/features/video/schemas/video-input-schema';
+import { useFeedback } from '@/shared/feedback';
+import type { VideoPublicCard } from '@/types/video';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/video/styles/video-input-page.scss';
@@ -34,6 +36,8 @@ import '@/features/video/styles/video-input-page.scss';
  */
 export function VideoInputPage() {
   const { t } = useAppTranslation();
+  const { notify } = useFeedback();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const form = useForm<VideoInputFormValues>({
     resolver: zodResolver(videoInputFormSchema),
     defaultValues: {
@@ -44,7 +48,7 @@ export function VideoInputPage() {
     mode: 'onSubmit',
   });
   const createMutation = useVideoCreate();
-  const { control, handleSubmit, formState, setValue } = form;
+  const { clearErrors, control, handleSubmit, formState, setValue } = form;
 
   const { isRecording, toggleRecording } = useBrowserAsr((transcript) => {
     if (transcript) {
@@ -84,6 +88,14 @@ export function VideoInputPage() {
   }) as string[];
   const feedLoadMore = t('videoInput.feedLoadMore');
   const feedLoading = t('videoInput.feedLoading');
+  const feedEmptyTitle = t('videoInput.feedEmptyTitle');
+  const feedEmptyDesc = t('videoInput.feedEmptyDesc');
+  const feedErrorTitle = t('videoInput.feedErrorTitle');
+  const feedErrorDesc = t('videoInput.feedErrorDesc');
+  const feedViewAction = t('videoInput.feedViewAction');
+  const feedReuseAction = t('videoInput.feedReuseAction');
+  const feedReuseToastTitle = t('videoInput.feedReuseToastTitle');
+  const feedReuseToastDesc = t('videoInput.feedReuseToastDesc');
 
   const guideCardsData = t('videoInput.guideCards', {
     returnObjects: true
@@ -106,6 +118,39 @@ export function VideoInputPage() {
       void handleSubmit(onFormSubmit)(event);
     },
     [handleSubmit, onFormSubmit],
+  );
+  const handleReusePublicVideo = useCallback(
+    (card: VideoPublicCard) => {
+      setValue('text', card.sourceText, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+      setValue('imageFiles', [], {
+        shouldDirty: true,
+      });
+      setValue('inputType', 'text');
+      clearErrors(['text', 'imageFiles']);
+      notify({
+        title: feedReuseToastTitle,
+        description: feedReuseToastDesc,
+        tone: 'success',
+      });
+      if (typeof textareaRef.current?.scrollIntoView === 'function') {
+        textareaRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }
+      textareaRef.current?.focus();
+    },
+    [
+      clearErrors,
+      feedReuseToastDesc,
+      feedReuseToastTitle,
+      notify,
+      setValue,
+    ],
   );
 
   return (
@@ -140,6 +185,7 @@ export function VideoInputPage() {
             toolUploadImage,
             toolVoiceInput,
           }}
+          textAreaRef={textareaRef}
         />
       }
       suggestionsLabel={suggestionsLabel}
@@ -155,9 +201,23 @@ export function VideoInputPage() {
       feedTitle={feedTitle}
       feedDescription={feedDesc}
       feedCategories={feedCategories}
-      feedCards={VIDEO_FEED_MOCK_CARDS}
+      feedCards={[]}
       feedLoadMoreLabel={feedLoadMore}
       feedLoadingLabel={feedLoading}
+      feedSlot={
+        <VideoPublicFeed
+          title={feedTitle}
+          description={feedDesc}
+          categories={feedCategories}
+          emptyTitle={feedEmptyTitle}
+          emptyDescription={feedEmptyDesc}
+          errorTitle={feedErrorTitle}
+          errorDescription={feedErrorDesc}
+          viewActionLabel={feedViewAction}
+          reuseActionLabel={feedReuseAction}
+          onReuseSourceText={handleReusePublicVideo}
+        />
+      }
     />
   );
 }

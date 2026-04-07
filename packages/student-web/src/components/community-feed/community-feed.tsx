@@ -4,10 +4,10 @@
  * 在视频输入页与课堂输入页底部展示社区公开作品卡片。
  * 分类使用下划线文本 Tab 切换，底部提供"加载更多"按钮。
  */
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { ChevronDown, Eye, Loader2, Play } from 'lucide-react';
+import { ChevronDown, Clock3, Eye, Loader2, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -28,7 +28,13 @@ export function CommunityFeed({
   cards,
   loadMoreLabel,
   loadingLabel,
-  className
+  className,
+  isLoading = false,
+  skeletonCount = 6,
+  errorState,
+  emptyState,
+  renderCardActions,
+  onCardPlay,
 }: CommunityFeedProps) {
   const [activeCategory, setActiveCategory] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -37,6 +43,12 @@ export function CommunityFeed({
   useEffect(() => {
     setDisplayedCards(cards);
   }, [cards]);
+
+  const hasCards = displayedCards.length > 0;
+  const showLoadingState = isLoading && !hasCards;
+  const showErrorState = !showLoadingState && Boolean(errorState) && !hasCards;
+  const showEmptyState =
+    !showLoadingState && !showErrorState && !hasCards && Boolean(emptyState);
 
   const handleLoadMore = useCallback(() => {
     setIsLoadingMore(true);
@@ -83,6 +95,94 @@ export function CommunityFeed({
       {/* 瀑布流 */}
       <div className="xm-community-feed__grid">
         <AnimatePresence mode="popLayout">
+          {showLoadingState
+            ? Array.from({ length: skeletonCount }).map((_, i) => (
+              <motion.article
+                key={`skeleton-initial-${i}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="xm-community-feed__card xm-community-feed__card--skeleton"
+              >
+                <div
+                  className="xm-community-feed__card-cover"
+                  style={{ background: 'var(--xm-color-secondary)' }}
+                ></div>
+                <div className="xm-community-feed__card-body pb-6">
+                  <div
+                    className="animate-pulse"
+                    style={{
+                      width: '80%',
+                      height: '1.2rem',
+                      background: 'var(--xm-color-secondary)',
+                      marginBottom: '0.75rem',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  <div
+                    className="animate-pulse"
+                    style={{
+                      width: '65%',
+                      height: '0.875rem',
+                      background: 'var(--xm-color-secondary)',
+                      marginBottom: '0.75rem',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  <div
+                    className="animate-pulse"
+                    style={{
+                      width: '45%',
+                      height: '0.875rem',
+                      background: 'var(--xm-color-secondary)',
+                      marginBottom: '1rem',
+                      borderRadius: '4px',
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <div
+                      className="animate-pulse"
+                      style={{
+                        width: '1.5rem',
+                        height: '1.5rem',
+                        borderRadius: '50%',
+                        background: 'var(--xm-color-secondary)',
+                      }}
+                    />
+                    <div
+                      className="animate-pulse"
+                      style={{
+                        width: '40%',
+                        height: '0.875rem',
+                        background: 'var(--xm-color-secondary)',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </div>
+                </div>
+              </motion.article>
+            ))
+            : null}
+          {showErrorState ? (
+            <motion.div
+              key="community-feed-error"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="col-span-full"
+            >
+              {errorState}
+            </motion.div>
+          ) : null}
+          {showEmptyState ? (
+            <motion.div
+              key="community-feed-empty"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="col-span-full"
+            >
+              {emptyState}
+            </motion.div>
+          ) : null}
           {displayedCards.map((card, i) => (
             <motion.article 
               key={card.id} 
@@ -100,6 +200,7 @@ export function CommunityFeed({
                     type="button"
                     className="xm-community-feed__card-play"
                     aria-label="播放"
+                    onClick={() => onCardPlay?.(card)}
                   >
                     <Play className="h-5 w-5" />
                   </button>
@@ -113,12 +214,23 @@ export function CommunityFeed({
               {/* 信息区 */}
               <div className="xm-community-feed__card-body">
                 <h3 className="xm-community-feed__card-title">{card.title}</h3>
+                {card.description ? (
+                  <p className="mb-3 text-xs leading-5 text-[color:var(--xm-color-text-secondary)]">
+                    {card.description}
+                  </p>
+                ) : null}
                 <div className="xm-community-feed__card-meta">
                   <span className="xm-community-feed__card-tag">{card.tag}</span>
                   <span className="xm-community-feed__card-views">
                     <Eye className="h-3 w-3" />
                     {card.viewCount}
                   </span>
+                  {card.durationLabel ? (
+                    <span className="xm-community-feed__card-views">
+                      <Clock3 className="h-3 w-3" />
+                      {card.durationLabel}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="xm-community-feed__card-author">
                   {card.authorAvatar ? (
@@ -136,6 +248,11 @@ export function CommunityFeed({
                     {card.authorName}
                   </span>
                 </div>
+                {renderCardActions ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {renderCardActions(card)}
+                  </div>
+                ) : null}
               </div>
             </motion.article>
           ))}
@@ -164,7 +281,7 @@ export function CommunityFeed({
       </div>
 
       {/* 加载更多 */}
-      {loadMoreLabel ? (
+      {loadMoreLabel && hasCards && !showErrorState && !showEmptyState ? (
         <div className="xm-community-feed__load-more">
           <button
             type="button"

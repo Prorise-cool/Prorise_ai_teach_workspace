@@ -38,6 +38,16 @@ export {
   createVideoTaskAdapterError,
 } from './video-task-error';
 export type {
+  VideoPublicAdapter
+} from './video-public-adapter';
+export {
+  VideoPublicAdapterError,
+  createMockVideoPublicAdapter,
+  createRealVideoPublicAdapter,
+  isVideoPublicAdapterError,
+  resolveVideoPublicAdapter,
+} from './video-public-adapter';
+export type {
   VideoPreprocessAdapter
 } from './video-preprocess-adapter';
 export {

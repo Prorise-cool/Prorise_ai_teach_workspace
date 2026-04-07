@@ -1,0 +1,10 @@
+{
+  "code": 200,
+  "msg": "获取公开视频列表成功",
+  "data": {
+    "items": [],
+    "total": 0,
+    "page": 1,
+    "pageSize": 12
+  }
+}

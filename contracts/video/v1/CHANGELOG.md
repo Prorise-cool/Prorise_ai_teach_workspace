@@ -8,3 +8,4 @@
 - 补充 preprocess 的稳定机读错误语义与 mock 样例说明。
 - 新增 `pipeline-stages.md`、`video-result.schema.json`、`video-failure.schema.json`、`video-artifact-graph.md`、`publish-api.md`。
 - 对齐 Epic 4 后端实现的 stage/status/result/publish 契约。
+- 新增 `public-videos.schema.json`，冻结 Story `3.6` 公开视频发现区的查询参数与响应结构。
