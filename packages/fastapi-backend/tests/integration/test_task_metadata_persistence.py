@@ -10,26 +10,16 @@ from app.features.classroom.service import ClassroomService
 from app.features.video.routes import get_video_service
 from app.features.video.service import VideoService
 from app.main import create_app
-from app.shared.ruoyi_client import RuoYiClient
 
-
-def _build_client_factory(handler):
-    def factory() -> RuoYiClient:
-        return RuoYiClient(
-            base_url="http://ruoyi.local",
-            transport=httpx.MockTransport(handler),
-            timeout_seconds=0.01,
-            retry_attempts=0,
-            retry_delay_seconds=0.0
-        )
-
-    return factory
+from tests.conftest import build_mock_client_factory, override_auth
 
 
 def _create_client(handler) -> TestClient:
     app = create_app()
-    app.dependency_overrides[get_video_service] = lambda: VideoService(client_factory=_build_client_factory(handler))
-    app.dependency_overrides[get_classroom_service] = lambda: ClassroomService(client_factory=_build_client_factory(handler))
+    override_auth(app)
+    factory = build_mock_client_factory(handler)
+    app.dependency_overrides[get_video_service] = lambda: VideoService(client_factory=factory)
+    app.dependency_overrides[get_classroom_service] = lambda: ClassroomService(client_factory=factory)
     return TestClient(app)
 
 

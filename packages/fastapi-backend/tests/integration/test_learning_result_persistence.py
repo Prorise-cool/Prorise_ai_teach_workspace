@@ -9,6 +9,7 @@ from app.features.learning.routes import get_learning_service
 from app.features.learning.service import LearningService
 from app.main import create_app
 from app.shared.ruoyi_client import RuoYiClient
+from tests.conftest import override_auth
 
 
 def _build_client_factory(handler):
@@ -60,12 +61,15 @@ def client() -> tuple[TestClient, list[dict[str, object]], list[str]]:
         )
 
     app = create_app()
+    override_auth(app)
     app.dependency_overrides[get_learning_service] = lambda: LearningService(client_factory=_build_client_factory(handler))
     return TestClient(app), captured_payloads, captured_paths
 
 
 def test_learning_persistence_preview_covers_all_result_types() -> None:
-    client = TestClient(create_app())
+    app = create_app()
+    override_auth(app)
+    client = TestClient(app)
     occurred_at = datetime(2026, 3, 28, 10, 20, tzinfo=timezone.utc)
     updated_at = datetime(2026, 3, 28, 10, 25, tzinfo=timezone.utc)
 

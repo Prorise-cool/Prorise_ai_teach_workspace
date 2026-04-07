@@ -1,7 +1,9 @@
 """学习结果持久化业务服务。"""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 
 from app.core.errors import IntegrationError
 from app.features.learning.schemas import (
@@ -15,6 +17,9 @@ from app.features.learning.schemas import (
 )
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
 
 
 class LearningService(RuoYiServiceMixin):
@@ -56,11 +61,18 @@ class LearningService(RuoYiServiceMixin):
 
     async def persist_results(
         self,
-        request: LearningPersistenceRequest
+        request: LearningPersistenceRequest,
+        *,
+        access_context: "AccessContext | None" = None,
     ) -> LearningPersistenceResponse:
-        """将学习结果批量写入远端并返回响应。"""
+        """将学习结果批量写入远端并返回响应。
+
+        Args:
+            request: 学习结果持久化请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         preview = await self.prepare_persistence_preview(request)
-        async with self._client_factory() as client:
+        async with self._resolve_factory(access_context)() as client:
             result = await client.post_single(
                 self._ENDPOINT,
                 resource=self._RESOURCE,

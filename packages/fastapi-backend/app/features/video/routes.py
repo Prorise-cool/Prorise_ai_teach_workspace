@@ -95,6 +95,7 @@ async def video_bootstrap(
 )
 async def preprocess_image(
     file: UploadFile = File(..., description="图片文件（JPEG/PNG/WebP，最大 10MB）"),
+    access_context: AccessContext = Depends(get_access_context),
     preprocess_service: PreprocessService = Depends(get_video_preprocess_service),
 ) -> dict[str, object]:
     """上传并预处理图片，执行校验、存储与 OCR 识别。"""
@@ -156,10 +157,11 @@ async def create_video_task_endpoint(
 @router.post("/tasks/metadata", response_model=VideoTaskMetadataPreviewResponse)
 async def create_video_task_metadata(
     payload: VideoTaskMetadataCreateRequest,
+    access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> VideoTaskMetadataPreviewResponse:
     """创建或更新视频任务元数据记录。"""
-    return await service.persist_task(payload)
+    return await service.persist_task(payload, access_context=access_context)
 
 
 @router.get("/tasks", response_model=VideoTaskMetadataPageResponse)
@@ -171,6 +173,7 @@ async def list_video_tasks(
     updated_to: datetime | None = Query(default=None, alias="updatedTo"),
     page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=10, alias="pageSize", ge=1, le=100),
+    access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> VideoTaskMetadataPageResponse:
     """分页查询视频任务元数据列表。"""
@@ -182,16 +185,18 @@ async def list_video_tasks(
         updated_to=updated_to,
         page_num=page_num,
         page_size=page_size,
+        access_context=access_context,
 )
 
 
 @router.get("/tasks/{task_id}", response_model=VideoTaskMetadataSnapshot)
 async def get_video_task(
     task_id: str,
+    access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> VideoTaskMetadataSnapshot:
     """按任务 ID 查询单条视频任务元数据。"""
-    snapshot = await service.get_task(task_id)
+    snapshot = await service.get_task(task_id, access_context=access_context)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Video task not found")
     return snapshot
@@ -201,10 +206,11 @@ async def get_video_task(
 async def get_video_task_result(
     task_id: str,
     request: Request,
+    access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> dict[str, object]:
     """获取视频任务的完整结果详情。"""
-    payload = await service.get_result_detail(task_id, runtime_store=request.app.state.runtime_store)
+    payload = await service.get_result_detail(task_id, runtime_store=request.app.state.runtime_store, access_context=access_context)
     return build_success_envelope(payload)
 
 
@@ -218,9 +224,13 @@ async def get_video_task_result(
         }
     },
 )
-async def get_video_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+async def get_video_task_status(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+) -> dict[str, object] | JSONResponse:
     """查询视频任务运行态快照。"""
-    return await get_shared_task_status(task_id, request)
+    return await get_shared_task_status(task_id, request, access_context)
 
 
 @router.get(
@@ -249,9 +259,10 @@ async def get_video_task_events(
     task_id: str,
     request: Request,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    access_context: AccessContext = Depends(get_access_context),
 ) -> Response:
     """以 SSE 补发 Last-Event-ID 之后缺失的视频任务事件。"""
-    return await get_shared_task_events(task_id, request, last_event_id)
+    return await get_shared_task_events(task_id, request, last_event_id, access_context)
 
 
 @router.post("/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope)
@@ -305,7 +316,8 @@ async def list_published_video_tasks(
 @router.get("/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse)
 async def replay_video_session(
     session_id: str,
+    access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> VideoTaskMetadataPageResponse:
     """回放指定会话下的视频任务元数据。"""
-    return await service.replay_session(session_id)
+    return await service.replay_session(session_id, access_context=access_context)

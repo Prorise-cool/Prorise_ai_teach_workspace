@@ -1,9 +1,13 @@
 """知识检索业务服务。"""
 
-from app.core.errors import IntegrationError
-from app.features.knowledge.schemas import KnowledgeBootstrapResponse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pydantic import ValidationError
 
+from app.core.errors import IntegrationError
+from app.features.knowledge.schemas import KnowledgeBootstrapResponse
 from app.shared.long_term_records import (
     KnowledgeChatCreateRequest,
     KnowledgeChatSnapshot,
@@ -12,6 +16,9 @@ from app.shared.long_term_records import (
 )
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
 
 
 class KnowledgeService(RuoYiServiceMixin):
@@ -26,9 +33,19 @@ class KnowledgeService(RuoYiServiceMixin):
         """返回知识检索功能域 bootstrap 状态。"""
         return KnowledgeBootstrapResponse()
 
-    async def persist_chat_log(self, request: KnowledgeChatCreateRequest) -> KnowledgeChatSnapshot:
-        """持久化对话记录到 RuoYi。"""
-        async with self._client_factory() as client:
+    async def persist_chat_log(
+        self,
+        request: KnowledgeChatCreateRequest,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> KnowledgeChatSnapshot:
+        """持久化对话记录到 RuoYi。
+
+        Args:
+            request: 对话记录创建请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.post_single(
                 "/internal/xiaomai/knowledge/chat-logs",
                 resource=self._RESOURCE,
@@ -37,10 +54,20 @@ class KnowledgeService(RuoYiServiceMixin):
             )
         return self._parse_chat_log(result.data, operation="persist", endpoint="/internal/xiaomai/knowledge/chat-logs")
 
-    async def get_chat_log(self, chat_log_id: str) -> KnowledgeChatSnapshot | None:
-        """按 ID 查询对话记录。"""
+    async def get_chat_log(
+        self,
+        chat_log_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> KnowledgeChatSnapshot | None:
+        """按 ID 查询对话记录。
+
+        Args:
+            chat_log_id: 对话记录唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         try:
-            async with self._client_factory() as client:
+            async with self._resolve_factory(access_context)() as client:
                 result = await client.get_single(
                     f"/internal/xiaomai/knowledge/chat-logs/{chat_log_id}",
                     resource=self._RESOURCE,

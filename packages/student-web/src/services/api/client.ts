@@ -65,6 +65,8 @@ type CreateApiClientOptions = {
   baseURL?: string;
   credentials?: RequestCredentials;
   timeout?: number;
+  /** 可选的访问令牌获取回调，存在时自动注入 Authorization header。 */
+  getAccessToken?: () => string | null;
 };
 
 const DEFAULT_TIMEOUT = 15000;
@@ -101,6 +103,27 @@ function resolveRequestLocale() {
   }
 
   return import.meta.env.VITE_APP_DEFAULT_LOCALE;
+}
+
+/**
+ * 将 Authorization header 合并到请求头中。
+ * 如果 accessToken 为空则不注入。
+ *
+ * @param headers - 原始请求头。
+ * @param accessToken - 可选访问令牌。
+ * @returns 合并后的请求头对象。
+ */
+export function withAuthHeader(
+  headers?: HeadersInit,
+  accessToken?: string | null,
+): Headers {
+  const merged = new Headers(headers);
+
+  if (accessToken) {
+    merged.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  return merged;
 }
 
 function appendDefaultHeaders(headers: Headers) {
@@ -329,6 +352,7 @@ export function createApiClient({
   baseURL = resolveRuoyiBaseUrl(),
   credentials = "include",
   timeout = DEFAULT_TIMEOUT,
+  getAccessToken,
 }: CreateApiClientOptions = {}): ApiClient {
   return {
     async request<T>({
@@ -343,6 +367,15 @@ export function createApiClient({
     }: ApiRequestConfig) {
       const requestHeaders = new Headers(headers);
       const requestUrl = resolveRequestUrl(baseURL, url);
+
+      /* 自动注入 Bearer token（仅在 header 尚未显式设置时）。 */
+      if (getAccessToken && !requestHeaders.has("Authorization")) {
+        const token = getAccessToken();
+
+        if (token) {
+          requestHeaders.set("Authorization", `Bearer ${token}`);
+        }
+      }
       const { signal: requestSignal, cleanup } = createRequestSignal(
         timeout,
         signal,

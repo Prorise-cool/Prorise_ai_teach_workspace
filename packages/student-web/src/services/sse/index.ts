@@ -9,11 +9,13 @@ import {
 } from "eventsource-parser";
 
 import { parseJsonText, readJsonBody } from "@/lib/type-guards";
+import { resolveFastapiBaseUrl } from "@/services/api/fastapi-base-url";
 import { resolveRuntimeMode } from "@/services/api/adapters/base-adapter";
 import {
   resolveTaskAdapter,
   type TaskAdapter,
 } from "@/services/api/adapters/task-adapter";
+import { useAuthSessionStore } from "@/stores/auth-session-store";
 import type {
   TaskErrorCode,
   TaskEventName,
@@ -545,7 +547,7 @@ async function streamSseAttempt(
   options: Pick<TaskEventStreamOptions, "signal" | "lastEventId">,
   logger: TaskEventParserLogger,
 ): Promise<TaskSseAttemptResult> {
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     Accept: "text/event-stream, application/json",
   };
 
@@ -553,8 +555,16 @@ async function streamSseAttempt(
     headers["Last-Event-ID"] = options.lastEventId;
   }
 
+  /* 自动注入 Bearer token，与 fastapiClient 保持一致。 */
+  const accessToken =
+    useAuthSessionStore.getState().session?.accessToken ?? null;
+
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(
-    `${import.meta.env.VITE_FASTAPI_BASE_URL}/api/v1/tasks/${taskId}/events`,
+    `${resolveFastapiBaseUrl()}/api/v1/tasks/${taskId}/events`,
     {
       headers,
       signal: options.signal,

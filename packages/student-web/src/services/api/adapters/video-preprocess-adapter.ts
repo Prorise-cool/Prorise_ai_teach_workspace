@@ -2,11 +2,10 @@
  * 文件说明：提供视频图片预处理的 mock / real adapter 抽象。
  */
 import {
-  createApiClient,
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getVideoPreprocessFixtureError,
   getMockVideoPreprocessSuccess,
@@ -19,10 +18,6 @@ import type {
 import { readRecord, readString } from '@/lib/type-guards';
 
 import { pickAdapterImplementation } from './base-adapter';
-
-const fastapiClient = createApiClient({
-  baseURL: resolveFastapiBaseUrl(),
-});
 
 export class VideoPreprocessAdapterError extends Error {
   name = 'VideoPreprocessAdapterError' as const;

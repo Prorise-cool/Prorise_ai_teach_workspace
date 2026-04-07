@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.providers.factory import ProviderFactory
+from tests.conftest import override_auth
 from app.providers.protocols import ProviderCapability, ProviderResult, ProviderRuntimeConfig
 from app.providers.registry import ProviderRegistry
 from app.shared.task_framework.base import BaseTask, TaskResult
@@ -202,6 +203,7 @@ def test_provider_switch_events_are_published_into_runtime_stream(monkeypatch) -
 
     try:
         with TestClient(main_module.create_app()) as client:
+            override_auth(client.app)
             scheduler = client.app.state.task_scheduler
             context = create_task_context(
                 prefix="video",

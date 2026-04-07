@@ -6,6 +6,7 @@ import { pickAdapterImplementation } from '@/services/api/adapters/base-adapter'
 import {
   apiClient,
   ApiClientError,
+  withAuthHeader,
   type ApiClient,
   type ApiRequestConfig
 } from '@/services/api/client';
@@ -72,16 +73,6 @@ type AvatarUploadPayload = {
 };
 
 const PROFILE_AVATAR_UPLOAD_PATH = '/system/user/profile/avatar';
-
-function mergeRequestHeaders(headers?: HeadersInit, accessToken?: string) {
-  const mergedHeaders = new Headers(headers);
-
-  if (accessToken) {
-    mergedHeaders.set('Authorization', `Bearer ${accessToken}`);
-  }
-
-  return mergedHeaders;
-}
 
 function unwrapRuoyiEnvelope<T>(payload: unknown, status: number) {
   const envelope = readRecord(payload);
@@ -203,7 +194,7 @@ async function requestProfileEnvelope<T>(
   const response = await client.request<RuoyiEnvelope<T>>({
     ...config,
     authFailureMode: 'manual',
-    headers: mergeRequestHeaders(config.headers, accessToken)
+    headers: withAuthHeader(config.headers, accessToken)
   });
 
   return unwrapRuoyiEnvelope<T>(response.data, response.status);

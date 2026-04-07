@@ -4,6 +4,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends
 
+from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.learning.schemas import (
     LearningPersistenceRequest,
@@ -43,6 +44,7 @@ async def learning_bootstrap(
 @router.post("/persistence-preview", response_model=LearningPersistenceResponse)
 async def learning_persistence_preview(
     request: LearningPersistenceRequest,
+    access_context: AccessContext = Depends(get_access_context),
     service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
     """预览学习结果的持久化映射。"""
@@ -52,7 +54,8 @@ async def learning_persistence_preview(
 @router.post("/persistence", response_model=LearningPersistenceResponse)
 async def learning_persistence(
     request: LearningPersistenceRequest,
+    access_context: AccessContext = Depends(get_access_context),
     service: LearningService = Depends(get_learning_service),
 ) -> LearningPersistenceResponse:
     """提交学习结果并持久化到 RuoYi。"""
-    return await service.persist_results(request)
+    return await service.persist_results(request, access_context=access_context)

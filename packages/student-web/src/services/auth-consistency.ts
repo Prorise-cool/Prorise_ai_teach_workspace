@@ -3,38 +3,15 @@
  * 负责向 FastAPI 发送受保护访问验证与权限不足验证请求。
  */
 import {
-  createApiClient,
   isApiClientError,
+  withAuthHeader,
   type ApiClient,
-  type ApiRequestConfig
+  type ApiRequestConfig,
 } from '@/services/api/client';
+import { fastapiClient } from '@/services/api/fastapi-client';
 
-const DEFAULT_FASTAPI_BASE_URL = 'http://127.0.0.1:8090';
-
-/**
- * 解析 FastAPI 服务基准地址。
- * 开发环境优先走同源代理，避免浏览器验证 Story 1.3 时被跨域策略拦截。
- *
- * @param configuredBaseUrl - 显式传入的后端基准地址。
- * @param isDev - 当前是否为开发环境。
- * @returns 可用的 FastAPI 基准地址。
- */
-export function resolveFastapiBaseUrl(
-  configuredBaseUrl = import.meta.env.VITE_FASTAPI_BASE_URL,
-  isDev = import.meta.env.DEV
-) {
-  const normalizedBaseUrl = configuredBaseUrl?.trim();
-
-  if (normalizedBaseUrl) {
-    return normalizedBaseUrl;
-  }
-
-  return isDev ? '' : DEFAULT_FASTAPI_BASE_URL;
-}
-
-const fastapiClient = createApiClient({
-  baseURL: resolveFastapiBaseUrl()
-});
+/* 保持向后兼容：外部模块仍可从此处导入 resolveFastapiBaseUrl。 */
+export { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
 
 type DataEnvelope<T> = {
   code: number;
@@ -77,21 +54,7 @@ export interface AuthConsistencyService {
   ): Promise<AuthPermissionProbe>;
 }
 
-/**
- * 生成认证请求头。
- *
- * @param accessToken - 可选访问令牌。
- * @returns 认证请求头。
- */
-function createAuthHeaders(accessToken?: string) {
-  const headers = new Headers();
-
-  if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`);
-  }
-
-  return headers;
-}
+/* createAuthHeaders 已被 withAuthHeader 替代，不再在此重复定义。 */
 
 /**
  * 把底层 API Client 异常映射为认证一致性服务错误。
@@ -160,14 +123,14 @@ export function createAuthConsistencyService(
       return requestProbeData<AuthSessionProbe>(client, {
         url: '/api/v1/contracts/session-probe',
         method: 'get',
-        headers: createAuthHeaders(accessToken)
+        headers: withAuthHeader(undefined, accessToken),
       });
     },
     getPermissionProbe(requiredPermission, accessToken) {
       return requestProbeData<AuthPermissionProbe>(client, {
         url: `/api/v1/contracts/permission-probe?permission=${encodeURIComponent(requiredPermission)}`,
         method: 'get',
-        headers: createAuthHeaders(accessToken)
+        headers: withAuthHeader(undefined, accessToken),
       });
     }
   };

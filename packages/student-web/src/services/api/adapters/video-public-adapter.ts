@@ -3,11 +3,10 @@
  * 兼容 Story 3.6 当前 `video/public` 形态与 Epic 4 `video/published` 列表形态。
  */
 import {
-  createApiClient,
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getMockVideoPublicListSuccess,
   getVideoPublicFixtureError,
@@ -26,10 +25,6 @@ import {
 } from '@/lib/type-guards';
 
 import { pickAdapterImplementation } from './base-adapter';
-
-const fastapiClient = createApiClient({
-  baseURL: resolveFastapiBaseUrl(),
-});
 
 type VideoPublicOptions = {
   signal?: AbortSignal;
