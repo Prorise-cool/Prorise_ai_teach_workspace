@@ -66,6 +66,7 @@ def _format_iso_datetime(value: datetime | None) -> str | None:
 
 
 class VideoPublicationSyncRequest(BaseModel):
+    """视频公开作品同步请求。"""
     user_id: str = Field(min_length=1)
     task_ref_id: str = Field(min_length=1)
     title: str | None = None
@@ -77,6 +78,8 @@ class VideoPublicationSyncRequest(BaseModel):
 
 
 class VideoPublicationSnapshot(BaseModel):
+    """视频公开作品远端快照。"""
+
     table_name: str = VIDEO_PUBLICATION_TABLE
     work_id: int
     work_type: str
@@ -94,11 +97,15 @@ class VideoPublicationSnapshot(BaseModel):
 
 
 class VideoPublicationPage(BaseModel):
+    """视频公开作品分页结果。"""
+
     rows: list[VideoPublicationSnapshot]
     total: int = Field(ge=0)
 
 
 class VideoSessionArtifactItem(BaseModel):
+    """单条会话产物项。"""
+
     artifact_type: str
     anchor_type: str | None = None
     anchor_key: str | None = None
@@ -112,6 +119,7 @@ class VideoSessionArtifactItem(BaseModel):
 
 
 class VideoSessionArtifactBatchCreateRequest(BaseModel):
+    """会话产物批量创建请求。"""
     session_type: str = "video"
     session_ref_id: str = Field(min_length=1)
     object_key: str | None = None
@@ -121,10 +129,12 @@ class VideoSessionArtifactBatchCreateRequest(BaseModel):
 
 
 class VideoSessionArtifactItemSnapshot(VideoSessionArtifactItem):
+    """会话产物项远端快照。"""
     table_name: str = SESSION_ARTIFACT_TABLE
 
 
 class VideoSessionArtifactBatchSnapshot(BaseModel):
+    """会话产物批量同步远端快照。"""
     table_name: str = SESSION_ARTIFACT_TABLE
     session_type: str
     session_ref_id: str
@@ -136,6 +146,7 @@ class VideoSessionArtifactBatchSnapshot(BaseModel):
 def video_publication_to_ruoyi_payload(
     request: VideoPublicationSyncRequest | VideoPublicationSnapshot,
 ) -> dict[str, Any]:
+    """将发布请求转为 RuoYi 接口 payload。"""
     return {
         "userId": request.user_id,
         "taskRefId": request.task_ref_id,
@@ -149,6 +160,7 @@ def video_publication_to_ruoyi_payload(
 
 
 def video_publication_from_ruoyi_data(payload: Mapping[str, Any]) -> VideoPublicationSnapshot:
+    """将 RuoYi 返回数据解析为发布快照。"""
     is_public = _parse_bool(_first_present(payload, "isPublic", "is_public", default=False))
     published_at = _parse_datetime(_first_present(payload, "publishedAt", "published_at"))
     created_at = _parse_datetime(_first_present(payload, "createdAt", "created_at"))
@@ -176,6 +188,7 @@ def video_publication_from_ruoyi_data(payload: Mapping[str, Any]) -> VideoPublic
 
 
 def video_session_artifact_batch_to_ruoyi_payload(request: VideoSessionArtifactBatchCreateRequest) -> dict[str, Any]:
+    """将会话产物批量请求转为 RuoYi 接口 payload。"""
     return {
         "sessionType": request.session_type,
         "sessionRefId": request.session_ref_id,
@@ -201,6 +214,7 @@ def video_session_artifact_batch_to_ruoyi_payload(request: VideoSessionArtifactB
 
 
 def video_session_artifact_batch_from_ruoyi_data(payload: Mapping[str, Any]) -> VideoSessionArtifactBatchSnapshot:
+    """将 RuoYi 返回数据解析为会话产物批量快照。"""
     artifacts = []
     for item in _first_present(payload, "artifacts", default=[]):
         artifacts.append(
@@ -239,6 +253,7 @@ def build_session_artifact_batch_request(
     object_key: str,
     payload_ref: str,
 ) -> VideoSessionArtifactBatchCreateRequest:
+    """根据产物图谱构建会话产物批量创建请求。"""
     occurred_at = _parse_datetime(graph.created_at) or datetime.now(timezone.utc)
     artifacts = [
         VideoSessionArtifactItem(

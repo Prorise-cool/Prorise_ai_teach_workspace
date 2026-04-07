@@ -1,3 +1,5 @@
+"""契约基线路由，输出共享 schema 示例。"""
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.errors import AppError
@@ -60,6 +62,7 @@ router = APIRouter(prefix="/contracts", tags=["contracts"])
     }
 )
 async def get_task_snapshot_contract() -> dict[str, object]:
+    """返回任务状态快照契约示例。"""
     payload = TaskSnapshotPayload(
         task_id="video_20260329161500_ab12cd34",
         task_type="video",
@@ -106,6 +109,7 @@ async def get_task_snapshot_contract() -> dict[str, object]:
     }
 )
 async def get_task_list_contract() -> dict[str, object]:
+    """返回分页任务列表契约示例。"""
     rows = [
         TaskListItemPayload(
             id="video_20260329161500_ab12cd34",
@@ -154,6 +158,7 @@ async def get_task_list_contract() -> dict[str, object]:
 async def get_session_probe(
     access_context: AccessContext = Depends(get_access_context)
 ) -> dict[str, object]:
+    """探测当前会话信息。"""
     payload = SessionProbePayload(
         userId=access_context.user_id,
         username=access_context.username,
@@ -185,6 +190,7 @@ async def get_permission_probe(
     permission: str = Query(..., min_length=1),
     access_context: AccessContext = Depends(get_access_context)
 ) -> dict[str, object]:
+    """探测当前用户是否拥有指定权限。"""
     if not has_permission(access_context.permissions, permission):
         raise AppError(
             code="AUTH_PERMISSION_DENIED",

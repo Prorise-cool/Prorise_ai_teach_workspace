@@ -1,3 +1,5 @@
+"""课堂功能域路由模块。"""
+
 from functools import lru_cache
 from datetime import datetime
 
@@ -23,6 +25,7 @@ router = APIRouter(prefix="/classroom", tags=["classroom"])
 
 @lru_cache
 def get_classroom_service() -> ClassroomService:
+    """获取缓存的课堂服务单例。"""
     return ClassroomService()
 
 
@@ -39,6 +42,7 @@ def get_classroom_service() -> ClassroomService:
 async def classroom_bootstrap(
     service: ClassroomService = Depends(get_classroom_service),
 ) -> dict[str, object]:
+    """返回课堂功能域 bootstrap 基线。"""
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
@@ -48,6 +52,7 @@ async def create_classroom_task(
     payload: ClassroomTaskMetadataCreateRequest,
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPreviewResponse:
+    """创建课堂任务元数据。"""
     return await service.persist_task(payload)
 
 
@@ -62,6 +67,7 @@ async def list_classroom_tasks(
     page_size: int = Query(default=10, alias="pageSize", ge=1, le=100),
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPageResponse:
+    """分页查询课堂任务列表。"""
     return await service.list_tasks(
         status=status,
         user_id=user_id,
@@ -78,6 +84,7 @@ async def get_classroom_task(
     task_id: str,
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataSnapshot:
+    """按任务 ID 查询单条课堂任务。"""
     snapshot = await service.get_task(task_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Classroom task not found")
@@ -95,6 +102,7 @@ async def get_classroom_task(
     },
 )
 async def get_classroom_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+    """查询课堂任务运行态快照。"""
     return await get_shared_task_status(task_id, request)
 
 
@@ -125,6 +133,7 @@ async def get_classroom_task_events(
     request: Request,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> Response:
+    """以 SSE 补发课堂任务事件。"""
     return await get_shared_task_events(task_id, request, last_event_id)
 
 
@@ -133,4 +142,5 @@ async def replay_classroom_session(
     session_id: str,
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPageResponse:
+    """回放指定会话的课堂任务记录。"""
     return await service.replay_session(session_id)

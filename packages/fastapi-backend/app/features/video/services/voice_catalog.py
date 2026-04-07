@@ -10,6 +10,7 @@ from app.providers.runtime_config_service import ProviderRuntimeResolver
 
 @dataclass(slots=True)
 class VideoVoiceCatalogService:
+    """视频音色目录查询服务。"""
     resolver: ProviderRuntimeResolver
 
     async def list_voices(
@@ -18,6 +19,7 @@ class VideoVoiceCatalogService:
         access_token: str | None = None,
         client_id: str | None = None,
     ) -> VideoVoiceListPayload:
+        """查询当前可用的 TTS 音色列表。"""
         descriptors = await self.resolver.resolve_video_tts_voices(
             access_token=access_token,
             client_id=client_id,

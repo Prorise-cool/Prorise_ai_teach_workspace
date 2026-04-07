@@ -13,7 +13,9 @@ from app.shared.cos_client import CosAsset, CosClient
 
 
 class LocalAssetStore:
+    """视频流水线本地资产存储。"""
     def __init__(self, *, root_dir: Path, cos_client: CosClient) -> None:
+        """初始化本地资产存储。"""
         self.root_dir = root_dir
         self.cos_client = cos_client
         self.root_dir.mkdir(parents=True, exist_ok=True)
@@ -25,6 +27,7 @@ class LocalAssetStore:
         *,
         cos_client: CosClient | None = None,
     ) -> "LocalAssetStore":
+        """从 Settings 创建实例。"""
         active_settings = settings or get_settings()
         active_cos_client = cos_client or CosClient.from_settings()
         return cls(
@@ -33,21 +36,26 @@ class LocalAssetStore:
         )
 
     def build_asset(self, key: str) -> CosAsset:
+        """根据 key 构建 CosAsset 对象。"""
         return self.cos_client.build_asset(key)
 
     def write_bytes(self, key: str, content: bytes) -> CosAsset:
+        """将字节数据写入本地文件并返回资产引用。"""
         path = self.resolve_path_from_key(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
         return self.build_asset(key)
 
     def write_text(self, key: str, content: str) -> CosAsset:
+        """将文本写入本地文件并返回资产引用。"""
         return self.write_bytes(key, content.encode("utf-8"))
 
     def write_json(self, key: str, content: dict[str, Any]) -> CosAsset:
+        """将字典序列化为 JSON 写入并返回资产引用。"""
         return self.write_text(key, json.dumps(content, ensure_ascii=False, indent=2))
 
     def copy_file(self, source_path: str | Path, key: str) -> CosAsset:
+        """拷贝外部文件到资产目录。"""
         source = Path(source_path)
         destination = self.resolve_path_from_key(key)
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -55,23 +63,29 @@ class LocalAssetStore:
         return self.build_asset(key)
 
     def read_json(self, ref: str) -> dict[str, Any]:
+        """读取并解析 JSON 资产文件。"""
         path = self.resolve_ref(ref)
         return json.loads(path.read_text(encoding="utf-8"))
 
     def read_result_detail(self, ref: str) -> VideoResultDetail:
+        """读取并解析视频结果详情。"""
         return VideoResultDetail.model_validate(self.read_json(ref))
 
     def exists(self, ref: str) -> bool:
+        """检查资产引用是否存在。"""
         return self.resolve_ref(ref).exists()
 
     def resolve_ref(self, ref: str) -> Path:
+        """将资产引用解析为本地路径。"""
         return self.resolve_path_from_key(self.ref_to_key(ref))
 
     def resolve_path_from_key(self, key: str) -> Path:
+        """将 key 解析为本地文件路径。"""
         normalized_key = key.lstrip("/")
         return self.root_dir / normalized_key
 
     def ref_to_key(self, ref: str) -> str:
+        """将资产引用转为存储 key。"""
         base_url = self.cos_client.base_url.rstrip("/")
         if ref.startswith(f"{base_url}/"):
             return ref[len(base_url) + 1:]

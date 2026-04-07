@@ -1,3 +1,5 @@
+"""应用入口模块，创建 FastAPI 实例。"""
+
 from fastapi import FastAPI
 
 from app.api.router import api_router
@@ -47,6 +49,7 @@ def create_app() -> FastAPI:
         }
     )
     async def root() -> dict[str, object]:
+        """返回系统启动基线信息。"""
         payload = RootBootstrapPayload(
             service=settings.app_name,
             environment=settings.environment,

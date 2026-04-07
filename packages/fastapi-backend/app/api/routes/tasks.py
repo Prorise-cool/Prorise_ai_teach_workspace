@@ -1,4 +1,6 @@
+"""统一任务状态查询与 SSE 事件推送路由。"""
 from __future__ import annotations
+
 
 import asyncio
 from time import monotonic
@@ -128,6 +130,7 @@ async def stream_task_events(
     recovery_state: Any,
     latest_event_id: str | None
 ) -> AsyncIterator[str]:
+    """生成任务事件 SSE 流。"""
     current_snapshot = recovery_state.snapshot
     latest_seen_event_id = latest_event_id
     last_stream_write_at = monotonic()
@@ -216,6 +219,7 @@ async def stream_task_events(
     }
 )
 async def get_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+    """查询任务运行态快照。"""
     runtime_store = _get_runtime_store(request)
     recovery_state = runtime_store.load_task_recovery_state(task_id)
 
@@ -241,6 +245,7 @@ async def get_task_status(task_id: str, request: Request) -> dict[str, object] |
     }
 )
 async def get_task_snapshot(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+    """查询任务运行态快照（snapshot 别名）。"""
     return await get_task_status(task_id, request)
 
 
@@ -271,6 +276,7 @@ async def get_task_events(
     request: Request,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID")
 ) -> Response:
+    """以 SSE 推送任务事件流。"""
     runtime_store = _get_runtime_store(request)
     recovery_state = runtime_store.load_task_recovery_state(
         task_id,

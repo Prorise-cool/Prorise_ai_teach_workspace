@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class OcrResult(BaseModel):
+    """OCR 识别结果。"""
     text: str | None = None
     confidence: float = Field(ge=0, le=1, default=0)
     raw: dict[str, Any] = Field(default_factory=dict)
@@ -19,17 +20,21 @@ class OcrResult(BaseModel):
 
 
 class OcrProvider(ABC):
+    """OCR 识别 Provider 抽象接口。"""
     @property
     @abstractmethod
     def provider_name(self) -> str:
+        """Provider 名称标识。"""
         raise NotImplementedError
 
     @abstractmethod
     async def recognize(self, image_data: bytes, image_ref: str) -> OcrResult:
+        """识别图片中的文字。"""
         raise NotImplementedError
 
 
 class MockOcrProvider(OcrProvider):
+    """模拟 OCR Provider（用于开发和测试）。"""
     SCENARIO_NORMAL = "normal"
     SCENARIO_LOW_CONFIDENCE = "low_confidence"
     SCENARIO_EMPTY = "empty"
@@ -37,13 +42,16 @@ class MockOcrProvider(OcrProvider):
     SCENARIO_FAILED = "failed"
 
     def __init__(self, *, force_scenario: str | None = None) -> None:
+        """初始化 OCR Provider。"""
         self._force_scenario = force_scenario
 
     @property
     def provider_name(self) -> str:
+        """Provider 名称标识。"""
         return "mock-ocr"
 
     async def recognize(self, image_data: bytes, image_ref: str) -> OcrResult:
+        """识别图片中的文字。"""
         scenario = self._force_scenario or self._determine_scenario(image_data)
 
         if scenario == self.SCENARIO_TIMEOUT:

@@ -5,6 +5,7 @@ from typing import Final
 
 
 class TaskStatus(StrEnum):
+    """对外暴露的任务状态枚举。"""
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -13,6 +14,7 @@ class TaskStatus(StrEnum):
 
 
 class TaskInternalStatus(StrEnum):
+    """内部任务状态枚举，粒度更细，映射到对外 TaskStatus。"""
     QUEUED = "queued"
     RUNNING = "running"
     RETRYING = "retrying"
@@ -23,6 +25,7 @@ class TaskInternalStatus(StrEnum):
 
 
 class TaskErrorCode(StrEnum):
+    """统一任务错误码枚举，覆盖通用错误和视频流水线专属错误。"""
     INVALID_INPUT = "TASK_INVALID_INPUT"
     PROVIDER_UNAVAILABLE = "TASK_PROVIDER_UNAVAILABLE"
     PROVIDER_TIMEOUT = "TASK_PROVIDER_TIMEOUT"
@@ -104,15 +107,18 @@ TASK_ERROR_RETRYABLE: Final[dict[TaskErrorCode, bool]] = {
 
 
 def map_internal_status(status: TaskInternalStatus | str) -> TaskStatus:
+    """将内部状态映射为对外暴露的 TaskStatus。"""
     normalized_status = TaskInternalStatus(status)
     return TASK_INTERNAL_STATUS_MAPPING[normalized_status]
 
 
 def is_terminal_status(status: TaskStatus | str) -> bool:
+    """判断是否为终态（completed/failed/cancelled）。"""
     return TaskStatus(status) in TASK_TERMINAL_STATUSES
 
 
 def is_retryable_error(code: TaskErrorCode | str) -> bool:
+    """判断指定错误码是否建议重试。"""
     normalized_code = TaskErrorCode(code)
     return TASK_ERROR_RETRYABLE[normalized_code]
 
@@ -122,6 +128,7 @@ def coerce_task_error_code(
     *,
     fallback: TaskErrorCode = TaskErrorCode.UNHANDLED_EXCEPTION
 ) -> TaskErrorCode:
+    """将错误码强制转换为 TaskErrorCode 枚举，无效时返回 fallback。"""
     if code is None:
         return fallback
     if isinstance(code, TaskErrorCode):

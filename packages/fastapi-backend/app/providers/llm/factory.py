@@ -1,4 +1,6 @@
+"""LLM Provider 注册与快捷获取。"""
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any, Mapping
 
@@ -14,6 +16,7 @@ if TYPE_CHECKING:
 
 
 def register_llm_providers(registry: ProviderRegistry) -> None:
+    """向注册表注册所有内置 LLM Provider。"""
     registry.register(
         ProviderCapability.LLM,
         "stub-llm",
@@ -42,6 +45,7 @@ def get_llm_provider(
     *,
     factory: ProviderFactory | None = None
 ) -> LLMProvider:
+    """获取单个 LLM Provider 实例。"""
     from app.providers.factory import get_provider_factory
 
     active_factory = factory or get_provider_factory()
@@ -54,6 +58,7 @@ def get_llm_provider_chain(
     *,
     factory: ProviderFactory | None = None
 ) -> tuple[LLMProvider, ...]:
+    """获取 LLM Provider 链。"""
     from app.providers.factory import get_provider_factory
 
     active_factory = factory or get_provider_factory()

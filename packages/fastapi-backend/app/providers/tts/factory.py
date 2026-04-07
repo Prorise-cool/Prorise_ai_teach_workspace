@@ -1,4 +1,6 @@
+"""TTS Provider 注册与快捷获取。"""
 from __future__ import annotations
+
 
 from typing import TYPE_CHECKING, Any, Mapping
 
@@ -14,6 +16,7 @@ if TYPE_CHECKING:
 
 
 def register_tts_providers(registry: ProviderRegistry) -> None:
+    """向注册表注册所有内置 TTS Provider。"""
     registry.register(
         ProviderCapability.TTS,
         "stub-tts",
@@ -42,6 +45,7 @@ def get_tts_provider(
     *,
     factory: ProviderFactory | None = None
 ) -> TTSProvider:
+    """获取单个 TTS Provider 实例。"""
     from app.providers.factory import get_provider_factory
 
     active_factory = factory or get_provider_factory()
@@ -54,6 +58,7 @@ def get_tts_provider_chain(
     *,
     factory: ProviderFactory | None = None
 ) -> tuple[TTSProvider, ...]:
+    """获取 TTS Provider 链。"""
     from app.providers.factory import get_provider_factory
 
     active_factory = factory or get_provider_factory()

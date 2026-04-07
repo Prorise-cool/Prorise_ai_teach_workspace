@@ -1,4 +1,6 @@
+"""Provider Failover 服务与错误分类。"""
 from __future__ import annotations
+
 
 import asyncio
 from dataclasses import dataclass, field
@@ -39,6 +41,7 @@ AUTHENTICATION_ERROR_MARKERS = (
 
 @dataclass(slots=True, frozen=True)
 class ProviderAttemptFailure:
+    """单次 Provider 调用失败记录。"""
     provider_id: str
     error_code: TaskErrorCode
     reason: str
@@ -46,6 +49,7 @@ class ProviderAttemptFailure:
 
 @dataclass(slots=True, frozen=True)
 class ProviderErrorClassification:
+    """Provider 错误分类结果。"""
     error_code: TaskErrorCode
     reason: str
     retryable: bool
@@ -54,6 +58,7 @@ class ProviderErrorClassification:
 
 @dataclass(slots=True, frozen=True)
 class ProviderSwitch:
+    """Provider 切换事件数据。"""
     from_provider: str
     to_provider: str
     reason: str
@@ -73,6 +78,7 @@ class ProviderSwitch:
         message: str,
         request_id: str | None,
     ) -> TaskProgressEvent:
+        """将切换事件转为 SSE payload。"""
         return TaskProgressEvent(
             event="provider_switch",
             task_id=task_id,
@@ -90,7 +96,9 @@ class ProviderSwitch:
 
 
 class ProviderAllFailedError(ProviderError):
+    """所有 Provider 均不可用异常。"""
     def __init__(self, failures: Sequence[ProviderAttemptFailure]) -> None:
+        """初始化 Failover 相关对象。"""
         self.failures = tuple(failures)
         message = "全部 Provider 均不可用"
         if self.failures:
@@ -99,21 +107,27 @@ class ProviderAllFailedError(ProviderError):
 
     @property
     def error_code(self) -> TaskErrorCode:
+        """最终聚合的错误码。"""
         return TaskErrorCode.PROVIDER_ALL_FAILED
 
 
 class ProviderTerminalError(ProviderError):
+    """不可重试的 Provider 终端异常。"""
     def __init__(self, message: str, *, error_code: TaskErrorCode) -> None:
+        """初始化 Failover 相关对象。"""
         super().__init__(message)
         self._error_code = error_code
 
     @property
     def error_code(self) -> TaskErrorCode:
+        """最终聚合的错误码。"""
         return self._error_code
 
 
 class ProviderFailoverService:
+    """Provider Failover 编排服务。"""
     def __init__(self, health_store: ProviderHealthStore) -> None:
+        """初始化 Failover 相关对象。"""
         self._health_store = health_store
 
     async def generate(
@@ -123,6 +137,7 @@ class ProviderFailoverService:
         *,
         emit_switch: SwitchObserver | None = None,
     ) -> ProviderResult:
+        """带 Failover 的 LLM 文本生成调用。"""
         return await self._run(
             providers,
             lambda provider: provider.generate(prompt),
@@ -137,6 +152,7 @@ class ProviderFailoverService:
         voice_config: Any | None = None,
         emit_switch: SwitchObserver | None = None,
     ) -> ProviderResult:
+        """带 Failover 的 TTS 语音合成调用。"""
         return await self._run(
             providers,
             lambda provider: provider.synthesize(text, voice_config=voice_config),
@@ -245,6 +261,7 @@ class ProviderFailoverService:
 
 
 def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
+    """将异常分类为标准化的 Provider 错误类型。"""
     message = str(exc).strip() or exc.__class__.__name__
     lowered = message.lower()
     if isinstance(exc, TimeoutError):

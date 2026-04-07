@@ -1,3 +1,5 @@
+"""内存 SSE 事件 broker，负责任务进度事件的发布与断线重放。"""
+
 from collections import defaultdict
 
 from app.core.logging import EMPTY_TRACE_VALUE, bind_trace_context, get_logger, reset_trace_context
@@ -5,12 +7,16 @@ from app.core.sse import TaskProgressEvent, ensure_sse_event_identity, parse_sse
 
 
 class InMemorySseBroker:
+    """内存 SSE 事件 broker，管理事件序列号并支持断线重放。"""
+
     def __init__(self) -> None:
+        """初始化事件存储、序列号计数器和日志记录器。"""
         self._events: dict[str, list[TaskProgressEvent]] = defaultdict(list)
         self._sequences: dict[str, int] = defaultdict(int)
         self._logger = get_logger("app.infra.sse_broker")
 
     def publish(self, event: TaskProgressEvent) -> TaskProgressEvent:
+        """发布一条 SSE 事件，自动分配序列号和事件 ID。"""
         tokens = bind_trace_context(
             task_id=event.task_id,
             error_code=event.error_code or EMPTY_TRACE_VALUE
@@ -41,6 +47,7 @@ class InMemorySseBroker:
         *,
         after_event_id: str | None = None
     ) -> list[TaskProgressEvent]:
+        """重放指定任务的事件列表，支持 after_event_id 断线续传。"""
         tokens = bind_trace_context(task_id=task_id)
         try:
             events = list(self._events.get(task_id, []))

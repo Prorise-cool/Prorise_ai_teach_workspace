@@ -19,16 +19,20 @@ from app.features.video.long_term_records import (
     video_session_artifact_batch_to_ruoyi_payload,
 )
 from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 
 
-class VideoPublicationService:
+class VideoPublicationService(RuoYiServiceMixin):
+    """视频公开发布记录防腐层服务。"""
     _RESOURCE = "video-publication"
     _ENDPOINT = "/internal/xiaomai/video/publications"
 
     def __init__(self, client_factory=None) -> None:
+        """初始化服务。"""
         self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def sync_publication(self, request: VideoPublicationSyncRequest) -> VideoPublicationSnapshot:
+        """同步发布记录到 RuoYi。"""
         async with self._client_factory() as client:
             result = await client.post_single(
                 self._ENDPOINT,
@@ -40,6 +44,7 @@ class VideoPublicationService:
         return self._parse_snapshot(result.data, operation="sync", endpoint=self._ENDPOINT)
 
     async def get_publication(self, task_ref_id: str) -> VideoPublicationSnapshot | None:
+        """按任务 ID 查询发布记录。"""
         endpoint = f"{self._ENDPOINT}/{task_ref_id}"
         try:
             async with self._client_factory() as client:
@@ -60,6 +65,7 @@ class VideoPublicationService:
         page: int = 1,
         page_size: int = 12,
     ) -> VideoPublicationPage:
+        """分页查询已发布记录列表。"""
         async with self._client_factory() as client:
             result = await client.get_page(
                 self._ENDPOINT,
@@ -97,30 +103,21 @@ class VideoPublicationService:
         except (KeyError, TypeError, ValueError, ValidationError) as exc:
             raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
 
-    def _invalid_response_error(self, *, operation: str, endpoint: str, reason: str) -> IntegrationError:
-        return IntegrationError(
-            service="ruoyi",
-            resource=self._RESOURCE,
-            operation=operation,
-            code="RUOYI_INVALID_RESPONSE",
-            message="RuoYi 响应格式异常",
-            status_code=502,
-            retryable=False,
-            details={"endpoint": endpoint, "reason": reason},
-        )
 
-
-class VideoArtifactIndexService:
+class VideoArtifactIndexService(RuoYiServiceMixin):
+    """视频会话产物索引防腐层服务。"""
     _RESOURCE = "video-session-artifact"
     _ENDPOINT = "/internal/xiaomai/video/session-artifacts"
 
     def __init__(self, client_factory=None) -> None:
+        """初始化服务。"""
         self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def sync_artifact_batch(
         self,
         request: VideoSessionArtifactBatchCreateRequest,
     ) -> VideoSessionArtifactBatchSnapshot:
+        """批量同步产物索引到 RuoYi。"""
         async with self._client_factory() as client:
             result = await client.post_single(
                 self._ENDPOINT,
@@ -143,14 +140,3 @@ class VideoArtifactIndexService:
         except (KeyError, TypeError, ValueError, ValidationError) as exc:
             raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
 
-    def _invalid_response_error(self, *, operation: str, endpoint: str, reason: str) -> IntegrationError:
-        return IntegrationError(
-            service="ruoyi",
-            resource=self._RESOURCE,
-            operation=operation,
-            code="RUOYI_INVALID_RESPONSE",
-            message="RuoYi 响应格式异常",
-            status_code=502,
-            retryable=False,
-            details={"endpoint": endpoint, "reason": reason},
-        )

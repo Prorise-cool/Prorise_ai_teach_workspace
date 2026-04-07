@@ -1,4 +1,6 @@
+"""Provider 健康状态存储与管理。"""
 from __future__ import annotations
+
 
 from dataclasses import dataclass, field
 from types import MappingProxyType
@@ -11,6 +13,7 @@ from app.shared.task_framework.status import TaskErrorCode, coerce_task_error_co
 
 @dataclass(slots=True, frozen=True)
 class ProviderHealthSnapshot:
+    """Provider 健康状态快照。"""
     provider_id: str
     is_healthy: bool
     checked_at: str
@@ -26,6 +29,7 @@ class ProviderHealthSnapshot:
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> "ProviderHealthSnapshot":
+        """从 Redis payload 反序列化健康快照。"""
         metadata = dict(payload.get("metadata", {}))
         error_code = metadata.get("errorCode")
         return cls(
@@ -41,16 +45,20 @@ class ProviderHealthSnapshot:
 
 
 class ProviderHealthStore:
+    """Provider 健康状态存储，基于 Redis 运行态。"""
     def __init__(self, runtime_store: RuntimeStore) -> None:
+        """初始化健康状态存储。"""
         self._runtime_store = runtime_store
 
     def get(self, provider_id: str) -> ProviderHealthSnapshot | None:
+        """获取指定 Provider 的健康快照。"""
         payload = self._runtime_store.get_provider_health(provider_id)
         if payload is None:
             return None
         return ProviderHealthSnapshot.from_payload(payload)
 
     def is_available(self, provider_id: str) -> bool:
+        """判断指定 Provider 是否可用。"""
         snapshot = self.get(provider_id)
         return snapshot is None or snapshot.is_healthy
 
@@ -61,6 +69,7 @@ class ProviderHealthStore:
         source: str = "provider-call",
         metadata: Mapping[str, Any] | None = None,
     ) -> ProviderHealthSnapshot:
+        """标记 Provider 调用成功。"""
         payload = self._runtime_store.set_provider_health(
             provider_id,
             is_healthy=True,
@@ -82,6 +91,7 @@ class ProviderHealthStore:
         source: str = "provider-call",
         metadata: Mapping[str, Any] | None = None,
     ) -> ProviderHealthSnapshot:
+        """标记 Provider 调用失败。"""
         previous = self.get(provider_id)
         payload = self._runtime_store.set_provider_health(
             provider_id,

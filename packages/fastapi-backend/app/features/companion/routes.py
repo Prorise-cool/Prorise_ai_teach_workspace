@@ -1,3 +1,5 @@
+"""伴学功能域路由模块。"""
+
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/companion", tags=["companion"])
 
 @lru_cache
 def get_companion_service() -> CompanionService:
+    """获取缓存的伴学服务单例。"""
     return CompanionService()
 
 
@@ -33,6 +36,7 @@ def get_companion_service() -> CompanionService:
 async def companion_bootstrap(
     service: CompanionService = Depends(get_companion_service),
 ) -> dict[str, object]:
+    """返回伴学功能域 bootstrap 基线。"""
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
 
@@ -42,6 +46,7 @@ async def create_companion_turn(
     payload: CompanionTurnCreateRequest,
     service: CompanionService = Depends(get_companion_service),
 ) -> CompanionTurnSnapshot:
+    """创建伴学对话轮次记录。"""
     return await service.persist_turn(payload)
 
 
@@ -50,6 +55,7 @@ async def get_companion_turn(
     turn_id: str,
     service: CompanionService = Depends(get_companion_service),
 ) -> CompanionTurnSnapshot:
+    """按 ID 查询单条伴学轮次。"""
     snapshot = await service.get_turn(turn_id)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Companion turn not found")
@@ -61,4 +67,5 @@ async def replay_companion_session(
     session_id: str,
     service: CompanionService = Depends(get_companion_service),
 ) -> SessionReplaySnapshot:
+    """回放指定会话的伴学对话。"""
     return await service.replay_session(session_id)

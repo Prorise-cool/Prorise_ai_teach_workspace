@@ -1,3 +1,5 @@
+"""RuoYi 数据格式双向映射器，处理字段别名、状态码映射与日期时间转换。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -31,11 +33,14 @@ def _format_datetime(value: Any) -> Any:
 
 @dataclass(slots=True)
 class RuoYiMapper:
+    """RuoYi 数据双向映射器，支持字段别名、状态枚举和日期时间的自动转换。"""
+
     field_aliases: Mapping[str, str] = field(default_factory=dict)
     status_fields: Mapping[str, Mapping[Any, str]] = field(default_factory=dict)
     datetime_fields: set[str] = field(default_factory=set)
 
     def from_ruoyi(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        """将 RuoYi camelCase 字典转换为项目内部 snake_case 字典。"""
         reverse_aliases = {ruoyi_field: canonical_field for canonical_field, ruoyi_field in self.field_aliases.items()}
         normalized: dict[str, Any] = {}
 
@@ -46,6 +51,7 @@ class RuoYiMapper:
         return normalized
 
     def to_ruoyi(self, payload: Mapping[str, Any]) -> dict[str, Any]:
+        """将项目内部 snake_case 字典转换为 RuoYi camelCase 字典。"""
         serialized: dict[str, Any] = {}
 
         for key, value in payload.items():

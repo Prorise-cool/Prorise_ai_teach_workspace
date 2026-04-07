@@ -29,6 +29,7 @@ IDEMPOTENCY_KEY_PREFIX = "xm_idempotent:video"
 
 
 def ensure_video_task_create_permission(access_context: AccessContext) -> None:
+    """校验当前用户是否拥有视频任务创建权限。"""
     if has_permission(access_context.permissions, VIDEO_TASK_CREATE_PERMISSION):
         return
 
@@ -44,14 +45,17 @@ def ensure_video_task_create_permission(access_context: AccessContext) -> None:
 
 
 def build_idempotency_key(user_id: str, client_request_id: str) -> str:
+    """构建幂等键。"""
     return f"{IDEMPOTENCY_KEY_PREFIX}:{user_id}:{client_request_id}"
 
 
 def generate_video_task_id() -> str:
+    """生成唯一的视频任务 ID。"""
     return generate_task_id("vtask")
 
 
 def validate_create_request(request: CreateVideoTaskRequest) -> dict[str, object]:
+    """校验视频任务创建请求的输入参数。"""
     source_payload = request.source_payload
 
     if request.input_type == "text":
@@ -101,6 +105,7 @@ def validate_create_request(request: CreateVideoTaskRequest) -> dict[str, object
 
 
 def normalize_voice_preference(request: CreateVideoTaskRequest) -> dict[str, str] | None:
+    """归一化音色偏好为可序列化字典。"""
     if request.voice_preference is None:
         return None
     payload = request.voice_preference.model_dump(mode="json", by_alias=True, exclude_none=True)
@@ -121,6 +126,7 @@ def initialize_task_runtime_state(
     source_payload: dict[str, object],
     voice_preference: dict[str, str] | None = None,
 ) -> dict[str, object]:
+    """在 Redis 中初始化任务运行态。"""
     context = {"sourcePayload": source_payload}
     if voice_preference is not None:
         context["voicePreference"] = voice_preference
@@ -144,6 +150,7 @@ def mark_dispatch_failure(
     created_at: str,
     request_id: str | None,
 ) -> None:
+    """将任务标记为分发失败状态。"""
     runtime_store.set_task_state(
         task_id=task_id,
         task_type=VIDEO_TASK_TYPE,
@@ -162,6 +169,7 @@ def read_idempotent_conflict(
     *,
     key: str,
 ) -> IdempotentConflictPayload | None:
+    """从 Redis 读取幂等冲突信息。"""
     payload = runtime_store.get_runtime_value(key)
     if not isinstance(payload, dict):
         return None
@@ -191,6 +199,7 @@ async def persist_video_task_metadata(
     source_payload: dict[str, object],
     created_at: str,
 ) -> None:
+    """持久化视频任务元数据到 RuoYi，失败时降级。"""
     created_at_dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
 
     if request.input_type == "text":
@@ -221,6 +230,7 @@ async def create_video_task(
     scheduler: TaskScheduler,
     metadata_service: VideoService,
 ) -> CreateVideoTaskAcceptedPayload | IdempotentConflictPayload:
+    """创建视频任务的完整流程：校验、幂等检测、入队、持久化。"""
     source_payload = validate_create_request(request)
     voice_preference = normalize_voice_preference(request)
     idempotency_key = build_idempotency_key(access_context.user_id, request.client_request_id)

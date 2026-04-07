@@ -1,74 +1,188 @@
 /**
- * 文件说明：视频结果页布局样式（Story 4.8）。
- * 管理播放器区域响应式布局与 Video.js 皮肤定制。
+ * 文件说明：视频结果页布局样式（Apple Dock 无界画布版）。
+ * 管理全屏画布 + Companion 侧栏的 flex 行布局，
+ * 以及背景装饰层（网格 + 光晕）。
  */
 
-.video-result-page {
-  --vr-sidebar-width: 380px;
-  --vr-gap: var(--xm-space-6, 1.5rem);
+@use 'partials/result-header';
+@use 'partials/video-dock';
+@use 'partials/publish-banner';
+@use 'partials/companion-sidebar';
 
-  &__layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--vr-gap);
+.xm-video-result {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--xm-font-family-sans);
+  background-color: var(--xm-color-background);
+  color: var(--xm-color-text-primary);
+  position: relative;
+
+  /* -- 左侧画布区 -- */
+  &__canvas {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    z-index: 10;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--xm-duration-base, 0.3s) var(--xm-easing-standard, ease);
+  }
+
+  /* -- 背景装饰层 -- */
+  &__ambient {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  &__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--xm-color-text-primary) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--xm-color-text-primary) 4%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+  }
+
+  &__glow {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80vw;
+    max-width: 1200px;
+    height: 400px;
+    border-radius: 100%;
+    background: color-mix(in srgb, var(--xm-color-primary) 15%, transparent);
+    filter: blur(100px);
+    mix-blend-mode: multiply;
+    transition: background var(--xm-duration-slow, 0.5s) var(--xm-easing-standard);
+  }
+
+  /* -- 全屏播放器容器 -- */
+  &__player-fullscreen {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--xm-spacing-6, 1.5rem);
+    z-index: 10;
     width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: var(--xm-space-6, 1.5rem);
+    min-height: 0;
+  }
 
-    @media (min-width: 1024px) {
-      grid-template-columns: 1fr var(--vr-sidebar-width);
+  /* -- Video.js 全屏透明模式 -- */
+  &__player-fullscreen .video-player-container {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+
+    .video-js {
+      width: 100% !important;
+      height: 100% !important;
+      background-color: transparent;
+      border-radius: 0;
+
+      .vjs-poster {
+        background-size: contain;
+        background-color: transparent;
+      }
     }
   }
 
-  &__player-area {
-    min-width: 0;
+  /* -- 字幕层 -- */
+  &__subtitle {
+    position: absolute;
+    bottom: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: color-mix(in srgb, var(--xm-color-text-primary) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--xm-color-surface);
+    padding: var(--xm-spacing-2, 0.5rem) var(--xm-spacing-6, 1.5rem);
+    border-radius: var(--xm-radius-md, 8px);
+    font-size: 15px;
+    letter-spacing: 0.025em;
+    font-weight: 500;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: var(--xm-shadow-md);
+    z-index: 20;
+    pointer-events: none;
+
+    @media (min-width: 768px) {
+      max-width: 48rem;
+    }
   }
 
-  &__sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--xm-space-4, 1rem);
+  /* -- 进度条 -- */
+  &__progress {
+    width: 100%;
+    padding: 0 var(--xm-spacing-10, 2.5rem);
+    z-index: 20;
+    position: relative;
+    margin-top: calc(var(--xm-spacing-1, 0.25rem) * -1);
+    margin-bottom: var(--xm-spacing-2, 0.5rem);
+  }
+
+  &__progress-track {
+    height: 4px;
+    width: 100%;
+    background: var(--xm-color-border);
+    border-radius: var(--xm-radius-full, 9999px);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+
+    &:hover .xm-video-result__progress-handle {
+      opacity: 1;
+    }
+  }
+
+  &__progress-fill {
+    position: absolute;
+    inset: 0;
+    right: auto;
+    background: var(--xm-color-primary);
+    border-radius: var(--xm-radius-full, 9999px);
+    transition: width 0.2s ease;
+  }
+
+  &__progress-handle {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translate(50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: var(--xm-color-surface);
+    border-radius: 50%;
+    box-shadow: var(--xm-shadow-sm);
+    border: 2px solid var(--xm-color-primary);
+    opacity: 0;
+    transition: opacity var(--xm-duration-fast, 0.15s) var(--xm-easing-standard);
   }
 }
 
-/* Video.js 皮肤定制 */
-.video-player-container {
-  .video-js {
-    border-radius: var(--xm-radius-lg, 0.75rem);
-    overflow: hidden;
-    background-color: var(--xm-color-surface-1, #000);
+/* -- Dark theme adjustments -- */
+:root[data-theme='dark'] {
+  .xm-video-result__glow {
+    background: color-mix(in srgb, var(--xm-color-primary) 5%, transparent);
+    mix-blend-mode: screen;
+  }
 
-    .vjs-control-bar {
-      background: linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.7) 0%,
-        transparent 100%
-      );
-    }
-
-    .vjs-play-progress {
-      background-color: var(--xm-color-brand, #f5c547);
-    }
-
-    .vjs-big-play-button {
-      border: 2px solid var(--xm-color-brand, #f5c547);
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
-      width: 3rem;
-      height: 3rem;
-      line-height: 3rem;
-      margin-top: -1.5rem;
-      margin-left: -1.5rem;
-
-      .vjs-icon-placeholder::before {
-        font-size: 1.5rem;
-      }
-    }
-
-    &:hover .vjs-big-play-button {
-      background-color: var(--xm-color-brand, #f5c547);
-      color: #000;
-    }
+  .xm-video-result__subtitle {
+    background: color-mix(in srgb, var(--xm-color-surface) 95%, transparent);
+    color: var(--xm-color-text-primary);
   }
 }

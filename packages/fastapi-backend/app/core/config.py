@@ -1,3 +1,13 @@
+"""应用配置模块。
+
+基于 ``pydantic-settings`` 实现的类型安全配置管理，支持 ``.env`` 文件
+和环境变量自动加载。所有配置项通过 ``FASTAPI_*`` 前缀的环境变量覆盖。
+
+使用方式::
+
+    from app.core.config import get_settings
+    settings = get_settings()  # 单例，首次调用后缓存
+"""
 from functools import lru_cache
 from pathlib import Path
 
@@ -63,4 +73,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """获取全局配置单例（``lru_cache`` 缓存，进程内只初始化一次）。"""
     return Settings()

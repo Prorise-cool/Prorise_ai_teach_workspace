@@ -1,3 +1,5 @@
+"""学习功能域 schema 定义。"""
+
 from datetime import datetime
 from enum import Enum
 
@@ -7,10 +9,12 @@ from app.features.common import BootstrapStatus
 
 
 class LearningBootstrapResponse(BootstrapStatus):
+    """学习功能域 bootstrap 状态数据。"""
     feature: str = "learning"
 
 
 class LearningResultType(str, Enum):
+    """学习结果类型枚举。"""
     CHECKPOINT = "checkpoint"
     QUIZ = "quiz"
     WRONGBOOK = "wrongbook"
@@ -19,6 +23,7 @@ class LearningResultType(str, Enum):
 
 
 class LearningSourceType(str, Enum):
+    """学习结果来源类型枚举。"""
     VIDEO = "video"
     CLASSROOM = "classroom"
     COMPANION = "companion"
@@ -29,6 +34,7 @@ class LearningSourceType(str, Enum):
 
 
 class LearningResultStatus(str, Enum):
+    """学习结果状态枚举。"""
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -44,6 +50,7 @@ LONG_TERM_TABLE_BY_RESULT_TYPE: dict[LearningResultType, str] = {
 
 
 class LearningResultInput(BaseModel):
+    """学习结果输入项。"""
     model_config = ConfigDict(use_enum_values=True)
 
     result_type: LearningResultType
@@ -70,6 +77,7 @@ class LearningResultInput(BaseModel):
 
 
 class LearningPersistenceRequest(BaseModel):
+    """学习结果批量持久化请求。"""
     model_config = ConfigDict(use_enum_values=True)
 
     user_id: str
@@ -77,6 +85,7 @@ class LearningPersistenceRequest(BaseModel):
 
 
 class LearningPersistenceItem(BaseModel):
+    """归一化后的学习结果持久化项。"""
     model_config = ConfigDict(use_enum_values=True)
 
     table_name: str
@@ -105,6 +114,7 @@ class LearningPersistenceItem(BaseModel):
 
 
 class LearningPersistenceResponse(BaseModel):
+    """学习结果持久化响应。"""
     model_config = ConfigDict(use_enum_values=True)
 
     user_id: str

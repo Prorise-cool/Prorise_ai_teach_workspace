@@ -1,3 +1,5 @@
+"""OpenAPI 示例数据常量与构建函数。"""
+
 from collections.abc import Callable
 
 ISO_8601_EXAMPLE = "2026-03-29T16:15:00Z"
@@ -28,6 +30,7 @@ ROOT_BOOTSTRAP_EXAMPLE = {
 
 
 def build_feature_bootstrap_example(feature: str) -> dict[str, object]:
+    """构建功能域 bootstrap 示例数据。"""
     return {
         "code": 200,
         "msg": "查询成功",
@@ -105,6 +108,7 @@ def build_error_example(
     task_id: str | None = None,
     details: dict[str, object] | None = None
 ) -> dict[str, object]:
+    """构建错误响应示例数据。"""
     return {
         "code": code,
         "msg": msg,
@@ -166,6 +170,7 @@ ERROR_RESPONSE_EXAMPLES: dict[int, dict[str, object]] = {
 
 
 def build_error_responses(example_builder: Callable[[int], dict[str, object]]) -> dict[int, dict[str, object]]:
+    """批量构建错误响应 OpenAPI 示例。"""
     return {
         status_code: {
             "description": example["msg"],

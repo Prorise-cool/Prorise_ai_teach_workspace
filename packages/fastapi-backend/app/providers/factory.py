@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Provider 工厂与默认注册入口。"""
+
+from __future__ import annotations
 
 import json
 import os
@@ -12,14 +12,14 @@ from app.core.config import Settings, get_settings
 from app.infra.redis_client import RuntimeStore, create_runtime_store
 from app.providers.failover import ProviderFailoverService, ProviderSwitch
 from app.providers.health import ProviderHealthStore
-from app.providers.registry import ProviderRegistry
 from app.providers.protocols import (
     LLMProvider,
     ProviderCapability,
     ProviderConfigurationError,
     ProviderRuntimeConfig,
-    TTSProvider
+    TTSProvider,
 )
+from app.providers.registry import ProviderRegistry
 
 LLM_CHAIN_ENV = "FASTAPI_LLM_PROVIDER_CHAIN"
 TTS_CHAIN_ENV = "FASTAPI_TTS_PROVIDER_CHAIN"
@@ -37,64 +37,66 @@ class ProviderFactory:
     """统一的 Provider 实例装配入口。"""
 
     def __init__(self, registry: ProviderRegistry) -> None:
+        """初始化 ProviderFactory。"""
         self._registry = registry
 
     @property
     def registry(self) -> ProviderRegistry:
+        """返回内部注册表引用。"""
         return self._registry
 
     def get_llm_provider(
-        self,
-        provider: str | ProviderRuntimeConfig | Mapping[str, Any]
+        self, provider: str | ProviderRuntimeConfig | Mapping[str, Any]
     ) -> LLMProvider:
+        """根据配置获取 LLM Provider 实例。"""
         return self._registry.build(
             ProviderCapability.LLM,
-            self._coerce_runtime_config(ProviderCapability.LLM, provider)
+            self._coerce_runtime_config(ProviderCapability.LLM, provider),
         )
 
     def get_tts_provider(
-        self,
-        provider: str | ProviderRuntimeConfig | Mapping[str, Any]
+        self, provider: str | ProviderRuntimeConfig | Mapping[str, Any]
     ) -> TTSProvider:
+        """根据配置获取 TTS Provider 实例。"""
         return self._registry.build(
             ProviderCapability.TTS,
-            self._coerce_runtime_config(ProviderCapability.TTS, provider)
+            self._coerce_runtime_config(ProviderCapability.TTS, provider),
         )
 
     def build_chain(
         self,
         capability: ProviderCapability | str,
-        providers: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]]
+        providers: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
     ) -> tuple[LLMProvider | TTSProvider, ...]:
+        """根据配置列表构建按优先级排序的 Provider 链。"""
         prepared = [
-            self._coerce_runtime_config(capability, provider)
-            for provider in providers
+            self._coerce_runtime_config(capability, provider) for provider in providers
         ]
         sorted_configs = sorted(
-            enumerate(prepared),
-            key=lambda item: (item[1].priority, item[0])
+            enumerate(prepared), key=lambda item: (item[1].priority, item[0])
         )
         return tuple(
-            self._registry.build(capability, config)
-            for _, config in sorted_configs
+            self._registry.build(capability, config) for _, config in sorted_configs
         )
 
     def assemble(
         self,
         *,
         llm: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
-        tts: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]]
+        tts: Iterable[str | ProviderRuntimeConfig | Mapping[str, Any]],
     ) -> ProviderAssembly:
+        """组装完整的 LLM + TTS Provider 链集合。"""
         return ProviderAssembly(
             llm=tuple(self.build_chain(ProviderCapability.LLM, llm)),
-            tts=tuple(self.build_chain(ProviderCapability.TTS, tts))
+            tts=tuple(self.build_chain(ProviderCapability.TTS, tts)),
         )
 
     def assemble_from_settings(
         self,
         settings: Settings | Any | None = None,
-        env: Mapping[str, str] | None = None
+        env: Mapping[str, str] | None = None,
     ) -> ProviderAssembly:
+        """从配置文件和环境变量装配 Provider 链。"""
         active_settings = settings or get_settings()
         active_env = env or os.environ
         llm_config = self._parse_chain_config(
@@ -109,6 +111,7 @@ class ProviderFactory:
         self,
         runtime_store: RuntimeStore | None = None,
     ) -> ProviderFailoverService:
+        """创建 Failover 服务实例。"""
         active_runtime_store = runtime_store or create_runtime_store()
         return ProviderFailoverService(ProviderHealthStore(active_runtime_store))
 
@@ -120,6 +123,7 @@ class ProviderFactory:
         runtime_store: RuntimeStore | None = None,
         emit_switch: Callable[[ProviderSwitch], Any] | None = None,
     ) -> ProviderResult:
+        """带 Failover 的 LLM 文本生成。"""
         chain = tuple(self.build_chain(ProviderCapability.LLM, providers))
         return await self.create_failover_service(runtime_store).generate(
             chain,
@@ -136,6 +140,7 @@ class ProviderFactory:
         runtime_store: RuntimeStore | None = None,
         emit_switch: Callable[[ProviderSwitch], Any] | None = None,
     ) -> ProviderResult:
+        """带 Failover 的 TTS 语音合成。"""
         chain = tuple(self.build_chain(ProviderCapability.TTS, providers))
         return await self.create_failover_service(runtime_store).synthesize(
             chain,
@@ -147,10 +152,12 @@ class ProviderFactory:
     def _coerce_runtime_config(
         self,
         capability: ProviderCapability | str,
-        provider: str | ProviderRuntimeConfig | Mapping[str, Any]
+        provider: str | ProviderRuntimeConfig | Mapping[str, Any],
     ) -> ProviderRuntimeConfig:
         if isinstance(provider, ProviderRuntimeConfig):
-            registration = self._registry.get_registration(capability, provider.provider_id)
+            registration = self._registry.get_registration(
+                capability, provider.provider_id
+            )
             if provider.provider_id == registration.provider_id:
                 return provider
             return ProviderRuntimeConfig(
@@ -159,7 +166,7 @@ class ProviderFactory:
                 timeout_seconds=provider.timeout_seconds,
                 retry_attempts=provider.retry_attempts,
                 health_source=provider.health_source,
-                settings=dict(provider.settings)
+                settings=dict(provider.settings),
             )
 
         if isinstance(provider, str):
@@ -167,7 +174,9 @@ class ProviderFactory:
 
         provider_id = provider.get("provider") or provider.get("provider_id")
         if not provider_id:
-            raise ProviderConfigurationError("Provider 配置缺少 provider/provider_id 字段")
+            raise ProviderConfigurationError(
+                "Provider 配置缺少 provider/provider_id 字段"
+            )
 
         return self._registry.build_runtime_config(
             capability,
@@ -176,12 +185,12 @@ class ProviderFactory:
             timeout_seconds=float(provider.get("timeout_seconds", 30.0)),
             retry_attempts=int(provider.get("retry_attempts", 0)),
             health_source=str(provider.get("health_source", "unconfigured")),
-            settings=dict(provider.get("settings", {}))
+            settings=dict(provider.get("settings", {})),
         )
 
     def _parse_chain_config(
         self,
-        raw_config: str | ProviderRuntimeConfig | Mapping[str, Any] | Iterable[Any]
+        raw_config: str | ProviderRuntimeConfig | Mapping[str, Any] | Iterable[Any],
     ) -> list[str | ProviderRuntimeConfig | Mapping[str, Any]]:
         if isinstance(raw_config, ProviderRuntimeConfig):
             return [raw_config]
@@ -218,4 +227,5 @@ def get_provider_factory() -> ProviderFactory:
 
 
 def reset_provider_factory_cache() -> None:
+    """清除 ProviderFactory 缓存（用于测试）。"""
     get_provider_factory.cache_clear()
