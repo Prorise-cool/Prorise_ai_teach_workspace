@@ -8,6 +8,13 @@
   - `src/test/utils/render-app.tsx`
   - `src/test/utils/session.ts`
   - `src/test/utils/msw-server.ts`
+- 新增前端浏览器级测试层：
+  - `src/test/browser/setup.ts`
+  - `src/test/browser/render-app.tsx`
+  - `src/**/*.browser.test.tsx`
+- 新增前端浏览器级命令入口：
+  - 根目录：`pnpm test:student-web:e2e`
+  - `packages/student-web`：`pnpm test:e2e` / `pnpm test:browser`
 - 将 `packages/fastapi-backend/tests` 重排为：
   - `tests/api/`
   - `tests/contracts/`
@@ -24,6 +31,12 @@
 
 - `pnpm test:student-web`
   - 结果：`32` 个测试文件，`183` 个测试，全部通过
+- `pnpm test:student-web:e2e`
+  - 结果：`2` 个浏览器级测试文件，`2` 个测试，全部通过
+  - 覆盖关键链路：
+    - 未登录访问受保护视频页，跳转 `/login` 并保留 `returnTo`
+    - 登录成功后恢复回跳到 `/video/input`
+    - 已登录用户提交视频输入，跳转 `/video/:id/generating`
 - `pnpm test:student-web:coverage`
   - 结果：`32` 个测试文件，`183` 个测试，全部通过
   - `v8` 总覆盖率：
@@ -48,18 +61,17 @@
 ## 新命令入口
 
 - 根目录 `package.json`
+  - `test:student-web:e2e`
   - `test:student-web:coverage`
   - `test:fastapi-backend:api`
   - `test:fastapi-backend:integration`
   - `test:fastapi-backend:unit`
 - `packages/student-web/package.json`
+  - `test:browser`
+  - `test:e2e`
   - `test:coverage`
 
 ## 当前残留风险
 
-- `pnpm lint:student-web` 仍未通过。
-- 当前 lint 失败主要来自仓库既有问题，不是本次测试结构重排本身，例如：
-  - 生产代码中的 `react-hooks/set-state-in-effect`
-  - 生产代码中的 `no-floating-promises`
-  - 若干历史测试中的 `no-unsafe-return`、`testing-library/no-node-access`
-- 因此本次收口以“测试结构统一 + 全量测试通过 + coverage 命令可跑通”为主，未扩展到 student-web 全仓 lint 治理。
+- 浏览器级用例当前仍是“真实浏览器 + mock runtime + 真实路由”层，不等同于联真实 RuoYi / FastAPI 的全环境联调冒烟。
+- 若后续要覆盖跨域登录、真实代理、第三方 OAuth 回调、文件下载与发布链路，建议在此基础上再补一层环境级 smoke suite。

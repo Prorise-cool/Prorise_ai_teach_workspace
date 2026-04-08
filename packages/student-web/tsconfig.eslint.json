@@ -5,6 +5,7 @@
     ".storybook/**/*.ts",
     ".storybook/**/*.tsx",
     "vite.config.ts",
+    "vitest.browser.config.ts",
     "vitest.config.ts",
     "eslint.config.mjs"
   ]
