@@ -19,16 +19,16 @@ import { useVideoGeneratingStore } from '../stores/video-generating-store';
  * @returns 扩展字段对象。
  */
 function extractPipelineFields(event: TaskStreamEventPayload) {
-  const raw = event as unknown as Record<string, unknown>;
   const context =
-    raw.context && typeof raw.context === 'object'
-      ? (raw.context as Record<string, unknown>)
+    event.context && typeof event.context === 'object'
+      ? (event.context as Record<string, unknown>)
       : null;
+  const currentStage = event.currentStage ?? event.stage ?? null;
 
   return {
-    currentStage: typeof raw.currentStage === 'string' ? (raw.currentStage as VideoPipelineStage) : null,
-    stageLabel: typeof raw.stageLabel === 'string' ? raw.stageLabel : null,
-    stageProgress: typeof raw.stageProgress === 'number' ? raw.stageProgress : null,
+    currentStage: typeof currentStage === 'string' ? (currentStage as VideoPipelineStage) : null,
+    stageLabel: typeof event.stageLabel === 'string' ? event.stageLabel : null,
+    stageProgress: typeof event.stageProgress === 'number' ? event.stageProgress : null,
     attemptNo: typeof context?.attemptNo === 'number' ? context.attemptNo : null,
     fixEvent: typeof context?.fixEvent === 'string' ? context.fixEvent : null,
     failure:
@@ -90,19 +90,7 @@ export function useVideoTaskSse(
     }
 
     if (event.event === 'snapshot') {
-      if (pipeline.currentStage) {
-        state.updateStage({
-          currentStage: pipeline.currentStage,
-          stageLabel: pipeline.stageLabel ?? pipeline.currentStage,
-          progress: event.progress,
-          fixAttempt: pipeline.attemptNo ?? 0,
-        });
-      } else {
-        state.updateProgress({
-          progress: event.progress,
-          message: event.message,
-        });
-      }
+      state.restoreSnapshot(event);
       return;
     }
 
@@ -149,15 +137,8 @@ export function useVideoTaskSse(
 
     abortRef.current = controller;
 
-    // 仅在 taskId 真正切换时执行 resetState；
-    // 若 store 中已持有同一 taskId 且有 snapshot 恢复的数据（status 非初始值或 progress > 0），
-    // 跳过 reset 以避免覆盖页面层已恢复的快照。
     const currentState = store.getState();
-    const isSameTask = currentState.taskId === taskId;
-    const hasRestoredSnapshot =
-      isSameTask && (currentState.status !== 'pending' || currentState.progress > 0);
-
-    if (!hasRestoredSnapshot) {
+    if (currentState.taskId !== taskId || !currentState.hasHydratedRuntime) {
       store.getState().resetState(taskId);
     }
 

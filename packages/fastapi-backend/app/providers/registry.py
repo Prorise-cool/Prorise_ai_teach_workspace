@@ -46,6 +46,21 @@ class ProviderRegistry:
         self._registration_order: dict[tuple[ProviderCapability, str], int] = {}
         self._order = 0
 
+    def clone(self) -> "ProviderRegistry":
+        """复制当前注册表，用于请求级 runtime 注册隔离。"""
+        cloned = ProviderRegistry()
+        cloned._registrations = {
+            capability: dict(registrations)
+            for capability, registrations in self._registrations.items()
+        }
+        cloned._aliases = {
+            capability: dict(aliases)
+            for capability, aliases in self._aliases.items()
+        }
+        cloned._registration_order = dict(self._registration_order)
+        cloned._order = self._order
+        return cloned
+
     def register(
         self,
         capability: ProviderCapability | str,

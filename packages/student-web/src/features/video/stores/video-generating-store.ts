@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 
-import type { TaskLifecycleStatus } from '@/types/task';
+import type { TaskLifecycleStatus, TaskSnapshot } from '@/types/task';
 import type { VideoPipelineStage } from '@/types/video';
 
 /** 等待页任务错误信息。 */
@@ -33,6 +33,8 @@ export interface VideoGeneratingState {
   progress: number;
   /** 任务生命周期状态。 */
   status: TaskLifecycleStatus;
+  /** 是否已经由 snapshot 或事件恢复过运行态。 */
+  hasHydratedRuntime: boolean;
   /** 错误信息（仅 failed 时有值）。 */
   error: VideoGeneratingError | null;
   /** SSE 是否已连接。 */
@@ -66,6 +68,8 @@ export interface VideoGeneratingActions {
   setFailed: (error: VideoGeneratingError) => void;
   /** 标记任务完成。 */
   setCompleted: () => void;
+  /** 从任务快照恢复当前状态。 */
+  restoreSnapshot: (snapshot: TaskSnapshot) => void;
   /** 标记已降级到轮询。 */
   setDegradedPolling: (degraded: boolean) => void;
   /** 标记 SSE 连接状态。 */
@@ -80,6 +84,7 @@ const INITIAL_STATE: VideoGeneratingState = {
   stageLabel: 'video.generating.preparing',
   progress: 0,
   status: 'pending',
+  hasHydratedRuntime: false,
   error: null,
   sseConnected: false,
   degradedToPolling: false,
@@ -99,6 +104,7 @@ export const useVideoGeneratingStore = create<
       progress: payload.progress,
       currentStage: payload.currentStage ?? state.currentStage,
       stageLabel: payload.stageLabel ?? state.stageLabel,
+      hasHydratedRuntime: true,
     })),
 
   updateStage: (payload) =>
@@ -107,6 +113,7 @@ export const useVideoGeneratingStore = create<
       currentStage: payload.currentStage,
       stageLabel: payload.stageLabel,
       progress: payload.progress,
+      hasHydratedRuntime: true,
       fixAttempt: payload.fixAttempt ?? 0,
       fixTotal: payload.fixTotal ?? 2,
     }),
@@ -114,6 +121,7 @@ export const useVideoGeneratingStore = create<
   setFailed: (error) =>
     set({
       status: 'failed',
+      hasHydratedRuntime: true,
       error,
     }),
 
@@ -122,6 +130,62 @@ export const useVideoGeneratingStore = create<
       status: 'completed',
       progress: 100,
       stageLabel: 'video.generating.completed',
+      hasHydratedRuntime: true,
+      error: null,
+    }),
+
+  restoreSnapshot: (snapshot) =>
+    set(() => {
+      const snapshotStage = (snapshot.currentStage ?? snapshot.stage) as VideoPipelineStage | null | undefined;
+      const snapshotStageLabel = snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? undefined;
+      const snapshotContext =
+        snapshot.context && typeof snapshot.context === 'object'
+          ? (snapshot.context as Record<string, unknown>)
+          : null;
+      const baseState = {
+        ...INITIAL_STATE,
+        taskId: snapshot.taskId,
+        hasHydratedRuntime: true,
+        fixAttempt:
+          typeof snapshotContext?.attemptNo === 'number' ? snapshotContext.attemptNo : 0,
+        fixTotal:
+          typeof snapshotContext?.fixTotal === 'number' ? snapshotContext.fixTotal : 2,
+      };
+
+      if (snapshot.status === 'completed') {
+        return {
+          ...baseState,
+          status: 'completed' as const,
+          progress: 100,
+          currentStage: snapshotStage ?? null,
+          stageLabel: snapshotStageLabel ?? 'video.generating.completed',
+        };
+      }
+
+      if (snapshot.status === 'failed' || snapshot.status === 'cancelled') {
+        return {
+          ...baseState,
+          status: snapshot.status,
+          progress: snapshot.progress,
+          currentStage: snapshotStage ?? null,
+          stageLabel: snapshotStageLabel ?? 'video.generating.preparing',
+          error: {
+            errorCode: snapshot.errorCode ?? null,
+            errorMessage: snapshot.message ?? null,
+            failedStage: snapshotStage ?? null,
+            retryable: false,
+          },
+        };
+      }
+
+      return {
+        ...baseState,
+        status: snapshot.status === 'pending' ? 'pending' : 'processing',
+        progress: snapshot.progress,
+        currentStage: snapshotStage ?? null,
+        stageLabel: snapshotStageLabel ?? 'video.generating.preparing',
+        error: null,
+      };
     }),
 
   setDegradedPolling: (degraded) =>

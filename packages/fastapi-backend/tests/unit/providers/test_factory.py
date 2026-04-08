@@ -55,6 +55,23 @@ def test_registry_orders_registrations_by_priority_then_registration_order() -> 
     ]
 
 
+def test_registry_clone_keeps_existing_entries_but_isolated_from_new_registrations() -> None:
+    registry = ProviderRegistry()
+    register_llm_providers(registry)
+
+    cloned = registry.clone()
+    cloned.register(
+        ProviderCapability.LLM,
+        "runtime-only-llm",
+        DemoLLMProvider,
+        default_priority=1
+    )
+
+    assert cloned.get_registration(ProviderCapability.LLM, "runtime-only-llm").provider_id == "runtime-only-llm"
+    with pytest.raises(ProviderNotFoundError, match="runtime-only-llm"):
+        registry.get_registration(ProviderCapability.LLM, "runtime-only-llm")
+
+
 def test_factory_builds_priority_sorted_chain_and_demo_provider_returns_metadata() -> None:
     factory = _build_factory()
 

@@ -94,6 +94,9 @@ export interface TaskRuntimeState {
   message: string;
   timestamp: string;
   stage?: string | null;
+  currentStage?: string | null;
+  stageLabel?: string | null;
+  stageProgress?: number | null;
   errorCode?: TaskErrorCode | null;
   context?: Record<string, unknown>;
 }

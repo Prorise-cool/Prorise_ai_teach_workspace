@@ -19,6 +19,9 @@ describe('task adapter', () => {
     ]);
     expect(detail.resultUrl).toBe('https://static.prorise.test/results/task_mock_completed.mp4');
     expect(snapshot.status).toBe('processing');
+    expect(snapshot.currentStage ?? null).toBeNull();
+    expect(snapshot.stageLabel ?? null).toBeNull();
+    expect(snapshot.stageProgress ?? null).toBeNull();
   });
 
   it('keeps real adapter aligned with the current FastAPI recovery endpoints', async () => {
@@ -37,7 +40,10 @@ describe('task adapter', () => {
             progress: 42,
             message: '任务处理中状态已同步',
             timestamp: '2026-03-30T13:05:00Z',
-            errorCode: null
+            errorCode: null,
+            currentStage: 'render',
+            stageLabel: 'video.stages.render',
+            stageProgress: 66
           }
         }
       });
@@ -56,12 +62,17 @@ describe('task adapter', () => {
       status: 501,
       code: 'TASK_OPERATION_UNSUPPORTED'
     });
-    await adapter.getTaskSnapshot('task_mock_processing');
+    const snapshot = await adapter.getTaskSnapshot('task_mock_processing');
 
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toMatchObject({
       url: '/api/v1/tasks/task_mock_processing/status',
       method: 'get'
+    });
+    expect(snapshot).toMatchObject({
+      currentStage: 'render',
+      stageLabel: 'video.stages.render',
+      stageProgress: 66
     });
   });
 
@@ -79,7 +90,10 @@ describe('task adapter', () => {
           progress: 42,
           message: '任务处理中状态已同步',
           timestamp: '2026-03-30T13:05:00Z',
-          errorCode: null
+          errorCode: null,
+          currentStage: 'render',
+          stageLabel: 'video.stages.render',
+          stageProgress: 66
         }
       }
     });
@@ -117,7 +131,10 @@ describe('task adapter', () => {
           message: '任务处理中状态已同步',
           timestamp: '2026-03-30T13:05:00Z',
           errorCode: null,
-          stage: 'render'
+          stage: 'render',
+          currentStage: 'render',
+          stageLabel: 'video.stages.render',
+          stageProgress: 60
         }
       }
     });
@@ -128,11 +145,16 @@ describe('task adapter', () => {
       module: 'video'
     });
 
-    await adapter.getTaskSnapshot('task_mock_processing');
+    const snapshot = await adapter.getTaskSnapshot('task_mock_processing');
 
     expect(request.mock.calls[0]?.[0]).toMatchObject({
       url: '/api/v1/video/tasks/task_mock_processing/status',
       method: 'get'
+    });
+    expect(snapshot).toMatchObject({
+      currentStage: 'render',
+      stageLabel: 'video.stages.render',
+      stageProgress: 60
     });
   });
 });
