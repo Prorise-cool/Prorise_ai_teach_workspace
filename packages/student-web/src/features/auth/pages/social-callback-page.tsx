@@ -20,6 +20,7 @@ import {
 	readSocialAuthReturnTo,
 	type AuthService,
 } from "@/services/auth";
+import { useFeedback } from "@/shared/feedback";
 import { useAuthSessionStore } from "@/stores/auth-session-store";
 import {
 	AUTH_DEFAULT_TENANT_ID,
@@ -90,6 +91,7 @@ export function SocialCallbackPage({
   service = authService,
 }: SocialCallbackPageProps) {
   const { t } = useAppTranslation();
+  const { notify } = useFeedback();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setSession = useAuthSessionStore((state) => state.setSession);
@@ -108,11 +110,15 @@ export function SocialCallbackPage({
       const statePayload = decodeSocialState(socialState);
 
       if (!socialCode || !socialState || !source) {
-        setStatusMessage(t("auth.feedback.socialMissingParams"));
         clearSocialAuthReturnTo();
-        window.setTimeout(() => {
-          void navigate(AUTH_LOGIN_PATH, { replace: true });
-        }, 1200);
+        notify({
+          tone: "error",
+          title: t("auth.feedback.socialMissingParams"),
+        });
+        void navigate(AUTH_LOGIN_PATH, {
+          replace: true,
+          state: null
+        });
 
         return;
       }
@@ -150,12 +156,17 @@ export function SocialCallbackPage({
         }
 
         clearSocialAuthReturnTo();
-        setStatusMessage(
-          getAuthFeedbackMessage(error, t("auth.feedback.socialFailed")),
-        );
-        window.setTimeout(() => {
-          void navigate(AUTH_LOGIN_PATH, { replace: true });
-        }, 1200);
+        const errorMessage = getAuthFeedbackMessage(error, t("auth.feedback.socialFailed"));
+
+        setStatusMessage(errorMessage);
+        notify({
+          tone: "error",
+          title: errorMessage,
+        });
+        void navigate(AUTH_LOGIN_PATH, {
+          replace: true,
+          state: null
+        });
       }
     }
 
@@ -164,7 +175,7 @@ export function SocialCallbackPage({
     return () => {
       isActive = false;
     };
-  }, [navigate, searchParams, service, setSession, t]);
+  }, [navigate, notify, searchParams, service, setSession, t]);
 
   return (
     <main className="xm-auth-page xm-auth-callback-page">
