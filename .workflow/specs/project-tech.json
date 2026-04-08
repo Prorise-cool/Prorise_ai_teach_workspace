@@ -1,0 +1,59 @@
+{
+  "project_name": "小麦 - AI 教学视频智能体",
+  "version": "1.0.0",
+  "last_updated": "2026-04-08",
+  "tech_stack": {
+    "frontend": {
+      "framework": "React 19.2.4",
+      "build_tool": "Vite 6.4.1",
+      "language": "TypeScript 5.9.3",
+      "styling": "Tailwind CSS 4.2.2",
+      "state_management": ["zustand 5.0.12", "@tanstack/react-query 5.95.2"],
+      "form_handling": ["react-hook-form 7.72.0", "zod 4.3.6"],
+      "animation": "Motion 12.27.5",
+      "testing": ["Vitest 4.1.2", "MSW 2.12.14", "Storybook 8.6.14"],
+      "ui_components": "shadcn/ui + Radix UI"
+    },
+    "backend_functional": {
+      "framework": "FastAPI 0.115+",
+      "language": "Python 3.11+",
+      "async_worker": "Dramatiq + Redis",
+      "validation": "Pydantic 2.7+",
+      "testing": "pytest 8.3+ + httpx 0.28+"
+    },
+    "backend_admin": {
+      "framework": "Spring Boot 3.5.9",
+      "language": "Java 21",
+      "base": "RuoYi-Vue-Plus 5.5.3",
+      "auth": "Sa-Token 1.44.0",
+      "orm": "MyBatis-Plus 3.5.16",
+      "cache": "Redisson 3.52.0"
+    },
+    "admin_frontend": {
+      "framework": "Vue 3.5.26",
+      "build_tool": "Vite 7.3.0",
+      "language": "TypeScript 5.9.3",
+      "ui_library": "Naive UI 2.43.2",
+      "state_management": "Pinia 3.0.4"
+    },
+    "infrastructure": {
+      "cache": "Redis",
+      "database": "MySQL",
+      "storage": "腾讯云 COS",
+      "reverse_proxy": "Nginx"
+    }
+  },
+  "monorepo_structure": {
+    "student_web": "packages/student-web/",
+    "fastapi_backend": "packages/fastapi-backend/",
+    "ruoyi_backend": "packages/RuoYi-Vue-Plus-5.X/",
+    "admin_frontend": "packages/ruoyi-plus-soybean/",
+    "contracts": "contracts/",
+    "mocks": "mocks/"
+  },
+  "key_directories": {
+    "planning_source": "_bmad-output/",
+    "dev_docs": "docs/01开发人员手册/",
+    "design_assets": "docs/03UI:UX 设计素材/001UI 设计稿/04-成品图/"
+  }
+}
