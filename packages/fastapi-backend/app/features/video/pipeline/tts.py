@@ -40,6 +40,25 @@ logger = get_logger("app.features.video.pipeline.tts")
 
 
 @dataclass(slots=True)
+class _BoundVoiceConfigProvider:
+    """将 TTS provider 与自身音色配置绑定。"""
+
+    provider: Any
+    voice_config: VoiceConfig
+
+    @property
+    def provider_id(self) -> str:
+        return self.provider.provider_id
+
+    @property
+    def config(self) -> Any:
+        return self.provider.config
+
+    async def synthesize(self, text: str, voice_config: Any | None = None):  # noqa: ANN401
+        return await self.provider.synthesize(text, voice_config=self.voice_config)
+
+
+@dataclass(slots=True)
 class TTSService:
     """TTS 语音合成服务，逐场景合成旁白音频并汇总结果。"""
 
@@ -67,7 +86,19 @@ class TTSService:
                 error_code=TaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
                 message="未配置可用的 TTS Provider",
             )
-        voice_config = self._build_voice_config(selected_providers, voice_preference)
+        provider_voice_configs = {
+            provider.provider_id: self._build_voice_config((provider,), voice_preference)
+            for provider in selected_providers
+        }
+        primary_provider_id = selected_providers[0].provider_id
+        voice_config = provider_voice_configs[primary_provider_id]
+        bound_providers = tuple(
+            _BoundVoiceConfigProvider(
+                provider=provider,
+                voice_config=provider_voice_configs[provider.provider_id],
+            )
+            for provider in selected_providers
+        )
         self.runtime.save_value(
             "tts_selected_voice",
             {
@@ -90,12 +121,11 @@ class TTSService:
         audio_segments: list[AudioSegment] = []
         provider_used: list[str] = []
         failover_occurred = False
-        primary_provider_id = selected_providers[0].provider_id
 
         for index, scene in enumerate(storyboard.scenes, start=1):
             try:
                 result = await self.failover_service.synthesize(
-                    selected_providers,
+                    bound_providers,
                     scene.narration,
                     voice_config=voice_config,
                     emit_switch=emit_switch,
@@ -112,6 +142,7 @@ class TTSService:
             provider_used.append(result.provider)
             if result.provider != primary_provider_id:
                 failover_occurred = True
+            result_voice_config = provider_voice_configs.get(result.provider, voice_config)
             decoded_audio = decode_audio_payload(getattr(result, "metadata", None))
             if decoded_audio is not None:
                 audio_bytes, audio_format = decoded_audio
@@ -123,7 +154,7 @@ class TTSService:
                 write_silent_wav(
                     audio_path,
                     duration_seconds=max(scene.duration_hint, 1),
-                    sample_rate=voice_config.sample_rate,
+                    sample_rate=result_voice_config.sample_rate,
                 )
                 logger.warning(
                     "TTS provider returned non-audio payload; generated silent fallback track",
