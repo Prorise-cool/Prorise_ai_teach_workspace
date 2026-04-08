@@ -115,7 +115,22 @@ export function VideoResultPage() {
 
   /* -- Success -- */
   if (!data?.result) {
-    return null;
+    return (
+      <div className="xm-video-result">
+        <main className="xm-video-result__canvas">
+          <ResultErrorView
+            icon={VideoOff}
+            title={t('video.result.videoMissingTitle')}
+            message={t('video.result.videoMissingMessage')}
+            action={
+              <Button variant="default" onClick={handleReturn}>
+                {t('video.common.createNew')}
+              </Button>
+            }
+          />
+        </main>
+      </div>
+    );
   }
 
   const result = data.result;

@@ -48,6 +48,26 @@ export {
   resolveVideoPublicAdapter,
 } from './video-public-adapter';
 export type {
+  VideoResultAdapter,
+  VideoResultData,
+} from './video-result-adapter';
+export {
+  VideoResultAdapterError,
+  createMockVideoResultAdapter,
+  createRealVideoResultAdapter,
+  resolveVideoResultAdapter,
+} from './video-result-adapter';
+export type {
+  VideoPublishAdapter,
+  VideoPublishResult,
+} from './video-publish-adapter';
+export {
+  VideoPublishAdapterError,
+  createMockVideoPublishAdapter,
+  createRealVideoPublishAdapter,
+  resolveVideoPublishAdapter,
+} from './video-publish-adapter';
+export type {
   VideoPreprocessAdapter
 } from './video-preprocess-adapter';
 export {

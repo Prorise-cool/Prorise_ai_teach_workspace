@@ -47,10 +47,12 @@ type TaskQueryOptions = {
 type ResolveTaskAdapterOptions = {
   client?: ApiClient;
   useMock?: boolean;
+  module?: string;
 };
 
 type RealTaskAdapterOptions = {
   client?: ApiClient;
+  module?: string;
 };
 
 const TASK_OPERATION_UNSUPPORTED_CODE = 'TASK_OPERATION_UNSUPPORTED';
@@ -77,6 +79,21 @@ function appendScenario(url: string, scenario?: TaskMockScenario) {
   nextUrl.searchParams.set('scenario', scenario);
 
   return `${nextUrl.pathname}${nextUrl.search}`;
+}
+
+/**
+ * 构造任务状态快照路径；模块级任务优先走 `/api/v1/{module}/tasks/...`。
+ *
+ * @param taskId - 任务 ID。
+ * @param module - 可选模块名。
+ * @returns 状态快照路径。
+ */
+function buildTaskSnapshotPath(taskId: string, module?: string) {
+  if (module) {
+    return `/api/v1/${module}/tasks/${taskId}/status`;
+  }
+
+  return `/api/v1/tasks/${taskId}/status`;
 }
 
 /**
@@ -226,7 +243,8 @@ async function requestDataEnvelope<T>(
  * @returns 真实任务 adapter。
  */
 export function createRealTaskAdapter({
-  client = fastapiClient
+  client = fastapiClient,
+  module
 }: RealTaskAdapterOptions = {}): TaskAdapter {
   return {
     listTasks() {
@@ -237,7 +255,7 @@ export function createRealTaskAdapter({
     },
     async getTaskSnapshot(taskId, options) {
       const envelope = await requestDataEnvelope<TaskSnapshot>(client, {
-        url: appendScenario(`/api/v1/tasks/${taskId}/status`, options?.scenario),
+        url: appendScenario(buildTaskSnapshotPath(taskId, module), options?.scenario),
         method: 'get',
         signal: options?.signal
       });
@@ -295,7 +313,8 @@ export function resolveTaskAdapter(
     {
       mock: createMockTaskAdapter(),
       real: createRealTaskAdapter({
-        client: options.client ?? fastapiClient
+        client: options.client ?? fastapiClient,
+        module: options.module
       })
     },
     {

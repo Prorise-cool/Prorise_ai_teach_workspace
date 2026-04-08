@@ -28,7 +28,7 @@ export interface VideoTaskStatusResult {
  * @returns 任务状态查询结果。
  */
 export function useVideoTaskStatus(taskId: string | undefined): VideoTaskStatusResult {
-  const adapter = resolveTaskAdapter();
+  const adapter = resolveTaskAdapter({ module: 'video' });
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['video', 'task-status', taskId],

@@ -1,20 +1,18 @@
 /**
  * 文件说明：SSE 断开后的 status 降级轮询 hook（Story 4.7）。
- * SSE 断开后启动 3s 间隔轮询 /api/v1/video/tasks/:id/status。
+ * SSE 断开后启动 3s 间隔轮询任务状态快照。
+ * 统一通过 task-adapter 获取快照，不再区分 mock / real 或自行构造请求。
  * SSE 重新连接后自动停止轮询。使用 @tanstack/react-query 的 useQuery + refetchInterval。
  */
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
-import { buildFastapiAuthHeaders, fastapiClient } from '@/services/api/fastapi-client';
-import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
-import type { TaskDataEnvelope } from '@/types/task';
+import { resolveTaskAdapter } from '@/services/api/adapters/task-adapter';
 import type { VideoPipelineStage } from '@/types/video';
 
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-/** Status 查询返回的快照结构。 */
+/** Status 查询返回的快照结构（从 TaskSnapshot 中提取轮询所需字段）。 */
 interface VideoTaskStatusSnapshot {
   taskId: string;
   status: string;
@@ -28,18 +26,25 @@ interface VideoTaskStatusSnapshot {
 const POLLING_INTERVAL_MS = 3000;
 
 /**
- * 查询视频任务状态快照。
+ * 通过 task-adapter 查询视频任务状态快照。
+ * adapter 内部已统一 mock / real 分支与 API 路径。
  *
  * @param taskId - 任务 ID。
  * @returns 状态快照。
  */
 async function fetchVideoTaskStatus(taskId: string): Promise<VideoTaskStatusSnapshot> {
-  const response = await fastapiClient.request<TaskDataEnvelope<VideoTaskStatusSnapshot>>({
-    url: `/api/v1/video/tasks/${taskId}/status`,
-    method: 'get',
-  });
+  const adapter = resolveTaskAdapter({ module: 'video' });
+  const snapshot = await adapter.getTaskSnapshot(taskId);
 
-  return response.data.data;
+  return {
+    taskId: snapshot.taskId,
+    status: snapshot.status,
+    progress: snapshot.progress,
+    message: snapshot.message,
+    errorCode: snapshot.errorCode ?? null,
+    currentStage: (snapshot.stage as VideoPipelineStage) ?? null,
+    stageLabel: snapshot.stage ?? null,
+  };
 }
 
 /**
@@ -57,23 +62,9 @@ export function useVideoStatusPolling(taskId: string | undefined) {
   const isTerminal = status === 'completed' || status === 'failed' || status === 'cancelled';
   const shouldPoll = !!taskId && !sseConnected && !isTerminal;
 
-  const isMock = resolveRuntimeMode() === 'mock';
-
   const { data } = useQuery({
     queryKey: ['video', 'status-polling', taskId],
-    queryFn: () => {
-      if (isMock) {
-        // mock 模式下从 MSW handler 获取数据
-        return fetch(
-          `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/status`,
-          { headers: buildFastapiAuthHeaders() },
-        )
-          .then((r) => r.json() as Promise<TaskDataEnvelope<VideoTaskStatusSnapshot>>)
-          .then((envelope) => envelope.data);
-      }
-
-      return fetchVideoTaskStatus(taskId!);
-    },
+    queryFn: () => fetchVideoTaskStatus(taskId!),
     enabled: shouldPoll,
     refetchInterval: shouldPoll ? POLLING_INTERVAL_MS : false,
     retry: 1,
