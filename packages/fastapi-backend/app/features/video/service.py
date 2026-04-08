@@ -132,7 +132,7 @@ class VideoService(BaseTaskMetadataService):
         Raises:
             AppError: 404 — 任务不存在。
         """
-        snapshot = await self.get_task(task_id)
+        snapshot = await self.get_task(task_id, access_context=access_context)
         if snapshot is None:
             raise AppError(
                 code="COMMON_NOT_FOUND",
@@ -140,11 +140,21 @@ class VideoService(BaseTaskMetadataService):
                 status_code=404,
                 task_id=task_id,
             )
+        if access_context is not None and snapshot.user_id != access_context.user_id:
+            raise AppError(
+                code="AUTH_PERMISSION_DENIED",
+                message="仅任务创建者可查看结果详情",
+                status_code=403,
+                task_id=task_id,
+            )
 
         if snapshot.detail_ref and self._asset_store.exists(snapshot.detail_ref):
             detail = self._asset_store.read_result_detail(snapshot.detail_ref)
             try:
-                publication = await self._publication_service.get_publication(task_id)
+                publication = await self._publication_service.get_publication(
+                    task_id,
+                    access_context=access_context,
+                )
             except IntegrationError:
                 logger.warning(
                     "Video publication overlay lookup failed; falling back to local publish state task_id=%s",
@@ -178,7 +188,7 @@ class VideoService(BaseTaskMetadataService):
         Raises:
             AppError: 404/403/400 — 任务不存在/非创建者/未完成。
         """
-        snapshot = await self.get_task(task_id)
+        snapshot = await self.get_task(task_id, access_context=access_context)
         if snapshot is None:
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
         if snapshot.user_id != access_context.user_id:
@@ -199,6 +209,7 @@ class VideoService(BaseTaskMetadataService):
                 cover_url=detail.result.cover_url,
                 is_public=True,
             ),
+            access_context=access_context,
         )
         publish_state = self._resolve_publish_state(
             detail.publish_state,
@@ -208,7 +219,12 @@ class VideoService(BaseTaskMetadataService):
         updated_detail = self._write_detail_state(snapshot.detail_ref, detail, publish_state)
 
         updated_at = publication.updated_at or datetime.now(UTC)
-        await self._persist_snapshot_and_invalidate(snapshot, updated_at=updated_at, runtime_store=runtime_store)
+        await self._persist_snapshot_and_invalidate(
+            snapshot,
+            updated_at=updated_at,
+            runtime_store=runtime_store,
+            access_context=access_context,
+        )
         return PublishOperationResult(
             task_id=task_id,
             published=publish_state.published,
@@ -228,7 +244,7 @@ class VideoService(BaseTaskMetadataService):
         Raises:
             AppError: 404/403 — 任务不存在/非创建者。
         """
-        snapshot = await self.get_task(task_id)
+        snapshot = await self.get_task(task_id, access_context=access_context)
         if snapshot is None:
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
         if snapshot.user_id != access_context.user_id:
@@ -238,7 +254,10 @@ class VideoService(BaseTaskMetadataService):
         if snapshot.detail_ref is not None and self._asset_store.exists(snapshot.detail_ref):
             detail = self._asset_store.read_result_detail(snapshot.detail_ref)
 
-        publication = await self._publication_service.get_publication(task_id)
+        publication = await self._publication_service.get_publication(
+            task_id,
+            access_context=access_context,
+        )
         if publication is None:
             if detail is not None:
                 self._write_detail_state(snapshot.detail_ref, detail, PublishState())
@@ -255,12 +274,18 @@ class VideoService(BaseTaskMetadataService):
                 is_public=False,
                 status=publication.status,
             ),
+            access_context=access_context,
         )
 
         if detail is not None:
             self._write_detail_state(snapshot.detail_ref, detail, PublishState())
 
-        await self._persist_snapshot_and_invalidate(snapshot, updated_at=datetime.now(UTC), runtime_store=runtime_store)
+        await self._persist_snapshot_and_invalidate(
+            snapshot,
+            updated_at=datetime.now(UTC),
+            runtime_store=runtime_store,
+            access_context=access_context,
+        )
         return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
     async def list_published_tasks(

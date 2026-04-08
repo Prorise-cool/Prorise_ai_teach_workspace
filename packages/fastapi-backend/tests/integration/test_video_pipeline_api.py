@@ -214,9 +214,14 @@ def _run_pipeline(*, tmp_path, runtime_store: RuntimeStore, video_service: Video
 
 
 @contextmanager
-def api_client(tmp_path, runtime_store: RuntimeStore, video_service: VideoService) -> Iterator[TestClient]:
+def api_client(
+    tmp_path,
+    runtime_store: RuntimeStore,
+    video_service: VideoService,
+    access_context: AccessContext | None = None,
+) -> Iterator[TestClient]:
     app = create_app()
-    override_auth(app, AccessContext(
+    effective_access_context = access_context or AccessContext(
         user_id="10001",
         username="student_demo",
         roles=("student",),
@@ -225,12 +230,13 @@ def api_client(tmp_path, runtime_store: RuntimeStore, video_service: VideoServic
         client_id="test-client-id",
         request_id="test-req-id",
         online_ttl_seconds=86400,
-    ))
+    )
+    override_auth(app, effective_access_context)
     app.dependency_overrides[get_video_service] = lambda: video_service
     app.dependency_overrides[get_security_runtime_store] = lambda: runtime_store
     runtime_store.set_online_token_record(
-        VALID_TOKEN,
-        {"tokenId": VALID_TOKEN, "userName": "student_demo"},
+        effective_access_context.token,
+        {"tokenId": effective_access_context.token, "userName": effective_access_context.username},
         ttl_seconds=600,
     )
 
@@ -343,7 +349,7 @@ def test_video_result_detail_falls_back_to_local_publish_state_when_publication_
             roles={"student"},
         )
 
-    async def fail_get_publication(task_ref_id: str):
+    async def fail_get_publication(task_ref_id: str, *, access_context: AccessContext | None = None):
         raise IntegrationError(
             service="ruoyi",
             resource="video-publication",
@@ -363,3 +369,30 @@ def test_video_result_detail_falls_back_to_local_publish_state_when_publication_
     assert response.status_code == 200
     assert response.json()["data"]["publishState"]["published"] is True
     assert response.json()["data"]["publishState"]["publishedAt"] == "2026-04-06T20:00:00Z"
+
+
+def test_video_pipeline_result_detail_rejects_non_owner(tmp_path) -> None:
+    state = {"video": [], "publications": [], "session_artifacts": {}}
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    video_service = _build_video_service(tmp_path, state)
+    task_id = _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
+
+    with api_client(
+        tmp_path,
+        runtime_store,
+        video_service,
+        access_context=AccessContext(
+            user_id="20002",
+            username="another_student",
+            roles=("student",),
+            permissions=("*:*:*",),
+            token="another-video-token",
+            client_id="test-client-id",
+            request_id="test-req-id-unauthorized",
+            online_ttl_seconds=86400,
+        ),
+    ) as client:
+        response = client.get(f"/api/v1/video/tasks/{task_id}/result")
+
+    assert response.status_code == 403
+    assert response.json()["data"]["error_code"] == "AUTH_PERMISSION_DENIED"

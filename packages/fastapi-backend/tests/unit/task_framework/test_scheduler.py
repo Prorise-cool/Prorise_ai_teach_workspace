@@ -185,6 +185,7 @@ def test_scheduler_persists_snapshot_and_event_cache_into_runtime_store() -> Non
 
     assert result.status == TaskStatus.COMPLETED
     assert snapshot["status"] == "completed"
+    assert snapshot["userId"] == "student-5"
     assert snapshot["context"] == {"requestId": context.request_id}
     assert [event.event for event in events] == ["progress", "completed"]
     assert [event.sequence for event in events] == [1, 2]

@@ -123,6 +123,7 @@ def initialize_task_runtime_state(
     task_id: str,
     created_at: str,
     request_id: str | None,
+    user_id: str,
     source_payload: dict[str, object],
     voice_preference: dict[str, str] | None = None,
 ) -> dict[str, object]:
@@ -137,6 +138,7 @@ def initialize_task_runtime_state(
         message="任务已创建，等待处理",
         progress=0,
         request_id=request_id,
+        user_id=user_id,
         source="video.create_task",
         context=context,
         created_at=created_at,
@@ -263,6 +265,7 @@ async def create_video_task(
         task_id=task_id,
         created_at=created_at,
         request_id=access_context.request_id,
+        user_id=access_context.user_id,
         source_payload=source_payload,
         voice_preference=voice_preference,
     )
