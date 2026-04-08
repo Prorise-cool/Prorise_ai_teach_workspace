@@ -6,48 +6,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
-import { buildFastapiAuthHeaders, fastapiClient } from '@/services/api/fastapi-client';
-import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
+import { resolveVideoPublishAdapter } from '@/services/api/adapters/video-publish-adapter';
+import type { VideoResultData } from '@/services/api/adapters/video-result-adapter';
 import { useFeedback } from '@/shared/feedback';
-
-/** Publish API 响应。 */
-interface PublishResponse {
-  taskId: string;
-  published: boolean;
-}
-
-/**
- * 发送视频发布/取消请求的统一函数。
- * mock 模式使用原生 fetch，真实模式使用 fastapiClient。
- *
- * @param taskId - 任务 ID。
- * @param method - HTTP 方法：'post' 公开发布，'delete' 取消公开。
- * @returns 发布/取消响应。
- */
-async function videoPublishRequest(
-  taskId: string,
-  method: 'post' | 'delete',
-): Promise<PublishResponse> {
-  const isMock = resolveRuntimeMode() === 'mock';
-
-  if (isMock) {
-    const response = await fetch(
-      `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/publish`,
-      { method: method.toUpperCase(), headers: buildFastapiAuthHeaders() },
-    );
-    const envelope = await response.json();
-
-    return (envelope as { data: PublishResponse }).data;
-  }
-
-  const response = await fastapiClient.request<{ data: PublishResponse }>({
-    url: `/api/v1/video/tasks/${taskId}/publish`,
-    method,
-  });
-
-  return response.data.data;
-}
 
 /**
  * 管理视频公开发布/取消操作的 mutation 状态。
@@ -56,13 +17,34 @@ async function videoPublishRequest(
  * @returns mutation 状态与操作函数。
  */
 export function useVideoPublish(taskId: string) {
+  const adapter = resolveVideoPublishAdapter();
   const queryClient = useQueryClient();
   const { notify } = useFeedback();
   const { t } = useAppTranslation();
 
+  const syncPublishedState = (published: boolean) => {
+    queryClient.setQueryData<VideoResultData | null>(
+      ['video', 'result', taskId],
+      (current) => {
+        if (!current?.result) {
+          return current ?? null;
+        }
+
+        return {
+          ...current,
+          result: {
+            ...current.result,
+            published,
+          },
+        };
+      },
+    );
+  };
+
   const publishMutation = useMutation({
-    mutationFn: () => videoPublishRequest(taskId, 'post'),
-    onSuccess: () => {
+    mutationFn: () => adapter.publish(taskId),
+    onSuccess: (result) => {
+      syncPublishedState(result.published);
       notify({ tone: 'success', title: t('video.result.publishSuccess') });
       void queryClient.invalidateQueries({ queryKey: ['video', 'result', taskId] });
       void queryClient.invalidateQueries({ queryKey: ['video', 'published'] });
@@ -73,8 +55,9 @@ export function useVideoPublish(taskId: string) {
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: () => videoPublishRequest(taskId, 'delete'),
-    onSuccess: () => {
+    mutationFn: () => adapter.unpublish(taskId),
+    onSuccess: (result) => {
+      syncPublishedState(result.published);
       notify({ tone: 'success', title: t('video.result.unpublishSuccess') });
       void queryClient.invalidateQueries({ queryKey: ['video', 'result', taskId] });
       void queryClient.invalidateQueries({ queryKey: ['video', 'published'] });

@@ -135,6 +135,7 @@ export type VideoPublicSort = (typeof VIDEO_PUBLIC_SORT_VALUES)[number];
 /** 公开视频卡片最小数据单元。 */
 export interface VideoPublicCard {
   videoId: string;
+  resultId?: string;
   title: string;
   summary: string;
   thumbnail: string | null;

@@ -2,11 +2,11 @@
  * 文件说明：视频输入页公开视频发现区的契约与 adapter 测试。
  * 覆盖 Story 3.6 当前 public 形态，以及对 Epic 4 published 形态的兼容。
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
-import { createApiClient } from '@/services/api/client';
+import { ApiClientError, createApiClient } from '@/services/api/client';
 import {
   createMockVideoPublicAdapter,
   createRealVideoPublicAdapter,
@@ -19,6 +19,7 @@ import { videoTaskHandlers } from '@/services/mock/handlers/video-task';
 
 import publicVideosJson from '../../../../../../mocks/video/v1/public-videos.json';
 import publicVideosEmptyJson from '../../../../../../mocks/video/v1/public-videos.empty.json';
+import publishedListJson from '../../../../../../mocks/video/v1/published-list.json';
 
 const server = setupServer(...videoTaskHandlers);
 
@@ -118,5 +119,48 @@ describe('video public adapters', () => {
     expect(result.items[0].videoId).toBe('video_public_lhopital');
     expect(result.items[0].sourceText).toContain('洛必达法则');
     expect(result.items[0].summary).toContain('柯西中值定理');
+  });
+
+  it('normalizes published rows payloads with numeric duration labels', async () => {
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiClientError(
+          404,
+          'not found',
+          {
+            code: 404,
+            msg: 'not found',
+            data: {},
+          },
+          {
+            status: 404,
+            data: {
+              code: 404,
+              msg: 'not found',
+              data: {},
+            },
+            headers: new Headers(),
+          },
+        ),
+      )
+      .mockResolvedValueOnce({
+        status: 200,
+        data: publishedListJson,
+      });
+    const adapter = createRealVideoPublicAdapter({
+      client: {
+        request,
+      } as never,
+    });
+    const result = await adapter.fetchPublicVideos({ page: 1, pageSize: 12, sort: 'latest' });
+
+    expect(result.items[0]).toMatchObject({
+      videoId: 'video_result_video_pipeline_api_001',
+      resultId: 'video_result_video_pipeline_api_001',
+      duration: '2:00',
+      authorName: 'student_demo',
+    });
+    expect(result.total).toBe(1);
   });
 });

@@ -64,7 +64,8 @@ export function VideoPublicFeed({
   onReuseSourceText,
 }: VideoPublicFeedProps) {
   const publicVideosQuery = usePublicVideos();
-  const cards = (publicVideosQuery.data?.items ?? []).map(mapVideoCardToCommunityCard);
+  const sourceCards = publicVideosQuery.data?.items ?? [];
+  const cards = sourceCards.map(mapVideoCardToCommunityCard);
 
   return (
     <CommunityFeed
@@ -93,6 +94,7 @@ export function VideoPublicFeed({
         </div>
       ) : undefined}
       renderCardActions={(card) => {
+        const sourceCard = sourceCards.find((item) => item.videoId === card.id);
         const sourceText = card.sourceText?.trim();
         const routeTo = card.routeTo ?? `/video/${card.id}`;
 
@@ -106,24 +108,13 @@ export function VideoPublicFeed({
               variant="secondary"
               size="sm"
               onClick={() => {
-                if (!sourceText) {
+                if (!sourceText || !sourceCard) {
                   return;
                 }
 
-                onReuseSourceText({
-                  videoId: card.id,
-                  title: card.title,
-                  summary: card.description ?? card.title,
-                  thumbnail: card.coverUrl ?? null,
-                  duration: card.durationLabel ?? '',
-                  viewCount: card.viewCount,
-                  createdAt: new Date().toISOString(),
-                  sourceText,
-                  authorName: card.authorName,
-                  authorAvatar: card.authorAvatar,
-                });
+                onReuseSourceText(sourceCard);
               }}
-              disabled={!sourceText}
+              disabled={!sourceText || !sourceCard}
             >
               {reuseActionLabel}
             </Button>
