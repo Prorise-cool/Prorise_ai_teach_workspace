@@ -23,6 +23,12 @@ class ImageStorageResult(BaseModel):
 
 class ImageStorage(ABC):
     """图片存储抽象接口。"""
+
+    @property
+    def is_development_fallback(self) -> bool:
+        """标记当前实现是否仅允许在开发/测试环境回退使用。"""
+        return False
+
     @abstractmethod
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
         """上传图片。"""
@@ -39,6 +45,11 @@ class LocalImageStorage(ImageStorage):
     def __init__(self, base_dir: str | Path = "data/uploads/video") -> None:
         """初始化图片存储。"""
         self._base_dir = Path(base_dir)
+
+    @property
+    def is_development_fallback(self) -> bool:
+        """本地文件存储只允许作为开发/测试回退。"""
+        return True
 
     async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
         """上传图片。"""

@@ -15,6 +15,7 @@ from app.features.video.services.preprocess import (
     ImageValidationError,
     PreprocessService,
     extract_image_metadata,
+    normalize_preprocess_environment,
     validate_file_empty,
     validate_file_size,
     validate_file_type,
@@ -221,3 +222,75 @@ def test_preprocess_raises_storage_failed_error() -> None:
         )
 
     assert exc_info.value.code == "VIDEO_STORAGE_FAILED"
+
+
+def test_preprocess_normalizes_supported_environments() -> None:
+    assert normalize_preprocess_environment("development") == "development"
+    assert normalize_preprocess_environment("test") == "test"
+    assert normalize_preprocess_environment("production") == "production"
+    assert normalize_preprocess_environment("dev") == "development"
+    assert normalize_preprocess_environment("testing") == "test"
+    assert normalize_preprocess_environment("prod") == "production"
+
+
+def test_preprocess_rejects_unknown_environment() -> None:
+    with pytest.raises(AppError) as exc_info:
+        normalize_preprocess_environment("staging")
+
+    assert exc_info.value.code == "COMMON_INVALID_CONFIGURATION"
+
+
+def test_preprocess_allows_default_fallback_providers_in_development() -> None:
+    service = PreprocessService(environment="development")
+
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="default-development.png",
+            content_type="image/png",
+        )
+    )
+
+    assert result.image_ref.startswith("local://")
+
+
+def test_preprocess_allows_default_fallback_providers_in_test() -> None:
+    service = PreprocessService(environment="test")
+
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="default-test.png",
+            content_type="image/png",
+        )
+    )
+
+    assert result.image_ref.startswith("local://")
+
+
+def test_preprocess_fails_fast_with_default_fallback_providers_in_production() -> None:
+    with pytest.raises(AppError) as exc_info:
+        PreprocessService(environment="production")
+
+    assert exc_info.value.code == "COMMON_INVALID_CONFIGURATION"
+    assert exc_info.value.details["environment"] == "production"
+    assert exc_info.value.details["fallback_components"] == ["LocalImageStorage", "MockOcrProvider"]
+
+
+def test_preprocess_allows_explicit_providers_in_production() -> None:
+    service = PreprocessService(
+        environment="production",
+        image_storage=InMemoryImageStorage(),
+        ocr_provider=FixedOcrProvider(OcrResult(text="生产 OCR", confidence=0.99)),
+    )
+
+    result = asyncio.run(
+        service.preprocess(
+            file_bytes=_make_png(),
+            filename="production.png",
+            content_type="image/png",
+        )
+    )
+
+    assert result.image_ref.startswith("local://test/")
+    assert result.ocr_text == "生产 OCR"
