@@ -1,15 +1,23 @@
 import asyncio
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 from app.features.video.pipeline.models import ResourceLimits, VIDEO_STAGE_PROFILES, VideoStage, build_stage_snapshot
+from app.features.video.pipeline.orchestrator import VideoPipelineService
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
     ScriptSecurityViolation,
+    resolve_local_fallback_policy,
     scan_script_safety,
 )
+from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.services import _cleanup_pipeline_temp_dirs
+from app.features.video.service import VideoService
+from app.infra.redis_client import RuntimeStore
+from app.providers.factory import ProviderFactory, build_default_registry
+from app.shared.cos_client import CosClient
 
 
 def test_video_stage_profiles_are_contiguous_and_cover_full_progress_range() -> None:
@@ -72,7 +80,7 @@ def test_local_sandbox_maps_oom_and_disk_full_markers() -> None:
     assert disk_full_result.error_type == "VIDEO_RENDER_DISK_FULL"
 
 
-def test_docker_sandbox_falls_back_to_local_executor_when_image_runtime_is_unavailable(monkeypatch) -> None:
+def test_docker_sandbox_fails_closed_when_image_runtime_is_unavailable(monkeypatch) -> None:
     executor = DockerSandboxExecutor(docker_image="manim-sandbox:latest")
     limits = ResourceLimits()
 
@@ -95,8 +103,70 @@ def test_docker_sandbox_falls_back_to_local_executor_when_image_runtime_is_unava
         executor.execute(task_id="video_docker_fallback_case", script="from manim import *", resource_limits=limits)
     )
 
+    assert result.success is False
+    assert result.output_path is None
+    assert result.error_type == "VIDEO_RENDER_FAILED"
+    assert "Unable to find image" in result.stderr
+
+
+def test_docker_sandbox_fails_closed_when_docker_executable_is_missing(monkeypatch) -> None:
+    executor = DockerSandboxExecutor(docker_image="manim-sandbox:latest")
+    limits = ResourceLimits()
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.shutil.which", lambda command: None)
+
+    result = asyncio.run(
+        executor.execute(task_id="video_docker_missing_case", script="from manim import *", resource_limits=limits)
+    )
+
+    assert result.success is False
+    assert result.output_path is None
+    assert result.error_type == "VIDEO_RENDER_FAILED"
+    assert "docker executable is unavailable" in (result.stderr or "")
+
+
+def test_docker_sandbox_allows_explicit_local_fallback_for_dev_and_test(monkeypatch) -> None:
+    executor = DockerSandboxExecutor(
+        docker_image="manim-sandbox:latest",
+        allow_local_fallback=True,
+    )
+    limits = ResourceLimits()
+
+    monkeypatch.setattr("app.features.video.pipeline.sandbox.shutil.which", lambda command: None)
+
+    result = asyncio.run(
+        executor.execute(task_id="video_docker_fallback_case", script="from manim import *", resource_limits=limits)
+    )
+
     assert result.success is True
     assert result.output_path is not None
+
+
+def test_resolve_local_fallback_policy_requires_supported_environment() -> None:
+    assert resolve_local_fallback_policy(environment="development", configured=True) is True
+    assert resolve_local_fallback_policy(environment="test", configured=True) is True
+    assert resolve_local_fallback_policy(environment="production", configured=True) is False
+    assert resolve_local_fallback_policy(environment="development", configured=False) is False
+
+
+def test_video_pipeline_service_wires_local_fallback_policy_from_settings(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="development",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+        ),
+        asset_store=asset_store,
+    )
+
+    assert isinstance(service.sandbox_executor, DockerSandboxExecutor)
+    assert service.sandbox_executor.allow_local_fallback is True
 
 
 def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> None:
