@@ -48,6 +48,7 @@ from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     SandboxExecutor,
     ScriptSecurityViolation,
+    resolve_local_fallback_policy,
 )
 from app.features.video.pipeline.storyboard import StoryboardService
 from app.features.video.pipeline.tts import TTSService
@@ -88,7 +89,12 @@ class VideoPipelineService:
         self.provider_factory = provider_factory
         self.settings = settings
         self.asset_store = asset_store
-        self.sandbox_executor = sandbox_executor or DockerSandboxExecutor()
+        self.sandbox_executor = sandbox_executor or DockerSandboxExecutor(
+            allow_local_fallback=resolve_local_fallback_policy(
+                environment=settings.environment,
+                configured=settings.video_sandbox_allow_local_fallback,
+            )
+        )
         self.provider_runtime_resolver = provider_runtime_resolver or ProviderRuntimeResolver(
             settings=settings,
             provider_factory=provider_factory,
