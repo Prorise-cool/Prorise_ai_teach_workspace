@@ -23,6 +23,7 @@ import {
 } from "@/types/auth";
 import {
   apiClient,
+  withAuthHeader,
   type ApiClient,
   type ApiRequestConfig,
   isApiClientError,
@@ -82,23 +83,6 @@ const DEFAULT_GRANT_TYPE = "password";
 
 function resolveClientId(inputClientId?: string) {
   return inputClientId ?? import.meta.env.VITE_APP_CLIENT_ID;
-}
-
-/**
- * 合并请求头，并在需要时注入认证 token。
- *
- * @param headers - 原始请求头。
- * @param accessToken - 可选访问令牌。
- * @returns 合并后的请求头对象。
- */
-function mergeRequestHeaders(headers?: HeadersInit, accessToken?: string) {
-  const mergedHeaders = new Headers(headers);
-
-  if (accessToken) {
-    mergedHeaders.set("Authorization", `Bearer ${accessToken}`);
-  }
-
-  return mergedHeaders;
 }
 
 /**
@@ -381,7 +365,7 @@ async function requestRuoyiEnvelope<T>(
     const response = await client.request<RuoyiEnvelope<T>>({
       ...config,
       authFailureMode: "manual",
-      headers: mergeRequestHeaders(config.headers, accessToken),
+      headers: withAuthHeader(config.headers, accessToken),
     });
 
     return unwrapRuoyiEnvelope(response.data, response.status);

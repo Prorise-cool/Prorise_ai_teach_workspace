@@ -1,5 +1,9 @@
 """伴学会话业务服务。"""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pydantic import ValidationError
 
 from app.core.errors import IntegrationError
@@ -15,6 +19,9 @@ from app.shared.long_term_records import (
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
+
 
 class CompanionService(RuoYiServiceMixin):
     """伴学会话业务服务，与 RuoYi 持久化交互。"""
@@ -28,9 +35,19 @@ class CompanionService(RuoYiServiceMixin):
         """返回伴学功能域 bootstrap 状态。"""
         return CompanionBootstrapResponse()
 
-    async def persist_turn(self, request: CompanionTurnCreateRequest) -> CompanionTurnSnapshot:
-        """持久化伴学对话轮次到 RuoYi。"""
-        async with self._client_factory() as client:
+    async def persist_turn(
+        self,
+        request: CompanionTurnCreateRequest,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> CompanionTurnSnapshot:
+        """持久化伴学对话轮次到 RuoYi。
+
+        Args:
+            request: 对话轮次创建请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.post_single(
                 "/internal/xiaomai/companion/turns",
                 resource=self._RESOURCE,
@@ -39,10 +56,20 @@ class CompanionService(RuoYiServiceMixin):
             )
         return self._parse_companion_turn(result.data, operation="persist", endpoint="/internal/xiaomai/companion/turns")
 
-    async def get_turn(self, turn_id: str) -> CompanionTurnSnapshot | None:
-        """按 ID 查询伴学对话轮次。"""
+    async def get_turn(
+        self,
+        turn_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> CompanionTurnSnapshot | None:
+        """按 ID 查询伴学对话轮次。
+
+        Args:
+            turn_id: 轮次唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         try:
-            async with self._client_factory() as client:
+            async with self._resolve_factory(access_context)() as client:
                 result = await client.get_single(
                     f"/internal/xiaomai/companion/turns/{turn_id}",
                     resource=self._RESOURCE,
@@ -58,9 +85,19 @@ class CompanionService(RuoYiServiceMixin):
             endpoint=f"/internal/xiaomai/companion/turns/{turn_id}"
         )
 
-    async def replay_session(self, session_id: str) -> SessionReplaySnapshot:
-        """回放指定会话的伴学对话记录。"""
-        async with self._client_factory() as client:
+    async def replay_session(
+        self,
+        session_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> SessionReplaySnapshot:
+        """回放指定会话的伴学对话记录。
+
+        Args:
+            session_id: 会话唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.get_single(
                 f"/internal/xiaomai/companion/sessions/{session_id}/replay",
                 resource=self._RESOURCE,

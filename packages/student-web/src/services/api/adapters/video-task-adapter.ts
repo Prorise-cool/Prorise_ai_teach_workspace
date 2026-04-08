@@ -3,11 +3,10 @@
  * Story 3.1：冻结创建接口 adapter，支持 mock 模式下完整创建 → 跳转等待页流程。
  */
 import {
-  createApiClient,
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getMockVideoTaskCreateSuccess,
   getVideoTaskFixtureError,
@@ -31,10 +30,6 @@ export {
   isVideoTaskAdapterError,
   VideoTaskAdapterError,
 } from './video-task-error';
-
-const fastapiClient = createApiClient({
-  baseURL: resolveFastapiBaseUrl(),
-});
 
 /* ---------- 错误类型 ---------- */
 

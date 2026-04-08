@@ -10,7 +10,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Callable, Mapping
+
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
 
 import httpx
 
@@ -92,6 +95,26 @@ class RuoYiClient:
             retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
             access_token=settings.ruoyi_access_token,
             client_id=settings.ruoyi_client_id,
+        )
+
+    @classmethod
+    def from_access_context(cls, ctx: "AccessContext") -> "RuoYiClient":
+        """用当前请求用户的 token 创建客户端实例。
+
+        Args:
+            ctx: 已认证用户的请求级安全上下文。
+
+        Returns:
+            携带用户 token 的 RuoYiClient 实例。
+        """
+        settings = get_settings()
+        return cls(
+            base_url=settings.ruoyi_base_url,
+            timeout_seconds=settings.ruoyi_timeout_seconds,
+            retry_attempts=settings.ruoyi_retry_attempts,
+            retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
+            access_token=ctx.token,
+            client_id=ctx.client_id,
         )
 
     async def __aenter__(self) -> "RuoYiClient":
@@ -578,3 +601,28 @@ class RuoYiClient:
         if retry_enabled is not None:
             return retry_enabled
         return method.upper() in _SAFE_RETRY_METHODS
+
+
+# ---------------------------------------------------------------------------
+# Client factory 类型与构造器
+# ---------------------------------------------------------------------------
+
+RuoYiClientFactory = Callable[[], "RuoYiClient"]
+"""无参调用返回 ``RuoYiClient``（可用作 async context manager）的工厂类型。"""
+
+
+def build_client_factory(access_context: "AccessContext | None" = None) -> RuoYiClientFactory:
+    """根据是否有用户上下文构造 client_factory。
+
+    有 ``access_context`` 时使用用户 token 创建客户端，否则回退到
+    ``RuoYiClient.from_settings``。
+
+    Args:
+        access_context: 可选的已认证用户安全上下文。
+
+    Returns:
+        可直接调用以获取 ``RuoYiClient`` 实例的工厂函数。
+    """
+    if access_context is not None:
+        return lambda: RuoYiClient.from_access_context(access_context)
+    return RuoYiClient.from_settings

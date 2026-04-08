@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from app.core.errors import IntegrationError
 from app.shared.ruoyi_client import RuoYiClient
@@ -19,6 +20,9 @@ from app.shared.task_metadata import (
     TaskType,
     snapshot_from_ruoyi_row,
 )
+
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
 
 
 class BaseTaskMetadataService(RuoYiServiceMixin):
@@ -38,9 +42,19 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         self._repository = repository
         self._client_factory = client_factory or RuoYiClient.from_settings
 
-    async def persist_task(self, request: TaskMetadataCreateRequest) -> TaskMetadataPreviewResponse:
-        """将任务元数据持久化到 RuoYi，自动判断新建或更新。"""
-        async with self._client_factory() as client:
+    async def persist_task(
+        self,
+        request: TaskMetadataCreateRequest,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> TaskMetadataPreviewResponse:
+        """将任务元数据持久化到 RuoYi，自动判断新建或更新。
+
+        Args:
+            request: 任务元数据创建请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             existing_row = await self._query_existing_row(client, request.task_id)
             existing_snapshot = (
                 self._snapshot_from_ruoyi_row(
@@ -71,9 +85,19 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
                 )
         return TaskMetadataPreviewResponse(table_name=snapshot.table_name, task=snapshot, ruoyi_payload=ruoyi_payload)
 
-    async def get_task(self, task_id: str) -> TaskMetadataSnapshot | None:
-        """按 task_id 查询单条任务元数据。"""
-        async with self._client_factory() as client:
+    async def get_task(
+        self,
+        task_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> TaskMetadataSnapshot | None:
+        """按 task_id 查询单条任务元数据。
+
+        Args:
+            task_id: 任务唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             row = await self._query_existing_row(client, task_id)
         return (
             self._snapshot_from_ruoyi_row(
@@ -95,9 +119,21 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         updated_to: datetime | None = None,
         page_num: int = 1,
         page_size: int = 10,
+        access_context: "AccessContext | None" = None,
     ) -> TaskMetadataPageResponse:
-        """分页查询任务元数据列表。"""
-        async with self._client_factory() as client:
+        """分页查询任务元数据列表。
+
+        Args:
+            status: 按任务状态过滤。
+            user_id: 按用户 ID 过滤。
+            source_session_id: 按来源会话 ID 过滤。
+            updated_from: 更新时间范围起始。
+            updated_to: 更新时间范围结束。
+            page_num: 页码。
+            page_size: 每页条数。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.get_page(
                 self._LIST_ENDPOINT,
                 resource=self._RESOURCE,
@@ -119,8 +155,18 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         ]
         return TaskMetadataPageResponse(rows=rows, total=result.total)
 
-    async def replay_session(self, session_id: str) -> TaskMetadataPageResponse:
-        """按会话 ID 回放所有关联任务，自动分页遍历。"""
+    async def replay_session(
+        self,
+        session_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> TaskMetadataPageResponse:
+        """按会话 ID 回放所有关联任务，自动分页遍历。
+
+        Args:
+            session_id: 会话唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         rows: list[TaskMetadataSnapshot] = []
         page_num = 1
         total = 0
@@ -129,6 +175,7 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
                 source_session_id=session_id,
                 page_num=page_num,
                 page_size=self._REPLAY_PAGE_SIZE,
+                access_context=access_context,
             )
             total = page.total
             rows.extend(page.rows)

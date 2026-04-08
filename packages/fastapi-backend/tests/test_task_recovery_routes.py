@@ -8,6 +8,14 @@ from app.infra.redis_client import RuntimeStore
 from app.main import create_app
 from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus
 
+from tests.conftest import override_auth
+
+
+def _create_test_app():
+    app = create_app()
+    override_auth(app)
+    return app
+
 
 class FakeStreamingRequest:
     def __init__(self) -> None:
@@ -18,7 +26,7 @@ class FakeStreamingRequest:
 
 
 def test_task_events_route_replays_missing_events_after_last_event_id() -> None:
-    with TestClient(create_app()) as client:
+    with TestClient(_create_test_app()) as client:
         runtime_store = client.app.state.runtime_store
         task_id = "video_20260330153000_route001"
         runtime_store.clear()
@@ -92,7 +100,7 @@ def test_task_events_route_replays_missing_events_after_last_event_id() -> None:
 
 
 def test_task_status_route_returns_latest_snapshot_and_resume_metadata() -> None:
-    with TestClient(create_app()) as client:
+    with TestClient(_create_test_app()) as client:
         runtime_store = client.app.state.runtime_store
         task_id = "video_20260330153500_route002"
         runtime_store.clear()
@@ -305,7 +313,7 @@ def test_task_events_route_emits_heartbeat_when_waiting_for_new_events(monkeypat
 
 
 def test_module_task_status_routes_proxy_shared_snapshot() -> None:
-    with TestClient(create_app()) as client:
+    with TestClient(_create_test_app()) as client:
         runtime_store = client.app.state.runtime_store
 
         for route_prefix, task_type in (
@@ -336,7 +344,7 @@ def test_module_task_status_routes_proxy_shared_snapshot() -> None:
 
 
 def test_module_task_events_routes_proxy_shared_stream() -> None:
-    with TestClient(create_app()) as client:
+    with TestClient(_create_test_app()) as client:
         runtime_store = client.app.state.runtime_store
 
         for route_prefix, task_type in (

@@ -4,6 +4,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.knowledge.service import KnowledgeService
 from app.schemas.common import build_success_envelope
@@ -40,19 +41,21 @@ async def knowledge_bootstrap(
 @router.post("/chat-logs", response_model=KnowledgeChatSnapshot)
 async def create_knowledge_chat_log(
     payload: KnowledgeChatCreateRequest,
+    access_context: AccessContext = Depends(get_access_context),
     service: KnowledgeService = Depends(get_knowledge_service),
 ) -> KnowledgeChatSnapshot:
     """创建知识检索对话记录。"""
-    return await service.persist_chat_log(payload)
+    return await service.persist_chat_log(payload, access_context=access_context)
 
 
 @router.get("/chat-logs/{chat_log_id}", response_model=KnowledgeChatSnapshot)
 async def get_knowledge_chat_log(
     chat_log_id: str,
+    access_context: AccessContext = Depends(get_access_context),
     service: KnowledgeService = Depends(get_knowledge_service),
 ) -> KnowledgeChatSnapshot:
     """按 ID 查询知识检索对话记录。"""
-    snapshot = await service.get_chat_log(chat_log_id)
+    snapshot = await service.get_chat_log(chat_log_id, access_context=access_context)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Knowledge chat log not found")
     return snapshot

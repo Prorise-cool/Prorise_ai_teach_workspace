@@ -10,7 +10,8 @@ import httpx
 from fastapi.testclient import TestClient
 
 from app.core.errors import IntegrationError
-from app.core.security import RuoYiAccessProfile, get_security_runtime_store
+from app.core.security import AccessContext, RuoYiAccessProfile, get_security_runtime_store
+from tests.conftest import override_auth
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.models import PublishState
 from app.features.video.pipeline.sandbox import LocalSandboxExecutor
@@ -215,6 +216,16 @@ def _run_pipeline(*, tmp_path, runtime_store: RuntimeStore, video_service: Video
 @contextmanager
 def api_client(tmp_path, runtime_store: RuntimeStore, video_service: VideoService) -> Iterator[TestClient]:
     app = create_app()
+    override_auth(app, AccessContext(
+        user_id="10001",
+        username="student_demo",
+        roles=("student",),
+        permissions=("*:*:*",),
+        token=VALID_TOKEN,
+        client_id="test-client-id",
+        request_id="test-req-id",
+        online_ttl_seconds=86400,
+    ))
     app.dependency_overrides[get_video_service] = lambda: video_service
     app.dependency_overrides[get_security_runtime_store] = lambda: runtime_store
     runtime_store.set_online_token_record(
