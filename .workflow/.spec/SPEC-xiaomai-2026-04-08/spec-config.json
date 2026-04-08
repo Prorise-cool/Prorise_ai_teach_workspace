@@ -1,0 +1,32 @@
+{
+  "session_id": "SPEC-xiaomai-2026-04-08",
+  "seed_input": "复用现有 _bmad-output/ 规划文档",
+  "input_type": "existing_project",
+  "timestamp": "2026-04-08T00:00:00+08:00",
+  "mode": "auto",
+  "complexity": "complex",
+  "depth": "comprehensive",
+  "focus_areas": ["video_engine", "classroom_engine", "companion", "evidence", "learning_coach"],
+  "spec_type": "platform",
+  "iteration_count": 0,
+  "iteration_history": [],
+  "source_documents": {
+    "product_brief": "_bmad-output/planning-artifacts/product-brief-小麦-2026-03-22.md",
+    "prd_index": "_bmad-output/planning-artifacts/prd/index.md",
+    "architecture_index": "_bmad-output/planning-artifacts/architecture/index.md",
+    "epics_index": "_bmad-output/planning-artifacts/epics/index.md",
+    "implementation_artifacts": "_bmad-output/implementation-artifacts/index.md",
+    "sprint_status": "_bmad-output/implementation-artifacts/sprint-status.yaml",
+    "project_context": "_bmad-output/project-context.md"
+  },
+  "has_codebase": true,
+  "phasesCompleted": [
+    { "phase": 1, "name": "discovery", "output_file": "spec-config.json", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 2, "name": "product_brief", "output_file": "product-brief.md", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 3, "name": "requirements", "output_file": "requirements/", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 4, "name": "architecture", "output_file": "architecture/", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 5, "name": "epics", "output_file": "epics/", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 6, "name": "readiness", "output_file": "readiness-report.md", "completed_at": "2026-04-08T00:00:00+08:00" },
+    { "phase": 7, "name": "roadmap", "output_file": "roadmap.md", "completed_at": "2026-04-08T00:00:00+08:00" }
+  ]
+}
