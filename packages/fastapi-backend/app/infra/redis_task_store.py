@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
+
+from redis.exceptions import WatchError
 
 from app.core.logging import format_trace_timestamp
 from app.core.sse import TaskProgressEvent, ensure_sse_event_identity, parse_sse_event_id
@@ -37,6 +40,7 @@ class TaskStoreMixin:
         progress: int,
         task_type: str | None = None,
         request_id: str | None = None,
+        user_id: str | None = None,
         error_code: TaskErrorCode | None = None,
         source: str = "unknown",
         context: dict[str, object] | None = None,
@@ -63,12 +67,13 @@ class TaskStoreMixin:
         existing = self.get_task_state(task_id) or {}
         payload: dict[str, object] = {
             "taskId": task_id,
-            "taskType": task_type,
+            "taskType": task_type if task_type is not None else existing.get("taskType"),
             "internalStatus": internal_status.value,
             "status": status.value,
             "message": message,
             "progress": progress,
-            "requestId": request_id,
+            "requestId": request_id if request_id is not None else existing.get("requestId"),
+            "userId": user_id if user_id is not None else existing.get("userId"),
             "errorCode": error_code.value if error_code is not None else None,
             "source": source,
             "context": dict(context or {}),
@@ -138,19 +143,9 @@ class TaskStoreMixin:
             归一化后的事件对象（含分配的 id 和 sequence）。
         """
         candidate = event if isinstance(event, TaskProgressEvent) else TaskProgressEvent.model_validate(event)
-        events = self.get_task_events(task_id)
-        next_sequence = (events[-1].sequence or 0) + 1 if events else 1
-        normalized = ensure_sse_event_identity(candidate, fallback_sequence=next_sequence)
-        payload = [
-            item.model_dump(mode="json", by_alias=True)
-            for item in (*events, normalized)
-        ]
-        self.set_runtime_value(  # type: ignore[attr-defined]
-            build_task_events_key(task_id),
-            payload,
-            ttl_seconds=TASK_EVENTS_TTL_SECONDS
-        )
-        return normalized
+        if getattr(self, "client", None) is None:
+            return self._append_task_event_with_memory_lock(task_id, candidate)
+        return self._append_task_event_with_redis_transaction(task_id, candidate)
 
     def get_task_events(
         self,
@@ -167,20 +162,11 @@ class TaskStoreMixin:
         Returns:
             按 sequence 排序的事件列表。
         """
-        payload = self.get_runtime_value(build_task_events_key(task_id))  # type: ignore[attr-defined]
-        if payload is None:
-            return []
-
-        events = [TaskProgressEvent.model_validate(item) for item in payload]
+        events = self._get_all_task_events(task_id)
         if after_event_id is None:
             return events
 
-        after_sequence = self._resolve_after_sequence(task_id, after_event_id, events)
-        return [
-            event
-            for event in events
-            if (event.sequence or 0) > after_sequence
-        ]
+        return self._filter_events_after(task_id, after_event_id, events)
 
     def load_task_recovery_state(
         self,
@@ -197,11 +183,93 @@ class TaskStoreMixin:
         Returns:
             ``TaskRuntimeRecoveryState`` 实例。
         """
+        all_events = self._get_all_task_events(task_id)
+        latest_event_id = all_events[-1].id if all_events else None
         return TaskRuntimeRecoveryState(
             task_id=task_id,
             snapshot=self.get_task_state(task_id),
-            events=tuple(self.get_task_events(task_id, after_event_id=after_event_id))
+            events=tuple(
+                all_events
+                if after_event_id is None
+                else self._filter_events_after(task_id, after_event_id, all_events)
+            ),
+            latest_event_id_snapshot=latest_event_id,
         )
+
+    def _append_task_event_with_memory_lock(
+        self,
+        task_id: str,
+        candidate: TaskProgressEvent,
+    ) -> TaskProgressEvent:
+        events_key = build_task_events_key(task_id)
+        with self._lock:  # type: ignore[attr-defined]
+            self._purge_expired_locked(events_key)  # type: ignore[attr-defined]
+            payload = self.storage.get(events_key)  # type: ignore[attr-defined]
+            events = self._deserialize_task_events(payload)
+            next_sequence = (events[-1].sequence or 0) + 1 if events else 1
+            normalized = ensure_sse_event_identity(candidate, fallback_sequence=next_sequence)
+            serialized = [
+                item.model_dump(mode="json", by_alias=True)
+                for item in (*events, normalized)
+            ]
+            self.storage[events_key] = json.loads(json.dumps(serialized))  # type: ignore[attr-defined]
+            self.expirations[events_key] = self._now() + TASK_EVENTS_TTL_SECONDS  # type: ignore[attr-defined]
+            return normalized
+
+    def _append_task_event_with_redis_transaction(
+        self,
+        task_id: str,
+        candidate: TaskProgressEvent,
+    ) -> TaskProgressEvent:
+        events_key = build_task_events_key(task_id)
+
+        while True:
+            pipeline = self.client.pipeline()  # type: ignore[union-attr]
+            try:
+                pipeline.watch(events_key)
+                payload = pipeline.get(events_key)
+                events = self._deserialize_task_events(
+                    json.loads(payload) if payload is not None else None
+                )
+                next_sequence = (events[-1].sequence or 0) + 1 if events else 1
+                normalized = ensure_sse_event_identity(candidate, fallback_sequence=next_sequence)
+                serialized = [
+                    item.model_dump(mode="json", by_alias=True)
+                    for item in (*events, normalized)
+                ]
+                pipeline.multi()
+                pipeline.set(events_key, json.dumps(serialized), ex=TASK_EVENTS_TTL_SECONDS)
+                pipeline.execute()
+                return normalized
+            except WatchError:
+                continue
+            finally:
+                pipeline.reset()
+
+    def _get_all_task_events(self, task_id: str) -> list[TaskProgressEvent]:
+        payload = self.get_runtime_value(build_task_events_key(task_id))  # type: ignore[attr-defined]
+        return self._deserialize_task_events(payload)
+
+    @staticmethod
+    def _deserialize_task_events(payload: object) -> list[TaskProgressEvent]:
+        if payload is None:
+            return []
+        if not isinstance(payload, list):
+            return []
+        return [TaskProgressEvent.model_validate(item) for item in payload]
+
+    @staticmethod
+    def _filter_events_after(
+        task_id: str,
+        after_event_id: str,
+        events: list[TaskProgressEvent],
+    ) -> list[TaskProgressEvent]:
+        after_sequence = TaskStoreMixin._resolve_after_sequence(task_id, after_event_id, events)
+        return [
+            event
+            for event in events
+            if (event.sequence or 0) > after_sequence
+        ]
 
     @staticmethod
     def _resolve_after_sequence(
