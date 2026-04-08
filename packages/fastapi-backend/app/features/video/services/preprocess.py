@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import io
 import struct
+from typing import Literal
 
+from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.features.video.preprocess_models import VideoPreprocessResult
@@ -19,6 +21,16 @@ ALLOWED_MIME_TYPES: tuple[str, ...] = ("image/jpeg", "image/png", "image/webp")
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 OCR_TIMEOUT_SECONDS = 3.0
 LOW_CONFIDENCE_THRESHOLD = 0.6
+PREPROCESS_ENVIRONMENT_ALIASES: dict[str, Literal["development", "test", "production"]] = {
+    "dev": "development",
+    "development": "development",
+    "local": "development",
+    "test": "test",
+    "testing": "test",
+    "pytest": "test",
+    "prod": "production",
+    "production": "production",
+}
 
 
 class ImageValidationError(AppError):
@@ -166,6 +178,50 @@ def _parse_webp_metadata(file_bytes: bytes) -> tuple[int, int]:
     )
 
 
+def normalize_preprocess_environment(environment: str | None) -> Literal["development", "test", "production"]:
+    """标准化预处理运行环境，禁止模糊环境值静默落到默认分支。"""
+    normalized = (environment or "").strip().lower()
+    resolved = PREPROCESS_ENVIRONMENT_ALIASES.get(normalized)
+    if resolved is None:
+        raise AppError(
+            code="COMMON_INVALID_CONFIGURATION",
+            message="预处理环境配置无效，仅支持 development、test、production",
+            status_code=500,
+            retryable=False,
+            details={"environment": environment},
+        )
+    return resolved
+
+
+def validate_preprocess_provider_gate(
+    *,
+    environment: Literal["development", "test", "production"],
+    image_storage: ImageStorage,
+    ocr_provider: OcrProvider,
+) -> None:
+    """校验默认回退实现是否被错误地用于生产环境。"""
+    if environment != "production":
+        return
+
+    fallback_components: list[str] = []
+    if image_storage.is_development_fallback:
+        fallback_components.append(type(image_storage).__name__)
+    if ocr_provider.is_development_fallback:
+        fallback_components.append(type(ocr_provider).__name__)
+
+    if fallback_components:
+        raise AppError(
+            code="COMMON_INVALID_CONFIGURATION",
+            message="生产环境未配置真实预处理 Provider，禁止回退到本地存储或 Mock OCR",
+            status_code=500,
+            retryable=False,
+            details={
+                "environment": environment,
+                "fallback_components": fallback_components,
+            },
+        )
+
+
 class PreprocessService:
     """视频图片预处理服务，编排校验、存储与 OCR。"""
     def __init__(
@@ -174,10 +230,22 @@ class PreprocessService:
         image_storage: ImageStorage | None = None,
         ocr_provider: OcrProvider | None = None,
         ocr_timeout: float = OCR_TIMEOUT_SECONDS,
+        environment: str | None = None,
     ) -> None:
         """初始化预处理服务。"""
-        self._image_storage = image_storage or LocalImageStorage()
-        self._ocr_provider = ocr_provider or MockOcrProvider()
+        resolved_environment = normalize_preprocess_environment(environment or get_settings().environment)
+        resolved_image_storage = image_storage or LocalImageStorage()
+        resolved_ocr_provider = ocr_provider or MockOcrProvider()
+
+        validate_preprocess_provider_gate(
+            environment=resolved_environment,
+            image_storage=resolved_image_storage,
+            ocr_provider=resolved_ocr_provider,
+        )
+
+        self._environment = resolved_environment
+        self._image_storage = resolved_image_storage
+        self._ocr_provider = resolved_ocr_provider
         self._ocr_timeout = ocr_timeout
 
     async def preprocess(
