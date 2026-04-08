@@ -128,3 +128,73 @@ def test_runtime_resolver_builds_video_stage_chain_from_ruoyi_runtime_config() -
         ("Bearer runtime-token", "runtime-client-id"),
         ("Bearer runtime-token", "runtime-client-id"),
     ]
+
+
+def test_runtime_resolver_supports_explicit_runtime_registration_override_for_new_provider_type() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/internal/xiaomai/ai/runtime-config/modules/video"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "ok",
+                "data": {
+                    "moduleCode": "video",
+                    "moduleName": "视频生成",
+                    "bindings": [
+                        {
+                            "stageCode": "tts",
+                            "capability": "tts",
+                            "roleCode": "",
+                            "providerId": "acme-runtime-voice",
+                            "priority": 1,
+                            "timeoutSeconds": 30,
+                            "retryAttempts": 0,
+                            "healthSource": "ruoyi",
+                            "isDefault": True,
+                            "providerType": "acme-tts-v2",
+                            "providerCode": "acme-voice-prod",
+                            "providerName": "Acme 教学播报",
+                            "vendorCode": "acme",
+                            "authType": "api_key",
+                            "resourceCode": "acme-voice-001",
+                            "resourceName": "Acme Voice 001",
+                            "resourceType": "voice",
+                            "voiceCode": "acme_voice_001",
+                            "languageCode": "zh-CN",
+                            "runtimeSettings": {"providerRegistrationId": "demo-voice"},
+                        },
+                    ],
+                },
+            },
+        )
+
+    runtime_client = RuoYiAiRuntimeClient(
+        client_factory=lambda **kwargs: RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+            access_token=kwargs.get("access_token"),
+            client_id=kwargs.get("client_id"),
+        )
+    )
+    resolver = ProviderRuntimeResolver(
+        settings=SimpleNamespace(
+            provider_runtime_source="ruoyi",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+        ),
+        provider_factory=ProviderFactory(build_default_registry()),
+        ruoyi_runtime_client=runtime_client,
+    )
+
+    assembly = asyncio.run(resolver.resolve_video_pipeline())
+    voice_descriptors = asyncio.run(resolver.resolve_video_tts_voices())
+
+    runtime_provider = assembly.tts_for("tts")[0]
+    assert runtime_provider.provider_id == "acme-runtime-voice"
+    assert runtime_provider.config.settings["providerRegistrationId"] == "demo-voice"
+    assert voice_descriptors[0].provider_id == "acme-runtime-voice"
+    assert voice_descriptors[0].voice_code == "acme_voice_001"

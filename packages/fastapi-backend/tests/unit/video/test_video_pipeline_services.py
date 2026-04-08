@@ -29,6 +29,7 @@ from app.features.video.pipeline.services import (
     UploadService,
 )
 from app.infra.redis_client import RuntimeStore
+from app.providers.failover import ProviderAllFailedError
 from app.shared.cos_client import CosClient
 
 
@@ -54,6 +55,39 @@ class FakeFailoverService:
         if not self._synthesize_results:
             raise AssertionError("missing fake synthesize result")
         return self._synthesize_results.pop(0)
+
+
+class RecordingTtsProvider:
+    def __init__(self, provider_id: str, *, voice_code: str, sample_rate: int, should_fail: bool = False) -> None:
+        self.provider_id = provider_id
+        self.config = SimpleNamespace(
+            timeout_seconds=1,
+            retry_attempts=0,
+            settings={
+                "voice_code": voice_code,
+                "sample_rate": sample_rate,
+            },
+        )
+        self._should_fail = should_fail
+        self.received_voice_ids: list[str | None] = []
+        self.received_sample_rates: list[int | None] = []
+
+    async def synthesize(self, text: str, voice_config=None):  # noqa: ANN001
+        self.received_voice_ids.append(getattr(voice_config, "voice_id", None))
+        self.received_sample_rates.append(getattr(voice_config, "sample_rate", None))
+        if self._should_fail:
+            raise TimeoutError(f"{self.provider_id} timeout for {text}")
+        return SimpleNamespace(provider=self.provider_id, content=f"audio:{text}")
+
+
+class SequentialFailoverService:
+    async def synthesize(self, providers, text: str, voice_config=None, emit_switch=None):  # noqa: ANN001
+        for provider in providers:
+            try:
+                return await provider.synthesize(text, voice_config=voice_config)
+            except TimeoutError:
+                continue
+        raise ProviderAllFailedError(())
 
 
 def _build_runtime(task_id: str = "video_unit_case") -> VideoRuntimeStateStore:
@@ -336,6 +370,41 @@ def test_tts_service_prefers_base64_audio_payload_when_provider_returns_real_aud
     first_segment = Path(result.audio_segments[0].audio_path)
     assert first_segment.suffix == ".mp3"
     assert first_segment.read_bytes() == b"ID3"
+
+
+def test_tts_service_uses_provider_specific_voice_config_after_failover() -> None:
+    runtime = _build_runtime("video_tts_provider_specific_config_case")
+    primary = RecordingTtsProvider(
+        "primary-tts",
+        voice_code="voice-primary",
+        sample_rate=22050,
+        should_fail=True,
+    )
+    backup = RecordingTtsProvider(
+        "backup-tts",
+        voice_code="voice-backup",
+        sample_rate=48000,
+    )
+    service = TTSService(
+        providers=[primary, backup],
+        failover_service=SequentialFailoverService(),
+        runtime=runtime,
+        settings=_build_settings(),
+    )
+
+    result = asyncio.run(
+        service.execute(
+            task_id="video_tts_provider_specific_config_case",
+            storyboard=_build_storyboard(),
+        )
+    )
+
+    assert result.failover_occurred is True
+    assert result.provider_used == ["backup-tts", "backup-tts", "backup-tts"]
+    assert set(primary.received_voice_ids) == {"voice-primary"}
+    assert set(backup.received_voice_ids) == {"voice-backup"}
+    assert set(primary.received_sample_rates) == {22050}
+    assert set(backup.received_sample_rates) == {48000}
 
 
 def test_tts_service_filters_provider_chain_by_requested_voice_preference() -> None:
