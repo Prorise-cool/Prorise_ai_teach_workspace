@@ -30,6 +30,16 @@ class RuoYiServiceMixin:
     _RESOURCE: str
     _client_factory: "RuoYiClientFactory"
 
+    def _uses_default_factory(self) -> bool:
+        """判断当前 client factory 是否仍为默认 ``from_settings``。
+
+        这里不能使用 ``is`` 做对象身份比较，因为每次访问 classmethod
+        都会生成新的 bound method 对象；使用 ``==`` 才能正确识别默认工厂。
+        """
+        from app.shared.ruoyi_client import RuoYiClient
+
+        return self._client_factory == RuoYiClient.from_settings
+
     def _resolve_factory(self, access_context: "AccessContext | None" = None) -> "RuoYiClientFactory":
         """选择 client factory：有用户上下文时用用户 token，否则用默认。
 
@@ -45,13 +55,11 @@ class RuoYiServiceMixin:
         Returns:
             可直接调用以获取 ``RuoYiClient`` 实例的工厂函数。
         """
-        from app.shared.ruoyi_client import RuoYiClient
+        from app.shared.ruoyi_client import build_client_factory
 
-        if self._client_factory is not RuoYiClient.from_settings:
+        if not self._uses_default_factory():
             return self._client_factory
-        if access_context is not None:
-            return lambda: RuoYiClient.from_access_context(access_context)
-        return self._client_factory
+        return build_client_factory(access_context)
 
     def _invalid_response_error(
         self,
