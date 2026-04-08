@@ -1,4 +1,10 @@
-"""视频流水线本地对象存储适配层。"""
+"""视频流水线本地资产存储适配层。
+
+负责将流水线产物落盘到 ``video_asset_root``，并生成可供前端访问的 URL 引用。
+注意：该适配层只负责本地文件系统落盘，不应伪装为真实 COS 行为；URL 的构建
+由 ``CosClient``（历史命名）统一拼装，在 development 环境会默认回落到 FastAPI
+本地资产路由（见 ``app.features.video.routes``）。
+"""
 
 from __future__ import annotations
 
@@ -6,6 +12,7 @@ import json
 import shutil
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from app.core.config import Settings, get_settings
 from app.features.video.pipeline.models import VideoResultDetail
@@ -81,12 +88,29 @@ class LocalAssetStore:
 
     def resolve_path_from_key(self, key: str) -> Path:
         """将 key 解析为本地文件路径。"""
-        normalized_key = key.lstrip("/")
-        return self.root_dir / normalized_key
+        normalized_key = key.lstrip("/").replace("\\", "/")
+        if not normalized_key:
+            raise ValueError("asset key is empty")
+
+        root_dir = self.root_dir.resolve(strict=False)
+        candidate = (root_dir / normalized_key).resolve(strict=False)
+        if not candidate.is_relative_to(root_dir):
+            raise ValueError("asset key escapes asset root")
+        return candidate
 
     def ref_to_key(self, ref: str) -> str:
         """将资产引用转为存储 key。"""
         base_url = self.cos_client.base_url.rstrip("/")
         if ref.startswith(f"{base_url}/"):
             return ref[len(base_url) + 1:]
+        parsed = urlparse(ref)
+        if parsed.scheme in {"http", "https"} and parsed.path:
+            path = parsed.path
+            marker = "/video/assets/"
+            if marker in path:
+                return path.split(marker, 1)[1].lstrip("/")
+            marker = "/video/"
+            if marker in path:
+                start = path.find(marker)
+                return path[start + 1:].lstrip("/")
         return ref.lstrip("/")
