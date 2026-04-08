@@ -23,6 +23,7 @@ import {
   type AuthService
 } from '@/services/auth';
 import {
+  AUTH_SESSION_STORAGE_KEY,
   resetAuthSessionStore,
   useAuthSessionStore
 } from '@/stores/auth-session-store';
@@ -197,6 +198,26 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(useAuthSessionStore.getState().session?.user.username).toBe('admin');
     });
+  });
+
+  it('stores session-only logins in sessionStorage when rememberSession is unchecked', async () => {
+    const { user } = renderAuthRoute({
+      initialEntries: ['/login']
+    });
+
+    await user.click(screen.getByRole('checkbox'));
+    await user.type(screen.getByLabelText('账号'), 'admin');
+    await user.type(screen.getByLabelText('密码'), 'admin123{Enter}');
+
+    await waitFor(() => {
+      expect(useAuthSessionStore.getState().session?.user.username).toBe('admin');
+    });
+
+    expect(useAuthSessionStore.getState().rememberSession).toBe(false);
+    expect(window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY)).toContain(
+      'mock-auth-admin-access-token'
+    );
   });
 
   it('restores the original returnTo target when the profile is already completed', async () => {
@@ -426,6 +447,34 @@ describe('LoginPage', () => {
       expect(useAuthSessionStore.getState().session?.user.username).toBe(
         'social_student'
       );
+    });
+  });
+
+  it('returns to /login when social callback parameters are missing', async () => {
+    const { router } = renderAuthRoute({
+      initialEntries: ['/login/social-callback']
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/login');
+    });
+  });
+
+  it('returns to /login when social callback login fails', async () => {
+    const service = createServiceStub({
+      login: vi.fn().mockRejectedValue(
+        createAuthError(401, 401, '当前会话已失效，请重新登录')
+      )
+    });
+    const { router } = renderAuthRoute({
+      initialEntries: [
+        '/login/social-callback?source=github&code=mock-github-code&state=eyJ0ZW5hbnRJZCI6IjAwMDAwMCIsImRvbWFpbiI6ImxvY2FsaG9zdDo0MTczIn0='
+      ],
+      service
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/login');
     });
   });
 });

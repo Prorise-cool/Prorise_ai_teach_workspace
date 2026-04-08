@@ -103,6 +103,7 @@ function normalizeLoginInput(input: AuthLoginInput) {
     source: input.source,
     socialCode: input.socialCode,
     socialState: input.socialState,
+    returnTo: input.returnTo,
   };
 }
 
@@ -123,6 +124,7 @@ function normalizeRegisterInput(input: AuthRegisterInput) {
     tenantId: input.tenantId ?? AUTH_DEFAULT_TENANT_ID,
     clientId: resolveClientId(input.clientId),
     grantType: input.grantType ?? DEFAULT_GRANT_TYPE,
+    returnTo: input.returnTo,
   };
 }
 

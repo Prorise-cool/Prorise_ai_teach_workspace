@@ -20,9 +20,7 @@ import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
 import { authService, type AuthService } from '@/services/auth';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
-import {
-	type AuthSession
-} from '@/types/auth';
+import type { AuthSession } from '@/types/auth';
 
 import '@/features/auth/styles/login-page.scss';
 
@@ -78,12 +76,16 @@ export function LoginPage({
 	 * 在认证成功后写入会话，并执行统一回跳。
 	 *
 	 * @param session - 已建立的认证会话。
+	 * @param rememberSession - 是否将会话写入持久化存储。
 	 */
-	function handleAuthenticated(session: AuthSession) {
+	function handleAuthenticated(
+		session: AuthSession,
+		rememberSession: boolean
+	) {
 		setRegisterSucceeded(false);
 		setPrefilledLoginUsername('');
 		setAuthRedirectReason('login-success');
-		setSession(session);
+		setSession(session, rememberSession);
 	}
 
 	useEffect(() => {
@@ -198,8 +200,26 @@ export function LoginPage({
 	const viewTitle = isRegisterView
 		? authPageCopy.registerTitle
 		: authPageCopy.loginTitle;
+
 	if (session?.accessToken) {
-		return null;
+		const isFreshLogin = authRedirectReason === 'login-success';
+
+		return (
+			<main className="xm-auth-page xm-auth-callback-page">
+				<section className="xm-auth-callback-card" aria-live="polite">
+					<h1 className="xm-auth-callback-title">
+						{isFreshLogin
+							? t('auth.feedback.loginSuccessTitle')
+							: t('auth.feedback.alreadySignedInTitle')}
+					</h1>
+					<p className="xm-auth-callback-message">
+						{isFreshLogin
+							? t('auth.feedback.loginSuccessMessage')
+							: t('auth.feedback.alreadySignedInMessage')}
+					</p>
+				</section>
+			</main>
+		);
 	}
 
 	return (
