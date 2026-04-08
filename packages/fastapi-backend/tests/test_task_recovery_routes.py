@@ -3,6 +3,7 @@ import asyncio
 import app.api.routes.tasks as task_routes
 from fastapi.testclient import TestClient
 
+from app.core.security import AccessContext
 from app.core.sse import TaskProgressEvent
 from app.infra.redis_client import RuntimeStore
 from app.main import create_app
@@ -11,9 +12,9 @@ from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus
 from tests.conftest import override_auth
 
 
-def _create_test_app():
+def _create_test_app(ctx: AccessContext | None = None):
     app = create_app()
-    override_auth(app)
+    override_auth(app, ctx)
     return app
 
 
@@ -37,6 +38,7 @@ def test_task_events_route_replays_missing_events_after_last_event_id() -> None:
             message="任务处理中",
             progress=55,
             request_id="req_route_recovery_001",
+            user_id="1",
             source="video",
             context={"stage": "scene_generation"}
         )
@@ -111,6 +113,7 @@ def test_task_status_route_returns_latest_snapshot_and_resume_metadata() -> None
             message="任务执行失败",
             progress=87,
             request_id="req_route_recovery_002",
+            user_id="1",
             error_code=TaskErrorCode.PROVIDER_TIMEOUT,
             source="video",
             context={
@@ -177,6 +180,7 @@ def test_task_events_route_streams_live_events_after_connection(monkeypatch) -> 
             message="等待新的事件写入",
             progress=42,
             request_id="req_route_recovery_003",
+            user_id="1",
             source="video",
             context={"stage": "scene_generation"},
         )
@@ -212,6 +216,7 @@ def test_task_events_route_streams_live_events_after_connection(monkeypatch) -> 
                 message="任务执行完成",
                 progress=100,
                 request_id="req_route_recovery_003",
+                user_id="1",
                 source="video",
                 context={
                     "stage": "completed",
@@ -272,6 +277,7 @@ def test_task_events_route_emits_heartbeat_when_waiting_for_new_events(monkeypat
             message="等待新的事件写入",
             progress=42,
             request_id="req_route_recovery_004",
+            user_id="1",
             source="video"
         )
         event = runtime_store.append_task_event(
@@ -329,6 +335,7 @@ def test_module_task_status_routes_proxy_shared_snapshot() -> None:
                 message="任务处理中",
                 progress=64,
                 request_id=f"req_{task_type}_status_proxy",
+                user_id="1",
                 source=f"{task_type}.proxy",
                 context={"stage": "running"},
             )
@@ -360,6 +367,7 @@ def test_module_task_events_routes_proxy_shared_stream() -> None:
                 message="任务处理中",
                 progress=30,
                 request_id=f"req_{task_type}_events_proxy",
+                user_id="1",
                 source=f"{task_type}.proxy",
             )
             runtime_store.append_task_event(
@@ -385,3 +393,138 @@ def test_module_task_events_routes_proxy_shared_stream() -> None:
             assert "event: completed" in body
 
         runtime_store.clear()
+
+
+def test_task_status_route_rejects_non_owner() -> None:
+    owner_ctx = AccessContext(
+        user_id="other-user",
+        username="other_user",
+        roles=("student",),
+        permissions=("*:*:*",),
+        token="test-token",
+        client_id="test-client-id",
+        request_id="test-req-id",
+        online_ttl_seconds=86400,
+    )
+    with TestClient(_create_test_app(owner_ctx)) as client:
+        runtime_store = client.app.state.runtime_store
+        task_id = "video_20260408101000_forbidden_status"
+        runtime_store.clear()
+        runtime_store.set_task_state(
+            task_id=task_id,
+            task_type="video",
+            internal_status=TaskInternalStatus.RUNNING,
+            message="任务处理中",
+            progress=10,
+            request_id="req_route_forbidden_001",
+            user_id="owner-user",
+            source="video",
+        )
+
+        response = client.get(f"/api/v1/tasks/{task_id}/status")
+
+        runtime_store.clear()
+
+    assert response.status_code == 403
+    assert response.json()["data"]["error_code"] == "AUTH_PERMISSION_DENIED"
+
+
+def test_task_events_route_rejects_non_owner() -> None:
+    owner_ctx = AccessContext(
+        user_id="other-user",
+        username="other_user",
+        roles=("student",),
+        permissions=("*:*:*",),
+        token="test-token",
+        client_id="test-client-id",
+        request_id="test-req-id",
+        online_ttl_seconds=86400,
+    )
+    with TestClient(_create_test_app(owner_ctx)) as client:
+        runtime_store = client.app.state.runtime_store
+        task_id = "video_20260408101500_forbidden_events"
+        runtime_store.clear()
+        runtime_store.set_task_state(
+            task_id=task_id,
+            task_type="video",
+            internal_status=TaskInternalStatus.RUNNING,
+            message="任务处理中",
+            progress=15,
+            request_id="req_route_forbidden_002",
+            user_id="owner-user",
+            source="video",
+        )
+        runtime_store.append_task_event(
+            task_id,
+            TaskProgressEvent(
+                event="progress",
+                task_id=task_id,
+                task_type="video",
+                status="processing",
+                progress=15,
+                message="任务处理中",
+                request_id="req_route_forbidden_002",
+                error_code=None,
+            ),
+        )
+
+        response = client.get(f"/api/v1/tasks/{task_id}/events")
+
+        runtime_store.clear()
+
+    assert response.status_code == 403
+    assert response.json()["data"]["error_code"] == "AUTH_PERMISSION_DENIED"
+
+
+def test_task_events_route_uses_single_recovery_snapshot_for_header_and_replay() -> None:
+    class CountingRuntimeStore(RuntimeStore):
+        def __init__(self) -> None:
+            super().__init__(backend="memory-runtime-store", redis_url="redis://memory")
+            self.load_calls = 0
+
+        def load_task_recovery_state(self, task_id: str, *, after_event_id: str | None = None):
+            self.load_calls += 1
+            return super().load_task_recovery_state(task_id, after_event_id=after_event_id)
+
+    with TestClient(_create_test_app()) as client:
+        runtime_store = CountingRuntimeStore()
+        client.app.state.runtime_store = runtime_store
+        task_id = "video_20260408102000_single_read"
+        runtime_store.clear()
+        runtime_store.set_task_state(
+            task_id=task_id,
+            task_type="video",
+            internal_status=TaskInternalStatus.SUCCEEDED,
+            message="任务完成",
+            progress=100,
+            request_id="req_route_single_read_001",
+            user_id="1",
+            source="video",
+        )
+        last_event = runtime_store.append_task_event(
+            task_id,
+            TaskProgressEvent(
+                event="completed",
+                task_id=task_id,
+                task_type="video",
+                status="completed",
+                progress=100,
+                message="任务完成",
+                request_id="req_route_single_read_001",
+                error_code=None,
+            ),
+        )
+
+        with client.stream(
+            "GET",
+            f"/api/v1/tasks/{task_id}/events",
+            headers={"Last-Event-ID": last_event.id or ""},
+        ) as response:
+            body = "".join(response.iter_text())
+
+        runtime_store.clear()
+
+    assert response.status_code == 200
+    assert response.headers["x-task-last-event-id"] == last_event.id
+    assert runtime_store.load_calls == 1
+    assert "event: connected" in body

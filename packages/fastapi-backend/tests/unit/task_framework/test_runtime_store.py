@@ -44,6 +44,7 @@ def test_runtime_store_uses_standard_keys_and_ttls_for_snapshot_mapping_and_heal
         message="任务处理中",
         progress=35,
         request_id="req_task_runtime_001",
+        user_id="student-001",
         source="video"
     )
     store.set_message_mapping("msg-1001", task_id)
@@ -57,6 +58,7 @@ def test_runtime_store_uses_standard_keys_and_ttls_for_snapshot_mapping_and_heal
 
     assert snapshot["taskId"] == task_id
     assert store.get_task_state(task_id)["status"] == "processing"
+    assert store.get_task_state(task_id)["userId"] == "student-001"
     assert store.get_task_state(task_id)["context"] == {}
     assert store.get_task_id_by_message("msg-1001") == task_id
     assert health["metadata"]["latencyMs"] == 180
@@ -76,6 +78,7 @@ def test_runtime_store_appends_events_and_builds_recovery_state() -> None:
         message="已恢复到当前进度",
         progress=48,
         request_id="req_task_runtime_002",
+        user_id="student-002",
         source="video"
     )
     first_event = store.append_task_event(
@@ -128,6 +131,64 @@ def test_runtime_store_appends_events_and_builds_recovery_state() -> None:
     assert [event.sequence for event in recovery.events] == [3]
     assert recovery.latest_event_id == third_event.id
     assert 0 < store.ttl(build_task_events_key(task_id)) <= TASK_EVENTS_TTL_SECONDS
+
+
+def test_runtime_store_preserves_owner_and_latest_cursor_when_incremental_replay_is_empty() -> None:
+    store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    task_id = "video_20260330142500_owner0001"
+
+    store.set_task_state(
+        task_id=task_id,
+        task_type="video",
+        internal_status=TaskInternalStatus.RUNNING,
+        message="任务处理中",
+        progress=60,
+        request_id="req_task_runtime_003",
+        user_id="student-003",
+        source="video",
+    )
+    first_event = store.append_task_event(
+        task_id,
+        TaskProgressEvent(
+            event="progress",
+            task_id=task_id,
+            task_type="video",
+            status="processing",
+            progress=30,
+            message="脚本生成中",
+            request_id="req_task_runtime_003",
+            error_code=None,
+        ),
+    )
+    second_event = store.append_task_event(
+        task_id,
+        TaskProgressEvent(
+            event="progress",
+            task_id=task_id,
+            task_type="video",
+            status="processing",
+            progress=60,
+            message="配音合成中",
+            request_id="req_task_runtime_003",
+            error_code=None,
+        ),
+    )
+
+    recovery = store.load_task_recovery_state(task_id, after_event_id=second_event.id)
+    updated = store.set_task_state(
+        task_id=task_id,
+        internal_status=TaskInternalStatus.SUCCEEDED,
+        message="任务完成",
+        progress=100,
+        request_id="req_task_runtime_003",
+        source="video",
+    )
+
+    assert first_event.sequence == 1
+    assert second_event.sequence == 2
+    assert recovery.events == ()
+    assert recovery.latest_event_id == second_event.id
+    assert updated["userId"] == "student-003"
 
 
 def test_memory_runtime_store_expires_runtime_keys_without_redis(monkeypatch) -> None:

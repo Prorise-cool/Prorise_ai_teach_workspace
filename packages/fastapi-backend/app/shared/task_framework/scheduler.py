@@ -400,6 +400,7 @@ class TaskScheduler:
                 message=message,
                 progress=progress,
                 request_id=context.request_id,
+                user_id=context.user_id,
                 error_code=error_code,
                 source=context.source_module,
                 context=payload

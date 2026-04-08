@@ -9,6 +9,7 @@ from typing import Any, AsyncIterator, cast
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from app.core.errors import AppError
 from app.core.security import AccessContext, get_access_context
 
 from app.core.logging import format_trace_timestamp
@@ -51,6 +52,29 @@ def _as_context(payload: object) -> dict[str, Any]:
 
 def _is_terminal_status(status: object) -> bool:
     return str(status or "").lower() in TERMINAL_TASK_STATUSES
+
+
+def _ensure_runtime_owner(
+    *,
+    task_id: str,
+    snapshot: dict[str, object] | None,
+    access_context: AccessContext,
+) -> None:
+    owner_id = snapshot.get("userId") if snapshot is not None else None
+    if not isinstance(owner_id, str) or not owner_id:
+        raise AppError(
+            code="AUTH_PERMISSION_DENIED",
+            message="任务归属信息缺失，禁止访问当前运行态",
+            status_code=403,
+            task_id=task_id,
+        )
+    if owner_id != access_context.user_id:
+        raise AppError(
+            code="AUTH_PERMISSION_DENIED",
+            message="仅任务创建者可查看任务运行态",
+            status_code=403,
+            task_id=task_id,
+        )
 
 
 def _build_ephemeral_task_event(
@@ -171,6 +195,7 @@ async def stream_task_events(
             task_id,
             after_event_id=latest_seen_event_id
         )
+        latest_seen_event_id = live_state.latest_event_id or latest_seen_event_id
         if live_state.snapshot is not None:
             current_snapshot = live_state.snapshot
 
@@ -231,6 +256,7 @@ async def get_task_status(
 
     if recovery_state.snapshot is None:
         return _not_found_response(task_id)
+    _ensure_runtime_owner(task_id=task_id, snapshot=recovery_state.snapshot, access_context=access_context)
 
     payload = _build_snapshot_payload(
         task_id=task_id,
@@ -296,8 +322,11 @@ async def get_task_events(
 
     if recovery_state.snapshot is None and not recovery_state.events:
         return _not_found_response(task_id)
+    if recovery_state.snapshot is None:
+        return _not_found_response(task_id)
+    _ensure_runtime_owner(task_id=task_id, snapshot=recovery_state.snapshot, access_context=access_context)
 
-    latest_event_id = runtime_store.load_task_recovery_state(task_id).latest_event_id
+    latest_event_id = recovery_state.latest_event_id
     headers = {
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",

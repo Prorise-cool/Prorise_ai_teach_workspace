@@ -14,10 +14,13 @@ class TaskRuntimeRecoveryState:
     task_id: str
     snapshot: dict[str, object] | None
     events: tuple[TaskProgressEvent, ...]
+    latest_event_id_snapshot: str | None = None
 
     @property
     def latest_event_id(self) -> str | None:
         """返回最新事件的 ID，无事件时返回 None。"""
+        if self.latest_event_id_snapshot is not None:
+            return self.latest_event_id_snapshot
         if not self.events:
             return None
         return self.events[-1].id
