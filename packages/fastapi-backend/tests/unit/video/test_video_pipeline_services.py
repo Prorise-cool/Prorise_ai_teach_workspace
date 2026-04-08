@@ -597,6 +597,36 @@ def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytes
     assert isinstance(persisted, dict)
 
 
+def test_cos_client_from_settings_falls_back_to_local_asset_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = SimpleNamespace(
+        environment="development",
+        cos_base_url="https://cos.example.local",
+        host="0.0.0.0",
+        port=8090,
+        api_v1_prefix="/api/v1",
+    )
+
+    monkeypatch.setattr("app.shared.cos_client.get_settings", lambda: settings)
+
+    client = CosClient.from_settings()
+    asset = client.build_asset("video/video_upload_case/output.mp4")
+
+    assert client.base_url == "http://127.0.0.1:8090/api/v1/video/assets"
+    assert asset.public_url == "http://127.0.0.1:8090/api/v1/video/assets/video/video_upload_case/output.mp4"
+
+
+def test_local_asset_store_round_trips_local_asset_route_refs(tmp_path) -> None:
+    asset_store = LocalAssetStore(
+        root_dir=tmp_path / "assets",
+        cos_client=CosClient("http://127.0.0.1:8090/api/v1/video/assets"),
+    )
+
+    asset = asset_store.write_text("video/video_upload_case/output.mp4", "video")
+
+    assert asset_store.ref_to_key(asset.public_url) == "video/video_upload_case/output.mp4"
+    assert asset_store.resolve_ref(asset.public_url).read_text(encoding="utf-8") == "video"
+
+
 def test_artifact_writeback_service_outputs_required_artifact_types(tmp_path) -> None:
     asset_store = LocalAssetStore(root_dir=tmp_path / "assets", cos_client=CosClient("https://cos.test.local"))
     service = ArtifactWritebackService(asset_store=asset_store)
@@ -632,3 +662,10 @@ def test_artifact_writeback_service_outputs_required_artifact_types(tmp_path) ->
         "manim_code",
     }
     assert asset_store.exists(ref) is True
+
+
+def test_local_asset_store_rejects_path_traversal(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path / "assets", cos_client=CosClient("https://cos.test.local"))
+
+    with pytest.raises(ValueError):
+        asset_store.resolve_path_from_key("../secrets.txt")
