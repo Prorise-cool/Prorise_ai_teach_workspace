@@ -73,6 +73,7 @@ pnpm --filter @xiaomai/student-web dev
 pnpm --filter @xiaomai/student-web lint
 pnpm --filter @xiaomai/student-web typecheck
 pnpm --filter @xiaomai/student-web test
+pnpm --filter @xiaomai/student-web test:e2e
 pnpm --filter @xiaomai/student-web build
 pnpm --filter @xiaomai/student-web storybook
 ```

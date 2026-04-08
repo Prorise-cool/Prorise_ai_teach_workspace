@@ -177,64 +177,76 @@ async function loadVideoResultRoute() {
   };
 }
 
-export const appRouter = createBrowserRouter([
-  {
-    path: '/',
-    element: <AppShell />,
-    children: [
-      {
-        index: true,
-        lazy: loadHomeRoute
-      },
-      {
-        path: 'landing',
-        lazy: loadLandingRoute
-      },
-      {
-        element: <RequireAuthRoute />,
-        children: [
-          {
-            path: 'profile/setup',
-            lazy: loadProfileSetupRoute
-          },
-          {
-            path: 'profile/setup/preferences',
-            lazy: loadProfilePreferencesRoute
-          },
-          {
-            path: 'profile/setup/tour',
-            lazy: loadProfileTourRoute
-          },
-          {
-            path: 'classroom/input',
-            lazy: loadClassroomInputRoute
-          },
-          {
-            path: 'video/input',
-            lazy: loadVideoInputRoute
-          },
-          {
-            path: 'video/:id/generating',
-            lazy: loadVideoGeneratingRoute
-          },
-          {
-            path: 'video/:id',
-            lazy: loadVideoResultRoute
-          }
-        ]
-      },
-      {
-        path: 'login',
-        lazy: loadLoginRoute
-      },
-      {
-        path: 'login/social-callback',
-        lazy: loadSocialCallbackRoute
-      },
-      {
-        path: 'forbidden',
-        lazy: loadForbiddenRoute
-      }
-    ]
-  }
-]);
+/**
+ * 创建应用级 Browser Router。
+ *
+ * 为运行时入口保留单例导出，同时允许浏览器级测试为每个用例生成独立 router，
+ * 避免跨用例共享 history 与懒加载状态。
+ *
+ * @returns 全量应用路由实例。
+ */
+export function createAppRouter() {
+  return createBrowserRouter([
+    {
+      path: '/',
+      element: <AppShell />,
+      children: [
+        {
+          index: true,
+          lazy: loadHomeRoute
+        },
+        {
+          path: 'landing',
+          lazy: loadLandingRoute
+        },
+        {
+          element: <RequireAuthRoute />,
+          children: [
+            {
+              path: 'profile/setup',
+              lazy: loadProfileSetupRoute
+            },
+            {
+              path: 'profile/setup/preferences',
+              lazy: loadProfilePreferencesRoute
+            },
+            {
+              path: 'profile/setup/tour',
+              lazy: loadProfileTourRoute
+            },
+            {
+              path: 'classroom/input',
+              lazy: loadClassroomInputRoute
+            },
+            {
+              path: 'video/input',
+              lazy: loadVideoInputRoute
+            },
+            {
+              path: 'video/:id/generating',
+              lazy: loadVideoGeneratingRoute
+            },
+            {
+              path: 'video/:id',
+              lazy: loadVideoResultRoute
+            }
+          ]
+        },
+        {
+          path: 'login',
+          lazy: loadLoginRoute
+        },
+        {
+          path: 'login/social-callback',
+          lazy: loadSocialCallbackRoute
+        },
+        {
+          path: 'forbidden',
+          lazy: loadForbiddenRoute
+        }
+      ]
+    }
+  ]);
+}
+
+export const appRouter = createAppRouter();

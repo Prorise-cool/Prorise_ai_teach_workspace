@@ -45,12 +45,22 @@ export default tseslint.config(
   },
   {
     files: ['src/test/**/*.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
+    ignores: ['src/test/browser/**/*.{ts,tsx}', 'src/**/*.browser.test.{ts,tsx}'],
     plugins: {
       'testing-library': testingLibrary,
       vitest
     },
     rules: {
       ...testingLibrary.configs['flat/react'].rules,
+      ...vitest.configs.recommended.rules
+    }
+  },
+  {
+    files: ['src/test/browser/**/*.{ts,tsx}', 'src/**/*.browser.test.{ts,tsx}'],
+    plugins: {
+      vitest
+    },
+    rules: {
       ...vitest.configs.recommended.rules
     }
   }

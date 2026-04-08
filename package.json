@@ -16,6 +16,7 @@
     "build:student-web": "pnpm --filter @xiaomai/student-web build",
     "lint:student-web": "pnpm --filter @xiaomai/student-web lint",
     "test:student-web": "pnpm --filter @xiaomai/student-web test",
+    "test:student-web:e2e": "pnpm --filter @xiaomai/student-web test:e2e",
     "test:student-web:coverage": "pnpm --filter @xiaomai/student-web test:coverage",
     "typecheck:student-web": "pnpm --filter @xiaomai/student-web typecheck",
     "test:fastapi-backend": "packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests",

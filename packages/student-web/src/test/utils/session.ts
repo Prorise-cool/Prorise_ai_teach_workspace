@@ -3,7 +3,11 @@
  * 供认证、profile、video、classroom 等运行态测试复用。
  */
 import { APP_DEFAULT_LOCALE, appI18n } from '@/app/i18n';
+import {
+  createEmptyUserProfile
+} from '@/features/profile/types';
 import { resetUserProfileStore } from '@/features/profile/stores/user-profile-store';
+import { useUserProfileStore } from '@/features/profile/stores/user-profile-store';
 import { createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService } from '@/services/auth';
 import {
@@ -23,6 +27,11 @@ type SeedMockAuthSessionOptions = {
   password?: string;
   rememberSession?: boolean;
   username?: string;
+};
+
+type SeedCompletedUserProfileOptions = {
+  bio?: string;
+  userId?: string;
 };
 
 /**
@@ -65,4 +74,24 @@ export async function seedMockAuthSession(
     .setSession(session, options.rememberSession);
 
   return session;
+}
+
+/**
+ * 为指定用户注入一份已完成 onboarding 的资料，供受保护路由与登录回跳测试复用。
+ *
+ * @param options - 资料种子选项。
+ * @returns 已写入 store 的用户资料。
+ */
+export function seedCompletedUserProfile(
+  options: SeedCompletedUserProfileOptions = {}
+) {
+  const profile = {
+    ...createEmptyUserProfile(options.userId ?? '1'),
+    bio: options.bio ?? '浏览器测试资料已完善',
+    isCompleted: true
+  };
+
+  useUserProfileStore.getState().setProfile(profile);
+
+  return profile;
 }

@@ -10,6 +10,7 @@ export default mergeConfig(
       setupFiles: ['./src/test/setup.ts'],
       globals: true,
       include: ['src/**/*.test.{ts,tsx}'],
+      exclude: ['src/**/*.browser.test.{ts,tsx}'],
       passWithNoTests: true
     }
   })
