@@ -122,6 +122,19 @@ function createVideoPublicError(
 }
 
 /**
+ * 将秒数格式化为发现区使用的 `m:ss` 文本。
+ *
+ * @param seconds - 原始秒数。
+ * @returns 时长文本。
+ */
+function formatDurationLabel(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+/**
  * 归一化单张公开视频卡片。
  *
  * @param payload - 原始卡片负载。
@@ -138,6 +151,7 @@ function normalizePublicCard(payload: unknown): VideoPublicCard | null {
     readString(item.videoId) ??
     readString(item.resultId) ??
     readString(item.id);
+  const resultId = readString(item.resultId) ?? undefined;
   const title = readString(item.title);
   const summary =
     readString(item.summary) ??
@@ -147,7 +161,11 @@ function normalizePublicCard(payload: unknown): VideoPublicCard | null {
     readString(item.thumbnail) ??
     readString(item.coverUrl) ??
     null;
-  const duration = readString(item.duration);
+  const duration =
+    readString(item.duration) ??
+    (readNumber(item.duration) !== undefined
+      ? formatDurationLabel(readNumber(item.duration) ?? 0)
+      : undefined);
   const viewCount = readNumber(item.viewCount) ?? 0;
   const createdAt =
     readString(item.createdAt) ??
@@ -177,6 +195,7 @@ function normalizePublicCard(payload: unknown): VideoPublicCard | null {
 
   return {
     videoId,
+    resultId,
     title,
     summary,
     thumbnail,
@@ -199,7 +218,11 @@ function normalizePublicCard(payload: unknown): VideoPublicCard | null {
 function normalizeVideoPublicList(data: unknown): VideoPublicListResult {
   const envelope = readRecord(data);
   const payload = readRecord(envelope?.data) ?? envelope;
-  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const items = Array.isArray(payload?.items)
+    ? payload.items
+    : Array.isArray(payload?.rows)
+      ? payload.rows
+      : [];
   const normalizedItems = items
     .map((item) => normalizePublicCard(item))
     .filter((item): item is VideoPublicCard => item !== null);

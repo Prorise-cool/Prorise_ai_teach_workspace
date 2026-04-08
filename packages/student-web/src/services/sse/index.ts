@@ -41,6 +41,7 @@ type TaskEventStreamOptions = {
   scenario?: TaskMockScenario;
   signal?: AbortSignal;
   useMock?: boolean;
+  module?: string;
   lastEventId?: string | null;
   reconnectAttempts?: number;
   reconnectDelayMs?: number;
@@ -50,6 +51,7 @@ type TaskEventStreamOptions = {
 
 type CreateRealTaskEventStreamOptions = {
   adapter?: TaskAdapter;
+  module?: string;
   reconnectAttempts?: number;
   reconnectDelayMs?: number;
   pollingIntervalMs?: number;
@@ -90,6 +92,21 @@ const MOCK_SSE_SEQUENCES: Record<string, TaskEventTemplate[]> = {
   snapshot: snapshotSequence as TaskEventTemplate[],
   provider_switch: providerSwitchSequence as TaskEventTemplate[],
 };
+
+/**
+ * 构造任务事件流路径；模块级任务优先走 `/api/v1/{module}/tasks/...`。
+ *
+ * @param taskId - 任务 ID。
+ * @param module - 可选模块名。
+ * @returns SSE 事件流路径。
+ */
+function buildTaskEventsPath(taskId: string, module?: string) {
+  if (module) {
+    return `/api/v1/${module}/tasks/${taskId}/events`;
+  }
+
+  return `/api/v1/tasks/${taskId}/events`;
+}
 
 export interface TaskEventStream {
   streamTaskEvents(
@@ -544,7 +561,7 @@ function parseSseMessages(
  */
 async function streamSseAttempt(
   taskId: string,
-  options: Pick<TaskEventStreamOptions, "signal" | "lastEventId">,
+  options: Pick<TaskEventStreamOptions, "signal" | "lastEventId" | "module">,
   logger: TaskEventParserLogger,
 ): Promise<TaskSseAttemptResult> {
   const headers: Record<string, string> = {
@@ -564,7 +581,7 @@ async function streamSseAttempt(
   }
 
   const response = await fetch(
-    `${resolveFastapiBaseUrl()}/api/v1/tasks/${taskId}/events`,
+    `${resolveFastapiBaseUrl()}${buildTaskEventsPath(taskId, options.module)}`,
     {
       headers,
       signal: options.signal,
@@ -780,7 +797,7 @@ export function createMockTaskEventStream(): TaskEventStream {
 export function createRealTaskEventStream(
   defaults: CreateRealTaskEventStreamOptions = {},
 ): TaskEventStream {
-  const adapter = defaults.adapter ?? resolveTaskAdapter();
+  const adapter = defaults.adapter ?? resolveTaskAdapter({ module: defaults.module });
 
   return {
     async *streamTaskEvents(taskId, options) {
@@ -833,6 +850,7 @@ export function createRealTaskEventStream(
             {
               signal: options?.signal,
               lastEventId,
+              module: options?.module ?? defaults.module,
             },
             console,
           );
@@ -897,11 +915,11 @@ export function createRealTaskEventStream(
  * @returns mock 或 real 事件流。
  */
 export function resolveTaskEventStream(
-  options: Pick<TaskEventStreamOptions, "useMock"> = {},
+  options: Pick<TaskEventStreamOptions, "useMock" | "module"> = {},
 ) {
   return resolveRuntimeMode(options) === "mock"
     ? createMockTaskEventStream()
-    : createRealTaskEventStream();
+    : createRealTaskEventStream({ module: options.module });
 }
 
 /**

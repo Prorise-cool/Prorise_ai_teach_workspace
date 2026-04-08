@@ -124,7 +124,7 @@ export function useVideoTaskSse(
 
   const startStream = useCallback(
     async (id: string, signal: AbortSignal) => {
-      const stream = resolveTaskEventStream();
+      const stream = resolveTaskEventStream({ module: 'video' });
       const iterable = stream.streamTaskEvents(id, { signal });
 
       for await (const event of iterable) {
