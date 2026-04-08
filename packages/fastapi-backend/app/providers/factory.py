@@ -45,6 +45,10 @@ class ProviderFactory:
         """返回内部注册表引用。"""
         return self._registry
 
+    def clone(self) -> "ProviderFactory":
+        """复制当前工厂与注册表，用于请求级 runtime 装配隔离。"""
+        return ProviderFactory(self._registry.clone())
+
     def get_llm_provider(
         self, provider: str | ProviderRuntimeConfig | Mapping[str, Any]
     ) -> LLMProvider:

@@ -15,7 +15,6 @@ import type { TaskSnapshot } from '@/types/task';
 
 const useVideoTaskStatusMock = vi.fn();
 const useVideoTaskSseMock = vi.fn();
-const useVideoStatusPollingMock = vi.fn();
 
 vi.mock('@/features/video/hooks/use-video-task-status', () => ({
   useVideoTaskStatus: (...args: unknown[]) => useVideoTaskStatusMock(...args),
@@ -23,10 +22,6 @@ vi.mock('@/features/video/hooks/use-video-task-status', () => ({
 
 vi.mock('@/features/video/hooks/use-video-task-sse', () => ({
   useVideoTaskSse: (...args: unknown[]) => useVideoTaskSseMock(...args),
-}));
-
-vi.mock('@/features/video/hooks/use-video-status-polling', () => ({
-  useVideoStatusPolling: (...args: unknown[]) => useVideoStatusPollingMock(...args),
 }));
 
 function createSnapshot(overrides: Partial<TaskSnapshot> = {}): TaskSnapshot {
@@ -38,6 +33,9 @@ function createSnapshot(overrides: Partial<TaskSnapshot> = {}): TaskSnapshot {
     progress: 42,
     message: '任务处理中状态已同步',
     timestamp: '2026-04-06T12:00:00Z',
+    currentStage: 'render',
+    stageLabel: 'video.stages.render',
+    stageProgress: 60,
     errorCode: null,
     ...overrides,
   };
@@ -84,7 +82,6 @@ describe('VideoGeneratingPage', () => {
   beforeEach(() => {
     useVideoTaskStatusMock.mockReset();
     useVideoTaskSseMock.mockReset();
-    useVideoStatusPollingMock.mockReset();
     useVideoTaskStatusMock.mockReturnValue(createStatusResult());
     useVideoGeneratingStore.getState().resetState('vtask_mock_text_001');
   });
@@ -105,6 +102,15 @@ describe('VideoGeneratingPage', () => {
     expect(useVideoTaskStatusMock).toHaveBeenCalledWith('vtask_mock_text_001');
     expect(useVideoTaskSseMock).toHaveBeenCalledWith('vtask_mock_text_001', {
       enabled: true,
+    });
+    await waitFor(() => {
+      expect(useVideoGeneratingStore.getState()).toMatchObject({
+        taskId: 'vtask_mock_text_001',
+        currentStage: 'render',
+        stageLabel: 'video.stages.render',
+        progress: 42,
+        hasHydratedRuntime: true,
+      });
     });
   });
 
@@ -255,6 +261,33 @@ describe('VideoGeneratingPage', () => {
     expect(state.error?.errorCode).toBe('VIDEO_TTS_ALL_PROVIDERS_FAILED');
     expect(state.error?.failedStage).toBe('tts');
     expect(state.error?.retryable).toBe(false);
+  });
+
+  it('zustand store 的 restoreSnapshot 使用 typed 阶段字段恢复失败态', () => {
+    const store = useVideoGeneratingStore.getState();
+
+    store.restoreSnapshot(createSnapshot({
+      status: 'failed',
+      currentStage: 'manim_fix',
+      stageLabel: 'video.stages.manim_fix',
+      progress: 66,
+      errorCode: 'TASK_PROVIDER_TIMEOUT',
+      message: '修复阶段超时',
+    }));
+
+    const state = useVideoGeneratingStore.getState();
+
+    expect(state.taskId).toBe('vtask_mock_text_001');
+    expect(state.status).toBe('failed');
+    expect(state.currentStage).toBe('manim_fix');
+    expect(state.stageLabel).toBe('video.stages.manim_fix');
+    expect(state.error).toMatchObject({
+      errorCode: 'TASK_PROVIDER_TIMEOUT',
+      errorMessage: '修复阶段超时',
+      failedStage: 'manim_fix',
+      retryable: false,
+    });
+    expect(state.hasHydratedRuntime).toBe(true);
   });
 
   it('zustand store 的 resetState 正确重置', () => {

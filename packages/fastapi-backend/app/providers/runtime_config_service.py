@@ -177,6 +177,7 @@ class ProviderRuntimeResolver:
         *,
         fallback: VideoProviderRuntimeAssembly,
     ) -> VideoProviderRuntimeAssembly:
+        runtime_provider_factory = self._provider_factory.clone()
         llm_config_map: dict[str, list[ProviderRuntimeConfig]] = {}
         tts_config_map: dict[str, list[ProviderRuntimeConfig]] = {}
 
@@ -185,7 +186,7 @@ class ProviderRuntimeResolver:
                 continue
             capability = ProviderCapability(binding.capability)
             config = self._build_runtime_config(binding)
-            self._ensure_runtime_registration(capability, config, binding)
+            self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
 
             target = llm_config_map if capability is ProviderCapability.LLM else tts_config_map
             target.setdefault(binding.stage_code, []).append(config)
@@ -193,18 +194,28 @@ class ProviderRuntimeResolver:
                 target.setdefault("default", []).append(config)
 
         llm_by_stage = {
-            stage: tuple(self._provider_factory.build_chain(ProviderCapability.LLM, configs))
+            stage: tuple(runtime_provider_factory.build_chain(ProviderCapability.LLM, configs))
             for stage, configs in llm_config_map.items()
             if stage != "default"
         }
         tts_by_stage = {
-            stage: tuple(self._provider_factory.build_chain(ProviderCapability.TTS, configs))
+            stage: tuple(runtime_provider_factory.build_chain(ProviderCapability.TTS, configs))
             for stage, configs in tts_config_map.items()
             if stage != "default"
         }
 
-        default_llm = self._resolve_default_llm(llm_by_stage, llm_config_map, fallback.default_llm)
-        default_tts = self._resolve_default_tts(tts_by_stage, tts_config_map, fallback.default_tts)
+        default_llm = self._resolve_default_llm(
+            runtime_provider_factory,
+            llm_by_stage,
+            llm_config_map,
+            fallback.default_llm,
+        )
+        default_tts = self._resolve_default_tts(
+            runtime_provider_factory,
+            tts_by_stage,
+            tts_config_map,
+            fallback.default_tts,
+        )
 
         for stage in _VIDEO_LLM_STAGES:
             llm_by_stage.setdefault(stage, default_llm)
@@ -253,12 +264,13 @@ class ProviderRuntimeResolver:
 
     def _ensure_runtime_registration(
         self,
+        provider_factory: ProviderFactory,
         capability: ProviderCapability,
         config: ProviderRuntimeConfig,
         binding: RuoYiAiRuntimeBinding,
     ) -> None:
         try:
-            self._provider_factory.registry.get_registration(capability, config.provider_id)
+            provider_factory.registry.get_registration(capability, config.provider_id)
             return
         except ProviderNotFoundError:
             pass
@@ -269,7 +281,7 @@ class ProviderRuntimeResolver:
         last_error: Exception | None = None
         for candidate in candidates:
             try:
-                base_registration = self._provider_factory.registry.get_registration(capability, candidate)
+                base_registration = provider_factory.registry.get_registration(capability, candidate)
                 break
             except (ProviderNotFoundError, ProviderConfigurationError) as exc:
                 last_error = exc
@@ -278,7 +290,7 @@ class ProviderRuntimeResolver:
         if base_registration is None:
             raise ProviderNotFoundError(f"未注册的 {capability.value} Provider：{config.provider_id}") from last_error
 
-        self._provider_factory.registry.register(
+        provider_factory.registry.register(
             capability,
             config.provider_id,
             base_registration.builder,
@@ -319,13 +331,14 @@ class ProviderRuntimeResolver:
 
     def _resolve_default_llm(
         self,
+        provider_factory: ProviderFactory,
         llm_by_stage: Mapping[str, tuple[LLMProvider, ...]],
         llm_config_map: Mapping[str, list[ProviderRuntimeConfig]],
         fallback: tuple[LLMProvider, ...],
     ) -> tuple[LLMProvider, ...]:
         default_configs = llm_config_map.get("default")
         if default_configs:
-            return tuple(self._provider_factory.build_chain(ProviderCapability.LLM, default_configs))
+            return tuple(provider_factory.build_chain(ProviderCapability.LLM, default_configs))
         for stage in _VIDEO_LLM_STAGES:
             providers = llm_by_stage.get(stage)
             if providers:
@@ -334,13 +347,14 @@ class ProviderRuntimeResolver:
 
     def _resolve_default_tts(
         self,
+        provider_factory: ProviderFactory,
         tts_by_stage: Mapping[str, tuple[TTSProvider, ...]],
         tts_config_map: Mapping[str, list[ProviderRuntimeConfig]],
         fallback: tuple[TTSProvider, ...],
     ) -> tuple[TTSProvider, ...]:
         default_configs = tts_config_map.get("default")
         if default_configs:
-            return tuple(self._provider_factory.build_chain(ProviderCapability.TTS, default_configs))
+            return tuple(provider_factory.build_chain(ProviderCapability.TTS, default_configs))
         providers = tts_by_stage.get(VideoStage.TTS.value)
         if providers:
             return providers

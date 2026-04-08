@@ -24,8 +24,6 @@ import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-import type { VideoPipelineStage } from '@/types/video';
-
 /** 完成后跳转结果页的延迟（毫秒）。 */
 const COMPLETED_REDIRECT_DELAY_MS = 2000;
 
@@ -70,31 +68,12 @@ export function VideoGeneratingPage() {
     }
 
     const store = useVideoGeneratingStore.getState();
+    const shouldRestore =
+      store.taskId !== snapshot.taskId ||
+      !store.hasHydratedRuntime;
 
-    // 仅当 store 尚未收到 SSE 事件时才用 snapshot 恢复
-    if (store.progress === 0 && store.status === 'pending') {
-      const raw = snapshot as unknown as Record<string, unknown>;
-      const snapshotStage = (raw.currentStage as string) ?? null;
-      const snapshotStageLabel = (raw.stageLabel as string) ?? null;
-
-      if (snapshot.status === 'completed') {
-        store.setCompleted();
-      } else if (snapshot.status === 'failed') {
-        store.setFailed({
-          errorCode: snapshot.errorCode ?? null,
-          errorMessage: snapshot.message ?? null,
-          failedStage: (snapshotStage as VideoPipelineStage) ?? null,
-          retryable: false,
-        });
-      } else if (snapshotStage) {
-        store.updateStage({
-          currentStage: snapshotStage as VideoPipelineStage,
-          stageLabel: snapshotStageLabel ?? snapshotStage,
-          progress: snapshot.progress,
-        });
-      } else {
-        store.updateProgress({ progress: snapshot.progress });
-      }
+    if (shouldRestore) {
+      store.restoreSnapshot(snapshot);
     }
   }, [snapshot, isSnapshotLoading, isNotFound]);
 
@@ -109,7 +88,7 @@ export function VideoGeneratingPage() {
   useVideoTaskSse(taskId, { enabled: sseEnabled });
 
   // 注意：降级轮询已内置于 services/sse 层的 fallback 机制，
-  // 不再在页面层重复调用 useVideoStatusPolling，避免双重轮询和状态写入冲突。
+  // 页面层不再重复启动额外 status 轮询，避免双重状态写入冲突。
 
   /* -- 5. 终态跳转 -- */
   useEffect(() => {

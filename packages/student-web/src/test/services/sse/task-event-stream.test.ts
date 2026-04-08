@@ -156,7 +156,7 @@ describe('task event stream', () => {
             '',
             'id: task_real_retry:evt:000002',
             'event: progress',
-            'data: {"taskId":"task_real_retry","taskType":"video","status":"processing","progress":30,"message":"working","timestamp":"2026-03-30T13:05:05Z","requestId":"req_real_retry","errorCode":null}',
+            'data: {"taskId":"task_real_retry","taskType":"video","status":"processing","progress":30,"message":"working","timestamp":"2026-03-30T13:05:05Z","requestId":"req_real_retry","errorCode":null,"currentStage":"render","stageLabel":"video.stages.render","stageProgress":45}',
             ''
           ].join('\n'),
           {
@@ -196,6 +196,11 @@ describe('task event stream', () => {
       'progress',
       'completed'
     ]);
+    expect(events[1]).toMatchObject({
+      currentStage: 'render',
+      stageLabel: 'video.stages.render',
+      stageProgress: 45
+    });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       headers: {
@@ -222,6 +227,9 @@ describe('task event stream', () => {
           message: 'polling',
           timestamp: '2026-03-30T13:05:11Z',
           stage: 'rendering',
+          currentStage: 'rendering',
+          stageLabel: 'video.stages.rendering',
+          stageProgress: 56,
           errorCode: null,
           lastEventId: 'task_real_polling:evt:000002'
         })
@@ -255,6 +263,9 @@ describe('task event stream', () => {
     expect(events.at(0)).toMatchObject({
       status: 'processing',
       progress: 56,
+      currentStage: 'rendering',
+      stageLabel: 'video.stages.rendering',
+      stageProgress: 56,
       resumeFrom: 'task_real_polling:evt:000002'
     });
     expect(events.at(-1)).toMatchObject({
@@ -278,6 +289,9 @@ describe('task event stream', () => {
           message: 'restored from snapshot',
           timestamp: '2026-03-30T13:05:21Z',
           stage: 'rendering',
+          currentStage: 'rendering',
+          stageLabel: 'video.stages.rendering',
+          stageProgress: 64,
           errorCode: null,
           lastEventId: 'task_real_snapshot_required:evt:000003'
         })
@@ -320,6 +334,9 @@ describe('task event stream', () => {
     expect(events.at(0)).toMatchObject({
       sequence: 4,
       status: 'processing',
+      currentStage: 'rendering',
+      stageLabel: 'video.stages.rendering',
+      stageProgress: 64,
       resumeFrom: 'task_real_snapshot_required:evt:000003'
     });
     expect(events.at(-1)).toMatchObject({

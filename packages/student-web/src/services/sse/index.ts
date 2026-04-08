@@ -257,6 +257,9 @@ function isTaskSnapshotEqual(left: TaskSnapshot, right: TaskSnapshot) {
     left.message === right.message &&
     left.timestamp === right.timestamp &&
     left.stage === right.stage &&
+    left.currentStage === right.currentStage &&
+    left.stageLabel === right.stageLabel &&
+    left.stageProgress === right.stageProgress &&
     left.errorCode === right.errorCode &&
     left.resumeFrom === right.resumeFrom &&
     left.lastEventId === right.lastEventId &&
@@ -336,7 +339,10 @@ function snapshotToStreamEvent(
     timestamp: snapshot.timestamp,
     requestId: snapshot.requestId,
     errorCode: snapshot.errorCode ?? null,
-    stage: snapshot.stage ?? null,
+    stage: snapshot.stage ?? snapshot.currentStage ?? null,
+    currentStage: snapshot.currentStage ?? snapshot.stage ?? null,
+    stageLabel: snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? null,
+    stageProgress: snapshot.stageProgress ?? null,
     resumeFrom,
     context: snapshot.context,
   };
@@ -485,6 +491,13 @@ function normalizeTaskEventPayload(
     requestId,
     errorCode,
     stage: toOptionalString(rawPayload.stage),
+    currentStage: toOptionalString(rawPayload.currentStage) ?? toOptionalString(rawPayload.stage),
+    stageLabel:
+      toOptionalString(rawPayload.stageLabel) ??
+      toOptionalString(rawPayload.currentStage) ??
+      toOptionalString(rawPayload.stage),
+    stageProgress:
+      typeof rawPayload.stageProgress === "number" ? rawPayload.stageProgress : null,
     from: toOptionalString(rawPayload.from),
     to: toOptionalString(rawPayload.to),
     reason: toOptionalString(rawPayload.reason),
