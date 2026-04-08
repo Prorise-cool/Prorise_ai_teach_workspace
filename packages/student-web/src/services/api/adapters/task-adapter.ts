@@ -2,12 +2,11 @@
  * 文件说明：提供任务列表、详情与状态快照的 mock / real adapter 抽象。
  */
 import {
-  createApiClient,
   type ApiClient,
   type ApiRequestConfig,
   isApiClientError
 } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getMockTaskDetailEnvelope,
   getMockTaskListEnvelope,
@@ -26,10 +25,6 @@ import type {
 import {
   pickAdapterImplementation
 } from './base-adapter';
-
-const fastapiClient = createApiClient({
-  baseURL: resolveFastapiBaseUrl()
-});
 
 export class TaskAdapterError extends Error {
   name = 'TaskAdapterError' as const;

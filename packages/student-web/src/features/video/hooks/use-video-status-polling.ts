@@ -6,8 +6,8 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { createApiClient } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
+import { buildFastapiAuthHeaders, fastapiClient } from '@/services/api/fastapi-client';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
 import type { TaskDataEnvelope } from '@/types/task';
 import type { VideoPipelineStage } from '@/types/video';
@@ -28,22 +28,13 @@ interface VideoTaskStatusSnapshot {
 const POLLING_INTERVAL_MS = 3000;
 
 /**
- * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
- *
- * @returns API 客户端实例。
- */
-function getApiClient() {
-  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
-}
-
-/**
  * 查询视频任务状态快照。
  *
  * @param taskId - 任务 ID。
  * @returns 状态快照。
  */
 async function fetchVideoTaskStatus(taskId: string): Promise<VideoTaskStatusSnapshot> {
-  const response = await getApiClient().request<TaskDataEnvelope<VideoTaskStatusSnapshot>>({
+  const response = await fastapiClient.request<TaskDataEnvelope<VideoTaskStatusSnapshot>>({
     url: `/api/v1/video/tasks/${taskId}/status`,
     method: 'get',
   });
@@ -73,7 +64,10 @@ export function useVideoStatusPolling(taskId: string | undefined) {
     queryFn: () => {
       if (isMock) {
         // mock 模式下从 MSW handler 获取数据
-        return fetch(`${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/status`)
+        return fetch(
+          `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/status`,
+          { headers: buildFastapiAuthHeaders() },
+        )
           .then((r) => r.json() as Promise<TaskDataEnvelope<VideoTaskStatusSnapshot>>)
           .then((envelope) => envelope.data);
       }

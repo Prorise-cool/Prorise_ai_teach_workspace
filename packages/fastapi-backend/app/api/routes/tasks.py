@@ -6,8 +6,10 @@ import asyncio
 from time import monotonic
 from typing import Any, AsyncIterator, cast
 
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+
+from app.core.security import AccessContext, get_access_context
 
 from app.core.logging import format_trace_timestamp
 from app.core.sse import TaskProgressEvent, encode_sse_event
@@ -218,7 +220,11 @@ async def stream_task_events(
         }
     }
 )
-async def get_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+async def get_task_status(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+) -> dict[str, object] | JSONResponse:
     """查询任务运行态快照。"""
     runtime_store = _get_runtime_store(request)
     recovery_state = runtime_store.load_task_recovery_state(task_id)
@@ -244,9 +250,13 @@ async def get_task_status(task_id: str, request: Request) -> dict[str, object] |
         }
     }
 )
-async def get_task_snapshot(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+async def get_task_snapshot(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+) -> dict[str, object] | JSONResponse:
     """查询任务运行态快照（snapshot 别名）。"""
-    return await get_task_status(task_id, request)
+    return await get_task_status(task_id, request, access_context)
 
 
 @router.get(
@@ -274,7 +284,8 @@ async def get_task_snapshot(task_id: str, request: Request) -> dict[str, object]
 async def get_task_events(
     task_id: str,
     request: Request,
-    last_event_id: str | None = Header(default=None, alias="Last-Event-ID")
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    access_context: AccessContext = Depends(get_access_context),
 ) -> Response:
     """以 SSE 推送任务事件流。"""
     runtime_store = _get_runtime_store(request)

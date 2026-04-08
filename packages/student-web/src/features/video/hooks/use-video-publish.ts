@@ -6,8 +6,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { createApiClient } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
+import { buildFastapiAuthHeaders, fastapiClient } from '@/services/api/fastapi-client';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
 import { useFeedback } from '@/shared/feedback';
 
@@ -18,17 +18,8 @@ interface PublishResponse {
 }
 
 /**
- * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
- *
- * @returns API 客户端实例。
- */
-function getApiClient() {
-  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
-}
-
-/**
  * 发送视频发布/取消请求的统一函数。
- * mock 模式使用原生 fetch，真实模式使用 apiClient。
+ * mock 模式使用原生 fetch，真实模式使用 fastapiClient。
  *
  * @param taskId - 任务 ID。
  * @param method - HTTP 方法：'post' 公开发布，'delete' 取消公开。
@@ -43,14 +34,14 @@ async function videoPublishRequest(
   if (isMock) {
     const response = await fetch(
       `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}/publish`,
-      { method: method.toUpperCase() },
+      { method: method.toUpperCase(), headers: buildFastapiAuthHeaders() },
     );
     const envelope = await response.json();
 
     return (envelope as { data: PublishResponse }).data;
   }
 
-  const response = await getApiClient().request<{ data: PublishResponse }>({
+  const response = await fastapiClient.request<{ data: PublishResponse }>({
     url: `/api/v1/video/tasks/${taskId}/publish`,
     method,
   });

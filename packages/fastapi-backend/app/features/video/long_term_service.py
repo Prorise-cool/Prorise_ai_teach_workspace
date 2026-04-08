@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 
 from pydantic import ValidationError
 
@@ -21,6 +21,9 @@ from app.features.video.long_term_records import (
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 
+if TYPE_CHECKING:
+    from app.core.security import AccessContext
+
 
 class VideoPublicationService(RuoYiServiceMixin):
     """视频公开发布记录防腐层服务。"""
@@ -31,9 +34,19 @@ class VideoPublicationService(RuoYiServiceMixin):
         """初始化服务。"""
         self._client_factory = client_factory or RuoYiClient.from_settings
 
-    async def sync_publication(self, request: VideoPublicationSyncRequest) -> VideoPublicationSnapshot:
-        """同步发布记录到 RuoYi。"""
-        async with self._client_factory() as client:
+    async def sync_publication(
+        self,
+        request: VideoPublicationSyncRequest,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> VideoPublicationSnapshot:
+        """同步发布记录到 RuoYi。
+
+        Args:
+            request: 发布记录同步请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.post_single(
                 self._ENDPOINT,
                 resource=self._RESOURCE,
@@ -43,11 +56,21 @@ class VideoPublicationService(RuoYiServiceMixin):
             )
         return self._parse_snapshot(result.data, operation="sync", endpoint=self._ENDPOINT)
 
-    async def get_publication(self, task_ref_id: str) -> VideoPublicationSnapshot | None:
-        """按任务 ID 查询发布记录。"""
+    async def get_publication(
+        self,
+        task_ref_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> VideoPublicationSnapshot | None:
+        """按任务 ID 查询发布记录。
+
+        Args:
+            task_ref_id: 任务唯一标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         endpoint = f"{self._ENDPOINT}/{task_ref_id}"
         try:
-            async with self._client_factory() as client:
+            async with self._resolve_factory(access_context)() as client:
                 result = await client.get_single(
                     endpoint,
                     resource=self._RESOURCE,
@@ -64,9 +87,16 @@ class VideoPublicationService(RuoYiServiceMixin):
         *,
         page: int = 1,
         page_size: int = 12,
+        access_context: "AccessContext | None" = None,
     ) -> VideoPublicationPage:
-        """分页查询已发布记录列表。"""
-        async with self._client_factory() as client:
+        """分页查询已发布记录列表。
+
+        Args:
+            page: 页码。
+            page_size: 每页条数。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.get_page(
                 self._ENDPOINT,
                 resource=self._RESOURCE,
@@ -116,9 +146,16 @@ class VideoArtifactIndexService(RuoYiServiceMixin):
     async def sync_artifact_batch(
         self,
         request: VideoSessionArtifactBatchCreateRequest,
+        *,
+        access_context: "AccessContext | None" = None,
     ) -> VideoSessionArtifactBatchSnapshot:
-        """批量同步产物索引到 RuoYi。"""
-        async with self._client_factory() as client:
+        """批量同步产物索引到 RuoYi。
+
+        Args:
+            request: 产物索引批量创建请求。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
+        async with self._resolve_factory(access_context)() as client:
             result = await client.post_single(
                 self._ENDPOINT,
                 resource=self._RESOURCE,

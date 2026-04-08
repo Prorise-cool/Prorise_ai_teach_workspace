@@ -117,11 +117,17 @@ class VideoService(BaseTaskMetadataService):
         task_id: str,
         *,
         runtime_store: RuntimeStore | None = None,
+        access_context: AccessContext | None = None,
     ) -> VideoResultDetail:
         """获取视频任务的完整结果详情。
 
         优先从本地资产文件加载持久化详情并叠加远端发布状态；
         若无本地详情则降级从 Redis 运行态读取实时进度。
+
+        Args:
+            task_id: 任务唯一标识。
+            runtime_store: 可选的 Redis 运行态存储实例。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
 
         Raises:
             AppError: 404 — 任务不存在。
@@ -192,7 +198,7 @@ class VideoService(BaseTaskMetadataService):
                 description=detail.result.summary,
                 cover_url=detail.result.cover_url,
                 is_public=True,
-            )
+            ),
         )
         publish_state = self._resolve_publish_state(
             detail.publish_state,
@@ -248,7 +254,7 @@ class VideoService(BaseTaskMetadataService):
                 cover_url=detail.result.cover_url if detail and detail.result else publication.cover_url,
                 is_public=False,
                 status=publication.status,
-            )
+            ),
         )
 
         if detail is not None:
@@ -263,11 +269,18 @@ class VideoService(BaseTaskMetadataService):
         page: int = 1,
         page_size: int = 12,
         runtime_store: RuntimeStore | None = None,
+        access_context: AccessContext | None = None,
     ) -> PublishedVideoCardPage:
         """分页查询所有已公开发布的视频卡片。
 
         优先从 Redis 缓存读取；缓存未命中时全量扫描远端发布记录，
         与本地产物交叉匹配后写入缓存。
+
+        Args:
+            page: 页码。
+            page_size: 每页条数。
+            runtime_store: 可选的 Redis 运行态存储实例。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
         """
         if runtime_store is not None:
             cached = runtime_store.get_runtime_value(build_video_runtime_key("published", "index"))
@@ -316,14 +329,21 @@ class VideoService(BaseTaskMetadataService):
         graph: VideoArtifactGraph,
         *,
         artifact_ref: str,
+        access_context: AccessContext | None = None,
     ):
-        """将视频产物图谱同步到远端产物索引服务。"""
+        """将视频产物图谱同步到远端产物索引服务。
+
+        Args:
+            graph: 视频产物图谱。
+            artifact_ref: 产物引用标识。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         return await self._artifact_index_service.sync_artifact_batch(
             build_session_artifact_batch_request(
                 graph,
                 object_key=self._asset_store.ref_to_key(artifact_ref),
                 payload_ref=artifact_ref,
-            )
+            ),
         )
 
     def _write_detail_state(
@@ -344,8 +364,16 @@ class VideoService(BaseTaskMetadataService):
         *,
         updated_at: datetime,
         runtime_store: RuntimeStore | None = None,
+        access_context: AccessContext | None = None,
     ) -> None:
-        """重新持久化 snapshot 到 RuoYi 并刷新公开视频缓存。"""
+        """重新持久化 snapshot 到 RuoYi 并刷新公开视频缓存。
+
+        Args:
+            snapshot: 任务元数据快照。
+            updated_at: 更新时间。
+            runtime_store: 可选的 Redis 运行态存储实例。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+        """
         await self.persist_task(
             self.build_task_request(
                 task_id=snapshot.task_id,
@@ -360,7 +388,8 @@ class VideoService(BaseTaskMetadataService):
                 started_at=snapshot.started_at,
                 completed_at=snapshot.completed_at,
                 updated_at=updated_at,
-            )
+            ),
+            access_context=access_context,
         )
         self._invalidate_published_cache(runtime_store)
 

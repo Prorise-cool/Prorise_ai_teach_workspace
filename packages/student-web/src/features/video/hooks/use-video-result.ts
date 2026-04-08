@@ -5,8 +5,8 @@
  */
 import { useQuery } from '@tanstack/react-query';
 
-import { createApiClient } from '@/services/api/client';
-import { resolveFastapiBaseUrl } from '@/services/auth-consistency';
+import { resolveFastapiBaseUrl } from '@/services/api/fastapi-base-url';
+import { buildFastapiAuthHeaders, fastapiClient } from '@/services/api/fastapi-client';
 import { resolveRuntimeMode } from '@/services/api/adapters/base-adapter';
 import type { TaskDataEnvelope } from '@/types/task';
 import type { VideoFailure, VideoResult } from '@/types/video';
@@ -42,15 +42,6 @@ export interface VideoResultState {
 }
 
 /**
- * 延迟创建 API 客户端，确保 resolveFastapiBaseUrl() 在请求时求值。
- *
- * @returns API 客户端实例。
- */
-function getApiClient() {
-  return createApiClient({ baseURL: resolveFastapiBaseUrl() });
-}
-
-/**
  * 判断错误对象是否包含 HTTP status 码。
  *
  * @param err - 未知错误。
@@ -72,6 +63,7 @@ async function fetchVideoResult(taskId: string): Promise<VideoResultData> {
   if (isMock) {
     const response = await fetch(
       `${resolveFastapiBaseUrl()}/api/v1/video/tasks/${taskId}`,
+      { headers: buildFastapiAuthHeaders() },
     );
 
     if (!response.ok) {
@@ -86,7 +78,7 @@ async function fetchVideoResult(taskId: string): Promise<VideoResultData> {
     return envelope.data;
   }
 
-  const response = await getApiClient().request<TaskDataEnvelope<VideoResultData>>({
+  const response = await fastapiClient.request<TaskDataEnvelope<VideoResultData>>({
     url: `/api/v1/video/tasks/${taskId}`,
     method: 'get',
   });

@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.tasks import get_task_events as get_shared_task_events
 from app.api.routes.tasks import get_task_status as get_shared_task_status
+from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.classroom.schemas import (
     ClassroomTaskMetadataCreateRequest,
@@ -50,10 +51,11 @@ async def classroom_bootstrap(
 @router.post("/tasks", response_model=ClassroomTaskMetadataPreviewResponse)
 async def create_classroom_task(
     payload: ClassroomTaskMetadataCreateRequest,
+    access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPreviewResponse:
     """创建课堂任务元数据。"""
-    return await service.persist_task(payload)
+    return await service.persist_task(payload, access_context=access_context)
 
 
 @router.get("/tasks", response_model=ClassroomTaskMetadataPageResponse)
@@ -65,6 +67,7 @@ async def list_classroom_tasks(
     updated_to: datetime | None = Query(default=None, alias="updatedTo"),
     page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=10, alias="pageSize", ge=1, le=100),
+    access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPageResponse:
     """分页查询课堂任务列表。"""
@@ -76,16 +79,18 @@ async def list_classroom_tasks(
         updated_to=updated_to,
         page_num=page_num,
         page_size=page_size,
+        access_context=access_context,
     )
 
 
 @router.get("/tasks/{task_id}", response_model=ClassroomTaskMetadataSnapshot)
 async def get_classroom_task(
     task_id: str,
+    access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataSnapshot:
     """按任务 ID 查询单条课堂任务。"""
-    snapshot = await service.get_task(task_id)
+    snapshot = await service.get_task(task_id, access_context=access_context)
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Classroom task not found")
     return snapshot
@@ -101,9 +106,13 @@ async def get_classroom_task(
         }
     },
 )
-async def get_classroom_task_status(task_id: str, request: Request) -> dict[str, object] | JSONResponse:
+async def get_classroom_task_status(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+) -> dict[str, object] | JSONResponse:
     """查询课堂任务运行态快照。"""
-    return await get_shared_task_status(task_id, request)
+    return await get_shared_task_status(task_id, request, access_context)
 
 
 @router.get(
@@ -132,15 +141,17 @@ async def get_classroom_task_events(
     task_id: str,
     request: Request,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    access_context: AccessContext = Depends(get_access_context),
 ) -> Response:
     """以 SSE 补发课堂任务事件。"""
-    return await get_shared_task_events(task_id, request, last_event_id)
+    return await get_shared_task_events(task_id, request, last_event_id, access_context)
 
 
 @router.get("/sessions/{session_id}/replay", response_model=ClassroomTaskMetadataPageResponse)
 async def replay_classroom_session(
     session_id: str,
+    access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
 ) -> ClassroomTaskMetadataPageResponse:
     """回放指定会话的课堂任务记录。"""
-    return await service.replay_session(session_id)
+    return await service.replay_session(session_id, access_context=access_context)

@@ -345,6 +345,7 @@ def test_video_metadata_route_moves_to_tasks_metadata(monkeypatch) -> None:
         client.app.dependency_overrides[get_video_service] = lambda: fake_service
         response = client.post(
             "/api/v1/video/tasks/metadata",
+            headers={"Authorization": f"Bearer {VALID_TOKEN}"},
             json={
                 "task_id": "video_meta_001",
                 "user_id": "student_001",
