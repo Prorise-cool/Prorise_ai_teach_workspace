@@ -5,10 +5,8 @@
 import type { ChangeEventHandler, RefObject } from 'react';
 import { ArrowRight, FileText, Globe, Mic, Paperclip, X } from 'lucide-react';
 
-import {
-  createInputWorkspaceCardClassNames,
-  InputWorkspaceCardFrame,
-} from '@/components/input-page/input-workspace-card-frame';
+import { InputWorkspaceCardFrame } from '@/components/input-page/input-workspace-card-frame';
+import { createInputWorkspaceCardClassNames } from '@/components/input-page/input-workspace-card-class-names';
 import { cn } from '@/lib/utils';
 
 type ClassroomInputCardProps = {
@@ -83,7 +81,6 @@ export function ClassroomInputCard({
   labels,
 }: ClassroomInputCardProps) {
   const classNames = createInputWorkspaceCardClassNames('xm-classroom-input');
-  const toolTextButtonClassName = `${classNames.root}-tool-text-btn`;
   const dividerClassName = `${classNames.root}-divider`;
   const toggleClassName = `${classNames.root}-toggle`;
   const toggleActiveClassName = `${toggleClassName}--active`;

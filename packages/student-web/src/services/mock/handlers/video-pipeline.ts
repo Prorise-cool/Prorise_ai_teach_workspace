@@ -139,7 +139,6 @@ export const videoPipelineHandlers = [
         { status: 200 },
       );
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('[mock] video status handler error:', err);
       return HttpResponse.json(
         { code: 500, msg: String(err), data: null },
@@ -198,7 +197,6 @@ export const videoPipelineHandlers = [
         { status: 200 },
       );
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('[mock] video result handler error:', err);
       return HttpResponse.json(
         { code: 500, msg: String(err), data: null },

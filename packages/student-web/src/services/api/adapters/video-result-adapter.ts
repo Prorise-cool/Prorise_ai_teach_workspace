@@ -142,19 +142,19 @@ function mapVideoResultApiClientError(error: unknown): VideoResultAdapterError {
 
 export function createMockVideoResultAdapter(): VideoResultAdapter {
   return {
-    async getResult(taskId, options) {
+    getResult(taskId, options) {
       const scenario = inferPipelineScenario(taskId, options?.scenario);
 
       if (scenario === 'failure') {
-        return {
+        return Promise.resolve({
           taskId,
           status: 'failed',
           result: null,
           failure: getMockVideoFailure(taskId),
-        };
+        });
       }
 
-      return {
+      return Promise.resolve({
         taskId,
         status: 'completed',
         result: {
@@ -162,7 +162,7 @@ export function createMockVideoResultAdapter(): VideoResultAdapter {
           published: false,
         },
         failure: null,
-      };
+      });
     },
   };
 }

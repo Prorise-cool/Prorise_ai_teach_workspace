@@ -85,6 +85,8 @@ export function useVideoResult(taskId: string | undefined): VideoResultState {
     viewStatus,
     isLoading,
     error: error instanceof Error ? error : null,
-    refetch,
+    refetch: () => {
+      void refetch();
+    },
   };
 }

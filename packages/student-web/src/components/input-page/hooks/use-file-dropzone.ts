@@ -1,33 +1,52 @@
+/**
+ * 文件说明：输入页共享拖拽上传 hook。
+ * 负责统一处理课堂页与视频页的拖拽上传、文件筛选与选择器触发逻辑。
+ */
 import { useCallback, useRef, useState } from 'react';
 
 import { useFeedback } from '@/shared/feedback/feedback-context';
+
+const SUPPORTED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'text/plain',
+  'text/markdown',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+] as const;
+
+const SUPPORTED_FILE_EXTENSIONS = [
+  '.md',
+  '.txt',
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.doc',
+  '.docx',
+] as const;
 
 type UseFileDropzoneOptions = {
   /** 是否允许多文件，默认 false（单文件模式）。 */
   multiple?: boolean;
 };
 
+/**
+ * 提供输入页共享拖拽上传能力。
+ *
+ * @param options - 可选配置。
+ * @returns 拖拽状态、文件列表与选择器交互方法。
+ */
 export function useFileDropzone(options?: UseFileDropzoneOptions) {
   const { multiple = false } = options ?? {};
   const { notify } = useFeedback();
   const [isDragging, setIsDragging] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const validTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-    'text/plain',
-    'text/markdown',
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ];
-  const validExts = [
-    '.md', '.txt', '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx'
-  ];
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -43,23 +62,16 @@ export function useFileDropzone(options?: UseFileDropzoneOptions) {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(false);
-
-      if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) {
-        return;
-      }
-
-      const incoming = Array.from(e.dataTransfer.files);
+  const handleIncomingFiles = useCallback(
+    (incoming: File[]) => {
       const accepted: File[] = [];
 
       for (const file of incoming) {
         const isValid =
-          validTypes.includes(file.type) ||
-          validExts.some((ext) => file.name.toLowerCase().endsWith(ext));
+          SUPPORTED_FILE_TYPES.some((type) => type === file.type) ||
+          SUPPORTED_FILE_EXTENSIONS.some((ext) =>
+            file.name.toLowerCase().endsWith(ext),
+          );
 
         if (!isValid) {
           notify({
@@ -93,7 +105,22 @@ export function useFileDropzone(options?: UseFileDropzoneOptions) {
         });
       }
     },
-    [multiple, notify]
+    [multiple, notify],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+
+      if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) {
+        return;
+      }
+
+      handleIncomingFiles(Array.from(e.dataTransfer.files));
+    },
+    [handleIncomingFiles],
   );
 
   const triggerSelect = useCallback(() => {
@@ -104,17 +131,13 @@ export function useFileDropzone(options?: UseFileDropzoneOptions) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (files && files.length > 0) {
-        handleDrop({
-          preventDefault: () => {},
-          stopPropagation: () => {},
-          dataTransfer: { files }
-        } as unknown as React.DragEvent);
+        handleIncomingFiles(Array.from(files));
       }
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [handleDrop]
+    [handleIncomingFiles]
   );
 
   const clearFiles = useCallback(() => setAttachedFiles([]), []);

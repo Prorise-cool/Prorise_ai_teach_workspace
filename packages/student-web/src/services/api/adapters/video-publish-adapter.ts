@@ -104,17 +104,17 @@ async function requestVideoPublish(
 
 export function createMockVideoPublishAdapter(): VideoPublishAdapter {
   return {
-    async publish(taskId) {
-      return {
+    publish(taskId) {
+      return Promise.resolve({
         taskId,
         published: true,
-      };
+      });
     },
-    async unpublish(taskId) {
-      return {
+    unpublish(taskId) {
+      return Promise.resolve({
         taskId,
         published: false,
-      };
+      });
     },
   };
 }

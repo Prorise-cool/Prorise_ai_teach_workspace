@@ -71,6 +71,8 @@ export function LoginPage({
 		returnTo
 	} = useAuthRedirect();
 	const registerEnabled = registerEnabledQuery.data ?? false;
+	const displayedActiveView: AuthView =
+		registerEnabled && activeView === 'register' ? 'register' : 'login';
 
 	/**
 	 * 在认证成功后写入会话，并执行统一回跳。
@@ -152,14 +154,6 @@ export function LoginPage({
 	]);
 
 	useEffect(() => {
-		if (registerEnabled) {
-			return;
-		}
-
-		setActiveView('login');
-	}, [registerEnabled]);
-
-	useEffect(() => {
 		if (!registerEnabledQuery.isError || registerFallbackNotifiedRef.current) {
 			return;
 		}
@@ -196,7 +190,7 @@ export function LoginPage({
 		});
 	}
 
-	const isRegisterView = registerEnabled && activeView === 'register';
+	const isRegisterView = displayedActiveView === 'register';
 	const viewTitle = isRegisterView
 		? authPageCopy.registerTitle
 		: authPageCopy.loginTitle;
@@ -273,7 +267,7 @@ export function LoginPage({
 
 					{registerEnabled ? (
 						<Tabs
-							value={activeView}
+							value={displayedActiveView}
 							onValueChange={nextValue => {
 								if (nextValue === 'register') {
 									switchToRegister();

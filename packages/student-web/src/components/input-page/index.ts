@@ -5,8 +5,8 @@
 export { InputPageHeader } from './input-page-header';
 export { InputPageGuideCards, type GuideCardItem } from './input-page-guide-cards';
 export { InputPageSuggestions } from './input-page-suggestions';
+export { INPUT_PAGE_GUIDE_CARD_ICONS } from './input-page-guide-card-icons';
 export {
-  INPUT_PAGE_GUIDE_CARD_ICONS,
   type InputWorkspaceNavLink,
   type InputWorkspaceRoute,
   WorkspaceInputShell,

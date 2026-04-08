@@ -6,8 +6,12 @@
  */
 import { create } from 'zustand';
 
+import { readRecord } from '@/lib/type-guards';
 import type { TaskLifecycleStatus, TaskSnapshot } from '@/types/task';
-import type { VideoPipelineStage } from '@/types/video';
+import {
+  isVideoPipelineStage,
+  type VideoPipelineStage,
+} from '@/types/video';
 
 /** 等待页任务错误信息。 */
 export interface VideoGeneratingError {
@@ -136,12 +140,13 @@ export const useVideoGeneratingStore = create<
 
   restoreSnapshot: (snapshot) =>
     set(() => {
-      const snapshotStage = (snapshot.currentStage ?? snapshot.stage) as VideoPipelineStage | null | undefined;
-      const snapshotStageLabel = snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? undefined;
-      const snapshotContext =
-        snapshot.context && typeof snapshot.context === 'object'
-          ? (snapshot.context as Record<string, unknown>)
-          : null;
+      const snapshotStageValue = snapshot.currentStage ?? snapshot.stage;
+      const snapshotStage = isVideoPipelineStage(snapshotStageValue)
+        ? snapshotStageValue
+        : null;
+      const snapshotStageLabel =
+        snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? undefined;
+      const snapshotContext = readRecord(snapshot.context) ?? null;
       const baseState = {
         ...INITIAL_STATE,
         taskId: snapshot.taskId,

@@ -207,6 +207,18 @@ export const VIDEO_PIPELINE_STAGE_VALUES = [
 /** 视频流水线阶段枚举类型。 */
 export type VideoPipelineStage = (typeof VIDEO_PIPELINE_STAGE_VALUES)[number];
 
+/**
+ * 判断给定值是否为合法的视频流水线阶段。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `VideoPipelineStage`。
+ */
+export function isVideoPipelineStage(
+  value: unknown,
+): value is VideoPipelineStage {
+  return VIDEO_PIPELINE_STAGE_VALUES.some((stage) => stage === value);
+}
+
 /** 视频流水线阶段错误码。 */
 export const VIDEO_PIPELINE_ERROR_CODE_VALUES = [
   'VIDEO_UNDERSTANDING_FAILED',
