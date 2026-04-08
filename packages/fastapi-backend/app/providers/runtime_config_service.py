@@ -11,15 +11,14 @@ from app.core.errors import IntegrationError
 from app.core.logging import get_logger
 from app.features.video.pipeline.models import VideoStage
 from app.providers.factory import ProviderFactory
-from app.providers.llm.openai_compatible_provider import OpenAICompatibleLLMProvider
 from app.providers.protocols import (
     LLMProvider,
     ProviderCapability,
+    ProviderConfigurationError,
     ProviderNotFoundError,
     ProviderRuntimeConfig,
     TTSProvider,
 )
-from app.providers.tts.doubao_provider import DoubaoTTSProvider
 from app.shared.ruoyi_ai_runtime_client import RuoYiAiRuntimeBinding, RuoYiAiRuntimeClient
 
 logger = get_logger("app.providers.runtime_config_service")
@@ -32,6 +31,10 @@ _VIDEO_LLM_STAGES = (
 )
 
 _DOUBAO_TTS_PROVIDER_TYPES = frozenset({"doubao-tts", "volcengine-tts", "bytedance-tts", "doubao"})
+_RUNTIME_PROVIDER_REGISTRATION_KEYS = (
+    "provider_registration_id",
+    "providerRegistrationId",
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -260,28 +263,59 @@ class ProviderRuntimeResolver:
         except ProviderNotFoundError:
             pass
 
-        provider_type = binding.provider_type or str(config.settings.get("provider_type") or "")
-        if capability is ProviderCapability.LLM and provider_type == "openai-compatible":
-            self._provider_factory.registry.register(
-                capability,
-                config.provider_id,
-                OpenAICompatibleLLMProvider,
-                default_priority=config.priority,
-                description=f"Runtime registered OpenAI compatible provider: {config.provider_id}",
-            )
-            return
+        candidates = self._build_runtime_registration_candidates(capability, config, binding)
 
-        if capability is ProviderCapability.TTS and provider_type in _DOUBAO_TTS_PROVIDER_TYPES:
-            self._provider_factory.registry.register(
-                capability,
-                config.provider_id,
-                DoubaoTTSProvider,
-                default_priority=config.priority,
-                description=f"Runtime registered Doubao TTS provider: {config.provider_id}",
-            )
-            return
+        base_registration = None
+        last_error: Exception | None = None
+        for candidate in candidates:
+            try:
+                base_registration = self._provider_factory.registry.get_registration(capability, candidate)
+                break
+            except (ProviderNotFoundError, ProviderConfigurationError) as exc:
+                last_error = exc
+                continue
 
-        raise ProviderNotFoundError(f"未注册的 {capability.value} Provider：{config.provider_id}")
+        if base_registration is None:
+            raise ProviderNotFoundError(f"未注册的 {capability.value} Provider：{config.provider_id}") from last_error
+
+        self._provider_factory.registry.register(
+            capability,
+            config.provider_id,
+            base_registration.builder,
+            default_priority=config.priority,
+            description=(
+                f"Runtime registered {base_registration.provider_id} provider: {config.provider_id}"
+            ),
+        )
+        return
+
+    def _build_runtime_registration_candidates(
+        self,
+        capability: ProviderCapability,
+        config: ProviderRuntimeConfig,
+        binding: RuoYiAiRuntimeBinding,
+    ) -> list[str]:
+        candidates: list[str] = []
+        explicit_registration_id = _read_text(
+            *(config.settings.get(key) for key in _RUNTIME_PROVIDER_REGISTRATION_KEYS),
+        )
+        if explicit_registration_id is not None:
+            candidates.append(explicit_registration_id.strip().lower())
+
+        provider_type = _read_text(binding.provider_type, config.settings.get("provider_type")) or ""
+        normalized_provider_type = provider_type.strip().lower()
+        if normalized_provider_type:
+            candidates.append(normalized_provider_type)
+        if capability is ProviderCapability.TTS and normalized_provider_type in _DOUBAO_TTS_PROVIDER_TYPES:
+            candidates.append("doubao-tts")
+
+        unique_candidates: list[str] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            if candidate and candidate not in seen:
+                unique_candidates.append(candidate)
+                seen.add(candidate)
+        return unique_candidates
 
     def _resolve_default_llm(
         self,
