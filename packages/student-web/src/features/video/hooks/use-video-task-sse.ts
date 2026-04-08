@@ -148,7 +148,18 @@ export function useVideoTaskSse(
     const controller = new AbortController();
 
     abortRef.current = controller;
-    store.getState().resetState(taskId);
+
+    // 仅在 taskId 真正切换时执行 resetState；
+    // 若 store 中已持有同一 taskId 且有 snapshot 恢复的数据（status 非初始值或 progress > 0），
+    // 跳过 reset 以避免覆盖页面层已恢复的快照。
+    const currentState = store.getState();
+    const isSameTask = currentState.taskId === taskId;
+    const hasRestoredSnapshot =
+      isSameTask && (currentState.status !== 'pending' || currentState.progress > 0);
+
+    if (!hasRestoredSnapshot) {
+      store.getState().resetState(taskId);
+    }
 
     startStream(taskId, controller.signal).catch((err) => {
       if (controller.signal.aborted) {

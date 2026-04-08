@@ -20,7 +20,6 @@ import { LogItemRow } from '../components/log-item-row';
 import { StageProgressBar } from '../components/stage-progress-bar';
 import { buildStageLog, estimateEtaText } from '../config/video-stages';
 import { useTipRotation } from '../hooks/use-tip-rotation';
-import { useVideoStatusPolling } from '../hooks/use-video-status-polling';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
@@ -109,10 +108,10 @@ export function VideoGeneratingPage() {
 
   useVideoTaskSse(taskId, { enabled: sseEnabled });
 
-  /* -- 5. 降级轮询 -- */
-  useVideoStatusPolling(taskId);
+  // 注意：降级轮询已内置于 services/sse 层的 fallback 机制，
+  // 不再在页面层重复调用 useVideoStatusPolling，避免双重轮询和状态写入冲突。
 
-  /* -- 6. 终态跳转 -- */
+  /* -- 5. 终态跳转 -- */
   useEffect(() => {
     if (status !== 'completed' || !taskId) {
       return;
