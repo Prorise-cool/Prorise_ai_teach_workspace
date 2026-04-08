@@ -1,10 +1,11 @@
 """视频功能域路由模块。"""
 
+import mimetypes
 from functools import lru_cache
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Header, Query, Request, Response, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.api.routes.tasks import get_task_events as get_shared_task_events
 from app.api.routes.tasks import get_task_status as get_shared_task_status
@@ -32,6 +33,7 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
+from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.voice_models import VideoVoiceListResponseEnvelope
 from app.providers.factory import get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
@@ -105,6 +107,26 @@ async def preprocess_image(
         content_type=file.content_type,
     )
     return build_success_envelope(result, msg="预处理完成")
+
+
+@router.get("/assets/{asset_key:path}", include_in_schema=False)
+async def get_local_video_asset(asset_key: str) -> Response:
+    """开发态读取本地落盘的视频流水线产物。"""
+    settings = get_settings()
+    if settings.environment != "development":
+        raise HTTPException(status_code=404, detail="Asset route is only available in development")
+
+    store = LocalAssetStore.from_settings(settings)
+    try:
+        file_path = store.resolve_path_from_key(asset_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Asset not found") from exc
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    media_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(path=file_path, media_type=media_type)
 
 
 @router.get("/voices", response_model=VideoVoiceListResponseEnvelope)

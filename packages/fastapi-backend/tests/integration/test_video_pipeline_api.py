@@ -81,10 +81,12 @@ def _build_video_service(tmp_path, state: dict[str, object]) -> VideoService:
         if request.method == "POST" and request.url.path == "/video/task":
             row = {"id": len(state["video"]) + 1, **payload}
             state["video"].append(row)
+            state.setdefault("video_write_requests", []).append({"method": request.method, "payload": payload})
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         if request.method == "PUT" and request.url.path == "/video/task":
             row = {"id": payload["id"], **{key: value for key, value in payload.items() if key != "id"}}
             state["video"] = [row]
+            state.setdefault("video_write_requests", []).append({"method": request.method, "payload": payload})
             return httpx.Response(200, json={"code": 200, "msg": "ok", "data": row})
         if request.method == "POST" and request.url.path == "/internal/xiaomai/video/publications":
             existing = next(
@@ -319,6 +321,20 @@ def test_video_pipeline_result_and_publish_api_flow(tmp_path, monkeypatch) -> No
 
     assert list_after_response.status_code == 200
     assert list_after_response.json()["data"]["total"] == 0
+
+
+def test_video_pipeline_persists_completed_metadata_once_with_artifact_ref(tmp_path) -> None:
+    state = {"video": [], "publications": [], "session_artifacts": {}, "video_write_requests": []}
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    video_service = _build_video_service(tmp_path, state)
+
+    _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
+
+    assert len(state["video_write_requests"]) == 1
+    write_request = state["video_write_requests"][0]
+    assert write_request["method"] == "POST"
+    assert write_request["payload"]["sourceArtifactRef"].endswith("/video/video_pipeline_api_001/artifact-graph.json")
+    assert write_request["payload"]["detailRef"].endswith("/video/video_pipeline_api_001/result-detail.json")
 
 
 def test_video_result_detail_falls_back_to_local_publish_state_when_publication_overlay_unavailable(

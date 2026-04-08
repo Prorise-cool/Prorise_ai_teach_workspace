@@ -524,10 +524,6 @@ class VideoPipelineService:
             publish_state=PublishState(),
         )
         asset = self.asset_store.write_json(result_storage_key(context.task_id), detail.model_dump(mode="json", by_alias=True))
-        long_term_failed = not await self._persist_completed_metadata(context, video_result, asset.public_url)
-        if long_term_failed:
-            detail = detail.model_copy(update={"long_term_writeback_failed": True})
-            asset = self.asset_store.write_json(result_storage_key(context.task_id), detail.model_dump(mode="json", by_alias=True))
         runtime.save_value("result_detail_ref", asset.public_url)
         return video_result
 
@@ -543,26 +539,42 @@ class VideoPipelineService:
         tts_result: TTSResult,
         manim_code: ManimCodeResult,
     ) -> None:
-        """写入产物图谱并同步元数据。"""
-        detail_ref = runtime.load_value("result_detail_ref")
-        if not isinstance(detail_ref, str):
-            return
-        detail = self.asset_store.read_result_detail(detail_ref)
-        artifact_ref: str | None = None
-        artifact_sync_failed = False
+        """写入产物图谱并执行一次性元数据写回。"""
         try:
-            graph, artifact_ref = artifact_service.execute(
-                task_id=video_result.task_id,
-                understanding=understanding,
-                storyboard=storyboard,
-                tts_result=tts_result,
-                manim_code=manim_code,
-            )
-            runtime.save_value("artifact_ref", artifact_ref)
+            detail_ref = runtime.load_value("result_detail_ref")
+            if not isinstance(detail_ref, str):
+                return
+            detail = self.asset_store.read_result_detail(detail_ref)
+            artifact_ref: str | None = None
+            artifact_writeback_failed = False
+
             try:
-                await self.metadata_service.sync_artifact_graph(graph, artifact_ref=artifact_ref)
+                graph, artifact_ref = artifact_service.execute(
+                    task_id=video_result.task_id,
+                    understanding=understanding,
+                    storyboard=storyboard,
+                    tts_result=tts_result,
+                    manim_code=manim_code,
+                )
+                runtime.save_value("artifact_ref", artifact_ref)
+                try:
+                    await self.metadata_service.sync_artifact_graph(graph, artifact_ref=artifact_ref)
+                except Exception:  # noqa: BLE001
+                    artifact_writeback_failed = True
+                    logger.warning(
+                        "Sync video artifact graph degraded task_id=%s",
+                        context.task_id,
+                        exc_info=True,
+                    )
             except Exception:  # noqa: BLE001
-                artifact_sync_failed = True
+                artifact_writeback_failed = True
+                logger.warning(
+                    "Write video artifact graph degraded task_id=%s",
+                    context.task_id,
+                    exc_info=True,
+                )
+
+            completed_at = utc_now()
             metadata_request = self.metadata_service.build_task_request(
                 task_id=context.task_id,
                 user_id=context.user_id or "anonymous",
@@ -572,48 +584,30 @@ class VideoPipelineService:
                 detail_ref=detail_ref,
                 source_artifact_ref=artifact_ref,
                 replay_hint=video_result.result_id,
-                completed_at=utc_now(),
-                updated_at=utc_now(),
+                completed_at=completed_at,
+                updated_at=completed_at,
             )
-            await self.metadata_service.persist_task(metadata_request)
-            if artifact_sync_failed:
-                updated_detail = detail.model_copy(update={"artifact_writeback_failed": True})
+
+            long_term_failed = False
+            try:
+                await self.metadata_service.persist_task(metadata_request)
+            except Exception:  # noqa: BLE001
+                long_term_failed = True
+                logger.warning("Persist completed video metadata degraded task_id=%s", context.task_id, exc_info=True)
+
+            if artifact_writeback_failed or long_term_failed:
+                updated_detail = detail.model_copy(
+                    update={
+                        "artifact_writeback_failed": detail.artifact_writeback_failed or artifact_writeback_failed,
+                        "long_term_writeback_failed": detail.long_term_writeback_failed or long_term_failed,
+                    }
+                )
                 self.asset_store.write_json(
                     result_storage_key(video_result.task_id),
                     updated_detail.model_dump(mode="json", by_alias=True),
                 )
         except Exception:  # noqa: BLE001
-            updated_detail = detail.model_copy(update={"artifact_writeback_failed": True})
-            self.asset_store.write_json(
-                result_storage_key(video_result.task_id),
-                updated_detail.model_dump(mode="json", by_alias=True),
-            )
-
-    async def _persist_completed_metadata(
-        self,
-        context: TaskContext,
-        video_result: VideoResult,
-        detail_ref: str,
-    ) -> bool:
-        """持久化完成态元数据到长期存储。"""
-        completed_at = utc_now()
-        metadata_request = self.metadata_service.build_task_request(
-            task_id=context.task_id,
-            user_id=context.user_id or "anonymous",
-            status=TaskStatus.COMPLETED,
-            summary=video_result.summary,
-            result_ref=video_result.video_url,
-            detail_ref=detail_ref,
-            replay_hint=video_result.result_id,
-            completed_at=completed_at,
-            updated_at=completed_at,
-        )
-        try:
-            await self.metadata_service.persist_task(metadata_request)
-        except Exception:  # noqa: BLE001
-            logger.warning("Persist completed video metadata degraded task_id=%s", context.task_id, exc_info=True)
-            return False
-        return True
+            logger.warning("Video post-processing writeback degraded task_id=%s", context.task_id, exc_info=True)
 
     # ------------------------------------------------------------------
     # 错误处理
