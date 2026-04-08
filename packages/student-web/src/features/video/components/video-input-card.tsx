@@ -8,9 +8,9 @@ import type { FieldErrors, UseFormReturn } from 'react-hook-form';
 import { Image, Loader2, Mic, Send, X } from 'lucide-react';
 
 import {
-  createInputWorkspaceCardClassNames,
   InputWorkspaceCardFrame,
 } from '@/components/input-page/input-workspace-card-frame';
+import { createInputWorkspaceCardClassNames } from '@/components/input-page/input-workspace-card-class-names';
 import { useFileDropzone } from '@/components/input-page';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';

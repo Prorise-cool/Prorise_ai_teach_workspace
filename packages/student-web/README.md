@@ -39,10 +39,17 @@ src/
   stores/           客户端状态
   hooks/            通用 Hook
   lib/              工具函数
-  test/             测试初始化
+  test/             测试 setup 与通用测试工具
   styles/           全局样式、主题变量与设计令牌
   types/            类型声明
 ```
+
+### 测试组织约定
+
+- 页面与业务流测试优先与 `features/*` 共置。
+- adapter、mock、SSE、runtime 等基础设施测试优先与 `services/*` 共置。
+- store 与样式测试分别与 `stores/*`、`styles/*` 共置。
+- `src/test/` 只保留 `setup.ts` 与跨域复用的测试工具，不再承载业务测试本体。
 
 ### `styles/` 设计令牌结构
 

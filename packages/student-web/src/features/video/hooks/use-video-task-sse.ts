@@ -5,9 +5,12 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 
+import { readRecord } from '@/lib/type-guards';
 import { resolveTaskEventStream } from '@/services/sse';
 import type { TaskStreamEventPayload } from '@/types/task';
-import type { VideoPipelineStage } from '@/types/video';
+import {
+  isVideoPipelineStage,
+} from '@/types/video';
 
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
@@ -19,22 +22,17 @@ import { useVideoGeneratingStore } from '../stores/video-generating-store';
  * @returns 扩展字段对象。
  */
 function extractPipelineFields(event: TaskStreamEventPayload) {
-  const context =
-    event.context && typeof event.context === 'object'
-      ? (event.context as Record<string, unknown>)
-      : null;
+  const context = readRecord(event.context) ?? null;
   const currentStage = event.currentStage ?? event.stage ?? null;
 
   return {
-    currentStage: typeof currentStage === 'string' ? (currentStage as VideoPipelineStage) : null,
+    currentStage: isVideoPipelineStage(currentStage) ? currentStage : null,
     stageLabel: typeof event.stageLabel === 'string' ? event.stageLabel : null,
     stageProgress: typeof event.stageProgress === 'number' ? event.stageProgress : null,
     attemptNo: typeof context?.attemptNo === 'number' ? context.attemptNo : null,
     fixEvent: typeof context?.fixEvent === 'string' ? context.fixEvent : null,
     failure:
-      context?.failure && typeof context.failure === 'object'
-        ? (context.failure as Record<string, unknown>)
-        : null,
+      readRecord(context?.failure) ?? null,
   };
 }
 
@@ -61,15 +59,27 @@ export function useVideoTaskSse(
     }
 
     if (event.event === 'failed') {
-      const failedStage = (pipeline.failure?.failedStage as VideoPipelineStage)
-        ?? pipeline.currentStage
-        ?? state.currentStage;
+      const rawFailedStage = pipeline.failure?.failedStage;
+      const failedStage = isVideoPipelineStage(rawFailedStage)
+        ? rawFailedStage
+        : pipeline.currentStage ?? state.currentStage;
 
       state.setFailed({
-        errorCode: event.errorCode ?? (pipeline.failure?.errorCode as string) ?? null,
-        errorMessage: event.message ?? (pipeline.failure?.errorMessage as string) ?? null,
+        errorCode:
+          event.errorCode ??
+          (typeof pipeline.failure?.errorCode === 'string'
+            ? pipeline.failure.errorCode
+            : null),
+        errorMessage:
+          event.message ??
+          (typeof pipeline.failure?.errorMessage === 'string'
+            ? pipeline.failure.errorMessage
+            : null),
         failedStage: failedStage ?? null,
-        retryable: (pipeline.failure?.retryable as boolean) ?? false,
+        retryable:
+          typeof pipeline.failure?.retryable === 'boolean'
+            ? pipeline.failure.retryable
+            : false,
       });
       return;
     }

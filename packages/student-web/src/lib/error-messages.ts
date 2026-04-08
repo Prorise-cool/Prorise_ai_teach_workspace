@@ -2,8 +2,6 @@
  * 文件说明：统一任务错误码到用户可读文案的映射。
  * 所有等待页与结果页的错误展示统一从这里取文案，不在组件内硬编码。
  */
-import type { TaskErrorCode } from '@/types/task';
-
 /** 任务错误码 → 用户可读文案映射。 */
 const TASK_ERROR_MESSAGES: Record<string, string> = {
   /* ── 统一任务框架 ── */
@@ -37,7 +35,9 @@ const TASK_ERROR_MESSAGES: Record<string, string> = {
  * @param errorCode - 任务错误码。
  * @returns 用户可读的错误描述，无匹配时返回 undefined。
  */
-export function getTaskErrorMessage(errorCode: TaskErrorCode | string | null | undefined): string | undefined {
+export function getTaskErrorMessage(
+  errorCode: string | null | undefined,
+): string | undefined {
   if (!errorCode) {
     return undefined;
   }

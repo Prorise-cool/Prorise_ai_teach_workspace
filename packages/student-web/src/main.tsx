@@ -15,10 +15,18 @@ if (!container) {
   throw new Error('未找到根挂载节点 #root');
 }
 
-initializeAppRuntime().then(() => {
-  createRoot(container).render(
+const rootContainer = container;
+
+async function bootstrapApp() {
+  await initializeAppRuntime();
+
+  createRoot(rootContainer).render(
     <StrictMode>
       <App />
     </StrictMode>
   );
+}
+
+void bootstrapApp().catch((error: unknown) => {
+  console.error('[main] 应用启动失败', error);
 });

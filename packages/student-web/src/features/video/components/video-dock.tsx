@@ -73,9 +73,9 @@ export function VideoDock({ playerRef, className }: VideoDockProps) {
     if (!player) return;
 
     if (player.isFullscreen()) {
-      player.exitFullscreen();
+      void player.exitFullscreen();
     } else {
-      player.requestFullscreen();
+      void player.requestFullscreen();
     }
   }, [playerRef]);
 

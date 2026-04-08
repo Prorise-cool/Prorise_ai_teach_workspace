@@ -10,6 +10,7 @@ import type {
 import { Sparkles } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { createInputWorkspaceCardClassNames } from './input-workspace-card-class-names';
 
 type InputWorkspaceCardFrameProps = {
   /** 页面级 BEM block，例如 `xm-classroom-input`。 */
@@ -39,40 +40,6 @@ type InputWorkspaceCardFrameProps = {
   /** 工具栏右侧提交动作。 */
   submitAction: ReactNode;
 };
-
-type InputWorkspaceCardClassNames = {
-  root: string;
-  hints: string;
-  hint: string;
-  hintAccent: string;
-  hintDesc: string;
-  body: string;
-  toolbar: string;
-  tools: string;
-};
-
-/**
- * 由页面 block 推导输入工作区卡片的 BEM class 名。
- *
- * @param block - 页面 block 名。
- * @returns 共享卡片骨架使用的 class 名集合。
- */
-export function createInputWorkspaceCardClassNames(
-  block: string
-): InputWorkspaceCardClassNames {
-  const root = `${block}__card`;
-
-  return {
-    root,
-    hints: `${root}-hints`,
-    hint: `${root}-hint`,
-    hintAccent: `${root}-hint--accent`,
-    hintDesc: `${root}-hint-desc`,
-    body: `${root}-body`,
-    toolbar: `${root}-toolbar`,
-    tools: `${root}-tools`,
-  };
-}
 
 /**
  * 渲染输入工作区卡片共享壳层。

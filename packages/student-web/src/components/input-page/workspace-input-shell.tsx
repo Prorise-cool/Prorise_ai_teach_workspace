@@ -4,10 +4,7 @@
  */
 import type { FormEventHandler, ReactNode } from 'react';
 import {
-  PackageSearch,
-  ShieldAlert,
   type LucideIcon,
-  WifiOff,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Variants } from 'motion/react';
@@ -33,12 +30,6 @@ export type InputWorkspaceRoute = {
   label: string;
   icon: string;
 };
-
-export const INPUT_PAGE_GUIDE_CARD_ICONS = [
-  PackageSearch,
-  ShieldAlert,
-  WifiOff,
-] as const satisfies readonly LucideIcon[];
 
 type WorkspaceInputContentProps = {
   /** 内容区使用的宿主节点类型。 */

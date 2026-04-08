@@ -10,7 +10,6 @@ import { ArrowLeft, Loader2, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-r
 import { useShallow } from 'zustand/react/shallow';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { cn } from '@/lib/utils';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import '@/components/generating/styles/task-generating-view.scss';
 
@@ -41,7 +40,7 @@ export function VideoGeneratingPage() {
   /* -- 1. zustand store 状态（shallow selector） -- */
   const {
     status, progress, currentStage, stageLabel, error,
-    degradedToPolling, fixAttempt, fixTotal, sseConnected,
+    degradedToPolling, fixAttempt, fixTotal,
   } = useVideoGeneratingStore(useShallow((s) => ({
     status: s.status,
     progress: s.progress,
@@ -51,7 +50,6 @@ export function VideoGeneratingPage() {
     degradedToPolling: s.degradedToPolling,
     fixAttempt: s.fixAttempt,
     fixTotal: s.fixTotal,
-    sseConnected: s.sseConnected,
   })));
 
   /* -- 2. 查询任务快照，恢复上下文 -- */

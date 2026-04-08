@@ -82,7 +82,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       });
 
       player.on('error', () => {
-        // eslint-disable-next-line no-console
         console.warn('[VideoPlayer] Media load error:', player.error()?.message);
       });
 

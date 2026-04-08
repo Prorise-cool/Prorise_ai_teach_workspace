@@ -13,7 +13,7 @@ import { RequireAuthRoute } from '@/features/auth/components/require-auth-route'
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadHomeRoute() {
-  const { HomePage } = await import('@/features/home/home-page');
+  const { HomePage } = await import('@/features/home/pages/home-page');
 
   return {
     Component: HomePage
@@ -26,7 +26,7 @@ async function loadHomeRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadLandingRoute() {
-  const { LandingPage } = await import('@/features/home/landing-page');
+  const { LandingPage } = await import('@/features/home/pages/landing-page');
 
   return {
     Component: LandingPage

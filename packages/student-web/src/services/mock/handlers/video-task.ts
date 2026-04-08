@@ -204,13 +204,13 @@ function toVideoPublicHttpErrorResponse(error: unknown) {
 
 /** 视频任务 mock handlers 列表。 */
 export const videoTaskHandlers = [
-  http.get('*/api/v1/video/public', async ({ request }) => {
+  http.get('*/api/v1/video/public', ({ request }) => {
     try {
       const scenario = readVideoPublicMockScenario(request);
       const fixtureError = getVideoPublicFixtureError(scenario);
 
       if (fixtureError) {
-        throw fixtureError;
+        return toVideoPublicHttpErrorResponse(fixtureError);
       }
 
       const url = new URL(request.url);
@@ -230,7 +230,7 @@ export const videoTaskHandlers = [
       return toVideoPublicHttpErrorResponse(error);
     }
   }),
-  http.get('*/api/v1/video/published', async ({ request }) => {
+  http.get('*/api/v1/video/published', ({ request }) => {
     try {
       const scenario = readVideoPublicMockScenario(request);
       const fixtureError = getVideoPublicFixtureError(
@@ -238,7 +238,7 @@ export const videoTaskHandlers = [
       );
 
       if (fixtureError) {
-        throw fixtureError;
+        return toVideoPublicHttpErrorResponse(fixtureError);
       }
 
       const url = new URL(request.url);

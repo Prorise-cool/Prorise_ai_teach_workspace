@@ -46,11 +46,11 @@ packages/fastapi-backend/
 │   │   └── task_metadata_service.py
 │   └── main.py
 ├── tests/
+│   ├── api/
+│   ├── contracts/
 │   ├── integration/
 │   ├── unit/
-│   ├── test_bootstrap_routes.py
-│   ├── test_health.py
-│   └── test_task_recovery_routes.py
+│   └── conftest.py
 ├── .env.example
 └── pyproject.toml
 ```
@@ -87,6 +87,14 @@ pnpm test:fastapi-backend
 
 ```bash
 packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests
+```
+
+按分层执行时可使用：
+
+```bash
+pnpm test:fastapi-backend:api
+pnpm test:fastapi-backend:integration
+pnpm test:fastapi-backend:unit
 ```
 
 ## 环境变量
