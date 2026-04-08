@@ -39,7 +39,7 @@ type LoginFormProps = {
 	returnTo: string;
 	canRegister: boolean;
 	initialUsername?: string;
-	onAuthenticated: (session: AuthSession) => void;
+	onAuthenticated: (session: AuthSession, rememberSession: boolean) => void;
 	onSwitchToRegister: () => void;
 	onSceneZoneChange: (zone: AuthInteractionZone) => void;
 };
@@ -122,7 +122,7 @@ export function LoginForm({
 				returnTo
 			});
 
-			onAuthenticated(session);
+			onAuthenticated(session, values.rememberSession);
 		} catch (error) {
 			if (captchaState.captchaEnabled) {
 				await refreshCaptcha();

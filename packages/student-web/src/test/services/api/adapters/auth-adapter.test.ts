@@ -165,7 +165,8 @@ describe('real adapter integration', () => {
 
     const session = await service.login({
       username: 'admin',
-      password: 'admin123'
+      password: 'admin123',
+      returnTo: '/video/input'
     });
 
     const requestCalls = request.mock.calls as unknown[][];
@@ -180,7 +181,8 @@ describe('real adapter integration', () => {
     });
     expect(firstRequest?.data).toMatchObject({
       tenantId: '000000',
-      grantType: 'password'
+      grantType: 'password',
+      returnTo: '/video/input'
     });
     expect(secondRequest).toMatchObject({
       url: '/system/user/getInfo',
@@ -215,7 +217,8 @@ describe('real adapter integration', () => {
         confirmPassword: 'Passw0rd!',
         code: 'A1B2',
         uuid: 'captcha-uuid',
-        clientId: 'demo-client'
+        clientId: 'demo-client',
+        returnTo: '/video/input'
       })
     ).resolves.toBeUndefined();
 
@@ -235,7 +238,8 @@ describe('real adapter integration', () => {
       userType: AUTH_DEFAULT_USER_TYPE,
       clientId: 'demo-client',
       code: 'A1B2',
-      uuid: 'captcha-uuid'
+      uuid: 'captcha-uuid',
+      returnTo: '/video/input'
     });
   });
 
@@ -271,7 +275,8 @@ describe('real adapter integration', () => {
       grantType: 'social',
       source: 'github',
       socialCode: 'oauth-code',
-      socialState: 'oauth-state'
+      socialState: 'oauth-state',
+      returnTo: '/video/input'
     });
 
     const firstRequest = request.mock.calls[0]?.[0] as RecordedRequest | undefined;
@@ -280,7 +285,8 @@ describe('real adapter integration', () => {
       tenantId: '000000',
       grantType: 'social',
       source: 'github',
-      socialCode: 'oauth-code'
+      socialCode: 'oauth-code',
+      returnTo: '/video/input'
     });
     expect(firstRequest?.encrypt).toBe(true);
   });
