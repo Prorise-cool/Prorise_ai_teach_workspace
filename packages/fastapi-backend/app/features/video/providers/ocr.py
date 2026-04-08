@@ -21,6 +21,12 @@ class OcrResult(BaseModel):
 
 class OcrProvider(ABC):
     """OCR 识别 Provider 抽象接口。"""
+
+    @property
+    def is_development_fallback(self) -> bool:
+        """标记当前实现是否仅允许在开发/测试环境回退使用。"""
+        return False
+
     @property
     @abstractmethod
     def provider_name(self) -> str:
@@ -44,6 +50,11 @@ class MockOcrProvider(OcrProvider):
     def __init__(self, *, force_scenario: str | None = None) -> None:
         """初始化 OCR Provider。"""
         self._force_scenario = force_scenario
+
+    @property
+    def is_development_fallback(self) -> bool:
+        """Mock OCR 仅允许作为开发/测试回退。"""
+        return True
 
     @property
     def provider_name(self) -> str:
