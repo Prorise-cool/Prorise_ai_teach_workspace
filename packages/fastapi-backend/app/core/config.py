@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     video_sandbox_memory_mb: int = Field(default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB")
     video_sandbox_timeout_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS")
     video_sandbox_tmp_size_mb: int = Field(default=1024, alias="FASTAPI_VIDEO_SANDBOX_TMP_SIZE_MB")
+    video_sandbox_allow_local_fallback: bool = Field(
+        default=False,
+        alias="FASTAPI_VIDEO_SANDBOX_ALLOW_LOCAL_FALLBACK",
+    )
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

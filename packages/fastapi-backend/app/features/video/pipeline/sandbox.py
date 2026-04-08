@@ -164,9 +164,15 @@ class LocalSandboxExecutor(SandboxExecutor):
 
 class DockerSandboxExecutor(SandboxExecutor):
     """Docker 容器沙箱执行器。"""
-    def __init__(self, *, docker_image: str = "manim-sandbox:latest") -> None:
+    def __init__(
+        self,
+        *,
+        docker_image: str = "manim-sandbox:latest",
+        allow_local_fallback: bool = False,
+    ) -> None:
         """初始化沙箱执行器。"""
         self.docker_image = docker_image
+        self.allow_local_fallback = allow_local_fallback
         self._fallback_executor = LocalSandboxExecutor()
 
     async def execute(
@@ -178,10 +184,11 @@ class DockerSandboxExecutor(SandboxExecutor):
     ) -> ExecutionResult:
         """在沙箱中执行 Manim 脚本。"""
         if shutil.which("docker") is None:
-            return await self._fallback_executor.execute(
+            return await self._handle_infrastructure_failure(
                 task_id=task_id,
                 script=script,
                 resource_limits=resource_limits,
+                stderr="docker executable is unavailable",
             )
 
         scan_script_safety(script)
@@ -246,11 +253,12 @@ class DockerSandboxExecutor(SandboxExecutor):
             )
 
         if _should_fallback_to_local(process.stderr):
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            return await self._fallback_executor.execute(
+            return await self._handle_infrastructure_failure(
                 task_id=task_id,
                 script=script,
                 resource_limits=resource_limits,
+                stderr=process.stderr or "sandbox infrastructure unavailable",
+                cleanup_dir=temp_dir,
             )
 
         output_path = output_dir / SANDBOX_RENDERED_FILE
@@ -272,6 +280,39 @@ class DockerSandboxExecutor(SandboxExecutor):
             exit_code=process.returncode,
             duration_seconds=time.perf_counter() - started_at,
         )
+
+    async def _handle_infrastructure_failure(
+        self,
+        *,
+        task_id: str,
+        script: str,
+        resource_limits: ResourceLimits,
+        stderr: str,
+        cleanup_dir: Path | None = None,
+    ) -> ExecutionResult:
+        if cleanup_dir is not None:
+            shutil.rmtree(cleanup_dir, ignore_errors=True)
+
+        if self.allow_local_fallback:
+            return await self._fallback_executor.execute(
+                task_id=task_id,
+                script=script,
+                resource_limits=resource_limits,
+            )
+
+        return ExecutionResult(
+            success=False,
+            stderr=stderr,
+            exit_code=1,
+            duration_seconds=0,
+            error_type=TaskErrorCode.VIDEO_RENDER_FAILED.value,
+        )
+
+
+def resolve_local_fallback_policy(*, environment: str, configured: bool) -> bool:
+    """仅在开发/测试环境且显式开启时允许回退到本地执行。"""
+    normalized_environment = environment.strip().lower()
+    return configured and normalized_environment in {"development", "test"}
 
 
 def _map_sandbox_process_error(return_code: int | None, stderr: str | None) -> TaskErrorCode:
