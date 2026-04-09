@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.dromara.common.core.constant.TenantConstants;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -59,7 +60,7 @@ public class XmPersistenceSyncService {
         Date now = new Date();
         XmCompanionTurn entity = new XmCompanionTurn();
         entity.setTurnId(nextIdWithPrefix("turn_"));
-        entity.setTenantId("000000");
+        entity.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
         entity.setUserId(bo.getUserId());
         entity.setSessionId(bo.getSessionId());
         entity.setContextType(bo.getContextType());
@@ -83,7 +84,7 @@ public class XmPersistenceSyncService {
         for (XmPersistenceSyncBo.WhiteboardActionBo actionBo : safeList(bo.getWhiteboardActions())) {
             XmWhiteboardActionLog action = new XmWhiteboardActionLog();
             action.setActionId(nextIdWithPrefix("wb_"));
-            action.setTenantId("000000");
+            action.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
             action.setTurnId(entity.getTurnId());
             action.setUserId(entity.getUserId());
             action.setSessionId(entity.getSessionId());
@@ -145,7 +146,7 @@ public class XmPersistenceSyncService {
         Date now = new Date();
         XmKnowledgeChatLog entity = new XmKnowledgeChatLog();
         entity.setChatLogId(nextIdWithPrefix("chat_"));
-        entity.setTenantId("000000");
+        entity.setTenantId(TenantConstants.DEFAULT_TENANT_ID);
         entity.setUserId(bo.getUserId());
         entity.setSessionId(bo.getSessionId());
         entity.setContextType(bo.getContextType());

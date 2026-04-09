@@ -97,6 +97,7 @@ public class XmUserProfileController extends BaseController {
      */
     @SaCheckPermission("xiaomai:userProfile:remove")
     @Log(title = "用户配置", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {

@@ -3,6 +3,7 @@ package org.dromara.xiaomai.ai.runtime.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.dromara.common.core.constant.TenantConstants;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.xiaomai.ai.runtime.domain.vo.XmAiRuntimeBindingRowVo;
@@ -24,7 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class XmAiRuntimeConfigService {
 
-    private static final String DEFAULT_TENANT_ID = "000000";
+    private static final String DEFAULT_TENANT_ID = TenantConstants.DEFAULT_TENANT_ID;
 
     private final XmAiRuntimeConfigMapper xmAiRuntimeConfigMapper;
     private final ObjectMapper objectMapper;

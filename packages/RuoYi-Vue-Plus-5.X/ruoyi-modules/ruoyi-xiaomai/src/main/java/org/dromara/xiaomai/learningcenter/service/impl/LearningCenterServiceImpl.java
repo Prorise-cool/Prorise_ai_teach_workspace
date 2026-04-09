@@ -3,6 +3,8 @@ package org.dromara.xiaomai.learningcenter.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.exception.ServiceException;
+import cn.hutool.core.bean.BeanUtil;
+import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.xiaomai.learningcenter.domain.bo.LearningCenterActionBo;
@@ -65,7 +67,7 @@ public class LearningCenterServiceImpl implements ILearningCenterService {
     }
 
     private TableDataInfo<LearningCenterRecordVo> queryPage(LearningCenterQueryBo bo, PageQuery pageQuery) {
-        PageQuery query = pageQuery == null ? new PageQuery(10, 1) : pageQuery;
+        PageQuery query = pageQuery == null ? new PageQuery(PageQuery.DEFAULT_PAGE_SIZE, PageQuery.DEFAULT_PAGE_NUM) : pageQuery;
         Page<LearningCenterRecordVo> page = query.build();
         long total = baseMapper.countAggregateRecords(bo);
         if (total <= 0) {
@@ -85,18 +87,6 @@ public class LearningCenterServiceImpl implements ILearningCenterService {
     }
 
     private LearningCenterQueryBo copyQuery(LearningCenterQueryBo source) {
-        LearningCenterQueryBo target = new LearningCenterQueryBo();
-        if (source == null) {
-            return target;
-        }
-        target.setUserId(source.getUserId());
-        target.setResultType(source.getResultType());
-        target.setStatus(source.getStatus());
-        target.setKeyword(source.getKeyword());
-        target.setFavoriteOnly(source.getFavoriteOnly());
-        target.setBeginSourceTime(source.getBeginSourceTime());
-        target.setEndSourceTime(source.getEndSourceTime());
-        target.setParams(source.getParams());
-        return target;
+        return source == null ? new LearningCenterQueryBo() : BeanUtil.toBean(source, LearningCenterQueryBo.class);
     }
 }

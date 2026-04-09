@@ -97,6 +97,7 @@ public class XmAiModuleBindingController extends BaseController {
      */
     @SaCheckPermission("xiaomai:aiModuleBinding:remove")
     @Log(title = "模块阶段到运行资源的绑定关系", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {

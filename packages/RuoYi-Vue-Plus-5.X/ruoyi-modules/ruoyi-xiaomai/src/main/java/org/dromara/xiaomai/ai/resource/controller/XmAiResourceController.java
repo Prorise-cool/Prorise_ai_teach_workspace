@@ -97,6 +97,7 @@ public class XmAiResourceController extends BaseController {
      */
     @SaCheckPermission("xiaomai:aiResource:remove")
     @Log(title = "AI 模型 / 音色等可调度资源", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {
