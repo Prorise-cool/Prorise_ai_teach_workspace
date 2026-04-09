@@ -620,7 +620,6 @@ def build_client_factory(
     优先级：
     1. 显式 ``request_auth``
     2. ``access_context`` 中的用户 token
-    3. 无显式鉴权时返回不带默认认证头的 ``RuoYiClient.from_settings()``
 
     Args:
         access_context: 可选的已认证用户安全上下文。
@@ -633,4 +632,4 @@ def build_client_factory(
         return lambda: RuoYiClient.from_request_auth(request_auth)
     if access_context is not None:
         return lambda: RuoYiClient.from_access_context(access_context)
-    return RuoYiClient.from_settings
+    raise ValueError("build_client_factory 必须显式提供 access_context 或 request_auth")

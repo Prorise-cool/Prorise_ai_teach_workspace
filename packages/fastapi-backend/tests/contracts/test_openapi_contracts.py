@@ -18,6 +18,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     payload = response.json()
     snapshot_route = payload["paths"]["/api/v1/contracts/task-snapshot"]["get"]
     list_route = payload["paths"]["/api/v1/contracts/tasks"]["get"]
+    auth_login_route = payload["paths"]["/api/v1/auth/login"]["post"]
+    auth_me_route = payload["paths"]["/api/v1/auth/me"]["get"]
     learning_preview_route = payload["paths"]["/api/v1/learning/persistence-preview"]["post"]
     learning_persist_route = payload["paths"]["/api/v1/learning/persistence"]["post"]
     feature_bootstrap_paths = {
@@ -31,6 +33,8 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["status"] == "processing"
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["taskId"] == "video_20260329161500_ab12cd34"
     assert snapshot_route["responses"]["200"]["content"]["application/json"]["example"]["data"]["requestId"] == "req_20260329_processing"
+    assert auth_login_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/AuthLoginResponseEnvelope"
+    assert auth_me_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/AuthCurrentUserResponseEnvelope"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["error_code"] == "TASK_PROVIDER_TIMEOUT"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["request_id"] == "req_20260329_conflict"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["task_id"] == "video_20260329161500_ab12cd34"

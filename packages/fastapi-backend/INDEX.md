@@ -2,7 +2,7 @@
 
 ## Files
 
-- **[README.md](./README.md)** - FastAPI + LangGraph AI 教学视频后端说明
+- **[README.md](./README.md)** - FastAPI 后端与统一认证代理说明
 - **[pyproject.toml](./pyproject.toml)** - FastAPI 最小依赖与 pytest 配置
 - **[.env.example](./.env.example)** - FastAPI 基础默认模板（复制到 `.env.defaults`）
 - **[.env.local.example](./.env.local.example)** - FastAPI 本地联调环境变量示例
@@ -19,7 +19,7 @@
 - **[core/](./app/core/)** - 配置、安全、生命周期、错误处理与 SSE 模型
 - **[infra/](./app/infra/)** - HTTP 抽象、运行时状态与 SSE broker
 - **[providers/](./app/providers/)** - LLM / TTS Provider 协议与工厂
-- **[features/](./app/features/)** - `video / classroom / companion / knowledge / learning` 骨架
+- **[features/](./app/features/)** - `auth / video / classroom / companion / knowledge / learning` 功能域
 - **[shared/](./app/shared/)** - 防腐层客户端、Agent 配置与统一任务框架
 
 ### tests/

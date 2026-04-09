@@ -22,12 +22,13 @@ import {
   AUTH_SUCCESS_CODE,
 } from "@/types/auth";
 import {
-  apiClient,
+  createApiClient,
   withAuthHeader,
   type ApiClient,
   type ApiRequestConfig,
   isApiClientError,
 } from "@/services/api/client";
+import { resolveFastapiBaseUrl } from "@/services/api/fastapi-base-url";
 import {
   getMockCaptchaEnvelope,
   getMockCurrentUserEnvelope,
@@ -80,6 +81,9 @@ type ResolveAuthAdapterOptions = RealAuthAdapterOptions & {
 };
 
 const DEFAULT_GRANT_TYPE = "password";
+const fastapiAuthClient = createApiClient({
+  baseURL: resolveFastapiBaseUrl(),
+});
 
 function resolveClientId(inputClientId?: string) {
   return inputClientId ?? import.meta.env.VITE_APP_CLIENT_ID;
@@ -142,7 +146,7 @@ function createSocialBindingRequestUrl(input: AuthSocialAuthInput) {
       (typeof window !== "undefined" ? window.location.host : ""),
   });
 
-  return `/auth/binding/${input.source}?${searchParams.toString()}`;
+  return `/api/v1/auth/binding/${input.source}?${searchParams.toString()}`;
 }
 
 /**
@@ -351,14 +355,14 @@ function unwrapSocialAuthUrl(payload: unknown, fallbackStatus: number) {
 }
 
 /**
- * 发送 RuoYi 认证请求，并在成功后解包业务数据。
+ * 发送统一认证代理请求，并在成功后解包业务数据。
  *
  * @param client - API Client 实例。
  * @param config - 请求配置。
  * @param accessToken - 可选访问令牌。
  * @returns 解包后的业务数据。
  */
-async function requestRuoyiEnvelope<T>(
+async function requestAuthEnvelope<T>(
   client: ApiClient,
   config: ApiRequestConfig,
   accessToken?: string,
@@ -396,14 +400,14 @@ async function requestSocialAuthUrl(
 
     return unwrapSocialAuthUrl(response.data, response.status);
   } catch (error) {
-    throw mapApiClientAuthError(error);
+      throw mapApiClientAuthError(error);
   }
 }
 
 async function requestCaptcha(client: ApiClient) {
   try {
     const response = await client.request<RuoyiEnvelope<RuoyiCaptchaPayload>>({
-      url: "/auth/code",
+      url: "/api/v1/auth/code",
       method: "get",
       authFailureMode: "manual",
     });
@@ -422,7 +426,7 @@ async function requestRegisterEnabled(
 ) {
   try {
     const response = await client.request<RuoyiEnvelope<boolean>>({
-      url: `/auth/register/enabled?tenantId=${encodeURIComponent(tenantId)}`,
+      url: `/api/v1/auth/register/enabled?tenantId=${encodeURIComponent(tenantId)}`,
       method: "get",
       authFailureMode: "manual",
     });
@@ -452,25 +456,23 @@ function runMockOperation<T>(operation: () => T): Promise<T> {
  * @returns 真实认证 adapter。
  */
 export function createRealAuthAdapter({
-  client = apiClient,
+  client = fastapiAuthClient,
 }: RealAuthAdapterOptions = {}): AuthAdapter {
   return {
     async login(input) {
-      const payload = await requestRuoyiEnvelope<RuoyiLoginToken>(client, {
-        url: "/auth/login",
+      const payload = await requestAuthEnvelope<RuoyiLoginToken>(client, {
+        url: "/api/v1/auth/login",
         method: "post",
         data: normalizeLoginInput(input),
-        encrypt: true,
       });
 
       return mapRuoyiLoginToken(payload);
     },
     async register(input) {
-      await requestRuoyiEnvelope<null>(client, {
-        url: "/auth/register",
+      await requestAuthEnvelope<null>(client, {
+        url: "/api/v1/auth/register",
         method: "post",
         data: normalizeRegisterInput(input),
-        encrypt: true,
       });
     },
     getCaptcha() {
@@ -483,20 +485,20 @@ export function createRealAuthAdapter({
       return requestSocialAuthUrl(client, input);
     },
     async logout(accessToken) {
-      await requestRuoyiEnvelope<null>(
+      await requestAuthEnvelope<null>(
         client,
         {
-          url: "/auth/logout",
+          url: "/api/v1/auth/logout",
           method: "post",
         },
         accessToken,
       );
     },
     async getCurrentUser(accessToken) {
-      const payload = await requestRuoyiEnvelope<RuoyiUserInfo>(
+      const payload = await requestAuthEnvelope<RuoyiUserInfo>(
         client,
         {
-          url: "/system/user/getInfo",
+          url: "/api/v1/auth/me",
           method: "get",
         },
         accessToken,

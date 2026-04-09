@@ -175,9 +175,8 @@ describe('real adapter integration', () => {
     const secondRequestHeaders = secondRequest?.headers as Headers | undefined;
 
     expect(firstRequest).toMatchObject({
-      url: '/auth/login',
-      method: 'post',
-      encrypt: true
+      url: '/api/v1/auth/login',
+      method: 'post'
     });
     expect(firstRequest?.data).toMatchObject({
       tenantId: '000000',
@@ -185,7 +184,7 @@ describe('real adapter integration', () => {
       returnTo: '/video/input'
     });
     expect(secondRequest).toMatchObject({
-      url: '/system/user/getInfo',
+      url: '/api/v1/auth/me',
       method: 'get'
     });
     expect(secondRequestHeaders).toBeInstanceOf(Headers);
@@ -225,9 +224,8 @@ describe('real adapter integration', () => {
     const registerRequest = request.mock.calls[0]?.[0] as RecordedRequest | undefined;
 
     expect(registerRequest).toMatchObject({
-      url: '/auth/register',
-      method: 'post',
-      encrypt: true
+      url: '/api/v1/auth/register',
+      method: 'post'
     });
     expect(registerRequest?.data).toMatchObject({
       username: 'new_student',
@@ -288,7 +286,6 @@ describe('real adapter integration', () => {
       socialCode: 'oauth-code',
       returnTo: '/video/input'
     });
-    expect(firstRequest?.encrypt).toBe(true);
   });
 
   it('requests the social auth binding url with tenant and domain params', async () => {
@@ -312,7 +309,7 @@ describe('real adapter integration', () => {
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'get',
-        url: '/auth/binding/github?tenantId=000000&domain=localhost%3A4173'
+        url: '/api/v1/auth/binding/github?tenantId=000000&domain=localhost%3A4173'
       })
     );
   });
@@ -343,7 +340,7 @@ describe('real adapter integration', () => {
     });
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/auth/code',
+        url: '/api/v1/auth/code',
         method: 'get'
       })
     );
@@ -367,7 +364,7 @@ describe('real adapter integration', () => {
     await expect(adapter.getRegisterEnabled('tenant-demo')).resolves.toBe(true);
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: '/auth/register/enabled?tenantId=tenant-demo',
+        url: '/api/v1/auth/register/enabled?tenantId=tenant-demo',
         method: 'get'
       })
     );

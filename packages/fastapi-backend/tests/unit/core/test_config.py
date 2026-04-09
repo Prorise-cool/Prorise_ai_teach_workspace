@@ -50,3 +50,20 @@ def test_settings_accepts_clean_ruoyi_configuration_without_service_auth(monkeyp
     )
 
     assert settings.ruoyi_base_url == "http://127.0.0.1:8080"
+
+
+def test_settings_accepts_ruoyi_crypto_configuration(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
+
+    settings = Settings(
+        _env_file=(),
+        ruoyi_encrypt_enabled=True,
+        ruoyi_encrypt_header_flag="encrypt-key",
+        ruoyi_encrypt_public_key="public-key",
+        ruoyi_encrypt_private_key="private-key",
+    )
+
+    assert settings.ruoyi_encrypt_enabled is True
+    assert settings.ruoyi_encrypt_header_flag == "encrypt-key"
+    assert settings.ruoyi_encrypt_public_key == "public-key"
+    assert settings.ruoyi_encrypt_private_key == "private-key"
