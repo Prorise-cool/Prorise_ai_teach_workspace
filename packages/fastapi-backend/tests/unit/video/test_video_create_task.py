@@ -166,6 +166,8 @@ def test_create_video_task_marks_failed_and_clears_idempotency_when_dispatch_fai
     assert states[0]["status"] == "failed"
     assert states[0]["errorCode"] == "VIDEO_DISPATCH_FAILED"
     assert states[0]["createdAt"]
+    runtime_auth_keys = [key for key in runtime_store.storage if key.startswith("xm_video_runtime_auth:")]
+    assert runtime_auth_keys == []
 
 
 def test_persist_video_task_metadata_passes_access_context_to_video_service() -> None:
@@ -221,7 +223,9 @@ def test_create_video_task_route_returns_202_and_initial_runtime_state(monkeypat
     assert state["createdAt"] == payload["data"]["createdAt"]
     assert state["context"]["voicePreference"]["voiceCode"] == "zh_female_yingyujiaoxue_uranus_bigtts"
     assert "accessToken" not in state["context"]
-    assert runtime_store.get_runtime_value(f"xm_video_runtime_auth:{task_id}") is None
+    assert runtime_store.get_runtime_value(f"xm_video_runtime_auth:{task_id}") == {
+        "accessToken": VALID_TOKEN,
+    }
 
 
 def test_create_video_task_route_returns_409_for_same_user_same_client_request_id(monkeypatch) -> None:

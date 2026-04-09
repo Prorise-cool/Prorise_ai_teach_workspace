@@ -29,7 +29,7 @@ class CompanionService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化伴学服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def bootstrap_status(self) -> CompanionBootstrapResponse:
         """返回伴学功能域 bootstrap 状态。"""

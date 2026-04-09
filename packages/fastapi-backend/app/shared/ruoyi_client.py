@@ -20,7 +20,7 @@ import httpx
 from app.core.config import get_settings
 from app.core.errors import IntegrationError
 from app.core.logging import get_logger, get_request_id, get_task_id
-from app.shared.ruoyi_auth import RuoYiRequestAuth, load_ruoyi_service_auth
+from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.ruoyi_mapper import RuoYiMapper
 
 # Re-export 数据类和辅助函数，作为客户端公共 API 暴露
@@ -115,12 +115,6 @@ class RuoYiClient:
             access_token=request_auth.access_token,
             client_id=request_auth.client_id,
         )
-
-    @classmethod
-    def from_service_auth(cls) -> "RuoYiClient":
-        """用显式配置的服务级鉴权创建客户端实例。"""
-
-        return cls.from_request_auth(load_ruoyi_service_auth())
 
     async def __aenter__(self) -> "RuoYiClient":
         return self
@@ -626,7 +620,7 @@ def build_client_factory(
     优先级：
     1. 显式 ``request_auth``
     2. ``access_context`` 中的用户 token
-    3. 显式配置的 ``RuoYiClient.from_service_auth()``
+    3. 无显式鉴权时返回不带默认认证头的 ``RuoYiClient.from_settings()``
 
     Args:
         access_context: 可选的已认证用户安全上下文。
@@ -639,4 +633,4 @@ def build_client_factory(
         return lambda: RuoYiClient.from_request_auth(request_auth)
     if access_context is not None:
         return lambda: RuoYiClient.from_access_context(access_context)
-    return RuoYiClient.from_service_auth
+    return RuoYiClient.from_settings

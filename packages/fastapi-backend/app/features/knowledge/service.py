@@ -27,7 +27,7 @@ class KnowledgeService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化知识检索服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def bootstrap_status(self) -> KnowledgeBootstrapResponse:
         """返回知识检索功能域 bootstrap 状态。"""

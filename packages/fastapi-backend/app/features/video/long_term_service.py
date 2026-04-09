@@ -33,7 +33,7 @@ class VideoPublicationService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def sync_publication(
         self,
@@ -148,7 +148,7 @@ class VideoArtifactIndexService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def sync_artifact_batch(
         self,

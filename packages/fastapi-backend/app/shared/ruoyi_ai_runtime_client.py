@@ -65,7 +65,11 @@ class RuoYiAiRuntimeClient:
 
     def __init__(self, client_factory: Callable[..., RuoYiClient] | None = None) -> None:
         """初始化客户端，可注入自定义的 RuoYiClient 工厂。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
+
+    def requires_explicit_request_auth(self) -> bool:
+        """判断当前客户端是否默认要求显式请求鉴权。"""
+        return self._client_factory == RuoYiClient.from_settings
 
     async def get_module_runtime(
         self,

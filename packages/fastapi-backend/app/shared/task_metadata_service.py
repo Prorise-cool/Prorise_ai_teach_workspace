@@ -41,7 +41,7 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
     ) -> None:
         """初始化服务，可注入内存仓库和 RuoYi 客户端工厂。"""
         self._repository = repository
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def persist_task(
         self,

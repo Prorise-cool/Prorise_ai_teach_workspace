@@ -15,7 +15,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -42,13 +42,6 @@ class ProviderRuntimeSource(str, Enum):
     RUOYI = "ruoyi"
 
 
-class RuoYiServiceAuthMode(str, Enum):
-    """RuoYi 服务级鉴权模式。"""
-
-    DISABLED = "disabled"
-    TOKEN_FILE = "token_file"
-
-
 def _normalize_runtime_environment(raw_value: str | RuntimeEnvironment | None) -> RuntimeEnvironment:
     """归一化 ``FASTAPI_ENV``，只接受正式环境枚举值。"""
 
@@ -68,13 +61,6 @@ def _resolve_runtime_environment() -> RuntimeEnvironment:
     """
 
     return _normalize_runtime_environment(os.getenv("FASTAPI_ENV"))
-
-
-def _resolve_optional_env_path(raw_path: str) -> Path:
-    candidate = Path(raw_path).expanduser()
-    if not candidate.is_absolute():
-        candidate = PROJECT_ROOT / candidate
-    return candidate
 
 
 def _build_env_file_candidates() -> tuple[Path, ...]:
@@ -127,18 +113,6 @@ class Settings(BaseSettings):
     ruoyi_timeout_seconds: float = Field(default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS")
     ruoyi_retry_attempts: int = Field(default=2, alias="FASTAPI_RUOYI_RETRY_ATTEMPTS")
     ruoyi_retry_delay_seconds: float = Field(default=0.1, alias="FASTAPI_RUOYI_RETRY_DELAY_SECONDS")
-    ruoyi_service_auth_mode: RuoYiServiceAuthMode = Field(
-        default=RuoYiServiceAuthMode.DISABLED,
-        alias="FASTAPI_RUOYI_SERVICE_AUTH_MODE",
-    )
-    ruoyi_service_token_file: str | None = Field(
-        default=None,
-        alias="FASTAPI_RUOYI_SERVICE_TOKEN_FILE",
-    )
-    ruoyi_service_client_id: str | None = Field(
-        default=None,
-        alias="FASTAPI_RUOYI_SERVICE_CLIENT_ID",
-    )
     provider_runtime_source: ProviderRuntimeSource = Field(
         default=ProviderRuntimeSource.SETTINGS,
         alias="FASTAPI_PROVIDER_RUNTIME_SOURCE",
@@ -199,30 +173,6 @@ class Settings(BaseSettings):
             layered_dotenv_settings,
             file_secret_settings,
         )
-
-    def resolve_ruoyi_service_token_file(self) -> Path | None:
-        """返回服务级 token 文件的绝对路径。"""
-
-        if self.ruoyi_service_token_file is None:
-            return None
-
-        normalized = self.ruoyi_service_token_file.strip()
-        if not normalized:
-            return None
-        return _resolve_optional_env_path(normalized)
-
-    @model_validator(mode="after")
-    def validate_ruoyi_service_auth(self) -> "Settings":
-        """校验服务级鉴权配置是否完整。"""
-
-        if (
-            self.ruoyi_service_auth_mode is RuoYiServiceAuthMode.TOKEN_FILE
-            and self.resolve_ruoyi_service_token_file() is None
-        ):
-            raise ValueError(
-                "FASTAPI_RUOYI_SERVICE_TOKEN_FILE 必须在 FASTAPI_RUOYI_SERVICE_AUTH_MODE=token_file 时提供"
-            )
-        return self
 
     @field_validator("environment", mode="before")
     @classmethod

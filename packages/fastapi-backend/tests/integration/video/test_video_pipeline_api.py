@@ -16,6 +16,7 @@ from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.models import PublishState
 from app.features.video.pipeline.sandbox import LocalSandboxExecutor
 from app.features.video.pipeline.services import VideoPipelineService
+from app.features.video.runtime_auth import save_video_runtime_auth
 from app.features.video.routes import get_video_service
 from app.features.video.service import VideoService
 from app.features.video.tasks.video_task_actor import VideoTask
@@ -23,7 +24,6 @@ from app.infra.redis_client import RuntimeStore
 from app.main import create_app
 from app.providers.factory import get_provider_factory
 from app.shared.cos_client import CosClient
-from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.scheduler import TaskScheduler
@@ -204,6 +204,20 @@ def _run_pipeline(*, tmp_path, runtime_store: RuntimeStore, video_service: Video
             "userProfile": {"subject": "math", "grade": "junior"},
         },
     )
+    save_video_runtime_auth(
+        runtime_store,
+        task_id=task_id,
+        access_context=AccessContext(
+            user_id="10001",
+            username="student_demo",
+            roles=("student",),
+            permissions=("*:*:*",),
+            token=VALID_TOKEN,
+            client_id="test-client-id",
+            request_id="req_video_pipeline_api_001",
+            online_ttl_seconds=600,
+        ),
+    )
     task = InlinePipelineTask(
         context,
         pipeline_service=pipeline_service,
@@ -255,18 +269,6 @@ def test_video_pipeline_result_and_publish_api_flow(tmp_path, monkeypatch) -> No
     state = {"video": [], "publications": [], "session_artifacts": {}}
     runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
     video_service = _build_video_service(tmp_path, state)
-    service_request_auth = RuoYiRequestAuth(
-        access_token="service-token",
-        client_id="service-client-id",
-    )
-    monkeypatch.setattr(
-        "app.features.video.pipeline.orchestrator.load_ruoyi_service_auth",
-        lambda: service_request_auth,
-    )
-    monkeypatch.setattr(
-        "app.features.video.service.load_ruoyi_service_auth",
-        lambda: service_request_auth,
-    )
     task_id = _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
 
     async def fake_load_ruoyi_access_profile(access_token: str, *, client_id: str | None = None) -> RuoYiAccessProfile:

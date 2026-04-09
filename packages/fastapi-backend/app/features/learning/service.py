@@ -30,7 +30,7 @@ class LearningService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化学习结果持久化服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
     async def bootstrap_status(self) -> LearningBootstrapResponse:
         """返回学习功能域 bootstrap 状态。"""

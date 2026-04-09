@@ -9,10 +9,11 @@
 ## 核心规则
 
 1. 不再把 RuoYi `access_token` 当成通用环境变量塞进 dotenv。
-2. 旧 `.env` 方案已彻底废弃；必须按正式环境分层，不再保留兼容入口。
-3. 任何需要匿名回源或后台回源的链路，必须显式声明“服务级鉴权”来源，不能靠 `from_settings()` 偷带 token。
-4. 用户请求发起的 RuoYi 调用，默认走请求态 token 透传；后台 worker 不再缓存用户 token，统一走显式服务级鉴权。
-5. 公开列表、匿名回源这类没有用户请求上下文的链路，必须显式使用服务级鉴权文件或明确报错，不允许隐式降级为“随便拿一个全局 token 顶上”。
+2. 旧 `.env` 兼容入口与 `FASTAPI_ENV_FILE` 已彻底废弃；必须按正式环境分层加载。
+3. 业务链路禁止再引入 “service auth / token file / 进程级默认 token”。
+4. 用户请求发起的 RuoYi 调用，统一走当前请求态 Bearer token 透传。
+5. 后台 worker 如需继续访问 RuoYi，只能使用任务创建时写入 Redis 运行态的短 TTL 请求鉴权；任务结束后立即清理。
+6. `GET /api/v1/video/published` 是登录态发现区接口，不再定义为匿名公开回源。
 
 ## 推荐 env 结构
 
@@ -22,9 +23,7 @@ packages/fastapi-backend/
 ├── .env.defaults               # 非敏感共享默认值（本地自建，不入库）
 ├── .env.local                  # 本地联调覆盖（不入库）
 ├── .env.staging                # 预发覆盖（不入库）
-├── .env.production             # 生产覆盖（不入库）
-└── .secrets/
-    └── ruoyi-service.token     # 本地服务级 token 文件（不入库）
+└── .env.production             # 生产覆盖（不入库）
 ```
 
 ## FastAPI 加载顺序
@@ -32,15 +31,12 @@ packages/fastapi-backend/
 FastAPI 当前按以下顺序加载配置，越靠后优先级越高：
 
 1. `.env.defaults`
-2. `.env`，仅兼容旧方案
-3. `.env.<FASTAPI_ENV>`
-4. `.env.<FASTAPI_ENV>.local`，仅 `development / test`
-5. `.env.local`，仅 `development / test`
-6. `FASTAPI_ENV_FILE` 指向的额外文件，仅兼容旧方案
+2. `.env.<FASTAPI_ENV>`
+3. `.env.<FASTAPI_ENV>.local`，仅 `development / test`
+4. `.env.local`，仅 `development / test`
 
 说明：
 
-- `.env` 与 `FASTAPI_ENV_FILE` 仍保留兼容读取能力，但新配置不应继续依赖这两个入口。
 - 推荐本地把 `FASTAPI_ENV` 固定为 `development`，部署环境通过进程环境变量显式设置 `staging` / `production`。
 - 预发与生产不自动加载 `.env.local`，避免把开发机覆盖项带入非本地环境。
 
@@ -49,31 +45,24 @@ FastAPI 当前按以下顺序加载配置，越靠后优先级越高：
 ### 用户请求链路
 
 - 来源：`Authorization: Bearer <user-token>`
-- 适用：`/video/tasks/*`、`/classroom/*`、`/companion/*`、`/knowledge/*`、`/learning/*`
+- 适用：`/video/tasks/*`、`/video/published`、`/classroom/*`、`/companion/*`、`/knowledge/*`、`/learning/*`
 - 要求：通过 `AccessContext` 或显式 `RuoYiRequestAuth` 透传，不允许依赖默认全局 token
 
 ### Worker 链路
 
-- 来源：`FASTAPI_RUOYI_SERVICE_AUTH_MODE=token_file`
+- 来源：创建任务时写入 Redis 运行态的短 TTL `RuoYiRequestAuth`
 - 适用：视频流水线 Provider runtime 查询、任务元数据写回、产物图谱写回等后台异步链路
-- 要求：worker 不再把用户 token 缓存进 Redis 运行态；如未配置服务级鉴权，应显式告警并按链路能力降级
-
-### 服务级回源链路
-
-- 来源：`FASTAPI_RUOYI_SERVICE_AUTH_MODE=token_file`
-- 适用：无用户上下文但需要读取 RuoYi 的公开列表、匿名补数等场景
-- 要求：token 必须来自未入库文件，例如 `.secrets/ruoyi-service.token` 或容器挂载 secret
-- 文件格式：支持纯 JWT 字符串、`{"access_token":"...", "client_id":"..."}` 形式 JSON，或完整的 RuoYi 登录响应信封
+- 要求：worker 只允许消费任务对应用户的显式请求鉴权；如缺失鉴权，则回退到本地 provider settings，并把长期写回降级为告警而不是偷用进程级 token
 
 ## 禁止事项
 
 - 禁止新增 `FASTAPI_RUOYI_ACCESS_TOKEN` 一类“拿来就塞”的全局 token 配置。
 - 禁止在 `RuoYiClient.from_settings()` 中恢复默认鉴权头。
-- 禁止在 service / repository / worker 中省略鉴权参数后自动偷用服务 token。
-- 禁止把一次性调试 token、抓包结果、临时 secret 文件提交进仓库。
+- 禁止在 service / repository / worker 中省略鉴权参数后自动偷用服务 token、匿名客户端或其它进程级兜底。
+- 禁止把一次性调试 token、抓包结果或 secret 文件提交进仓库。
 
 ## 调试建议
 
-1. 先确认当前链路到底属于“用户态透传”还是“服务级回源”。
-2. 需要本地服务级回源时，把临时 token 写进 `.secrets/ruoyi-service.token`，不要回填到 `.env.local`。
-3. 如果某个链路没有用户态也没有服务级鉴权配置，应显式报错并修正设计，而不是临时继续偷全局 token。
+1. 先确认当前链路到底属于“用户态透传”还是“任务运行态透传”。
+2. 若需要脱离前端手工验证 FastAPI，可先向 RuoYi 登录获取 token，再直接带 `Authorization` 请求 FastAPI。
+3. 如果某个链路既没有用户态也没有运行态鉴权，应显式报错或按能力降级，而不是临时再造一套 env token 方案。
