@@ -12,6 +12,7 @@ from app.features.video.create_task_models import (
     CreateVideoTaskRequest,
     IdempotentConflictPayload,
 )
+from app.features.video.pipeline.errors import VideoTaskErrorCode
 from app.features.video.schemas import VideoTaskMetadataCreateRequest
 from app.features.video.runtime_auth import delete_video_runtime_auth, save_video_runtime_auth
 from app.features.video.service import VideoService
@@ -64,14 +65,14 @@ def validate_create_request(request: CreateVideoTaskRequest) -> dict[str, object
 
         if not normalized_text:
             raise AppError(
-                code=TaskErrorCode.VIDEO_INPUT_EMPTY.value,
+                code=VideoTaskErrorCode.VIDEO_INPUT_EMPTY.value,
                 message="输入内容为空，请填写后重新提交",
                 status_code=422,
                 details={"field": "sourcePayload.text"},
             )
         if len(normalized_text) > 5000:
             raise AppError(
-                code=TaskErrorCode.VIDEO_INPUT_TOO_LONG.value,
+                code=VideoTaskErrorCode.VIDEO_INPUT_TOO_LONG.value,
                 message="输入内容不能超过 5000 个字符",
                 status_code=422,
                 details={"field": "sourcePayload.text", "maxLength": 5000},
@@ -92,7 +93,7 @@ def validate_create_request(request: CreateVideoTaskRequest) -> dict[str, object
     normalized_ocr_text = ocr_text.strip() if isinstance(ocr_text, str) else None
     if normalized_ocr_text and len(normalized_ocr_text) > 5000:
         raise AppError(
-            code=TaskErrorCode.VIDEO_INPUT_TOO_LONG.value,
+            code=VideoTaskErrorCode.VIDEO_INPUT_TOO_LONG.value,
             message="OCR 文本不能超过 5000 个字符",
             status_code=422,
             details={"field": "sourcePayload.ocrText", "maxLength": 5000},
@@ -160,7 +161,7 @@ def mark_dispatch_failure(
         message="任务分发失败",
         progress=0,
         request_id=request_id,
-        error_code=TaskErrorCode.VIDEO_DISPATCH_FAILED,
+        error_code=VideoTaskErrorCode.VIDEO_DISPATCH_FAILED,
         source="video.create_task",
         created_at=created_at,
     )
@@ -314,7 +315,7 @@ async def create_video_task(
         delete_video_runtime_auth(runtime_store, task_id=task_id)
         runtime_store.delete_runtime_value(idempotency_key)
         raise AppError(
-            code=TaskErrorCode.VIDEO_DISPATCH_FAILED.value,
+            code=VideoTaskErrorCode.VIDEO_DISPATCH_FAILED.value,
             message="任务分发失败，请稍后重试",
             status_code=500,
             retryable=True,

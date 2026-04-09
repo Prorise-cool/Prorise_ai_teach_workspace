@@ -10,10 +10,10 @@ from typing import Literal
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import get_logger
+from app.features.video.pipeline.errors import VideoTaskErrorCode
 from app.features.video.preprocess_models import VideoPreprocessResult
 from app.features.video.providers.image_storage import ImageStorage, LocalImageStorage
 from app.features.video.providers.ocr import MockOcrProvider, OcrProvider, OcrResult
-from app.shared.task_framework.status import TaskErrorCode
 
 logger = get_logger("app.features.video.preprocess")
 
@@ -60,7 +60,7 @@ def validate_file_type(content_type: str | None) -> str:
     normalized = (content_type or "").strip().lower()
     if normalized not in ALLOWED_MIME_TYPES:
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_FORMAT_INVALID.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_FORMAT_INVALID.value,
             message="不支持的文件类型，仅支持 JPG、PNG、WebP",
             details={"content_type": content_type, "allowed": sorted(ALLOWED_MIME_TYPES)},
         )
@@ -71,7 +71,7 @@ def validate_file_size(file_bytes: bytes) -> None:
     """校验文件大小是否超限。"""
     if len(file_bytes) > MAX_FILE_SIZE_BYTES:
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_TOO_LARGE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_TOO_LARGE.value,
             message="图片大小不能超过 10MB",
             details={"size_bytes": len(file_bytes), "max_bytes": MAX_FILE_SIZE_BYTES},
         )
@@ -81,7 +81,7 @@ def validate_file_empty(file_bytes: bytes) -> None:
     """校验文件是否为空。"""
     if not file_bytes:
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
             message="上传的图片为空或无法读取",
         )
 
@@ -102,13 +102,13 @@ def extract_image_metadata(file_bytes: bytes, content_type: str) -> ImageMetadat
         raise
     except Exception as exc:  # noqa: BLE001
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
             message="图片文件无法解码，请确认文件完整性",
             details={"reason": str(exc)},
         ) from exc
 
     raise ImageValidationError(
-        code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+        code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
         message="图片文件无法解码，请确认文件完整性",
     )
 
@@ -116,7 +116,7 @@ def extract_image_metadata(file_bytes: bytes, content_type: str) -> ImageMetadat
 def _parse_png_metadata(file_bytes: bytes) -> tuple[int, int]:
     if len(file_bytes) < 24 or file_bytes[:8] != b"\x89PNG\r\n\x1a\n":
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
             message="无效的 PNG 文件格式",
         )
     return struct.unpack(">II", file_bytes[16:24])
@@ -125,7 +125,7 @@ def _parse_png_metadata(file_bytes: bytes) -> tuple[int, int]:
 def _parse_jpeg_metadata(file_bytes: bytes) -> tuple[int, int]:
     if len(file_bytes) < 2 or file_bytes[:2] != b"\xff\xd8":
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
             message="无效的 JPEG 文件格式",
         )
 
@@ -147,7 +147,7 @@ def _parse_jpeg_metadata(file_bytes: bytes) -> tuple[int, int]:
         stream.seek(length - 2, 1)
 
     raise ImageValidationError(
-        code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+        code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
         message="无法从 JPEG 文件中提取尺寸信息",
     )
 
@@ -155,7 +155,7 @@ def _parse_jpeg_metadata(file_bytes: bytes) -> tuple[int, int]:
 def _parse_webp_metadata(file_bytes: bytes) -> tuple[int, int]:
     if len(file_bytes) < 30 or file_bytes[:4] != b"RIFF" or file_bytes[8:12] != b"WEBP":
         raise ImageValidationError(
-            code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+            code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
             message="无效的 WebP 文件格式",
         )
 
@@ -173,7 +173,7 @@ def _parse_webp_metadata(file_bytes: bytes) -> tuple[int, int]:
         return width, height
 
     raise ImageValidationError(
-        code=TaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
+        code=VideoTaskErrorCode.VIDEO_IMAGE_UNREADABLE.value,
         message="不支持的 WebP 子格式",
     )
 
@@ -266,7 +266,7 @@ class PreprocessService:
         except Exception as exc:  # noqa: BLE001
             logger.error("Video image storage failed filename=%s", filename, exc_info=exc)
             raise AppError(
-                code=TaskErrorCode.VIDEO_STORAGE_FAILED.value,
+                code=VideoTaskErrorCode.VIDEO_STORAGE_FAILED.value,
                 message="图片存储失败，请稍后重试",
                 status_code=500,
                 retryable=True,
@@ -301,13 +301,13 @@ class PreprocessService:
             return OcrResult(error=str(exc), raw={"provider": self._ocr_provider.provider_name})
 
     @staticmethod
-    def _resolve_ocr_error_code(ocr_result: OcrResult) -> TaskErrorCode | None:
+    def _resolve_ocr_error_code(ocr_result: OcrResult) -> VideoTaskErrorCode | None:
         if ocr_result.timed_out:
-            return TaskErrorCode.VIDEO_OCR_TIMEOUT
+            return VideoTaskErrorCode.VIDEO_OCR_TIMEOUT
         if ocr_result.error:
-            return TaskErrorCode.VIDEO_OCR_FAILED
+            return VideoTaskErrorCode.VIDEO_OCR_FAILED
         if not ocr_result.text or not ocr_result.text.strip():
-            return TaskErrorCode.VIDEO_OCR_EMPTY
+            return VideoTaskErrorCode.VIDEO_OCR_EMPTY
         return None
 
     @staticmethod

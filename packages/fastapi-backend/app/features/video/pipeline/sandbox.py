@@ -21,27 +21,27 @@ from app.features.video.pipeline.constants import (
     SANDBOX_SCENE_SCRIPT,
     SANDBOX_WORKSPACE_MOUNT,
 )
+from app.features.video.pipeline.errors import VideoTaskErrorCode
 from app.features.video.pipeline.models import ExecutionResult, ResourceLimits
-from app.shared.task_framework.status import TaskErrorCode
 
 FORBIDDEN_IMPORTS = {
-    "os": TaskErrorCode.SANDBOX_FS_VIOLATION,
-    "pathlib": TaskErrorCode.SANDBOX_FS_VIOLATION,
-    "subprocess": TaskErrorCode.SANDBOX_PROCESS_VIOLATION,
-    "socket": TaskErrorCode.SANDBOX_NETWORK_VIOLATION,
-    "requests": TaskErrorCode.SANDBOX_NETWORK_VIOLATION,
-    "httpx": TaskErrorCode.SANDBOX_NETWORK_VIOLATION,
+    "os": VideoTaskErrorCode.SANDBOX_FS_VIOLATION,
+    "pathlib": VideoTaskErrorCode.SANDBOX_FS_VIOLATION,
+    "subprocess": VideoTaskErrorCode.SANDBOX_PROCESS_VIOLATION,
+    "socket": VideoTaskErrorCode.SANDBOX_NETWORK_VIOLATION,
+    "requests": VideoTaskErrorCode.SANDBOX_NETWORK_VIOLATION,
+    "httpx": VideoTaskErrorCode.SANDBOX_NETWORK_VIOLATION,
 }
 FORBIDDEN_CALLS = {
-    "eval": TaskErrorCode.SANDBOX_PROCESS_VIOLATION,
-    "exec": TaskErrorCode.SANDBOX_PROCESS_VIOLATION,
-    "__import__": TaskErrorCode.SANDBOX_PROCESS_VIOLATION,
+    "eval": VideoTaskErrorCode.SANDBOX_PROCESS_VIOLATION,
+    "exec": VideoTaskErrorCode.SANDBOX_PROCESS_VIOLATION,
+    "__import__": VideoTaskErrorCode.SANDBOX_PROCESS_VIOLATION,
 }
 
 
 class ScriptSecurityViolation(ValueError):
     """Manim 脚本安全扫描违规异常。"""
-    def __init__(self, error_code: TaskErrorCode, message: str) -> None:
+    def __init__(self, error_code: VideoTaskErrorCode, message: str) -> None:
         """初始化沙箱执行器。"""
         super().__init__(message)
         self.error_code = error_code
@@ -52,7 +52,7 @@ def scan_script_safety(script: str) -> None:
     try:
         tree = ast.parse(script)
     except SyntaxError as exc:
-        raise ScriptSecurityViolation(TaskErrorCode.VIDEO_MANIM_GEN_FAILED, str(exc)) from exc
+        raise ScriptSecurityViolation(VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED, str(exc)) from exc
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -117,7 +117,7 @@ class LocalSandboxExecutor(SandboxExecutor):
                     stderr="render timed out",
                     exit_code=124,
                     duration_seconds=resource_limits.timeout_seconds,
-                    error_type=TaskErrorCode.VIDEO_RENDER_TIMEOUT.value,
+                    error_type=VideoTaskErrorCode.VIDEO_RENDER_TIMEOUT.value,
                 )
             if "FORCE_RENDER_ERROR" in script:
                 return ExecutionResult(
@@ -125,7 +125,7 @@ class LocalSandboxExecutor(SandboxExecutor):
                     stderr="simulated render error",
                     exit_code=1,
                     duration_seconds=time.perf_counter() - start,
-                    error_type=TaskErrorCode.VIDEO_RENDER_FAILED.value,
+                    error_type=VideoTaskErrorCode.VIDEO_RENDER_FAILED.value,
                 )
             if "FORCE_RENDER_OOM" in script:
                 return ExecutionResult(
@@ -133,7 +133,7 @@ class LocalSandboxExecutor(SandboxExecutor):
                     stderr="simulated out of memory",
                     exit_code=137,
                     duration_seconds=time.perf_counter() - start,
-                    error_type=TaskErrorCode.VIDEO_RENDER_OOM.value,
+                    error_type=VideoTaskErrorCode.VIDEO_RENDER_OOM.value,
                 )
             if "FORCE_RENDER_DISK_FULL" in script:
                 return ExecutionResult(
@@ -141,7 +141,7 @@ class LocalSandboxExecutor(SandboxExecutor):
                     stderr="simulated disk full",
                     exit_code=28,
                     duration_seconds=time.perf_counter() - start,
-                    error_type=TaskErrorCode.VIDEO_RENDER_DISK_FULL.value,
+                    error_type=VideoTaskErrorCode.VIDEO_RENDER_DISK_FULL.value,
                 )
 
             output_path.write_bytes(b"FAKE_MP4_DATA")
@@ -249,7 +249,7 @@ class DockerSandboxExecutor(SandboxExecutor):
                 stderr="render timed out",
                 exit_code=124,
                 duration_seconds=resource_limits.timeout_seconds,
-                error_type=TaskErrorCode.VIDEO_RENDER_TIMEOUT.value,
+                error_type=VideoTaskErrorCode.VIDEO_RENDER_TIMEOUT.value,
             )
 
         if _should_fallback_to_local(process.stderr):
@@ -305,7 +305,7 @@ class DockerSandboxExecutor(SandboxExecutor):
             stderr=stderr,
             exit_code=1,
             duration_seconds=0,
-            error_type=TaskErrorCode.VIDEO_RENDER_FAILED.value,
+            error_type=VideoTaskErrorCode.VIDEO_RENDER_FAILED.value,
         )
 
 
@@ -315,13 +315,13 @@ def resolve_local_fallback_policy(*, environment: str, configured: bool) -> bool
     return configured and normalized_environment in {"development", "test"}
 
 
-def _map_sandbox_process_error(return_code: int | None, stderr: str | None) -> TaskErrorCode:
+def _map_sandbox_process_error(return_code: int | None, stderr: str | None) -> VideoTaskErrorCode:
     lowered = (stderr or "").lower()
     if return_code == 137 or "oomkilled" in lowered or "out of memory" in lowered:
-        return TaskErrorCode.VIDEO_RENDER_OOM
+        return VideoTaskErrorCode.VIDEO_RENDER_OOM
     if "no space left" in lowered or "disk full" in lowered:
-        return TaskErrorCode.VIDEO_RENDER_DISK_FULL
-    return TaskErrorCode.VIDEO_RENDER_FAILED
+        return VideoTaskErrorCode.VIDEO_RENDER_DISK_FULL
+    return VideoTaskErrorCode.VIDEO_RENDER_FAILED
 
 
 def _should_fallback_to_local(stderr: str | None) -> bool:

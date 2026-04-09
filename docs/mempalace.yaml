@@ -1,0 +1,14 @@
+wing: docs
+rooms:
+- name: documentation
+  description: Files related to documentation
+- name: backend
+  description: Files related to backend
+- name: frontend
+  description: Files related to frontend
+- name: team
+  description: Files related to team
+- name: configuration
+  description: Files related to configuration
+- name: design
+  description: Files related to design
