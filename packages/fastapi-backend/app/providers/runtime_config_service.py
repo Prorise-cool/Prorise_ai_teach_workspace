@@ -22,6 +22,11 @@ from app.shared.ruoyi_ai_runtime_client import RuoYiAiRuntimeBinding, RuoYiAiRun
 
 logger = get_logger("app.providers.runtime_config_service")
 
+
+def _enum_value(val: Any) -> str:
+    """从枚举或字符串中提取纯文本值。"""
+    return getattr(val, "value", str(val))
+
 _VIDEO_LLM_STAGES = (
     "understanding",
     "storyboard",
@@ -111,7 +116,15 @@ class ProviderRuntimeResolver:
     ) -> VideoProviderRuntimeAssembly:
         """解析视频流水线 Provider 配置。"""
         fallback = self._build_from_settings()
-        if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
+        runtime_source = _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower()
+        logger.info(
+            "resolve_video_pipeline called  source=%s  has_token=%s  has_client_id=%s",
+            runtime_source,
+            access_token is not None,
+            client_id is not None,
+        )
+        if runtime_source != "ruoyi":
+            logger.info("provider_runtime_source is not 'ruoyi'; fallback to settings")
             return fallback
         if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
             logger.info("Skip RuoYi provider runtime lookup without explicit request auth; fallback to settings")
@@ -123,6 +136,7 @@ class ProviderRuntimeResolver:
                 access_token=access_token,
                 client_id=client_id,
             )
+            logger.info("RuoYi runtime config response  module=%s  bindings_count=%s", module.module_code, len(module.bindings))
         except IntegrationError as exc:
             logger.warning("Resolve provider runtime from RuoYi failed; fallback to settings", exc_info=exc)
             return fallback
@@ -131,6 +145,7 @@ class ProviderRuntimeResolver:
             return fallback
 
         if not module.bindings:
+            logger.warning("RuoYi returned EMPTY bindings for video module; fallback to settings")
             return fallback
 
         try:
@@ -147,7 +162,7 @@ class ProviderRuntimeResolver:
     ) -> tuple[TtsRuntimeVoiceDescriptor, ...]:
         """解析视频可用 TTS 音色列表。"""
         fallback = self._build_tts_voice_descriptors_from_providers(self._build_from_settings().default_tts)
-        if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
+        if _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
             return fallback
         if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
             logger.info("Skip RuoYi TTS runtime lookup without explicit request auth; fallback to settings")
