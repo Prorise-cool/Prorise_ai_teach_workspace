@@ -1,0 +1,10 @@
+.env
+.env.defaults
+.env.local
+.env.*.local
+.env.development
+.env.staging
+.env.production
+.secrets/*
+!.secrets/.gitkeep
+.runtime/secrets/*

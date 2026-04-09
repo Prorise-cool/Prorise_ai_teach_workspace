@@ -29,7 +29,7 @@ class CompanionService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化伴学服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_settings
+        self._client_factory = client_factory or RuoYiClient.from_service_auth
 
     async def bootstrap_status(self) -> CompanionBootstrapResponse:
         """返回伴学功能域 bootstrap 状态。"""
@@ -47,7 +47,7 @@ class CompanionService(RuoYiServiceMixin):
             request: 对话轮次创建请求。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context)() as client:
             result = await client.post_single(
                 "/internal/xiaomai/companion/turns",
                 resource=self._RESOURCE,
@@ -69,7 +69,7 @@ class CompanionService(RuoYiServiceMixin):
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
         """
         try:
-            async with self._resolve_factory(access_context)() as client:
+            async with self._resolve_authenticated_factory(access_context)() as client:
                 result = await client.get_single(
                     f"/internal/xiaomai/companion/turns/{turn_id}",
                     resource=self._RESOURCE,
@@ -97,7 +97,7 @@ class CompanionService(RuoYiServiceMixin):
             session_id: 会话唯一标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context)() as client:
             result = await client.get_single(
                 f"/internal/xiaomai/companion/sessions/{session_id}/replay",
                 resource=self._RESOURCE,
@@ -132,4 +132,3 @@ class CompanionService(RuoYiServiceMixin):
             return session_replay_from_ruoyi_data(payload)
         except (KeyError, TypeError, ValueError, ValidationError) as exc:
             raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
-

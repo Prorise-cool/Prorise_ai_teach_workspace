@@ -1,8 +1,6 @@
-"""伴学 / 知识检索长期记录的共享模型与 RuoYi 映射（re-export hub）。
+"""伴学 / 知识检索长期记录的共享模型与 RuoYi 映射聚合入口。
 
-本模块作为向后兼容的统一入口，将所有公有名称从以下子模块
-re-export，确保现有 ``from app.shared.long_term_records import X``
-导入语句无需修改：
+本模块是长期记录域的正式公共入口，统一暴露以下子模块中的稳定符号：
 
 - ``long_term_models``  — 枚举、值对象与 Pydantic 模型
 - ``long_term_mapper``  — RuoYi 双向映射函数与内部辅助函数

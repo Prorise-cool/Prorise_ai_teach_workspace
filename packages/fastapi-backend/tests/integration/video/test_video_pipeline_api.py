@@ -23,6 +23,7 @@ from app.infra.redis_client import RuntimeStore
 from app.main import create_app
 from app.providers.factory import get_provider_factory
 from app.shared.cos_client import CosClient
+from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.ruoyi_client import RuoYiClient
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.scheduler import TaskScheduler
@@ -254,6 +255,18 @@ def test_video_pipeline_result_and_publish_api_flow(tmp_path, monkeypatch) -> No
     state = {"video": [], "publications": [], "session_artifacts": {}}
     runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
     video_service = _build_video_service(tmp_path, state)
+    service_request_auth = RuoYiRequestAuth(
+        access_token="service-token",
+        client_id="service-client-id",
+    )
+    monkeypatch.setattr(
+        "app.features.video.pipeline.orchestrator.load_ruoyi_service_auth",
+        lambda: service_request_auth,
+    )
+    monkeypatch.setattr(
+        "app.features.video.service.load_ruoyi_service_auth",
+        lambda: service_request_auth,
+    )
     task_id = _run_pipeline(tmp_path=tmp_path, runtime_store=runtime_store, video_service=video_service)
 
     async def fake_load_ruoyi_access_profile(access_token: str, *, client_id: str | None = None) -> RuoYiAccessProfile:

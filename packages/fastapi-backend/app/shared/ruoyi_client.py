@@ -3,8 +3,8 @@
 本模块封装对 RuoYi 后台的所有 HTTP 请求，包括单条查询、分页查询、
 仅确认写入三种模式，并内置超时/网络异常重试、统一错误码映射与日志追踪。
 
-数据类与通用辅助函数定义在 ``ruoyi_models`` 模块中，此处 re-export
-以保持向后兼容。
+响应数据类与纯工具函数由 ``ruoyi_models`` 统一提供，这里作为客户端公共 API
+的一部分直接暴露。
 """
 
 from __future__ import annotations
@@ -20,9 +20,10 @@ import httpx
 from app.core.config import get_settings
 from app.core.errors import IntegrationError
 from app.core.logging import get_logger, get_request_id, get_task_id
+from app.shared.ruoyi_auth import RuoYiRequestAuth, load_ruoyi_service_auth
 from app.shared.ruoyi_mapper import RuoYiMapper
 
-# Re-export 数据类和辅助函数，保持 ``from app.shared.ruoyi_client import X`` 兼容
+# Re-export 数据类和辅助函数，作为客户端公共 API 暴露
 from app.shared.ruoyi_models import (  # noqa: F401 – re-export
     RuoYiAckResponse,
     RuoYiPageResponse,
@@ -35,12 +36,6 @@ from app.shared.ruoyi_models import (  # noqa: F401 – re-export
 
 logger = get_logger("app.shared.ruoyi_client")
 _SAFE_RETRY_METHODS = {"GET", "HEAD", "OPTIONS"}
-
-# 向后兼容：保留旧的下划线前缀别名
-_coerce_status_code = coerce_status_code
-_extract_client_id_from_access_token = extract_client_id_from_access_token
-_format_headers = format_headers
-_build_retry_details = build_retry_details
 
 
 class RuoYiClient:
@@ -86,15 +81,13 @@ class RuoYiClient:
 
     @classmethod
     def from_settings(cls) -> "RuoYiClient":
-        """从全局 ``Settings`` 创建客户端实例。"""
+        """从全局 ``Settings`` 创建不带默认鉴权头的客户端实例。"""
         settings = get_settings()
         return cls(
             base_url=settings.ruoyi_base_url,
             timeout_seconds=settings.ruoyi_timeout_seconds,
             retry_attempts=settings.ruoyi_retry_attempts,
             retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
-            access_token=settings.ruoyi_access_token,
-            client_id=settings.ruoyi_client_id,
         )
 
     @classmethod
@@ -107,15 +100,27 @@ class RuoYiClient:
         Returns:
             携带用户 token 的 RuoYiClient 实例。
         """
+        return cls.from_request_auth(RuoYiRequestAuth.from_access_context(ctx))
+
+    @classmethod
+    def from_request_auth(cls, request_auth: RuoYiRequestAuth) -> "RuoYiClient":
+        """用显式请求鉴权信息创建客户端实例。"""
+
         settings = get_settings()
         return cls(
             base_url=settings.ruoyi_base_url,
             timeout_seconds=settings.ruoyi_timeout_seconds,
             retry_attempts=settings.ruoyi_retry_attempts,
             retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
-            access_token=ctx.token,
-            client_id=ctx.client_id,
+            access_token=request_auth.access_token,
+            client_id=request_auth.client_id,
         )
+
+    @classmethod
+    def from_service_auth(cls) -> "RuoYiClient":
+        """用显式配置的服务级鉴权创建客户端实例。"""
+
+        return cls.from_request_auth(load_ruoyi_service_auth())
 
     async def __aenter__(self) -> "RuoYiClient":
         return self
@@ -611,18 +616,27 @@ RuoYiClientFactory = Callable[[], "RuoYiClient"]
 """无参调用返回 ``RuoYiClient``（可用作 async context manager）的工厂类型。"""
 
 
-def build_client_factory(access_context: "AccessContext | None" = None) -> RuoYiClientFactory:
-    """根据是否有用户上下文构造 client_factory。
+def build_client_factory(
+    access_context: "AccessContext | None" = None,
+    *,
+    request_auth: RuoYiRequestAuth | None = None,
+) -> RuoYiClientFactory:
+    """根据显式鉴权上下文构造 client_factory。
 
-    有 ``access_context`` 时使用用户 token 创建客户端，否则回退到
-    ``RuoYiClient.from_settings``。
+    优先级：
+    1. 显式 ``request_auth``
+    2. ``access_context`` 中的用户 token
+    3. 显式配置的 ``RuoYiClient.from_service_auth()``
 
     Args:
         access_context: 可选的已认证用户安全上下文。
+        request_auth: 可选的显式请求鉴权信息。
 
     Returns:
         可直接调用以获取 ``RuoYiClient`` 实例的工厂函数。
     """
+    if request_auth is not None:
+        return lambda: RuoYiClient.from_request_auth(request_auth)
     if access_context is not None:
         return lambda: RuoYiClient.from_access_context(access_context)
-    return RuoYiClient.from_settings
+    return RuoYiClient.from_service_auth

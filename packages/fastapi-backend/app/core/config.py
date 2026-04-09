@@ -1,20 +1,106 @@
 """应用配置模块。
 
-基于 ``pydantic-settings`` 实现的类型安全配置管理，支持 ``.env`` 文件
-和环境变量自动加载。所有配置项通过 ``FASTAPI_*`` 前缀的环境变量覆盖。
+基于 ``pydantic-settings`` 实现类型安全配置管理，按正式环境分层加载
+package 内 dotenv 文件，并显式区分本地、预发、生产与测试运行配置。
 
 使用方式::
 
     from app.core.config import get_settings
     settings = get_settings()  # 单例，首次调用后缓存
 """
+from __future__ import annotations
+
+import os
+from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+class RuntimeEnvironment(str, Enum):
+    """FastAPI 运行环境枚举。"""
+
+    DEVELOPMENT = "development"
+    STAGING = "staging"
+    PRODUCTION = "production"
+    TEST = "test"
+
+
+class ProviderRuntimeSource(str, Enum):
+    """Provider 运行时配置来源。"""
+
+    SETTINGS = "settings"
+    RUOYI = "ruoyi"
+
+
+class RuoYiServiceAuthMode(str, Enum):
+    """RuoYi 服务级鉴权模式。"""
+
+    DISABLED = "disabled"
+    TOKEN_FILE = "token_file"
+
+
+def _normalize_runtime_environment(raw_value: str | RuntimeEnvironment | None) -> RuntimeEnvironment:
+    """归一化 ``FASTAPI_ENV``，只接受正式环境枚举值。"""
+
+    if isinstance(raw_value, RuntimeEnvironment):
+        return raw_value
+    normalized = (raw_value or "").strip().lower()
+    if not normalized:
+        return RuntimeEnvironment.DEVELOPMENT
+    return RuntimeEnvironment(normalized)
+
+
+def _resolve_runtime_environment() -> RuntimeEnvironment:
+    """解析当前运行环境。
+
+    非本地部署必须通过进程环境变量显式声明 ``FASTAPI_ENV``；
+    未声明时仅默认回落到本地开发环境。
+    """
+
+    return _normalize_runtime_environment(os.getenv("FASTAPI_ENV"))
+
+
+def _resolve_optional_env_path(raw_path: str) -> Path:
+    candidate = Path(raw_path).expanduser()
+    if not candidate.is_absolute():
+        candidate = PROJECT_ROOT / candidate
+    return candidate
+
+
+def _build_env_file_candidates() -> tuple[Path, ...]:
+    """按基础 -> 环境 -> 本地覆盖顺序构建 env 文件候选列表。"""
+
+    environment = _resolve_runtime_environment()
+
+    candidates = [
+        PROJECT_ROOT / ".env.defaults",
+        PROJECT_ROOT / f".env.{environment.value}",
+    ]
+    if environment in {RuntimeEnvironment.DEVELOPMENT, RuntimeEnvironment.TEST}:
+        candidates.extend(
+            (
+                PROJECT_ROOT / f".env.{environment.value}.local",
+                PROJECT_ROOT / ".env.local",
+            )
+        )
+    seen: set[Path] = set()
+    ordered: list[Path] = []
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        ordered.append(candidate)
+    return tuple(ordered)
 
 
 class Settings(BaseSettings):
@@ -24,7 +110,10 @@ class Settings(BaseSettings):
         default="Prorise AI Teach FastAPI Backend",
         alias="FASTAPI_APP_NAME"
     )
-    environment: str = Field(default="development", alias="FASTAPI_ENV")
+    environment: RuntimeEnvironment = Field(
+        default=RuntimeEnvironment.DEVELOPMENT,
+        alias="FASTAPI_ENV",
+    )
     host: str = Field(default="0.0.0.0", alias="FASTAPI_HOST")
     port: int = Field(default=8090, alias="FASTAPI_PORT")
     reload: bool = Field(default=True, alias="FASTAPI_RELOAD")
@@ -35,12 +124,25 @@ class Settings(BaseSettings):
     dramatiq_worker_threads: int = Field(default=2, alias="FASTAPI_DRAMATIQ_WORKER_THREADS")
     dramatiq_worker_processes: int = Field(default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES")
     ruoyi_base_url: str = Field(default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL")
-    ruoyi_access_token: str | None = Field(default=None, alias="FASTAPI_RUOYI_ACCESS_TOKEN")
-    ruoyi_client_id: str | None = Field(default=None, alias="FASTAPI_RUOYI_CLIENT_ID")
     ruoyi_timeout_seconds: float = Field(default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS")
     ruoyi_retry_attempts: int = Field(default=2, alias="FASTAPI_RUOYI_RETRY_ATTEMPTS")
     ruoyi_retry_delay_seconds: float = Field(default=0.1, alias="FASTAPI_RUOYI_RETRY_DELAY_SECONDS")
-    provider_runtime_source: str = Field(default="settings", alias="FASTAPI_PROVIDER_RUNTIME_SOURCE")
+    ruoyi_service_auth_mode: RuoYiServiceAuthMode = Field(
+        default=RuoYiServiceAuthMode.DISABLED,
+        alias="FASTAPI_RUOYI_SERVICE_AUTH_MODE",
+    )
+    ruoyi_service_token_file: str | None = Field(
+        default=None,
+        alias="FASTAPI_RUOYI_SERVICE_TOKEN_FILE",
+    )
+    ruoyi_service_client_id: str | None = Field(
+        default=None,
+        alias="FASTAPI_RUOYI_SERVICE_CLIENT_ID",
+    )
+    provider_runtime_source: ProviderRuntimeSource = Field(
+        default=ProviderRuntimeSource.SETTINGS,
+        alias="FASTAPI_PROVIDER_RUNTIME_SOURCE",
+    )
     cos_base_url: str = Field(default="https://cos.example.local", alias="FASTAPI_COS_BASE_URL")
     default_llm_provider: str = Field(default="stub-llm", alias="FASTAPI_DEFAULT_LLM_PROVIDER")
     default_tts_provider: str = Field(default="stub-tts", alias="FASTAPI_DEFAULT_TTS_PROVIDER")
@@ -68,11 +170,68 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=PROJECT_ROOT / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore"
+        extra="ignore",
+        populate_by_name=True,
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """按环境分层加载 dotenv 配置。"""
+
+        explicit_env_file = getattr(dotenv_settings, "env_file", None)
+        layered_dotenv_settings = DotEnvSettingsSource(
+            settings_cls,
+            env_file=_build_env_file_candidates() if explicit_env_file is None else explicit_env_file,
+            env_file_encoding="utf-8",
+        )
+        return (
+            init_settings,
+            env_settings,
+            layered_dotenv_settings,
+            file_secret_settings,
+        )
+
+    def resolve_ruoyi_service_token_file(self) -> Path | None:
+        """返回服务级 token 文件的绝对路径。"""
+
+        if self.ruoyi_service_token_file is None:
+            return None
+
+        normalized = self.ruoyi_service_token_file.strip()
+        if not normalized:
+            return None
+        return _resolve_optional_env_path(normalized)
+
+    @model_validator(mode="after")
+    def validate_ruoyi_service_auth(self) -> "Settings":
+        """校验服务级鉴权配置是否完整。"""
+
+        if (
+            self.ruoyi_service_auth_mode is RuoYiServiceAuthMode.TOKEN_FILE
+            and self.resolve_ruoyi_service_token_file() is None
+        ):
+            raise ValueError(
+                "FASTAPI_RUOYI_SERVICE_TOKEN_FILE 必须在 FASTAPI_RUOYI_SERVICE_AUTH_MODE=token_file 时提供"
+            )
+        return self
+
+    @field_validator("environment", mode="before")
+    @classmethod
+    def validate_environment(cls, value: object) -> RuntimeEnvironment:
+        """归一化 ``FASTAPI_ENV``，只接受正式环境值。"""
+
+        if isinstance(value, (str, RuntimeEnvironment)) or value is None:
+            return _normalize_runtime_environment(value)
+        return RuntimeEnvironment.DEVELOPMENT
 
 
 @lru_cache

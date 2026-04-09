@@ -23,6 +23,7 @@ from app.shared.task_metadata import (
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+    from app.shared.ruoyi_auth import RuoYiRequestAuth
 
 
 class BaseTaskMetadataService(RuoYiServiceMixin):
@@ -40,21 +41,23 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
     ) -> None:
         """初始化服务，可注入内存仓库和 RuoYi 客户端工厂。"""
         self._repository = repository
-        self._client_factory = client_factory or RuoYiClient.from_settings
+        self._client_factory = client_factory or RuoYiClient.from_service_auth
 
     async def persist_task(
         self,
         request: TaskMetadataCreateRequest,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> TaskMetadataPreviewResponse:
         """将任务元数据持久化到 RuoYi，自动判断新建或更新。
 
         Args:
             request: 任务元数据创建请求。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             existing_row = await self._query_existing_row(client, request.task_id)
             existing_snapshot = (
                 self._snapshot_from_ruoyi_row(
@@ -90,14 +93,16 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         task_id: str,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> TaskMetadataSnapshot | None:
         """按 task_id 查询单条任务元数据。
 
         Args:
             task_id: 任务唯一标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             row = await self._query_existing_row(client, task_id)
         return (
             self._snapshot_from_ruoyi_row(
@@ -120,6 +125,7 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         page_num: int = 1,
         page_size: int = 10,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> TaskMetadataPageResponse:
         """分页查询任务元数据列表。
 
@@ -132,8 +138,9 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
             page_num: 页码。
             page_size: 每页条数。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             result = await client.get_page(
                 self._LIST_ENDPOINT,
                 resource=self._RESOURCE,
@@ -160,12 +167,14 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
         session_id: str,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> TaskMetadataPageResponse:
         """按会话 ID 回放所有关联任务，自动分页遍历。
 
         Args:
             session_id: 会话唯一标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
         rows: list[TaskMetadataSnapshot] = []
         page_num = 1
@@ -176,6 +185,7 @@ class BaseTaskMetadataService(RuoYiServiceMixin):
                 page_num=page_num,
                 page_size=self._REPLAY_PAGE_SIZE,
                 access_context=access_context,
+                request_auth=request_auth,
             )
             total = page.total
             rows.extend(page.rows)

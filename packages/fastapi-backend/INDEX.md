@@ -4,8 +4,12 @@
 
 - **[README.md](./README.md)** - FastAPI + LangGraph AI 教学视频后端说明
 - **[pyproject.toml](./pyproject.toml)** - FastAPI 最小依赖与 pytest 配置
-- **[.env.example](./.env.example)** - FastAPI 本地环境变量示例
-- **[run_dev.py](./run_dev.py)** - 读取 package 内 `.env` 的本地启动入口
+- **[.env.example](./.env.example)** - FastAPI 基础默认模板（复制到 `.env.defaults`）
+- **[.env.local.example](./.env.local.example)** - FastAPI 本地联调环境变量示例
+- **[.env.staging.example](./.env.staging.example)** - FastAPI 预发环境变量示例
+- **[.env.production.example](./.env.production.example)** - FastAPI 生产环境变量示例
+- **[run_dev.py](./run_dev.py)** - 读取 package 内分层 env 配置的本地启动入口
+- **[scripts/migrate_legacy_ruoyi_env.py](./scripts/migrate_legacy_ruoyi_env.py)** - 迁移旧版 RuoYi token env 配置到 `.secrets/` token 文件
 
 ## Subdirectories
 

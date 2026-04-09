@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    """使用 package 内 .env 启动本地开发服务。"""
+    """使用 package 内分层 env 配置启动本地开发服务。"""
     settings = get_settings()
     uvicorn.run(
         "app.main:app",

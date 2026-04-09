@@ -17,13 +17,13 @@ from app.core.security import (
 )
 from app.features.video.routes import get_video_service, get_video_voice_catalog_service
 from app.features.video.create_task_models import CreateVideoTaskRequest
-from app.features.video.runtime_auth import load_video_runtime_auth
 from app.features.video.service import VideoService
 from app.features.video.voice_models import VideoVoiceListPayload, VideoVoiceOption
 from app.features.video.services.create_task import (
     VIDEO_TASK_CREATE_PERMISSION,
     build_idempotency_key,
     create_video_task,
+    persist_video_task_metadata,
 )
 from app.infra.redis_client import RuntimeStore
 from app.main import create_app
@@ -168,6 +168,31 @@ def test_create_video_task_marks_failed_and_clears_idempotency_when_dispatch_fai
     assert states[0]["createdAt"]
 
 
+def test_persist_video_task_metadata_passes_access_context_to_video_service() -> None:
+    metadata_service = MagicMock(spec=VideoService)
+    metadata_service.persist_task = AsyncMock(return_value=None)
+    access_context = build_access_context()
+
+    asyncio.run(
+        persist_video_task_metadata(
+            metadata_service,
+            task_id="video-task-001",
+            access_context=access_context,
+            request=CreateVideoTaskRequest(
+                input_type="text",
+                source_payload={"text": "解释勾股定理为什么成立。"},
+                client_request_id="persist-metadata-001",
+            ),
+            source_payload={"text": "解释勾股定理为什么成立。"},
+            created_at="2026-04-08T12:00:00Z",
+        )
+    )
+
+    metadata_service.persist_task.assert_awaited_once()
+    _, kwargs = metadata_service.persist_task.await_args
+    assert kwargs["access_context"] == access_context
+
+
 def test_create_video_task_route_returns_202_and_initial_runtime_state(monkeypatch) -> None:
     with video_client(monkeypatch) as (client, runtime_store):
         response = client.post(
@@ -196,7 +221,7 @@ def test_create_video_task_route_returns_202_and_initial_runtime_state(monkeypat
     assert state["createdAt"] == payload["data"]["createdAt"]
     assert state["context"]["voicePreference"]["voiceCode"] == "zh_female_yingyujiaoxue_uranus_bigtts"
     assert "accessToken" not in state["context"]
-    assert load_video_runtime_auth(runtime_store, task_id=task_id) == (VALID_TOKEN, None)
+    assert runtime_store.get_runtime_value(f"xm_video_runtime_auth:{task_id}") is None
 
 
 def test_create_video_task_route_returns_409_for_same_user_same_client_request_id(monkeypatch) -> None:

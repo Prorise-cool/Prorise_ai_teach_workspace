@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
-from app.core.config import get_settings
+from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.ruoyi_client import RuoYiClient
 
 
@@ -65,7 +65,7 @@ class RuoYiAiRuntimeClient:
 
     def __init__(self, client_factory: Callable[..., RuoYiClient] | None = None) -> None:
         """初始化客户端，可注入自定义的 RuoYiClient 工厂。"""
-        self._client_factory = client_factory or RuoYiClient.from_settings
+        self._client_factory = client_factory or RuoYiClient.from_service_auth
 
     async def get_module_runtime(
         self,
@@ -106,14 +106,10 @@ class RuoYiAiRuntimeClient:
         try:
             return self._client_factory(access_token=access_token, client_id=client_id)
         except TypeError:
-            settings = get_settings()
-            return RuoYiClient(
-                base_url=settings.ruoyi_base_url,
-                timeout_seconds=settings.ruoyi_timeout_seconds,
-                retry_attempts=settings.ruoyi_retry_attempts,
-                retry_delay_seconds=settings.ruoyi_retry_delay_seconds,
-                access_token=access_token or settings.ruoyi_access_token,
-                client_id=client_id or settings.ruoyi_client_id,
+            if access_token is None:
+                return self._client_factory()
+            return RuoYiClient.from_request_auth(
+                RuoYiRequestAuth(access_token=access_token, client_id=client_id)
             )
 
     @staticmethod

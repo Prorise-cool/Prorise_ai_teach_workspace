@@ -23,6 +23,7 @@ from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+    from app.shared.ruoyi_auth import RuoYiRequestAuth
 
 
 class VideoPublicationService(RuoYiServiceMixin):
@@ -32,21 +33,23 @@ class VideoPublicationService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_settings
+        self._client_factory = client_factory or RuoYiClient.from_service_auth
 
     async def sync_publication(
         self,
         request: VideoPublicationSyncRequest,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoPublicationSnapshot:
         """同步发布记录到 RuoYi。
 
         Args:
             request: 发布记录同步请求。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于公开列表等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             result = await client.post_single(
                 self._ENDPOINT,
                 resource=self._RESOURCE,
@@ -61,16 +64,18 @@ class VideoPublicationService(RuoYiServiceMixin):
         task_ref_id: str,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoPublicationSnapshot | None:
         """按任务 ID 查询发布记录。
 
         Args:
             task_ref_id: 任务唯一标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于公开列表等非路由上下文。
         """
         endpoint = f"{self._ENDPOINT}/{task_ref_id}"
         try:
-            async with self._resolve_factory(access_context)() as client:
+            async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
                 result = await client.get_single(
                     endpoint,
                     resource=self._RESOURCE,
@@ -88,6 +93,7 @@ class VideoPublicationService(RuoYiServiceMixin):
         page: int = 1,
         page_size: int = 12,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoPublicationPage:
         """分页查询已发布记录列表。
 
@@ -95,8 +101,9 @@ class VideoPublicationService(RuoYiServiceMixin):
             page: 页码。
             page_size: 每页条数。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于公开列表等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             result = await client.get_page(
                 self._ENDPOINT,
                 resource=self._RESOURCE,
@@ -141,21 +148,23 @@ class VideoArtifactIndexService(RuoYiServiceMixin):
 
     def __init__(self, client_factory=None) -> None:
         """初始化服务。"""
-        self._client_factory = client_factory or RuoYiClient.from_settings
+        self._client_factory = client_factory or RuoYiClient.from_service_auth
 
     async def sync_artifact_batch(
         self,
         request: VideoSessionArtifactBatchCreateRequest,
         *,
         access_context: "AccessContext | None" = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoSessionArtifactBatchSnapshot:
         """批量同步产物索引到 RuoYi。
 
         Args:
             request: 产物索引批量创建请求。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
-        async with self._resolve_factory(access_context)() as client:
+        async with self._resolve_authenticated_factory(access_context, request_auth=request_auth)() as client:
             result = await client.post_single(
                 self._ENDPOINT,
                 resource=self._RESOURCE,
@@ -176,4 +185,3 @@ class VideoArtifactIndexService(RuoYiServiceMixin):
             return video_session_artifact_batch_from_ruoyi_data(payload)
         except (KeyError, TypeError, ValueError, ValidationError) as exc:
             raise self._invalid_response_error(operation=operation, endpoint=endpoint, reason=str(exc)) from exc
-

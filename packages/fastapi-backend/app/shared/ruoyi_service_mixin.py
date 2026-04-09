@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.core.errors import IntegrationError
+from app.core.errors import AppError, IntegrationError
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+    from app.shared.ruoyi_auth import RuoYiRequestAuth
     from app.shared.ruoyi_client import RuoYiClientFactory
 
 
@@ -31,26 +32,33 @@ class RuoYiServiceMixin:
     _client_factory: "RuoYiClientFactory"
 
     def _uses_default_factory(self) -> bool:
-        """判断当前 client factory 是否仍为默认 ``from_settings``。
+        """判断当前 client factory 是否仍为默认 ``from_service_auth``。
 
         这里不能使用 ``is`` 做对象身份比较，因为每次访问 classmethod
         都会生成新的 bound method 对象；使用 ``==`` 才能正确识别默认工厂。
         """
         from app.shared.ruoyi_client import RuoYiClient
 
-        return self._client_factory == RuoYiClient.from_settings
+        return self._client_factory == RuoYiClient.from_service_auth
 
-    def _resolve_factory(self, access_context: "AccessContext | None" = None) -> "RuoYiClientFactory":
+    def _resolve_factory(
+        self,
+        access_context: "AccessContext | None" = None,
+        *,
+        request_auth: "RuoYiRequestAuth | None" = None,
+    ) -> "RuoYiClientFactory":
         """选择 client factory：有用户上下文时用用户 token，否则用默认。
 
         优先级规则：
-        1. 如果 ``_client_factory`` 已被外部注入（非默认 ``from_settings``），
+        1. 如果 ``_client_factory`` 已被外部注入（非默认 ``from_service_auth``），
            始终使用注入的 factory（测试 mock 场景）。
-        2. 如果有 ``access_context``，使用用户 token 创建临时客户端。
-        3. 否则回退到默认 ``from_settings``。
+        2. 如果有显式 ``request_auth``，使用显式请求鉴权创建客户端。
+        3. 如果有 ``access_context``，使用用户 token 创建临时客户端。
+        4. 否则回退到默认 ``from_service_auth``。
 
         Args:
             access_context: 可选的已认证用户安全上下文。
+            request_auth: 可选的显式 RuoYi 请求鉴权信息。
 
         Returns:
             可直接调用以获取 ``RuoYiClient`` 实例的工厂函数。
@@ -59,7 +67,30 @@ class RuoYiServiceMixin:
 
         if not self._uses_default_factory():
             return self._client_factory
-        return build_client_factory(access_context)
+        return build_client_factory(access_context, request_auth=request_auth)
+
+    def _resolve_authenticated_factory(
+        self,
+        access_context: "AccessContext | None" = None,
+        *,
+        request_auth: "RuoYiRequestAuth | None" = None,
+    ) -> "RuoYiClientFactory":
+        """解析必须显式带鉴权上下文的 client factory。
+
+        业务路由和 worker 写回链路都应明确声明本次调用到底使用用户 token
+        还是服务级 token，而不是在缺少上下文时静默回退到默认服务鉴权。
+        只有测试注入了自定义 ``client_factory`` 时，才允许绕过该约束。
+        """
+        if not self._uses_default_factory():
+            return self._client_factory
+        if request_auth is None and access_context is None:
+            raise AppError(
+                code="RUOYI_REQUEST_AUTH_REQUIRED",
+                message="当前链路缺少显式 RuoYi 请求鉴权，禁止静默回退到默认服务 token",
+                status_code=500,
+                details={"resource": self._RESOURCE},
+            )
+        return self._resolve_factory(access_context, request_auth=request_auth)
 
     def _invalid_response_error(
         self,
