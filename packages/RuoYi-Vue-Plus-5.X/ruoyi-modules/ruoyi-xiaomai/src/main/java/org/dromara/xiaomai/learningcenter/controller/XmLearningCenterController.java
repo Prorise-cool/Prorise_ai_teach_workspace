@@ -4,6 +4,8 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
+import org.dromara.common.log.annotation.Log;
+import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
@@ -29,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @SaCheckLogin
 @RequestMapping("/xiaomai/learning-center")
-public class LearningCenterController extends BaseController {
+public class XmLearningCenterController extends BaseController {
 
     private final ILearningCenterService learningCenterService;
 
@@ -48,18 +50,21 @@ public class LearningCenterController extends BaseController {
         return learningCenterService.queryFavoritePage(bo, pageQuery);
     }
 
+    @Log(title = "学习收藏", businessType = BusinessType.INSERT)
     @PostMapping("/favorite")
     @RepeatSubmit()
     public R<Void> favorite(@Validated @RequestBody LearningCenterActionBo bo) {
         return toAjax(learningCenterService.favorite(bo));
     }
 
+    @Log(title = "学习收藏", businessType = BusinessType.DELETE)
     @PostMapping("/favorite/cancel")
     @RepeatSubmit()
     public R<Void> cancelFavorite(@Validated @RequestBody LearningCenterActionBo bo) {
         return toAjax(learningCenterService.cancelFavorite(bo));
     }
 
+    @Log(title = "学习记录", businessType = BusinessType.DELETE)
     @PostMapping("/history/remove")
     @RepeatSubmit()
     public R<Void> removeHistory(@Validated @RequestBody LearningCenterActionBo bo) {

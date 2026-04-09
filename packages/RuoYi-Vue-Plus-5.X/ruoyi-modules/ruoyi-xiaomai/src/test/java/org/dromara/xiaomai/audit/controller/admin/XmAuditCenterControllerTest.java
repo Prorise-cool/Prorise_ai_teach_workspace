@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 @Tag("dev")
 @Tag("local")
-public class AuditCenterControllerTest {
+public class XmAuditCenterControllerTest {
 
     @Test
     void shouldFreezePermissionsAndExportLogSemantics() throws NoSuchMethodException {
-        Method list = AuditCenterController.class.getMethod("list", AuditRecordBo.class, PageQuery.class);
-        Method detail = AuditCenterController.class.getMethod("detail", String.class, String.class, String.class);
-        Method export = AuditCenterController.class.getMethod(
+        Method list = XmAuditCenterController.class.getMethod("list", AuditRecordBo.class, PageQuery.class);
+        Method detail = XmAuditCenterController.class.getMethod("detail", String.class, String.class, String.class);
+        Method export = XmAuditCenterController.class.getMethod(
             "export",
             AuditRecordBo.class,
             jakarta.servlet.http.HttpServletResponse.class

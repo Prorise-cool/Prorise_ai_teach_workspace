@@ -97,6 +97,7 @@ public class XmUserWorkController extends BaseController {
      */
     @SaCheckPermission("xiaomai:userWork:remove")
     @Log(title = "用户作品（视频/课堂）—— 社区瀑布流与管理后台共用", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {

@@ -1,5 +1,6 @@
 package org.dromara.xiaomai.ai.provider.service.impl;
 
+import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -172,22 +173,7 @@ public class XmAiProviderServiceImpl implements IXmAiProviderService {
     }
 
     private XmAiProvider buildEntityFromBo(XmAiProviderBo bo) {
-        XmAiProvider entity = new XmAiProvider();
-        entity.setId(bo.getId());
-        entity.setProviderCode(bo.getProviderCode());
-        entity.setProviderName(bo.getProviderName());
-        entity.setVendorCode(bo.getVendorCode());
-        entity.setAuthType(bo.getAuthType());
-        entity.setEndpointUrl(bo.getEndpointUrl());
-        entity.setAppId(bo.getAppId());
-        entity.setApiKey(bo.getApiKey());
-        entity.setApiSecret(bo.getApiSecret());
-        entity.setAccessToken(bo.getAccessToken());
-        entity.setExtraAuthJson(bo.getExtraAuthJson());
-        entity.setStatus(bo.getStatus());
-        entity.setSortOrder(bo.getSortOrder());
-        entity.setRemark(bo.getRemark());
-        return entity;
+        return MapstructUtils.convert(bo, XmAiProvider.class);
     }
 
     private String maskSecret(String value) {
