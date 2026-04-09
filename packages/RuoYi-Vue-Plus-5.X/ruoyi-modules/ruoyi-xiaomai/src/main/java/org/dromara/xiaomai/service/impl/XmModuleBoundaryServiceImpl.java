@@ -1,5 +1,6 @@
 package org.dromara.xiaomai.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.PageQuery;
@@ -188,20 +189,7 @@ public class XmModuleBoundaryServiceImpl implements IXmModuleBoundaryService {
     }
 
     private XmModuleResourceVo copyResource(XmModuleResourceVo source) {
-        XmModuleResourceVo target = new XmModuleResourceVo();
-        target.setResourceKey(source.getResourceKey());
-        target.setDisplayName(source.getDisplayName());
-        target.setTableNames(source.getTableNames());
-        target.setPermissionPrefix(source.getPermissionPrefix());
-        target.setAdminPath(source.getAdminPath());
-        target.setAdminComponent(source.getAdminComponent());
-        target.setAccessMode(source.getAccessMode());
-        target.setImplementationMode(source.getImplementationMode());
-        target.setSupportedActions(source.getSupportedActions());
-        target.setExportEnabled(source.getExportEnabled());
-        target.setAuditLogged(source.getAuditLogged());
-        target.setNote(source.getNote());
-        return target;
+        return BeanUtil.toBean(source, XmModuleResourceVo.class);
     }
 
     private static XmModuleResourceVo buildResource(

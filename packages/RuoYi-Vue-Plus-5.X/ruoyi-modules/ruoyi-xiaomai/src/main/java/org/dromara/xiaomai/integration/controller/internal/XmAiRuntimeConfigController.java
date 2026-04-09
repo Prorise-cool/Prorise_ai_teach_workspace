@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.domain.R;
 import org.dromara.xiaomai.ai.runtime.domain.vo.XmAiRuntimeConfigVo;
 import org.dromara.xiaomai.ai.runtime.service.XmAiRuntimeConfigService;
-import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +31,7 @@ public class XmAiRuntimeConfigController {
     ) {
         XmAiRuntimeConfigVo data = xmAiRuntimeConfigService.queryModuleRuntime(moduleCode);
         return data == null
-            ? R.fail(HttpStatus.NOT_FOUND.value(), "AI runtime module not found")
+            ? R.fail("AI runtime module not found")
             : R.ok(data);
     }
 }

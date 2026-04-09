@@ -1,7 +1,6 @@
 package org.dromara.xiaomai.integration.controller.internal;
 
 import lombok.RequiredArgsConstructor;
-import org.dromara.common.core.constant.HttpStatus;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
@@ -39,7 +38,7 @@ public class XmPersistenceSyncController {
     @GetMapping("/companion/turns/{turnId}")
     public R<XmPersistenceSyncVo.CompanionTurnSyncVo> getCompanionTurn(@PathVariable String turnId) {
         XmPersistenceSyncVo.CompanionTurnSyncVo data = xmPersistenceSyncService.getCompanionTurn(turnId);
-        return data == null ? R.fail(HttpStatus.NOT_FOUND, "Companion turn not found") : R.ok(data);
+        return data == null ? R.fail("Companion turn not found") : R.ok(data);
     }
 
     @GetMapping("/companion/sessions/{sessionId}/replay")
@@ -55,7 +54,7 @@ public class XmPersistenceSyncController {
     @GetMapping("/knowledge/chat-logs/{chatLogId}")
     public R<XmPersistenceSyncVo.KnowledgeChatSyncVo> getKnowledgeChat(@PathVariable String chatLogId) {
         XmPersistenceSyncVo.KnowledgeChatSyncVo data = xmPersistenceSyncService.getKnowledgeChat(chatLogId);
-        return data == null ? R.fail(HttpStatus.NOT_FOUND, "Knowledge chat log not found") : R.ok(data);
+        return data == null ? R.fail("Knowledge chat log not found") : R.ok(data);
     }
 
     @PostMapping("/video/publications")
@@ -66,7 +65,7 @@ public class XmPersistenceSyncController {
     @GetMapping("/video/publications/{taskRefId}")
     public R<XmPersistenceSyncVo.VideoPublicationSyncVo> getVideoPublication(@PathVariable String taskRefId) {
         XmPersistenceSyncVo.VideoPublicationSyncVo data = xmPersistenceSyncService.getVideoPublication(taskRefId);
-        return data == null ? R.fail(HttpStatus.NOT_FOUND, "Video publication not found") : R.ok(data);
+        return data == null ? R.fail("Video publication not found") : R.ok(data);
     }
 
     @GetMapping("/video/publications")

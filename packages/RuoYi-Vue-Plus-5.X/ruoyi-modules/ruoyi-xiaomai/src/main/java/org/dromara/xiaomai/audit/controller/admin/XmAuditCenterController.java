@@ -33,7 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/xiaomai/audit-center")
-public class AuditCenterController extends BaseController {
+public class XmAuditCenterController extends BaseController {
 
     private final IAuditCenterService auditCenterService;
 

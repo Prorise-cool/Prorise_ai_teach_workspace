@@ -9,6 +9,8 @@ import org.dromara.common.core.validate.AddGroup;
 import org.dromara.common.core.validate.EditGroup;
 import org.dromara.common.core.validate.QueryGroup;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
+import org.dromara.common.log.annotation.Log;
+import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.web.core.BaseController;
@@ -39,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/classroom/session")
-public class ClassroomSessionController extends BaseController {
+public class XmClassroomSessionController extends BaseController {
 
     private final IClassroomSessionService classroomSessionService;
 
@@ -56,6 +58,7 @@ public class ClassroomSessionController extends BaseController {
     }
 
     @SaCheckPermission(XmPermissionConstants.CLASSROOM_SESSION_PREFIX + ":add")
+    @Log(title = "课堂会话", businessType = BusinessType.INSERT)
     @PostMapping
     @RepeatSubmit(interval = 2, timeUnit = TimeUnit.SECONDS, message = "{repeat.submit.message}")
     public R<Void> add(@RequestBody ClassroomSessionBo bo) {
@@ -64,6 +67,7 @@ public class ClassroomSessionController extends BaseController {
     }
 
     @SaCheckPermission(XmPermissionConstants.CLASSROOM_SESSION_PREFIX + ":edit")
+    @Log(title = "课堂会话", businessType = BusinessType.UPDATE)
     @PutMapping
     @RepeatSubmit
     public R<Void> edit(@Validated(EditGroup.class) @RequestBody ClassroomSessionBo bo) {
@@ -71,6 +75,8 @@ public class ClassroomSessionController extends BaseController {
     }
 
     @SaCheckPermission(XmPermissionConstants.CLASSROOM_SESSION_PREFIX + ":remove")
+    @Log(title = "课堂会话", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空") @PathVariable Long[] ids) {
         return toAjax(classroomSessionService.deleteWithValidByIds(Arrays.asList(ids), true));

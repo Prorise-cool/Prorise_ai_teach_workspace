@@ -97,6 +97,7 @@ public class XmAiModuleController extends BaseController {
      */
     @SaCheckPermission("xiaomai:aiModule:remove")
     @Log(title = "AI 配置模块主数据", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {
