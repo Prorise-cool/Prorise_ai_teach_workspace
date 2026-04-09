@@ -54,10 +54,10 @@ from app.features.video.pipeline.storyboard import StoryboardService
 from app.features.video.pipeline.tts import TTSService
 from app.features.video.pipeline.understanding import UnderstandingService
 from app.features.video.pipeline.upload import UploadService
-from app.features.video.runtime_auth import delete_video_runtime_auth, load_video_runtime_auth
 from app.features.video.service import VideoService
 from app.providers.factory import ProviderFactory, get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
+from app.shared.ruoyi_auth import RuoYiRequestAuth, load_ruoyi_service_auth
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import (
@@ -104,52 +104,46 @@ class VideoPipelineService:
     async def run(self, task: BaseTask) -> TaskResult:
         """执行完整的视频生成流水线。"""
         runtime = VideoRuntimeStateStore(self.runtime_store, task.context.task_id)
-        runtime_access_token, runtime_client_id = load_video_runtime_auth(
-            self.runtime_store,
-            task_id=task.context.task_id,
-        )
-        try:
-            provider_runtime = await self.provider_runtime_resolver.resolve_video_pipeline(
-                access_token=runtime_access_token,
-                client_id=runtime_client_id,
-            )
-        finally:
-            delete_video_runtime_auth(self.runtime_store, task_id=task.context.task_id)
-        understanding_service = UnderstandingService(
-            provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
-            self.failover_service,
-            runtime,
-        )
-        storyboard_service = StoryboardService(
-            provider_runtime.llm_for(VideoStage.STORYBOARD.value),
-            self.failover_service,
-            runtime,
-            self.settings,
-        )
-        manim_service = ManimGenerationService(
-            provider_runtime.llm_for(VideoStage.MANIM_GEN.value),
-            self.failover_service,
-            runtime,
-        )
-        rule_fixer = RuleBasedFixer()
-        llm_fixer = LLMBasedFixer(provider_runtime.llm_for(VideoStage.MANIM_FIX.value), self.failover_service)
-        tts_service = TTSService(
-            provider_runtime.tts_for(VideoStage.TTS.value),
-            self.failover_service,
-            runtime,
-            self.settings,
-        )
-        compose_service = ComposeService(self.settings, runtime)
-        upload_service = UploadService(self.asset_store, self.settings, runtime)
-        artifact_service = ArtifactWritebackService(self.asset_store)
-
-        source_payload = dict(task.context.metadata.get("sourcePayload", {}))
-        user_profile = dict(task.context.metadata.get("userProfile", {}))
+        service_request_auth = self._load_worker_request_auth(task_id=task.context.task_id)
         render_result: ExecutionResult | None = None
         tts_result: TTSResult | None = None
         compose_result: ComposeResult | None = None
-
         try:
+            provider_runtime = await self.provider_runtime_resolver.resolve_video_pipeline(
+                access_token=service_request_auth.access_token if service_request_auth is not None else None,
+                client_id=service_request_auth.client_id if service_request_auth is not None else None,
+            )
+            understanding_service = UnderstandingService(
+                provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
+                self.failover_service,
+                runtime,
+            )
+            storyboard_service = StoryboardService(
+                provider_runtime.llm_for(VideoStage.STORYBOARD.value),
+                self.failover_service,
+                runtime,
+                self.settings,
+            )
+            manim_service = ManimGenerationService(
+                provider_runtime.llm_for(VideoStage.MANIM_GEN.value),
+                self.failover_service,
+                runtime,
+            )
+            rule_fixer = RuleBasedFixer()
+            llm_fixer = LLMBasedFixer(provider_runtime.llm_for(VideoStage.MANIM_FIX.value), self.failover_service)
+            tts_service = TTSService(
+                provider_runtime.tts_for(VideoStage.TTS.value),
+                self.failover_service,
+                runtime,
+                self.settings,
+            )
+            compose_service = ComposeService(self.settings, runtime)
+            upload_service = UploadService(self.asset_store, self.settings, runtime)
+            artifact_service = ArtifactWritebackService(self.asset_store)
+
+            source_payload = dict(task.context.metadata.get("sourcePayload", {}))
+            user_profile = dict(task.context.metadata.get("userProfile", {}))
+
             understanding = await self._run_understanding(
                 task,
                 understanding_service,
@@ -192,6 +186,7 @@ class VideoPipelineService:
                 storyboard=storyboard,
                 tts_result=tts_result,
                 manim_code=manim_code,
+                request_auth=service_request_auth,
             )
             final_context = build_stage_context(
                 VideoStage.UPLOAD,
@@ -208,7 +203,12 @@ class VideoPipelineService:
             )
         except VideoPipelineError as exc:
             logger.warning("Video pipeline failed task_id=%s stage=%s", task.context.task_id, exc.stage.value)
-            return await self._handle_pipeline_failure(task.context, runtime, exc)
+            return await self._handle_pipeline_failure(
+                task.context,
+                runtime,
+                exc,
+                request_auth=service_request_auth,
+            )
         finally:
             cleanup_pipeline_temp_dirs(
                 render_result.output_path if render_result is not None else None,
@@ -216,6 +216,26 @@ class VideoPipelineService:
                 compose_result.video_path if compose_result is not None else None,
                 compose_result.cover_path if compose_result is not None else None,
             )
+
+    def _load_worker_request_auth(self, *, task_id: str) -> RuoYiRequestAuth | None:
+        """解析后台任务可用的服务级鉴权。
+
+        worker 链路不再把用户 token 固化到 Redis；若环境已配置服务级鉴权，
+        由任务运行时显式加载并透传给回源与写回链路。
+        """
+        auth_mode = getattr(self.settings, "ruoyi_service_auth_mode", None)
+        if auth_mode is None or str(auth_mode).lower() == "disabled":
+            return None
+
+        try:
+            return load_ruoyi_service_auth(self.settings)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "RuoYi service auth unavailable in video pipeline task_id=%s; background persistence may degrade",
+                task_id,
+                exc_info=True,
+            )
+            return None
 
     # ------------------------------------------------------------------
     # 阶段执行方法
@@ -538,6 +558,7 @@ class VideoPipelineService:
         storyboard: Storyboard,
         tts_result: TTSResult,
         manim_code: ManimCodeResult,
+        request_auth: RuoYiRequestAuth | None = None,
     ) -> None:
         """写入产物图谱并执行一次性元数据写回。"""
         try:
@@ -558,7 +579,11 @@ class VideoPipelineService:
                 )
                 runtime.save_value("artifact_ref", artifact_ref)
                 try:
-                    await self.metadata_service.sync_artifact_graph(graph, artifact_ref=artifact_ref)
+                    await self.metadata_service.sync_artifact_graph(
+                        graph,
+                        artifact_ref=artifact_ref,
+                        request_auth=request_auth,
+                    )
                 except Exception:  # noqa: BLE001
                     artifact_writeback_failed = True
                     logger.warning(
@@ -590,7 +615,10 @@ class VideoPipelineService:
 
             long_term_failed = False
             try:
-                await self.metadata_service.persist_task(metadata_request)
+                await self.metadata_service.persist_task(
+                    metadata_request,
+                    request_auth=request_auth,
+                )
             except Exception:  # noqa: BLE001
                 long_term_failed = True
                 logger.warning("Persist completed video metadata degraded task_id=%s", context.task_id, exc_info=True)
@@ -618,6 +646,8 @@ class VideoPipelineService:
         context: TaskContext,
         runtime: VideoRuntimeStateStore,
         exc: VideoPipelineError,
+        *,
+        request_auth: RuoYiRequestAuth | None = None,
     ) -> TaskResult:
         """处理流水线阶段性失败。"""
         failed_at = format_trace_timestamp()
@@ -656,7 +686,10 @@ class VideoPipelineService:
             updated_at=utc_now(),
         )
         try:
-            await self.metadata_service.persist_task(metadata_request)
+            await self.metadata_service.persist_task(
+                metadata_request,
+                request_auth=request_auth,
+            )
         except Exception:  # noqa: BLE001
             logger.warning("Persist failed video metadata degraded task_id=%s", context.task_id, exc_info=True)
 

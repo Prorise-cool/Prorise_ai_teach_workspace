@@ -60,7 +60,8 @@ packages/fastapi-backend/
 ```bash
 cd /path/to/Prorise_ai_teach_workspace
 pnpm setup:fastapi-backend
-cp packages/fastapi-backend/.env.example packages/fastapi-backend/.env
+cp packages/fastapi-backend/.env.example packages/fastapi-backend/.env.defaults
+cp packages/fastapi-backend/.env.local.example packages/fastapi-backend/.env.local
 pnpm dev:fastapi-backend
 ```
 
@@ -100,14 +101,45 @@ pnpm test:fastapi-backend:unit
 ## 环境变量
 
 - `FASTAPI_APP_NAME`：应用名称
-- `FASTAPI_ENV`：运行环境，默认 `development`
+- `FASTAPI_ENV`：运行环境，支持 `development / staging / production / test`
 - `FASTAPI_HOST`：监听地址，默认 `0.0.0.0`
 - `FASTAPI_PORT`：监听端口，默认 `8090`
 - `FASTAPI_RELOAD`：是否开启热更新，默认 `true`
 - `FASTAPI_API_V1_PREFIX`：统一 API 前缀
 - `FASTAPI_REDIS_URL`：运行时状态缓存地址
 - `FASTAPI_RUOYI_BASE_URL`：RuoYi 防腐层基地址
+- `FASTAPI_RUOYI_SERVICE_AUTH_MODE`：服务级回源鉴权模式，当前支持 `disabled / token_file`
+- `FASTAPI_RUOYI_SERVICE_TOKEN_FILE`：服务级 token 文件路径，仅在 `token_file` 模式下生效
+- `FASTAPI_RUOYI_SERVICE_CLIENT_ID`：服务级 `Clientid` 请求头
 - `FASTAPI_COS_BASE_URL`：对象存储占位基地址
+
+FastAPI 会按以下顺序加载配置文件，越靠后优先级越高：
+
+1. `.env.defaults`
+2. `.env`（仅兼容历史方案，不推荐继续使用）
+3. `.env.<FASTAPI_ENV>`
+4. 开发与测试环境额外加载 `.env.<FASTAPI_ENV>.local`
+5. 开发与测试环境额外加载 `.env.local`
+6. `FASTAPI_ENV_FILE` 指向的额外文件（仅兼容历史方案）
+
+约束：
+
+- `.env` 与 `FASTAPI_ENV_FILE` 仍保留临时兼容读取能力，但新配置不得继续依赖这两个入口。
+- 部署环境必须通过进程环境变量显式设置 `FASTAPI_ENV=staging|production`。
+- 需要匿名回源的场景必须显式配置服务级鉴权，不允许业务代码默认偷用全局 token。
+- 本地调试若必须使用临时 token，请写入未入库的 token 文件，例如 `packages/fastapi-backend/.secrets/ruoyi-service.token`。
+- 服务级 token 文件支持纯 JWT 字符串、`{"access_token":"...", "client_id":"..."}` 形式的 JSON 对象，或完整的 RuoYi 登录响应信封。
+
+## 迁移旧配置
+
+如本地仍残留旧版 `FASTAPI_RUOYI_ACCESS_TOKEN` / `FASTAPI_RUOYI_CLIENT_ID`，可使用迁移脚本改写为服务级 token 文件：
+
+```bash
+cd /path/to/Prorise_ai_teach_workspace
+packages/fastapi-backend/.venv/bin/python \
+  packages/fastapi-backend/scripts/migrate_legacy_ruoyi_env.py \
+  --env-file packages/fastapi-backend/.env.local
+```
 
 ## 维护说明
 

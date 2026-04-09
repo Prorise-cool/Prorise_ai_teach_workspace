@@ -3,6 +3,7 @@ import base64
 import json
 from collections.abc import Callable
 from datetime import datetime
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -89,6 +90,25 @@ def test_ruoyi_client_unwraps_single_response_and_applies_mapper() -> None:
     }
 
     _run(client.aclose())
+
+
+def test_ruoyi_client_from_settings_does_not_inject_implicit_authorization(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.shared.ruoyi_client.get_settings",
+        lambda: SimpleNamespace(
+            ruoyi_base_url="http://ruoyi.local",
+            ruoyi_timeout_seconds=0.01,
+            ruoyi_retry_attempts=0,
+            ruoyi_retry_delay_seconds=0.0,
+        ),
+    )
+
+    client = RuoYiClient.from_settings()
+    try:
+        assert client._client.headers.get("Authorization") is None
+        assert client._client.headers.get("Clientid") is None
+    finally:
+        _run(client.aclose())
 
 
 def test_ruoyi_client_infers_clientid_header_from_access_token() -> None:

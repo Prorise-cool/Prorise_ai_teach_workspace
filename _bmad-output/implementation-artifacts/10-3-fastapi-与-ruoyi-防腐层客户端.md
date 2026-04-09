@@ -111,7 +111,12 @@ GPT-5 Codex
 - 已实现统一 `RuoYiClient`，支持单条与分页响应解包、请求头传播、超时与重试、错误映射。
 - 已实现 `RuoYiMapper`，用于字段名、状态值与日期格式的双向归一。
 - 已补充单元与集成测试，覆盖成功、分页、字段漂移、权限不足、资源不存在、网络异常与超时重试。
-- 已将 RuoYi 集成配置纳入 FastAPI settings，并同步 `.env.example`。
+- 2026-04-08 补记：已将 RuoYi 回源默认工厂切换为显式 `from_service_auth`，不再允许业务 service 静默回退到无鉴权 `from_settings`。
+- 2026-04-08 补记：已补齐 FastAPI 的环境分层加载规则，区分共享基础配置、本地覆盖、预发覆盖与生产覆盖，并同步 `.env.example` / `.env.local.example` / `.env.staging.example` / `.env.production.example`。
+- 2026-04-08 补记：已新增服务级 token file 规范文档，明确禁止继续把 RuoYi `access_token` 直接写入通用 `.env`。
+- 2026-04-08 补记：当前仍保留旧 `.env` 与 `FASTAPI_ENV_FILE` 的兼容读取能力，但推荐入口已切换为 `.env.defaults`、`.env.<env>`、`.env.<env>.local`、`.env.local`；同时新增 `packages/fastapi-backend/scripts/migrate_legacy_ruoyi_env.py` 用于清理历史 `FASTAPI_RUOYI_ACCESS_TOKEN` / `FASTAPI_RUOYI_CLIENT_ID`。
+- 2026-04-08 补记：服务级 token file 当前兼容三种格式：纯 JWT 字符串、`{"access_token":"...", "client_id":"..."}` JSON 对象，以及完整的 RuoYi 登录响应 envelope。
+- 2026-04-08 补记：视频 worker 已停止把用户 token 写入 Redis 运行态；后台异步写回、公开列表回源与 provider runtime 查询统一转向显式服务级鉴权。
 
 ### File List
 
@@ -119,8 +124,22 @@ GPT-5 Codex
 - `packages/fastapi-backend/app/core/config.py`
 - `packages/fastapi-backend/app/core/errors.py`
 - `packages/fastapi-backend/app/shared/ruoyi_client.py`
+- `packages/fastapi-backend/app/shared/ruoyi_auth.py`
 - `packages/fastapi-backend/app/shared/ruoyi_mapper.py`
 - `packages/fastapi-backend/.env.example`
+- `packages/fastapi-backend/.env.local.example`
+- `packages/fastapi-backend/.env.staging.example`
+- `packages/fastapi-backend/.env.production.example`
+- `packages/fastapi-backend/scripts/migrate_legacy_ruoyi_env.py`
+- `packages/fastapi-backend/app/features/video/pipeline/orchestrator.py`
+- `packages/fastapi-backend/app/features/video/services/create_task.py`
 - `packages/fastapi-backend/tests/unit/test_ruoyi_client.py`
 - `packages/fastapi-backend/tests/unit/test_ruoyi_mapper.py`
 - `packages/fastapi-backend/tests/integration/test_ruoyi_client_integration.py`
+- `packages/fastapi-backend/tests/unit/core/test_config.py`
+- `packages/fastapi-backend/tests/unit/shared/test_ruoyi_auth.py`
+- `packages/fastapi-backend/tests/unit/shared/test_ruoyi_service_mixin.py`
+- `packages/fastapi-backend/tests/unit/video/test_video_create_task.py`
+- `packages/fastapi-backend/tests/unit/video/test_video_ruoyi_auth_paths.py`
+- `packages/fastapi-backend/tests/integration/video/test_video_pipeline_api.py`
+- `docs/01开发人员手册/004-开发规范/0110-FastAPI-RuoYi-环境与鉴权分层规范.md`

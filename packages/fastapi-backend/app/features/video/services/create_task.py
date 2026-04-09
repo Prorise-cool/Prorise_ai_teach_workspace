@@ -12,7 +12,6 @@ from app.features.video.create_task_models import (
     CreateVideoTaskRequest,
     IdempotentConflictPayload,
 )
-from app.features.video.runtime_auth import delete_video_runtime_auth, save_video_runtime_auth
 from app.features.video.schemas import VideoTaskMetadataCreateRequest
 from app.features.video.service import VideoService
 from app.infra.redis_client import RuntimeStore
@@ -219,7 +218,10 @@ async def persist_video_task_metadata(
     )
 
     try:
-        await metadata_service.persist_task(metadata_request)
+        await metadata_service.persist_task(
+            metadata_request,
+            access_context=access_context,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Persist video task metadata degraded task_id=%s", task_id, exc_info=exc)
 
@@ -269,11 +271,6 @@ async def create_video_task(
         source_payload=source_payload,
         voice_preference=voice_preference,
     )
-    save_video_runtime_auth(
-        runtime_store,
-        task_id=task_id,
-        access_context=access_context,
-    )
     await persist_video_task_metadata(
         metadata_service,
         task_id=task_id,
@@ -308,7 +305,6 @@ async def create_video_task(
             created_at=created_at,
             request_id=access_context.request_id,
         )
-        delete_video_runtime_auth(runtime_store, task_id=task_id)
         runtime_store.delete_runtime_value(idempotency_key)
         raise AppError(
             code=TaskErrorCode.VIDEO_DISPATCH_FAILED.value,

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from app.core.errors import AppError, IntegrationError
 from app.core.logging import get_logger
@@ -33,11 +34,15 @@ from app.features.video.pipeline.models import (
 from app.features.video.pipeline.runtime import build_video_runtime_key
 from app.features.video.schemas import VideoBootstrapResponse, VideoTaskMetadataCreateRequest
 from app.infra.redis_client import RuntimeStore
+from app.shared.ruoyi_auth import load_ruoyi_service_auth
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import TaskMetadataSnapshot, TaskType
 from app.shared.task_metadata_service import BaseTaskMetadataService
 
 logger = get_logger("app.features.video.service")
+
+if TYPE_CHECKING:
+    from app.shared.ruoyi_auth import RuoYiRequestAuth
 
 
 class VideoService(BaseTaskMetadataService):
@@ -313,15 +318,23 @@ class VideoService(BaseTaskMetadataService):
                 cards = [PublishedVideoCard.model_validate(item) for item in cached]
                 return self._paginate_cards(cards, page=page, page_size=page_size)
 
+        service_request_auth = load_ruoyi_service_auth()
         cards: list[PublishedVideoCard] = []
         page_num = 1
         page_size_scan = 100
         total_seen = 0
         while True:
-            publication_page = await self._publication_service.list_publications(page=page_num, page_size=page_size_scan)
+            publication_page = await self._publication_service.list_publications(
+                page=page_num,
+                page_size=page_size_scan,
+                request_auth=service_request_auth,
+            )
             total_seen += len(publication_page.rows)
             snapshots = await asyncio.gather(
-                *(self.get_task(item.task_ref_id) for item in publication_page.rows)
+                *(
+                    self.get_task(item.task_ref_id, request_auth=service_request_auth)
+                    for item in publication_page.rows
+                )
             )
             for publication, snapshot in zip(publication_page.rows, snapshots, strict=False):
                 if snapshot is None or snapshot.detail_ref is None:
@@ -355,6 +368,7 @@ class VideoService(BaseTaskMetadataService):
         *,
         artifact_ref: str,
         access_context: AccessContext | None = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ):
         """将视频产物图谱同步到远端产物索引服务。
 
@@ -362,6 +376,7 @@ class VideoService(BaseTaskMetadataService):
             graph: 视频产物图谱。
             artifact_ref: 产物引用标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于 worker 等非路由上下文。
         """
         return await self._artifact_index_service.sync_artifact_batch(
             build_session_artifact_batch_request(
@@ -369,6 +384,8 @@ class VideoService(BaseTaskMetadataService):
                 object_key=self._asset_store.ref_to_key(artifact_ref),
                 payload_ref=artifact_ref,
             ),
+            access_context=access_context,
+            request_auth=request_auth,
         )
 
     def _write_detail_state(
