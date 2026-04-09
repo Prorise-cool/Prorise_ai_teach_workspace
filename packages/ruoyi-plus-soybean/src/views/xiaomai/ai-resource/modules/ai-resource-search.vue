@@ -44,7 +44,12 @@ async function search() {
               <NInputNumber v-model:value="model.providerId" placeholder="请输入 Provider 主键" class="w-full" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="能力类型" label-width="auto" path="capability" class="pr-24px">
-              <DictSelect v-model:value="model.capability" placeholder="请选择能力类型" dict-code="xm_ai_capability" clearable />
+              <DictSelect
+                v-model:value="model.capability"
+                placeholder="请选择能力类型"
+                dict-code="xm_ai_capability"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="资源编码" label-width="auto" path="resourceCode" class="pr-24px">
               <NInput v-model:value="model.resourceCode" placeholder="请输入资源编码" />
@@ -60,7 +65,13 @@ async function search() {
                 clearable
               />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="运行时 Provider ID" label-width="auto" path="runtimeProviderId" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="运行时 Provider ID"
+              label-width="auto"
+              path="runtimeProviderId"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.runtimeProviderId" placeholder="请输入运行时 Provider ID" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="模型名称" label-width="auto" path="modelName" class="pr-24px">
@@ -73,7 +84,12 @@ async function search() {
               <NInput v-model:value="model.languageCode" placeholder="请输入语言编码" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect v-model:value="model.status" placeholder="请选择状态" dict-code="sys_normal_disable" clearable />
+              <DictSelect
+                v-model:value="model.status"
+                placeholder="请选择状态"
+                dict-code="sys_normal_disable"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="排序号" label-width="auto" path="sortOrder" class="pr-24px">
               <NInputNumber v-model:value="model.sortOrder" placeholder="请输入排序号" class="w-full" />

@@ -47,7 +47,12 @@ async function search() {
               <NInput v-model:value="model.stageCode" placeholder="请输入阶段编码" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="能力类型" label-width="auto" path="capability" class="pr-24px">
-              <DictSelect v-model:value="model.capability" placeholder="请选择能力类型" dict-code="xm_ai_capability" clearable />
+              <DictSelect
+                v-model:value="model.capability"
+                placeholder="请选择能力类型"
+                dict-code="xm_ai_capability"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="角色编码" label-width="auto" path="roleCode" class="pr-24px">
               <NInput v-model:value="model.roleCode" placeholder="请输入角色编码" />
@@ -64,10 +69,20 @@ async function search() {
               />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect v-model:value="model.status" placeholder="请选择状态" dict-code="sys_normal_disable" clearable />
+              <DictSelect
+                v-model:value="model.status"
+                placeholder="请选择状态"
+                dict-code="sys_normal_disable"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="默认链路" label-width="auto" path="isDefault" class="pr-24px">
-              <DictSelect v-model:value="model.isDefault" placeholder="请选择默认链路" dict-code="sys_yes_no" clearable />
+              <DictSelect
+                v-model:value="model.isDefault"
+                placeholder="请选择默认链路"
+                dict-code="sys_yes_no"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi :show-feedback="false" span="24" class="pr-24px">
               <NSpace class="w-full" justify="end">

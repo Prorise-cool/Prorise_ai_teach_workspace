@@ -63,8 +63,18 @@ async function search() {
             <NFormItemGi span="24 s:12 m:6" label="任务ID" label-width="auto" path="taskId" class="pr-24px">
               <NInput v-model:value="model.taskId" placeholder="请输入任务ID" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="用户ID（关联 sys_user.user_id）" label-width="auto" path="userId" class="pr-24px">
-              <NInputNumber v-model:value="model.userId" placeholder="请输入用户ID（关联 sys_user.user_id）" class="w-full" />
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="用户ID（关联 sys_user.user_id）"
+              label-width="auto"
+              path="userId"
+              class="pr-24px"
+            >
+              <NInputNumber
+                v-model:value="model.userId"
+                placeholder="请输入用户ID（关联 sys_user.user_id）"
+                class="w-full"
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="任务类型" label-width="auto" path="taskType" class="pr-24px">
               <NInput v-model:value="model.taskType" placeholder="请输入任务类型" />
@@ -89,10 +99,22 @@ async function search() {
             <NFormItemGi span="24 s:12 m:6" label="失败摘要" label-width="auto" path="errorSummary" class="pr-24px">
               <NInput v-model:value="model.errorSummary" placeholder="请输入失败摘要" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="来源会话ID" label-width="auto" path="sourceSessionId" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="来源会话ID"
+              label-width="auto"
+              path="sourceSessionId"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.sourceSessionId" placeholder="请输入来源会话ID" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="来源产物引用" label-width="auto" path="sourceArtifactRef" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="来源产物引用"
+              label-width="auto"
+              path="sourceArtifactRef"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.sourceArtifactRef" placeholder="请输入来源产物引用" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="回看定位提示" label-width="auto" path="replayHint" class="pr-24px">

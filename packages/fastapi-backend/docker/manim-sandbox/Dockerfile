@@ -20,13 +20,16 @@ RUN rm -f /etc/apt/sources.list.d/yarn.list && \
     texlive \
     texlive-latex-extra \
     texlive-fonts-recommended \
+    texlive-lang-chinese \
+    texlive-xetex \
+    texlive-luatex \
     texlive-science \
     dvisvgm \
     ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip setuptools wheel && \
-    python -m pip install manim==0.18.1
+    python -m pip install manim==0.19.0
 
 # 运行时由沙箱执行器挂载脚本与输出目录，镜像本身不内置任何业务代码或敏感配置。
 ENTRYPOINT ["python"]

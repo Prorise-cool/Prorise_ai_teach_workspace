@@ -4,6 +4,30 @@ import {
   resolveTaskEventStream
 } from '@/services/sse';
 
+function createStreamingSseResponse(chunks: Array<string | Promise<string>>) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(await chunk));
+      }
+
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream'
+    }
+  });
+}
+
+function toSseChunk(lines: string[]) {
+  return `${lines.join('\n')}\n\n`;
+}
+
 describe('task event stream', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -87,7 +111,6 @@ describe('task event stream', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         [
-          'id: task_real_001:evt:000001',
           'event: connected',
           'data: {"taskId":"task_real_001","taskType":"video","status":"pending","progress":0,"message":"connected","timestamp":"2026-03-30T13:05:00Z","requestId":"req_real","errorCode":null}',
           '',
@@ -137,11 +160,87 @@ describe('task event stream', () => {
       }
     });
     expect(events.map(event => event.event)).toEqual(['connected', 'failed']);
+    expect(events.at(0)?.id).toContain('transient:task_real_001:connected:');
     expect(events.at(-1)?.id).toBe('task_real_001:evt:000003');
     expect(warnSpy).toHaveBeenCalledWith(
       '[task-sse] Ignoring unknown task SSE event type',
       expect.any(Object)
     );
+  });
+
+  it('yields SSE events incrementally before the response stream closes', async () => {
+    let releaseRemainingChunk!: (chunk: string) => void;
+    const remainingChunk = new Promise<string>((resolve) => {
+      releaseRemainingChunk = (chunk: string) => resolve(chunk);
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      createStreamingSseResponse([
+        toSseChunk([
+          'event: connected',
+          'data: {"taskId":"task_real_streaming","taskType":"video","status":"pending","progress":0,"message":"connected","timestamp":"2026-03-30T13:05:00Z","requestId":"req_real_streaming","errorCode":null}',
+          ''
+        ]),
+        remainingChunk
+      ])
+    );
+
+    const iterator = createRealTaskEventStream()
+      .streamTaskEvents('task_real_streaming')[Symbol.asyncIterator]();
+
+    const firstResult = await iterator.next();
+
+    expect(firstResult.done).toBe(false);
+    if (firstResult.done) {
+      return;
+    }
+
+    expect(firstResult.value).toMatchObject({
+      event: 'connected',
+      taskId: 'task_real_streaming'
+    });
+    expect(firstResult.value.id).toContain('transient:task_real_streaming:connected:');
+
+    releaseRemainingChunk(
+      [
+        toSseChunk([
+          'id: task_real_streaming:evt:000001',
+          'event: progress',
+          'data: {"taskId":"task_real_streaming","taskType":"video","status":"processing","progress":35,"message":"working","timestamp":"2026-03-30T13:05:05Z","requestId":"req_real_streaming","errorCode":null,"currentStage":"render","stageLabel":"video.stages.render","stageProgress":35}',
+          ''
+        ]),
+        toSseChunk([
+          'id: task_real_streaming:evt:000002',
+          'event: completed',
+          'data: {"taskId":"task_real_streaming","taskType":"video","status":"completed","progress":100,"message":"done","timestamp":"2026-03-30T13:05:08Z","requestId":"req_real_streaming","errorCode":null}',
+          ''
+        ])
+      ].join('')
+    );
+
+    const secondResult = await iterator.next();
+    expect(secondResult.done).toBe(false);
+    if (secondResult.done) {
+      return;
+    }
+    expect(secondResult.value).toMatchObject({
+      event: 'progress',
+      currentStage: 'render',
+      stageLabel: 'video.stages.render',
+      stageProgress: 35
+    });
+
+    const thirdResult = await iterator.next();
+    expect(thirdResult.done).toBe(false);
+    if (thirdResult.done) {
+      return;
+    }
+    expect(thirdResult.value).toMatchObject({
+      event: 'completed',
+      id: 'task_real_streaming:evt:000002'
+    });
+
+    await expect(iterator.next()).resolves.toMatchObject({ done: true });
   });
 
   it('reconnects SSE with the latest event id after a transient disconnect', async () => {
@@ -150,7 +249,6 @@ describe('task event stream', () => {
       .mockResolvedValueOnce(
         new Response(
           [
-            'id: task_real_retry:evt:000001',
             'event: connected',
             'data: {"taskId":"task_real_retry","taskType":"video","status":"pending","progress":0,"message":"connected","timestamp":"2026-03-30T13:05:00Z","requestId":"req_real_retry","errorCode":null}',
             '',

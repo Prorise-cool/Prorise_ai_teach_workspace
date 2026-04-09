@@ -13,6 +13,8 @@ from pathlib import Path
 
 from app.features.video.pipeline.constants import (
     DEFAULT_MANIM_SCENE_CLASS,
+    MANIM_QUALITY_DEFAULT,
+    MANIM_QUALITY_MAP,
     SANDBOX_ENV_VARS,
     SANDBOX_INFRASTRUCTURE_ERROR_MARKERS,
     SANDBOX_OUTPUT_DIR,
@@ -169,10 +171,12 @@ class DockerSandboxExecutor(SandboxExecutor):
         *,
         docker_image: str = "manim-sandbox:latest",
         allow_local_fallback: bool = False,
+        render_quality: str = "m",
     ) -> None:
         """初始化沙箱执行器。"""
         self.docker_image = docker_image
         self.allow_local_fallback = allow_local_fallback
+        self.render_quality = render_quality
         self._fallback_executor = LocalSandboxExecutor()
 
     async def execute(
@@ -198,7 +202,7 @@ class DockerSandboxExecutor(SandboxExecutor):
         output_dir = temp_dir / SANDBOX_OUTPUT_DIR
         output_dir.mkdir(parents=True, exist_ok=True)
         script_path.write_text(script, encoding="utf-8")
-        runner_path.write_text(_build_manim_runner_script(), encoding="utf-8")
+        runner_path.write_text(_build_manim_runner_script(self.render_quality), encoding="utf-8")
         scene_class_name = _detect_scene_class_name(script) or DEFAULT_MANIM_SCENE_CLASS
         docker_command = [
             "docker",
@@ -338,14 +342,29 @@ def _docker_env_args() -> list[str]:
 
 def _detect_scene_class_name(script: str) -> str | None:
     tree = ast.parse(script)
+    candidates: list[tuple[str, bool]] = []
     for node in tree.body:
         if not isinstance(node, ast.ClassDef):
             continue
+        has_scene_base = False
         for base in node.bases:
             base_name = _read_base_name(base)
             if base_name is not None and base_name.endswith("Scene"):
-                return node.name
-    return None
+                has_scene_base = True
+                break
+        if not has_scene_base:
+            continue
+        has_construct = any(
+            isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef) and child.name == "construct"
+            for child in node.body
+        )
+        candidates.append((node.name, has_construct))
+
+    for class_name, has_construct in reversed(candidates):
+        if has_construct:
+            return class_name
+
+    return candidates[-1][0] if candidates else None
 
 
 def _read_base_name(node: ast.expr) -> str | None:
@@ -356,7 +375,8 @@ def _read_base_name(node: ast.expr) -> str | None:
     return None
 
 
-def _build_manim_runner_script() -> str:
+def _build_manim_runner_script(quality: str = "m") -> str:
+    quality_flag = MANIM_QUALITY_MAP.get(quality, MANIM_QUALITY_DEFAULT)
     return """from __future__ import annotations
 
 import shutil
@@ -376,7 +396,7 @@ def main() -> int:
 
     command = [
         "manim",
-        "-ql",
+        "{quality_flag}",
         "--disable_caching",
         "--media_dir",
         str(MEDIA_DIR),
@@ -409,6 +429,7 @@ if __name__ == "__main__":
 """.format(
         default_scene_class=DEFAULT_MANIM_SCENE_CLASS,
         output_dir=SANDBOX_OUTPUT_DIR,
+        quality_flag=quality_flag,
         rendered_file=SANDBOX_RENDERED_FILE,
         scene_script=SANDBOX_SCENE_SCRIPT,
         workspace_mount=SANDBOX_WORKSPACE_MOUNT,

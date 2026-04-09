@@ -9,6 +9,7 @@ from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
     ScriptSecurityViolation,
+    _detect_scene_class_name,
     resolve_local_fallback_policy,
     scan_script_safety,
 )
@@ -161,12 +162,14 @@ def test_video_pipeline_service_wires_local_fallback_policy_from_settings(tmp_pa
             default_llm_provider="stub-llm",
             default_tts_provider="stub-tts",
             video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
         ),
         asset_store=asset_store,
     )
 
     assert isinstance(service.sandbox_executor, DockerSandboxExecutor)
     assert service.sandbox_executor.allow_local_fallback is True
+    assert service.sandbox_executor.render_quality == "l"
 
 
 def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> None:
@@ -191,7 +194,10 @@ def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> N
             task_id="video_docker_success_case",
             script=(
                 "from manim import *\n\n"
-                "class DemoScene(Scene):\n"
+                "class FlexibleElementsScene(MovingCameraScene):\n"
+                "    def helper(self):\n"
+                "        return None\n\n"
+                "class DemoScene(FlexibleElementsScene):\n"
                 "    def construct(self):\n"
                 "        self.wait(1)\n"
             ),
@@ -202,6 +208,20 @@ def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> N
     assert result.success is True
     assert result.output_path is not None
     assert Path(result.output_path).read_bytes() == b"REAL_MP4_DATA"
+
+
+def test_detect_scene_class_name_prefers_concrete_scene_with_construct() -> None:
+    script = (
+        "from manim import *\n\n"
+        "class FlexibleElementsScene(MovingCameraScene):\n"
+        "    def helper(self):\n"
+        "        return None\n\n"
+        "class DemoScene(FlexibleElementsScene):\n"
+        "    def construct(self):\n"
+        "        self.wait(1)\n"
+    )
+
+    assert _detect_scene_class_name(script) == "DemoScene"
 
 
 def test_cleanup_pipeline_temp_dirs_removes_known_temp_roots(tmp_path) -> None:

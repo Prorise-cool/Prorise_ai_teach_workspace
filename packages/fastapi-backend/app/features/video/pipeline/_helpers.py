@@ -21,6 +21,7 @@ FAKE_RENDER_BYTES = b"FAKE_MP4_DATA"
 SUBTITLE_MAX_CHARS_PER_LINE = 20
 SUBTITLE_FONT_NAME = "Source Han Sans CN"
 SUBTITLE_FONT_SIZE = 24
+SENTENCE_PUNCTUATION = "。！？!?；;，,、：:"
 
 
 def utc_now() -> datetime:
@@ -221,6 +222,34 @@ def split_sentences(text: str) -> list[str]:
     """按中文/英文句号等拆分句子。"""
     chunks = re.split(r"[。！？\n]+", text)
     return [chunk.strip() for chunk in chunks if chunk.strip()]
+
+
+def estimate_narration_duration_seconds(
+    text: str,
+    *,
+    chars_per_second: float,
+    sentence_pause_seconds: float,
+    min_seconds: int,
+    max_seconds: int,
+) -> int:
+    """根据旁白文本粗略估算场景时长。
+
+    该估算仅用于 storyboard 阶段补齐初始时长，真实字幕与合成仍以
+    TTS 产物探测结果为准。
+    """
+    normalized = re.sub(r"\s+", "", text or "").strip()
+    if not normalized:
+        return max(min_seconds, 1)
+
+    safe_chars_per_second = max(chars_per_second, 0.1)
+    punctuation_count = sum(normalized.count(char) for char in SENTENCE_PUNCTUATION)
+    estimated_seconds = (len(normalized) / safe_chars_per_second) + (
+        punctuation_count * max(sentence_pause_seconds, 0.0)
+    )
+    bounded = max(round_duration_seconds(estimated_seconds), max(min_seconds, 1))
+    if max_seconds > 0:
+        return min(bounded, max_seconds)
+    return bounded
 
 
 def is_pipeline_temp_dir(path: Path) -> bool:

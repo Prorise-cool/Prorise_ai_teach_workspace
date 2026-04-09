@@ -142,6 +142,7 @@ class ComposeService:
                 "yuv420p",
                 "-c:a",
                 "aac",
+                "-shortest",
                 "-movflags",
                 "+faststart",
                 output_path,
@@ -178,7 +179,7 @@ class ComposeService:
         for index, scene in enumerate(storyboard.scenes):
             duration = scene_durations[index] if index < len(scene_durations) else float(scene.duration_hint)
             duration = max(duration, 0.1)
-            scene_text = re.sub(r"\s+", " ", scene.narration).strip() or scene.title.strip() or f"场景 {index + 1}"
+            scene_text = re.sub(r"\s+", " ", scene.voice_text or scene.narration).strip() or scene.title.strip() or f"场景 {index + 1}"
             segments = split_subtitle_text(scene_text, max_chars_per_line=max_chars_per_line) or [scene_text]
             segment_duration = duration / max(len(segments), 1)
             segment_start = current_start
@@ -321,6 +322,22 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             source_video_duration = probe_media_duration_seconds(source_video_path) or max(render_result.duration_seconds, 0.0)
             output_duration_seconds = max(merged_audio_duration, source_video_duration, 1.0)
             extend_seconds = max(merged_audio_duration - source_video_duration, 0.0)
+            max_allowed_pad_seconds = min(
+                float(self.settings.video_compose_max_pad_seconds),
+                max(merged_audio_duration * float(self.settings.video_compose_max_pad_ratio), 1.0),
+            )
+            if extend_seconds > max_allowed_pad_seconds + 0.01:
+                raise VideoPipelineError(
+                    stage=VideoStage.COMPOSE,
+                    error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
+                    message=(
+                        "render/audio duration gap too large: "
+                        f"render={source_video_duration:.2f}s "
+                        f"audio={merged_audio_duration:.2f}s "
+                        f"pad={extend_seconds:.2f}s "
+                        f"limit={max_allowed_pad_seconds:.2f}s"
+                    ),
+                )
             compose_command = self.build_compose_command(
                 str(source_video_path),
                 str(mixed_audio_path),
@@ -330,6 +347,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             )
             cover_command = self.build_cover_command(str(output_path), str(cover_path))
             await self._run_ffmpeg(compose_command)
+            output_duration_seconds = probe_media_duration_seconds(output_path) or output_duration_seconds
             await self._run_ffmpeg(cover_command)
         else:
             output_path.write_bytes(b"COMPOSED_FAKE_MP4")

@@ -6,7 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.features.video.pipeline.auto_fix import ast_fix_code
 from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.pipeline.manim_runtime_prelude import (
+    MANIM_RUNTIME_PRELUDE,
+    MANIM_RUNTIME_TEX_TEMPLATE_NAME,
+)
 from app.features.video.pipeline.models import (
     AudioSegment,
     ComposeResult,
@@ -17,6 +22,10 @@ from app.features.video.pipeline.models import (
     UnderstandingResult,
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
+from app.features.video.pipeline.script_templates import (
+    build_default_fix_script,
+    build_default_manim_script,
+)
 from app.features.video.pipeline.services import (
     ArtifactWritebackService,
     ComposeService,
@@ -105,6 +114,13 @@ def _build_settings(**overrides) -> SimpleNamespace:
         "video_output_audio_format": "mp3",
         "video_output_audio_sample_rate": 44100,
         "video_output_audio_bitrate": "192k",
+        "video_narration_chars_per_second": 4.8,
+        "video_narration_sentence_pause_seconds": 0.35,
+        "video_scene_min_duration_seconds": 4,
+        "video_scene_max_duration_seconds": 28,
+        "video_scene_ambient_motion_chunk_seconds": 4.0,
+        "video_compose_max_pad_seconds": 12.0,
+        "video_compose_max_pad_ratio": 0.25,
         "video_ffmpeg_timeout_seconds": 1,
         "video_upload_retry_attempts": 1,
     }
@@ -192,22 +208,48 @@ def test_understanding_service_parses_json_and_persists_runtime() -> None:
     assert persisted.topic_summary == "一次函数图像"
 
 
-def test_storyboard_service_normalizes_scene_duration_to_target_range() -> None:
-    runtime = _build_runtime("video_storyboard_case")
-    service = StoryboardService(
+def test_understanding_service_normalizes_solution_step_aliases() -> None:
+    runtime = _build_runtime("video_understanding_alias_case")
+    service = UnderstandingService(
         providers=[SimpleNamespace(provider_id="stub-llm")],
         failover_service=FakeFailoverService(
             generate_results=[
                 SimpleNamespace(
                     provider="stub-llm",
                     content=(
-                        '{"scenes":['
-                        '{"sceneId":"scene_1","title":"引入","narration":"开场","visualDescription":"展示题目","durationHint":100,"order":1},'
-                        '{"sceneId":"scene_2","title":"分析","narration":"分析条件","visualDescription":"标注条件","durationHint":100,"order":2},'
-                        '{"sceneId":"scene_3","title":"总结","narration":"总结结论","visualDescription":"展示结果","durationHint":100,"order":3}'
-                        "],\"totalDuration\":300,\"targetDuration\":120}"
+                        '{"topicSummary":"苹果加法","knowledgePoints":["加法"],'
+                        '"solutionSteps":[{"step":1,"action":"先展示一个苹果"},{"step":2,"action":"再展示另一个苹果"}],'
+                        '"difficulty":"easy","subject":"math"}'
                     ),
                 )
+            ]
+        ),
+        runtime=runtime,
+    )
+
+    result = asyncio.run(
+        service.execute(source_payload={"text": "用苹果解释一加一等于二。"}, user_profile={"grade": "primary"})
+    )
+
+    assert [step.step_id for step in result.solution_steps] == ["step_1", "step_2"]
+    assert [step.title for step in result.solution_steps] == ["步骤 1", "步骤 2"]
+    assert [step.explanation for step in result.solution_steps] == ["先展示一个苹果", "再展示另一个苹果"]
+
+
+def test_storyboard_service_normalizes_scene_duration_to_target_range() -> None:
+    runtime = _build_runtime("video_storyboard_case")
+    storyboard_json = (
+        '{"scenes":['
+        '{"sceneId":"scene_1","title":"引入","narration":"开场","visualDescription":"展示题目","durationHint":100,"order":1},'
+        '{"sceneId":"scene_2","title":"分析","narration":"分析条件","visualDescription":"标注条件","durationHint":100,"order":2},'
+        '{"sceneId":"scene_3","title":"总结","narration":"总结结论","visualDescription":"展示结果","durationHint":100,"order":3}'
+        '],"totalDuration":300,"targetDuration":120}'
+    )
+    service = StoryboardService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(provider="stub-llm", content=storyboard_json),
             ]
         ),
         runtime=runtime,
@@ -217,27 +259,26 @@ def test_storyboard_service_normalizes_scene_duration_to_target_range() -> None:
     result = asyncio.run(service.execute(understanding=_build_understanding()))
 
     assert result.total_duration == 120
+    assert result.target_duration == 120
+    assert sum(scene.duration_hint for scene in result.scenes) == 120
     assert [scene.order for scene in result.scenes] == [1, 2, 3]
     persisted = runtime.load_model("storyboard", Storyboard)
     assert persisted is not None
-    assert persisted.total_duration == 120
 
 
 def test_storyboard_service_tolerates_partial_scene_fields_from_real_llm_output() -> None:
     runtime = _build_runtime("video_storyboard_partial_case")
+    partial_json = (
+        '{"scenes":['
+        '{"sceneId":"scene_1","narration":"先回顾平方差公式","content":"展示公式 a²-b²=(a+b)(a-b)"},'
+        '{"sceneId":"scene_2","voiceover":"再用例题演示","description":"代入 x²-9"}'
+        '],"totalDuration":60,"targetDuration":120}'
+    )
     service = StoryboardService(
         providers=[SimpleNamespace(provider_id="stub-llm")],
         failover_service=FakeFailoverService(
             generate_results=[
-                SimpleNamespace(
-                    provider="stub-llm",
-                    content=(
-                        '{"scenes":['
-                        '{"sceneId":"scene_1","narration":"先回顾平方差公式","content":"展示公式 a²-b²=(a+b)(a-b)"},'
-                        '{"sceneId":"scene_2","voiceover":"再用例题演示","description":"代入 x²-9"}'
-                        '],"totalDuration":60,"targetDuration":120}'
-                    ),
-                )
+                SimpleNamespace(provider="stub-llm", content=partial_json),
             ]
         ),
         runtime=runtime,
@@ -251,6 +292,33 @@ def test_storyboard_service_tolerates_partial_scene_fields_from_real_llm_output(
     assert result.scenes[0].visual_description == "展示公式 a²-b²=(a+b)(a-b)"
     assert result.scenes[1].narration == "再用例题演示"
     assert result.scenes[1].duration_hint >= 1
+    assert result.total_duration == sum(scene.duration_hint for scene in result.scenes)
+    assert result.total_duration >= 90
+
+
+def test_storyboard_service_maps_prompt_native_voice_text_and_image_desc_fields() -> None:
+    runtime = _build_runtime("video_storyboard_prompt_native_case")
+    prompt_native_json = (
+        '{"scenes":['
+        '{"sceneId":"scene_1","title":"引入","voiceText":"先观察题目条件","imageDesc":"高亮题干中的已知条件","durationHint":18},'
+        '{"sceneId":"scene_2","title":"总结","voiceText":"最后总结解题方法","imageDesc":"高亮最终结论","durationHint":16}'
+        '],"targetDuration":120}'
+    )
+    service = StoryboardService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[SimpleNamespace(provider="stub-llm", content=prompt_native_json)]
+        ),
+        runtime=runtime,
+        settings=_build_settings(video_target_duration_seconds=120),
+    )
+
+    result = asyncio.run(service.execute(understanding=_build_understanding()))
+
+    assert result.scenes[0].narration == "先观察题目条件"
+    assert result.scenes[0].visual_description == "高亮题干中的已知条件"
+    assert result.scenes[1].voice_text == "最后总结解题方法"
+    assert result.scenes[1].image_desc == "高亮最终结论"
 
 
 def test_rule_based_fixer_wraps_script_with_safe_scene_defaults() -> None:
@@ -264,26 +332,75 @@ def test_rule_based_fixer_wraps_script_with_safe_scene_defaults() -> None:
     assert "(Scene)" in result.fixed_script
 
 
+def test_ast_fix_normalizes_legacy_ctex_reference_without_injecting_prelude() -> None:
+    fragment = 'formula = MathTex("1+1=?", tex_template=TexTemplateLibrary.ctex)'
+
+    fixed = ast_fix_code(fragment)
+
+    assert "TexTemplateLibrary.ctex" not in fixed
+    assert f"tex_template={MANIM_RUNTIME_TEX_TEMPLATE_NAME}" in fixed
+    assert MANIM_RUNTIME_PRELUDE not in fixed
+
+
+def test_build_default_fix_script_injects_runtime_prelude_for_tex_template_usage() -> None:
+    script = (
+        "from manim import *\n\n"
+        "class Demo(Scene):\n"
+        "    def construct(self):\n"
+        "        formula = MathTex('1+1=?', tex_template=TexTemplateLibrary.ctex)\n"
+        "        self.add(formula)\n"
+    )
+
+    fixed = build_default_fix_script(script)
+
+    assert MANIM_RUNTIME_PRELUDE in fixed
+    assert "TexTemplateLibrary.ctex" not in fixed
+    assert f"tex_template={MANIM_RUNTIME_TEX_TEMPLATE_NAME}" in fixed
+
+
 def test_manim_generation_service_persists_generated_script() -> None:
+    from app.core.config import Settings
+
     runtime = _build_runtime("video_manim_case")
+    scene_code = "title_1 = Text('题目引入', font_size=32)\nself.add_elements(title_1)"
+    # Provide enough results for scene-by-scene generation (3 scenes) + fallback (1)
     service = ManimGenerationService(
         providers=[SimpleNamespace(provider_id="stub-llm")],
         failover_service=FakeFailoverService(
             generate_results=[
+                # Scene 1
+                SimpleNamespace(provider="stub-llm", content=f"```python\n{scene_code}\n```"),
+                # Scene 2
+                SimpleNamespace(provider="stub-llm", content=f"```python\n{scene_code}\n```"),
+                # Scene 3
+                SimpleNamespace(provider="stub-llm", content=f"```python\n{scene_code}\n```"),
+                # Fallback (if scene-by-scene fails)
                 SimpleNamespace(
                     provider="stub-llm",
                     content="```python\nfrom manim import *\n\nclass Demo(Scene):\n    def construct(self):\n        self.wait(1)\n```",
-                )
+                ),
             ]
         ),
         runtime=runtime,
+        settings=Settings(),
     )
 
     result = asyncio.run(service.execute(storyboard=_build_storyboard()))
 
-    assert "class Demo(Scene)" in result.script_content
+    assert result.script_content  # Non-empty script
+    assert result.provider_used == "scene-by-scene"
+    assert "self.hold_scene(" in result.script_content
+    assert "self.clear_scene()" in result.script_content
     persisted = runtime.load_value("manim_code")
     assert isinstance(persisted, dict)
+
+
+def test_build_default_manim_script_uses_scene_duration_helpers() -> None:
+    script = build_default_manim_script(_build_storyboard())
+
+    assert "self.hold_scene(" in script
+    assert "self.clear_scene()" in script
+    assert "self.add_elements(title_1, body_1, run_time=0.5)" in script
 
 
 def test_llm_based_fixer_uses_provider_output_when_available() -> None:
@@ -310,6 +427,40 @@ def test_llm_based_fixer_uses_provider_output_when_available() -> None:
     assert result.fixed is True
     assert result.fixed_script is not None
     assert "class Fixed(Scene)" in result.fixed_script
+
+
+def test_llm_based_fixer_normalizes_legacy_ctex_template_refs() -> None:
+    fixer = LLMBasedFixer(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        "```python\nfrom manim import *\n\n"
+                        "class Fixed(Scene):\n"
+                        "    def construct(self):\n"
+                        "        formula = MathTex('a^2+b^2=c^2', tex_template=TexTemplateLibrary.ctex)\n"
+                        "        self.add(formula)\n```"
+                    ),
+                )
+            ]
+        ),
+    )
+
+    result = asyncio.run(
+        fixer.fix(
+            storyboard=_build_storyboard(),
+            script_content="class Broken:\n    pass\n",
+            error_log="ValueError: xelatex error converting to xdv",
+        )
+    )
+
+    assert result.fixed is True
+    assert result.fixed_script is not None
+    assert MANIM_RUNTIME_PRELUDE in result.fixed_script
+    assert "TexTemplateLibrary.ctex" not in result.fixed_script
+    assert f"tex_template={MANIM_RUNTIME_TEX_TEMPLATE_NAME}" in result.fixed_script
 
 
 def test_tts_service_marks_failover_and_persists_segments() -> None:
@@ -506,6 +657,7 @@ def test_compose_service_builds_expected_ffmpeg_commands() -> None:
         "yuv420p",
         "-c:a",
         "aac",
+        "-shortest",
         "-movflags",
         "+faststart",
         "output.mp4",
@@ -661,6 +813,12 @@ def test_artifact_writeback_service_outputs_required_artifact_types(tmp_path) ->
         "solution_steps",
         "manim_code",
     }
+    timeline_artifact = next(artifact for artifact in graph.artifacts if artifact.artifact_type.value == "timeline")
+    narration_artifact = next(artifact for artifact in graph.artifacts if artifact.artifact_type.value == "narration")
+    assert timeline_artifact.data["scenes"][0]["startTime"] == 0
+    assert timeline_artifact.data["scenes"][0]["endTime"] == 40
+    assert timeline_artifact.data["scenes"][1]["startTime"] == 40
+    assert narration_artifact.data["segments"][0]["text"] == (storyboard.scenes[0].voice_text or storyboard.scenes[0].narration)
     assert asset_store.exists(ref) is True
 
 

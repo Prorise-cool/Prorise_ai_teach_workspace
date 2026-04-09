@@ -2,14 +2,14 @@
 import { ref } from 'vue';
 import { NDivider } from 'naive-ui';
 import { fetchBatchDeleteAiProvider, fetchGetAiProviderList } from '@/service/api/xiaomai/ai-provider';
-import DictTag from '@/components/custom/dict-tag.vue';
-import ButtonIcon from '@/components/custom/button-icon.vue';
+import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { useDict } from '@/hooks/business/dict';
 import { useDownload } from '@/hooks/business/download';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import ButtonIcon from '@/components/custom/button-icon.vue';
+import DictTag from '@/components/custom/dict-tag.vue';
 import { $t } from '@/locales';
-import { useAppStore } from '@/store/modules/app';
 import AiProviderOperateDrawer from './modules/ai-provider-operate-drawer.vue';
 import AiProviderSearch from './modules/ai-provider-search.vue';
 

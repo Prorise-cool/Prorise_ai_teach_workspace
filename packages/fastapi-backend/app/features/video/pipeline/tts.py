@@ -123,10 +123,12 @@ class TTSService:
         failover_occurred = False
 
         for index, scene in enumerate(storyboard.scenes, start=1):
+            # 优先使用 voiceText（数学符号已口语化），回退到 narration。
+            tts_text = scene.voice_text or scene.narration
             try:
                 result = await self.failover_service.synthesize(
                     bound_providers,
-                    scene.narration,
+                    tts_text,
                     voice_config=voice_config,
                     emit_switch=emit_switch,
                 )

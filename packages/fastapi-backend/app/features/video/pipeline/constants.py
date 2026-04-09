@@ -6,6 +6,13 @@ MANIM_IMPORT_LINE = "from manim import *"
 DEFAULT_MANIM_SCENE_CLASS = "GeneratedLesson"
 DEFAULT_FIXED_SCENE_CLASS = "FixedLesson"
 
+MANIM_QUALITY_MAP: dict[str, str] = {
+    "l": "-ql",
+    "m": "-qm",
+    "h": "-qh",
+}
+MANIM_QUALITY_DEFAULT = "-qm"
+
 VIDEO_RESULT_DETAIL_TEMPLATE = "video/{task_id}/result-detail.json"
 VIDEO_ARTIFACT_GRAPH_TEMPLATE = "video/{task_id}/artifact-graph.json"
 

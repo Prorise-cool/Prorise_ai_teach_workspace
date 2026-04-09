@@ -1,0 +1,2 @@
+{"task":"TASK-001","kind":"root-cause","summary":"student-web used await response.text() for text/event-stream, so no SSE event was emitted until the backend closed the long-lived response."}
+{"task":"TASK-001","kind":"compatibility","summary":"FastAPI connected/heartbeat currently omit id/sequence; frontend now synthesizes transient ids for local consumption only and excludes them from Last-Event-ID progression."}

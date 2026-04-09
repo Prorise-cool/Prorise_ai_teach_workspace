@@ -41,23 +41,24 @@ class ArtifactWritebackService:
         narration_segments: list[dict[str, object]] = []
         current_time = 0
         for scene, audio_segment in zip(storyboard.scenes, tts_result.audio_segments, strict=False):
+            scene_duration = max(int(audio_segment.duration), 1)
             timeline_scenes.append(
                 {
                     "sceneId": scene.scene_id,
                     "startTime": current_time,
-                    "endTime": current_time + scene.duration_hint,
+                    "endTime": current_time + scene_duration,
                     "title": scene.title,
                 }
             )
             narration_segments.append(
                 {
                     "sceneId": scene.scene_id,
-                    "text": scene.narration,
+                    "text": scene.voice_text or scene.narration,
                     "startTime": current_time,
-                    "endTime": current_time + audio_segment.duration,
+                    "endTime": current_time + scene_duration,
                 }
             )
-            current_time += scene.duration_hint
+            current_time += scene_duration
 
         graph = VideoArtifactGraph(
             session_id=task_id,

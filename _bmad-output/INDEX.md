@@ -12,6 +12,12 @@
 
 - [brainstorming-session-2026-03-18-142300.md](./brainstorming/brainstorming-session-2026-03-18-142300.md) - 项目早期产品与技术头脑风暴记录
 
+### implementation-artifacts/
+
+- [index.md](./implementation-artifacts/index.md) - 实施产物总索引与 Story 执行文档入口
+- [4-7-视频等待页SSE实时状态故障调查-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态故障调查-20260409.md) - 视频等待页实时状态丢失问题调查结论
+- [4-7-视频等待页SSE实时状态修复-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态修复-20260409.md) - 视频等待页 SSE 流式消费修复与验证记录
+
 
 ### planning-artifacts/
 

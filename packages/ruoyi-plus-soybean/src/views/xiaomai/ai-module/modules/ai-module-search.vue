@@ -47,7 +47,12 @@ async function search() {
               <NInput v-model:value="model.moduleName" placeholder="请输入模块名称" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect v-model:value="model.status" placeholder="请选择状态" dict-code="sys_normal_disable" clearable />
+              <DictSelect
+                v-model:value="model.status"
+                placeholder="请选择状态"
+                dict-code="sys_normal_disable"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="排序号" label-width="auto" path="sortOrder" class="pr-24px">
               <NInputNumber v-model:value="model.sortOrder" placeholder="请输入排序号" class="w-full" />

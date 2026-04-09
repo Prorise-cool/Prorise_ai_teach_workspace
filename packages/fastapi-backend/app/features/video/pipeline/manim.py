@@ -1,19 +1,28 @@
 """Manim 代码生成与修复服务。
 
-包含:
-- ``ManimGenerationService``: 根据分镜生成 Manim Python 脚本。
-- ``RuleBasedFixer``: 基于规则的脚本修复器。
-- ``LLMBasedFixer``: 基于 LLM 的脚本修复器。
-三者紧密耦合，共同完成"生成 → 渲染 → 修复"循环。
+采用逐场景增量生成策略：
+1. 对每个分镜场景，携带前文上下文调用 LLM 生成场景代码。
+2. 每段代码经过 AST 参数注入 + 静态分析检查。
+3. 增量拼接为完整的 Manim 脚本。
+4. 失败时回退到单次全量生成或默认模板。
 """
 
 from __future__ import annotations
 
+import re
+import textwrap
 from dataclasses import dataclass
 from typing import Any, Sequence
 
-from app.features.video.pipeline._helpers import extract_code, first_non_empty
+from app.core.config import Settings
+from app.core.logging import get_logger
+
+logger = get_logger("app.features.video.pipeline.manim")
+from app.features.video.pipeline._helpers import extract_code
+from app.features.video.pipeline.auto_fix import ast_fix_code, stat_check_fix
+from app.features.video.pipeline.code_render.renderer import CodeRenderer
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
+from app.features.video.pipeline.manim_runtime_prelude import ensure_manim_runtime_prelude
 from app.features.video.pipeline.models import (
     FixResult,
     ManimCodeResult,
@@ -21,18 +30,90 @@ from app.features.video.pipeline.models import (
     Storyboard,
     VideoStage,
 )
+from app.features.video.pipeline.prompts.code_gen_prompts import (
+    build_code_gen_system_prompt,
+    build_scene_code_prompt,
+)
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
-from app.features.video.pipeline.script_templates import build_default_fix_script, build_default_manim_script
+from app.features.video.pipeline.script_templates import (
+    build_default_fix_script,
+    build_default_manim_script,
+)
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
+
+
+_WAIT_CALL_PATTERN = re.compile(r"self\.wait\(\s*([0-9]+(?:\.[0-9]+)?)\s*\)")
+_RUN_TIME_PATTERN = re.compile(r"run_time\s*=\s*([0-9]+(?:\.[0-9]+)?)")
+
+
+def _estimate_scene_code_duration_seconds(scene_code: str) -> float:
+    """粗估场景代码已显式声明的动画时长。
+
+    用于避免模板再无脑补满整个 ``duration_hint``，导致 LLM 已经写了大量
+    ``self.wait`` / ``run_time`` 时被二次拉长。
+    """
+    total_duration = sum(float(match.group(1)) for match in _WAIT_CALL_PATTERN.finditer(scene_code))
+    total_duration += sum(float(match.group(1)) for match in _RUN_TIME_PATTERN.finditer(scene_code))
+
+    for raw_line in scene_code.splitlines():
+        line = raw_line.strip()
+        if not line or "run_time" in line:
+            continue
+        if "self.add_elements(" in line or "self.add_element(" in line:
+            total_duration += 0.9
+        elif "self.play(" in line:
+            total_duration += 1.0
+
+    return total_duration
+
+
+def _compress_scene_waits_to_target(scene_code: str, *, target_duration: int) -> str:
+    """在超时明显时，优先压缩场景中的静态 wait 时长。"""
+    if target_duration <= 0:
+        return scene_code
+
+    wait_matches = list(_WAIT_CALL_PATTERN.finditer(scene_code))
+    if not wait_matches:
+        return scene_code
+
+    estimated_duration = _estimate_scene_code_duration_seconds(scene_code)
+    overflow_seconds = estimated_duration - float(target_duration)
+    if overflow_seconds <= 0.5:
+        return scene_code
+
+    original_waits = [float(match.group(1)) for match in wait_matches]
+    reducible_waits = [max(wait_seconds - 0.2, 0.0) for wait_seconds in original_waits]
+    total_reducible = sum(reducible_waits)
+    if total_reducible <= 0.0:
+        return scene_code
+
+    reduction_ratio = min(overflow_seconds / total_reducible, 1.0)
+    replacement_values = [
+        round(wait_seconds - (reducible * reduction_ratio), 3)
+        for wait_seconds, reducible in zip(original_waits, reducible_waits, strict=False)
+    ]
+    replacement_iter = iter(replacement_values)
+
+    def _replace(match: re.Match[str]) -> str:
+        next_value = next(replacement_iter)
+        normalized_value = int(next_value) if float(next_value).is_integer() else next_value
+        return f"self.wait({normalized_value})"
+
+    return _WAIT_CALL_PATTERN.sub(_replace, scene_code)
 
 
 @dataclass(slots=True)
 class ManimGenerationService:
-    """Manim 脚本生成服务，调用 LLM 根据分镜生成可执行的 Manim 代码。"""
+    """Manim 脚本生成服务 — 逐场景增量生成。
+
+    对每个分镜场景独立调用 LLM 生成代码片段，经 AST 修复 + 静态分析后
+    增量拼接为完整脚本。若增量生成失败，回退到单次全量生成。
+    """
 
     providers: Sequence[Any]
     failover_service: ProviderFailoverService
     runtime: VideoRuntimeStateStore
+    settings: Settings
 
     async def execute(
         self,
@@ -40,7 +121,158 @@ class ManimGenerationService:
         storyboard: Storyboard,
         emit_switch=None,
     ) -> ManimCodeResult:
-        """执行 Manim 脚本生成，返回 ``ManimCodeResult``。"""
+        """执行 Manim 脚本生成，返回 ``ManimCodeResult``。
+
+        优先使用逐场景增量生成；若失败回退到单次全量生成。
+        """
+        try:
+            result = await self._generate_scene_by_scene(
+                storyboard=storyboard,
+                emit_switch=emit_switch,
+            )
+            if result is not None:
+                return result
+        except Exception:  # noqa: BLE001
+            logger.warning("逐场景增量生成失败，回退到单次全量生成")
+
+        return await self._fallback_single_generation(
+            storyboard=storyboard,
+            emit_switch=emit_switch,
+        )
+
+    async def _generate_scene_by_scene(
+        self,
+        *,
+        storyboard: Storyboard,
+        emit_switch=None,
+    ) -> ManimCodeResult | None:
+        """逐场景增量生成 Manim 代码。
+
+        对每个场景：
+        1. 构建带前文代码上下文的 prompt。
+        2. LLM 生成当前场景代码。
+        3. AST 自动参数注入。
+        4. 静态分析检查修复。
+        5. 增量拼接到总代码。
+
+        Returns:
+            生成成功时返回 ``ManimCodeResult``；失败返回 ``None``。
+        """
+        background_color = storyboard.video_config.background_color
+        system_prompt = build_code_gen_system_prompt(
+            background_color=background_color,
+        )
+        renderer = CodeRenderer()
+        prev_code = ""
+        accumulated_code = ""
+        scene_codes: list[str] = []
+        mappings: list[SceneCodeMapping] = []
+
+        for index, scene in enumerate(storyboard.scenes, start=1):
+            image_desc = scene.image_desc or scene.visual_description
+
+            # 构建上下文 prompt 并调用 LLM。
+            user_prompt = build_scene_code_prompt(
+                scene_title=scene.title,
+                scene_voice_text=scene.voice_text or scene.narration,
+                scene_image_desc=image_desc,
+                scene_duration_hint=scene.duration_hint,
+                current_code=prev_code[-2000:] if prev_code else "（这是第一个场景）",
+            )
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+            try:
+                provider_result = await self.failover_service.generate(
+                    self.providers,
+                    full_prompt,
+                    emit_switch=emit_switch,
+                )
+            except ProviderAllFailedError:
+                logger.warning("场景 %s 的 LLM 生成失败", scene.scene_id)
+                return None
+
+            logger.debug("[Manim] 场景%d LLM响应 (前400字): %s", index, provider_result.content[:400])
+            scene_code = extract_code(provider_result.content) or ""
+            if not scene_code.strip():
+                logger.warning("场景 %s 的 LLM 返回为空，跳过", scene.scene_id)
+                continue
+
+            # 后处理：ShowCreation → Create + dedent。
+            scene_code = scene_code.replace("ShowCreation", "Create")
+            scene_code = textwrap.dedent(scene_code)
+
+            # Layer 1: AST 参数注入。
+            scene_code = ast_fix_code(scene_code)
+
+            # Layer 2: 静态分析检查。
+            scene_code = stat_check_fix(scene_code)
+            scene_code = _compress_scene_waits_to_target(
+                scene_code,
+                target_duration=scene.duration_hint,
+            )
+
+            # 增量拼接。
+            if accumulated_code:
+                accumulated_code = renderer.render_scene_increment(
+                    prev_code=accumulated_code,
+                    current_scene_code=scene_code,
+                )
+            else:
+                accumulated_code = scene_code
+
+            scene_codes.append(scene_code)
+            prev_code = scene_code
+
+            # 记录行号映射（粗略估算）。
+            line_count = accumulated_code.count("\n") + 1
+            mappings.append(
+                SceneCodeMapping(
+                    scene_id=scene.scene_id,
+                    title=scene.title,
+                    start_line=max(1, line_count - scene_code.count("\n")),
+                    end_line=line_count,
+                )
+            )
+
+        if not accumulated_code.strip():
+            return None
+
+        # 渲染完整脚本。
+        video_config = storyboard.video_config.model_dump()
+        scenes_data = []
+        total_scenes = len(storyboard.scenes)
+        for index, (scene, scene_code) in enumerate(zip(storyboard.scenes, scene_codes, strict=False), start=1):
+            estimated_scene_duration = _estimate_scene_code_duration_seconds(scene_code)
+            transition_buffer = 0.4 if index < total_scenes else 0.0
+            scenes_data.append({
+                "scene_code": scene_code,
+                "scene_duration_hint": scene.duration_hint,
+                "scene_hold_duration": round(max(float(scene.duration_hint) - estimated_scene_duration - transition_buffer, 0.0), 3),
+                "voiceText": scene.voice_text or scene.narration,
+                "voiceRole": scene.voice_role,
+            })
+        full_script = renderer.render_full_script(
+            scenes=scenes_data,
+            video_config=video_config,
+        )
+        full_script = ensure_manim_runtime_prelude(full_script)
+
+        result = ManimCodeResult(
+            script_content=full_script,
+            scene_mapping=mappings,
+            provider_used="scene-by-scene",
+        )
+        self.runtime.save_model("manim_code", result)
+        logger.info("[Manim完成] scenes=%d code_len=%d", len(scene_codes), len(full_script))
+        return result
+
+    async def _fallback_single_generation(
+        self,
+        *,
+        storyboard: Storyboard,
+        emit_switch=None,
+    ) -> ManimCodeResult:
+        """回退方案：单次全量生成 Manim 脚本。"""
         prompt = (
             "请根据 storyboard 输出可执行的 Manim Python 脚本。\n"
             f"{storyboard.model_dump_json(by_alias=True)}"
@@ -61,6 +293,11 @@ class ManimGenerationService:
         script_content = extract_code(provider_result.content) or build_default_manim_script(storyboard)
         if "class " not in script_content:
             script_content = build_default_manim_script(storyboard)
+
+        # 对全量生成也做 AST + 静态分析修复。
+        script_content = ast_fix_code(script_content)
+        script_content = stat_check_fix(script_content)
+        script_content = ensure_manim_runtime_prelude(script_content)
 
         mappings: list[SceneCodeMapping] = []
         current_line = 5
@@ -95,7 +332,7 @@ class RuleBasedFixer:
             fixed=success,
             fixed_script=fixed_script if success else None,
             strategy="rule",
-            error_type=first_non_empty([error_log], fallback="render_error"),
+            error_type=error_log[:120] or "render_error",
             notes="Applied built-in Manim script normalization rules.",
         )
 
@@ -137,6 +374,12 @@ class LLMBasedFixer:
             )
 
         fixed_script = extract_code(provider_result.content) or build_default_manim_script(storyboard)
+
+        # 对 LLM 修复结果也做 AST + 静态分析修复。
+        fixed_script = ast_fix_code(fixed_script)
+        fixed_script = stat_check_fix(fixed_script)
+        fixed_script = ensure_manim_runtime_prelude(fixed_script)
+
         return FixResult(
             fixed=bool(fixed_script.strip()),
             fixed_script=fixed_script,

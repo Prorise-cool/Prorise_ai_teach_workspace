@@ -60,7 +60,10 @@ function createDefaultModel(): Model {
   };
 }
 
-type RuleKey = Extract<keyof Model, 'providerId' | 'capability' | 'resourceCode' | 'resourceName' | 'runtimeProviderId' | 'status'>;
+type RuleKey = Extract<
+  keyof Model,
+  'providerId' | 'capability' | 'resourceCode' | 'resourceName' | 'runtimeProviderId' | 'status'
+>;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
   providerId: createRequiredRule('Provider 主键不能为空'),
@@ -144,7 +147,12 @@ watch(visible, () => {
           <NInput v-model:value="model.resourceName" placeholder="请输入资源名称" />
         </NFormItem>
         <NFormItem label="资源类型" path="resourceType">
-          <DictSelect v-model:value="model.resourceType" placeholder="请选择资源类型" dict-code="xm_ai_resource_type" clearable />
+          <DictSelect
+            v-model:value="model.resourceType"
+            placeholder="请选择资源类型"
+            dict-code="xm_ai_resource_type"
+            clearable
+          />
         </NFormItem>
         <NFormItem label="运行时 Provider ID" path="runtimeProviderId">
           <NInput v-model:value="model.runtimeProviderId" placeholder="请输入运行时 Provider ID" />
