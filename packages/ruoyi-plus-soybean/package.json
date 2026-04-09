@@ -121,7 +121,7 @@
   },
   "simple-git-hooks": {
     "commit-msg": "pnpm sa git-commit-verify",
-    "pre-commit": "pnpm typecheck && pnpm lint && git diff --exit-code"
+    "pre-commit": "pnpm typecheck:all && pnpm lint && git diff --exit-code"
   },
   "website": "https://ruoyi.xlsea.cn"
 }
