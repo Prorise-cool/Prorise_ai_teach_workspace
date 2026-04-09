@@ -9,7 +9,6 @@ from typing import Any, Mapping, Sequence
 from app.core.config import Settings
 from app.core.errors import IntegrationError
 from app.core.logging import get_logger
-from app.features.video.pipeline.models import VideoStage
 from app.providers.factory import ProviderFactory
 from app.providers.protocols import (
     LLMProvider,
@@ -24,11 +23,12 @@ from app.shared.ruoyi_ai_runtime_client import RuoYiAiRuntimeBinding, RuoYiAiRun
 logger = get_logger("app.providers.runtime_config_service")
 
 _VIDEO_LLM_STAGES = (
-    VideoStage.UNDERSTANDING.value,
-    VideoStage.STORYBOARD.value,
-    VideoStage.MANIM_GEN.value,
-    VideoStage.MANIM_FIX.value,
+    "understanding",
+    "storyboard",
+    "manim_gen",
+    "manim_fix",
 )
+_TTS_STAGE = "tts"
 
 _DOUBAO_TTS_PROVIDER_TYPES = frozenset({"doubao-tts", "volcengine-tts", "bytedance-tts", "doubao"})
 _RUNTIME_PROVIDER_REGISTRATION_KEYS = (
@@ -225,7 +225,7 @@ class ProviderRuntimeResolver:
 
         for stage in _VIDEO_LLM_STAGES:
             llm_by_stage.setdefault(stage, default_llm)
-        tts_by_stage.setdefault(VideoStage.TTS.value, default_tts)
+        tts_by_stage.setdefault(_TTS_STAGE, default_tts)
 
         return VideoProviderRuntimeAssembly(
             llm_by_stage=llm_by_stage,
@@ -361,7 +361,7 @@ class ProviderRuntimeResolver:
         default_configs = tts_config_map.get("default")
         if default_configs:
             return tuple(provider_factory.build_chain(ProviderCapability.TTS, default_configs))
-        providers = tts_by_stage.get(VideoStage.TTS.value)
+        providers = tts_by_stage.get(_TTS_STAGE)
         if providers:
             return providers
         return fallback
@@ -376,14 +376,14 @@ class ProviderRuntimeResolver:
         sorted_bindings = sorted(
             bindings,
             key=lambda item: (
-                item.stage_code != VideoStage.TTS.value,
+                item.stage_code != _TTS_STAGE,
                 not item.is_default,
                 item.priority,
                 item.provider_id,
             ),
         )
         for binding in sorted_bindings:
-            if binding.capability != ProviderCapability.TTS.value or binding.stage_code != VideoStage.TTS.value:
+            if binding.capability != ProviderCapability.TTS.value or binding.stage_code != _TTS_STAGE:
                 continue
 
             voice_code = _read_text(

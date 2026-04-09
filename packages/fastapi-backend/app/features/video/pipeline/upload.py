@@ -12,14 +12,13 @@ from dataclasses import dataclass
 from app.core.config import Settings
 from app.features.video.pipeline._helpers import serialize_datetime, utc_now
 from app.features.video.pipeline.assets import LocalAssetStore
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
     UploadResult,
     VideoStage,
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
-from app.shared.task_framework.status import TaskErrorCode
 
 
 @dataclass(slots=True)
@@ -61,6 +60,6 @@ class UploadService:
 
         raise VideoPipelineError(
             stage=VideoStage.UPLOAD,
-            error_code=TaskErrorCode.VIDEO_UPLOAD_FAILED,
+            error_code=VideoTaskErrorCode.VIDEO_UPLOAD_FAILED,
             message=str(last_error or "upload failed"),
         )

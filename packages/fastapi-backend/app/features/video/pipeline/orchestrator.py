@@ -21,7 +21,7 @@ from app.features.video.pipeline._helpers import (
 from app.features.video.pipeline.artifact_writeback import ArtifactWritebackService
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.compose import ComposeService
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.manim import LLMBasedFixer, ManimGenerationService, RuleBasedFixer
 from app.features.video.pipeline.models import (
     ComposeResult,
@@ -55,7 +55,7 @@ from app.features.video.pipeline.storyboard import StoryboardService
 from app.features.video.pipeline.tts import TTSService
 from app.features.video.pipeline.understanding import UnderstandingService
 from app.features.video.pipeline.upload import UploadService
-from app.features.video.service import VideoService
+from app.features.video.pipeline.protocols import VideoMetadataPersister
 from app.providers.factory import ProviderFactory, get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
 from app.shared.ruoyi_auth import RuoYiRequestAuth
@@ -78,7 +78,7 @@ class VideoPipelineService:
         self,
         *,
         runtime_store,
-        metadata_service: VideoService,
+        metadata_service: VideoMetadataPersister,
         provider_factory: ProviderFactory,
         settings: Settings,
         asset_store: LocalAssetStore,
@@ -339,7 +339,7 @@ class VideoPipelineService:
                 )
                 error_code = coerce_task_error_code(
                     render_result.error_type,
-                    fallback=TaskErrorCode.VIDEO_RENDER_FAILED,
+                    fallback=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
                 )
                 raise VideoPipelineError(
                     stage=VideoStage.RENDER,
@@ -770,7 +770,7 @@ class VideoPipelineService:
         return tuple(unique_preserve_order(provider.provider_id for provider in providers))
 
 
-def get_video_pipeline_service(runtime_store, metadata_service: VideoService) -> VideoPipelineService:
+def get_video_pipeline_service(runtime_store, metadata_service: VideoMetadataPersister) -> VideoPipelineService:
     """工厂函数：创建 VideoPipelineService 实例。"""
     settings = get_settings()
     return VideoPipelineService(

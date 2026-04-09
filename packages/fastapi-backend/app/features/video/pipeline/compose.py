@@ -28,7 +28,7 @@ from app.features.video.pipeline._helpers import (
     round_duration_seconds,
     split_subtitle_text,
 )
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
     ExecutionResult,
@@ -37,7 +37,6 @@ from app.features.video.pipeline.models import (
     VideoStage,
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
-from app.shared.task_framework.status import TaskErrorCode
 
 
 @dataclass(slots=True)
@@ -274,7 +273,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         except Exception as exc:  # noqa: BLE001
             raise VideoPipelineError(
                 stage=VideoStage.COMPOSE,
-                error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
                 message=str(exc),
             ) from exc
 
@@ -290,13 +289,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         if render_result.output_path is None:
             raise VideoPipelineError(
                 stage=VideoStage.COMPOSE,
-                error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
                 message="render output is missing",
             )
         if not tts_result.audio_segments:
             raise VideoPipelineError(
                 stage=VideoStage.COMPOSE,
-                error_code=TaskErrorCode.VIDEO_COMPOSE_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
                 message="tts output is missing",
             )
 

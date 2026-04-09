@@ -4,6 +4,17 @@
 1. 把 student-web 的认证入口统一收口到 FastAPI；
 2. 由 FastAPI 负责与 RuoYi 认证接口通信；
 3. 登录成功后把在线态写入 FastAPI 运行时，避免再出现 env/token 文件兜底。
+
+Design Note — Direct httpx Client Usage:
+    本服务直接创建 ``httpx.AsyncClient`` 而非使用共享的 ``RuoYiClient``。
+    这是刻意为之，原因如下：
+
+    1. RuoYi 认证端点要求 ``@ApiEncrypt`` 协议（RSA+AES 混合加密），
+       由 ``RuoYiAuthCrypto`` 处理；
+    2. 共享的 ``RuoYiClient`` 不支持请求/响应体加解密；
+    3. 认证端点有独特的错误处理模式（token 持久化、在线态写入）。
+
+    未来改进方向：将加密支持抽取为 ``RuoYiClient`` 的可选中间件。
 """
 
 from __future__ import annotations

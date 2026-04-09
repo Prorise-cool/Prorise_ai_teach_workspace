@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 from app.features.video.pipeline._helpers import extract_code, first_non_empty
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     FixResult,
     ManimCodeResult,
@@ -24,7 +24,6 @@ from app.features.video.pipeline.models import (
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.features.video.pipeline.script_templates import build_default_fix_script, build_default_manim_script
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
-from app.shared.task_framework.status import TaskErrorCode
 
 
 @dataclass(slots=True)
@@ -55,7 +54,7 @@ class ManimGenerationService:
         except ProviderAllFailedError as exc:
             raise VideoPipelineError(
                 stage=VideoStage.MANIM_GEN,
-                error_code=TaskErrorCode.VIDEO_MANIM_GEN_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
                 message=str(exc),
             ) from exc
 

@@ -11,7 +11,7 @@ from typing import Any, Sequence
 
 from app.core.config import Settings
 from app.features.video.pipeline._helpers import extract_json_object
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     Scene,
     Storyboard,
@@ -21,7 +21,6 @@ from app.features.video.pipeline.models import (
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
-from app.shared.task_framework.status import TaskErrorCode
 
 
 def _normalize_scene_payload(scene: dict[str, Any], index: int) -> dict[str, Any]:
@@ -159,7 +158,7 @@ class StoryboardService:
         except ProviderAllFailedError as exc:
             raise VideoPipelineError(
                 stage=VideoStage.STORYBOARD,
-                error_code=TaskErrorCode.VIDEO_STORYBOARD_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_STORYBOARD_FAILED,
                 message=str(exc),
             ) from exc
 

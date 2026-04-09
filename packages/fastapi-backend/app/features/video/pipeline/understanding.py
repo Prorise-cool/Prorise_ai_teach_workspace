@@ -19,7 +19,7 @@ from app.features.video.pipeline._helpers import (
     split_sentences,
     unique_preserve_order,
 )
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     SolutionStep,
     UnderstandingResult,
@@ -27,7 +27,6 @@ from app.features.video.pipeline.models import (
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
-from app.shared.task_framework.status import TaskErrorCode
 
 
 def _build_default_understanding(
@@ -100,7 +99,7 @@ class UnderstandingService:
         except ProviderAllFailedError as exc:
             raise VideoPipelineError(
                 stage=VideoStage.UNDERSTANDING,
-                error_code=TaskErrorCode.VIDEO_UNDERSTANDING_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_UNDERSTANDING_FAILED,
                 message=str(exc),
             ) from exc
 

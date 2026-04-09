@@ -24,7 +24,7 @@ from app.features.video.pipeline._helpers import (
     round_duration_seconds,
 )
 from app.features.video.pipeline.audio import decode_audio_payload, write_silent_wav
-from app.features.video.pipeline.errors import VideoPipelineError
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     AudioSegment,
     Storyboard,
@@ -83,7 +83,7 @@ class TTSService:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise VideoPipelineError(
                 stage=VideoStage.TTS,
-                error_code=TaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
                 message="未配置可用的 TTS Provider",
             )
         provider_voice_configs = {
@@ -134,7 +134,7 @@ class TTSService:
                 shutil.rmtree(temp_dir, ignore_errors=True)
                 raise VideoPipelineError(
                     stage=VideoStage.TTS,
-                    error_code=TaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                    error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
                     message=str(exc),
                     progress_ratio=index / max(len(storyboard.scenes), 1),
                 ) from exc
