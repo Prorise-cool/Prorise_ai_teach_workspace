@@ -116,12 +116,18 @@ GPT-5 Codex
 - 2026-04-09 补记：已彻底移除 FastAPI 的 service token / token file / `FASTAPI_ENV_FILE` 兼容叙述，业务鉴权不再从 env 或文件读取。
 - 2026-04-09 补记：视频 worker 改为只消费任务创建时写入 Redis 运行态的短 TTL 用户请求鉴权，任务结束后立即清理。
 - 2026-04-09 补记：`GET /api/v1/video/published` 改为登录态发现区接口，直接消费当前用户 Bearer token，不再走匿名服务级回源。
+- 2026-04-09 补记：已新增 FastAPI `/api/v1/auth/*` 统一认证代理，student-web 不再直接把登录/登出/当前用户请求打到 RuoYi。
+- 2026-04-09 补记：FastAPI auth 代理负责把前端明文登录/注册请求转成 RuoYi `@ApiEncrypt` 协议，并在登录成功后把在线 token 写入 FastAPI 运行态。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/10-3-fastapi-与-ruoyi-防腐层客户端.md`
 - `packages/fastapi-backend/app/core/config.py`
 - `packages/fastapi-backend/app/core/errors.py`
+- `packages/fastapi-backend/app/features/auth/routes.py`
+- `packages/fastapi-backend/app/features/auth/service.py`
+- `packages/fastapi-backend/app/features/auth/crypto.py`
+- `packages/fastapi-backend/app/features/auth/models.py`
 - `packages/fastapi-backend/app/shared/ruoyi_client.py`
 - `packages/fastapi-backend/app/shared/ruoyi_auth.py`
 - `packages/fastapi-backend/app/shared/ruoyi_mapper.py`
@@ -134,6 +140,8 @@ GPT-5 Codex
 - `packages/fastapi-backend/app/features/video/runtime_auth.py`
 - `packages/fastapi-backend/app/features/video/pipeline/orchestrator.py`
 - `packages/fastapi-backend/app/features/video/services/create_task.py`
+- `packages/student-web/src/services/api/adapters/auth-adapter.ts`
+- `packages/student-web/vite.config.ts`
 - `packages/fastapi-backend/tests/unit/test_ruoyi_client.py`
 - `packages/fastapi-backend/tests/unit/test_ruoyi_mapper.py`
 - `packages/fastapi-backend/tests/integration/test_ruoyi_client_integration.py`

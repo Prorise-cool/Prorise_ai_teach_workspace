@@ -62,14 +62,6 @@ export function createViteConfig(mode: string) {
       host: '0.0.0.0',
       port: 5173,
       proxy: {
-        '/auth': {
-          target: ruoyiProxyTarget,
-          changeOrigin: true
-        },
-        '/system': {
-          target: ruoyiProxyTarget,
-          changeOrigin: true
-        },
         '/api/user': {
           target: ruoyiProxyTarget,
           changeOrigin: true

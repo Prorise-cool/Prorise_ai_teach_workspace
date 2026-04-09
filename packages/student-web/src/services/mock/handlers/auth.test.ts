@@ -28,7 +28,7 @@ async function readJsonRecord(response: Response) {
 
 describe("auth mock handlers", () => {
   it("returns a successful login envelope for the admin fixture", async () => {
-    const response = await fetch("http://localhost/auth/login", {
+    const response = await fetch("http://localhost/api/v1/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -51,17 +51,18 @@ describe("auth mock handlers", () => {
 
   it("returns a local social callback url for the binding entry", async () => {
     const response = await fetch(
-      "http://localhost/auth/binding/github?tenantId=000000&domain=localhost:4173",
+      "http://localhost/api/v1/auth/binding/github?tenantId=000000&domain=localhost:4173",
     );
-    const payload = await response.text();
+    const payload = await readJsonRecord(response);
 
     expect(response.status).toBe(200);
-    expect(payload).toContain("/login/social-callback");
-    expect(payload).toContain("source=github");
+    expect(readStringProperty(payload, "msg")).toBe("操作成功");
+    expect(readStringProperty(payload, "data")).toContain("/login/social-callback");
+    expect(readStringProperty(payload, "data")).toContain("source=github");
   });
 
   it("returns a successful register envelope that shares the same domain contract", async () => {
-    const response = await fetch("http://localhost/auth/register", {
+    const response = await fetch("http://localhost/api/v1/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -84,7 +85,7 @@ describe("auth mock handlers", () => {
 
   it("returns the backend register toggle and captcha envelope", async () => {
     const registerResponse = await fetch(
-      "http://localhost/auth/register/enabled",
+      "http://localhost/api/v1/auth/register/enabled",
     );
     const registerPayload = await readJsonRecord(registerResponse);
 
@@ -94,7 +95,7 @@ describe("auth mock handlers", () => {
       authMockFixtures.settings.registerEnabled,
     );
 
-    const captchaResponse = await fetch("http://localhost/auth/code");
+    const captchaResponse = await fetch("http://localhost/api/v1/auth/code");
     const captchaPayload = await readJsonRecord(captchaResponse);
     const captchaPayloadData = readRecord(captchaPayload.data);
 
@@ -106,7 +107,7 @@ describe("auth mock handlers", () => {
   });
 
   it("returns an unauthorized envelope when current user info is requested without a token", async () => {
-    const response = await fetch("http://localhost/system/user/getInfo");
+    const response = await fetch("http://localhost/api/v1/auth/me");
 
     const payload = await readJsonRecord(response);
 
@@ -118,7 +119,7 @@ describe("auth mock handlers", () => {
   });
 
   it("returns a forbidden envelope for a role-blocked session and supports logout", async () => {
-    const infoResponse = await fetch("http://localhost/system/user/getInfo", {
+    const infoResponse = await fetch("http://localhost/api/v1/auth/me", {
       headers: {
         Authorization: `Bearer ${authMockFixtures.tokens.forbidden}`,
       },
@@ -130,7 +131,7 @@ describe("auth mock handlers", () => {
       "当前账号暂无小麦学生端访问权限",
     );
 
-    const logoutResponse = await fetch("http://localhost/auth/logout", {
+    const logoutResponse = await fetch("http://localhost/api/v1/auth/logout", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${authMockFixtures.tokens.admin}`,

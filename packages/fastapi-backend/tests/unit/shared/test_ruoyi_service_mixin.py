@@ -140,23 +140,10 @@ def test_resolve_authenticated_factory_rejects_missing_request_auth_when_default
     assert exc_info.value.details == {"resource": "dummy-resource"}
 
 
-def test_resolve_factory_falls_back_to_unauthenticated_client_when_request_context_missing(
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(
-        "app.shared.ruoyi_client.get_settings",
-        lambda: SimpleNamespace(
-            ruoyi_base_url="http://ruoyi.local",
-            ruoyi_timeout_seconds=0.01,
-            ruoyi_retry_attempts=0,
-            ruoyi_retry_delay_seconds=0.0,
-        ),
-    )
+def test_resolve_factory_rejects_missing_request_context_when_default_factory_is_used() -> None:
     service = _DummyService()
 
-    client = service._resolve_factory()()
-    try:
-        assert client._client.headers.get("Authorization") is None
-        assert client._client.headers.get("Clientid") is None
-    finally:
-        asyncio.run(client.aclose())
+    with pytest.raises(AppError, match="缺少显式 RuoYi 请求鉴权") as exc_info:
+        service._resolve_factory()
+
+    assert exc_info.value.code == "RUOYI_REQUEST_AUTH_REQUIRED"

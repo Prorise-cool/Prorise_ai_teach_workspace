@@ -78,13 +78,13 @@ function toHttpErrorResponse(error: unknown) {
 
 /** 认证 mock handlers 列表。 */
 export const authHandlers = [
-  http.get("*/auth/code", () => {
+  http.get("*/api/v1/auth/code", () => {
     return HttpResponse.json(getMockCaptchaEnvelope(), { status: 200 });
   }),
-  http.get("*/auth/register/enabled", () => {
+  http.get("*/api/v1/auth/register/enabled", () => {
     return HttpResponse.json(getMockRegisterEnabledEnvelope(), { status: 200 });
   }),
-  http.get("*/auth/binding/:source", ({ params, request }) => {
+  http.get("*/api/v1/auth/binding/:source", ({ params, request }) => {
     try {
       const source = String(params.source ?? "");
       const requestUrl = new URL(request.url);
@@ -93,19 +93,23 @@ export const authHandlers = [
         throw new Error("暂不支持该第三方登录来源");
       }
 
-      return HttpResponse.text(
-        getMockSocialAuthUrl({
-          source,
-          tenantId: requestUrl.searchParams.get("tenantId") ?? undefined,
-          domain: requestUrl.searchParams.get("domain") ?? undefined,
-        }),
+      return HttpResponse.json(
+        {
+          code: 200,
+          msg: "操作成功",
+          data: getMockSocialAuthUrl({
+            source,
+            tenantId: requestUrl.searchParams.get("tenantId") ?? undefined,
+            domain: requestUrl.searchParams.get("domain") ?? undefined,
+          }),
+        },
         { status: 200 },
       );
     } catch (error) {
       return toHttpErrorResponse(error);
     }
   }),
-  http.post("*/auth/login", async ({ request }) => {
+  http.post("*/api/v1/auth/login", async ({ request }) => {
     try {
       const body = parseAuthLoginInput(await readJsonBody(request));
 
@@ -114,7 +118,7 @@ export const authHandlers = [
       return toHttpErrorResponse(error);
     }
   }),
-  http.post("*/auth/register", async ({ request }) => {
+  http.post("*/api/v1/auth/register", async ({ request }) => {
     try {
       const body = parseAuthRegisterInput(await readJsonBody(request));
 
@@ -123,10 +127,10 @@ export const authHandlers = [
       return toHttpErrorResponse(error);
     }
   }),
-  http.post("*/auth/logout", () => {
+  http.post("*/api/v1/auth/logout", () => {
     return HttpResponse.json(getMockLogoutEnvelope(), { status: 200 });
   }),
-  http.get("*/system/user/getInfo", ({ request }) => {
+  http.get("*/api/v1/auth/me", ({ request }) => {
     try {
       const accessToken = extractBearerToken(
         request.headers.get("Authorization"),

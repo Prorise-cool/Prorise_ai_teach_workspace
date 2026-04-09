@@ -113,6 +113,10 @@ class Settings(BaseSettings):
     ruoyi_timeout_seconds: float = Field(default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS")
     ruoyi_retry_attempts: int = Field(default=2, alias="FASTAPI_RUOYI_RETRY_ATTEMPTS")
     ruoyi_retry_delay_seconds: float = Field(default=0.1, alias="FASTAPI_RUOYI_RETRY_DELAY_SECONDS")
+    ruoyi_encrypt_enabled: bool = Field(default=True, alias="FASTAPI_RUOYI_ENCRYPT_ENABLED")
+    ruoyi_encrypt_header_flag: str = Field(default="encrypt-key", alias="FASTAPI_RUOYI_ENCRYPT_HEADER_FLAG")
+    ruoyi_encrypt_public_key: str = Field(default="", alias="FASTAPI_RUOYI_ENCRYPT_PUBLIC_KEY")
+    ruoyi_encrypt_private_key: str = Field(default="", alias="FASTAPI_RUOYI_ENCRYPT_PRIVATE_KEY")
     provider_runtime_source: ProviderRuntimeSource = Field(
         default=ProviderRuntimeSource.SETTINGS,
         alias="FASTAPI_PROVIDER_RUNTIME_SOURCE",

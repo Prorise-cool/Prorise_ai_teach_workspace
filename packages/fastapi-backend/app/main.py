@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
         openapi_tags=[
             {"name": "health", "description": "服务健康检查与最小运行态。"},
+            {"name": "auth", "description": "FastAPI 统一认证代理，负责登录、登出与当前用户会话。"},
             {"name": "contracts", "description": "契约输出基线，包含共享响应、任务快照与分页示例。"},
             {"name": "tasks", "description": "统一任务恢复、状态查询与事件补发。"},
             {"name": "video", "description": "视频功能域骨架。"},

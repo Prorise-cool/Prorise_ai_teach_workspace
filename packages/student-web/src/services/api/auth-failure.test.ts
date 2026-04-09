@@ -103,7 +103,7 @@ describe('api client auth failure dispatch', () => {
 
     await expect(
       client.request({
-        url: '/auth/login',
+        url: '/api/v1/auth/login',
         method: 'post',
         authFailureMode: 'manual'
       })

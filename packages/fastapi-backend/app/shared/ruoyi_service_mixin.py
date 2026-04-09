@@ -2,7 +2,7 @@
 
 所有与 RuoYi 后端对接的业务 Service 均可继承 ``RuoYiServiceMixin``，
 通过声明类属性 ``_RESOURCE`` 复用统一的 ``_invalid_response_error`` 方法，
-并通过 ``_resolve_factory`` 方法在有用户上下文时自动切换到用户 token 的客户端。
+并通过 ``_resolve_factory`` 方法在有显式请求鉴权时解析客户端。
 """
 
 from __future__ import annotations
@@ -24,8 +24,9 @@ class RuoYiServiceMixin:
     RuoYi 资源名称（如 ``"video-publication"``、``"companion-turn"`` 等），
     该值会被填入 ``IntegrationError.resource`` 字段。
 
-    子类应在 ``__init__`` 中设置 ``_client_factory`` 属性，
-    ``_resolve_factory`` 方法将在有用户上下文时自动切换到用户 token 的客户端。
+    子类应在 ``__init__`` 中设置 ``_client_factory`` 属性。
+    默认工厂仅用于声明“走真实 RuoYiClient”，真正执行时必须显式传入
+    ``access_context`` 或 ``request_auth``，否则直接报错。
     """
 
     _RESOURCE: str
@@ -47,14 +48,14 @@ class RuoYiServiceMixin:
         *,
         request_auth: "RuoYiRequestAuth | None" = None,
     ) -> "RuoYiClientFactory":
-        """选择 client factory：有用户上下文时用用户 token，否则用默认无鉴权客户端。
+        """解析本次调用的显式 client factory。
 
         优先级规则：
         1. 如果 ``_client_factory`` 已被外部注入（非默认 ``from_settings``），
            始终使用注入的 factory（测试 mock 场景）。
         2. 如果有显式 ``request_auth``，使用显式请求鉴权创建客户端。
         3. 如果有 ``access_context``，使用用户 token 创建临时客户端。
-        4. 否则返回默认 ``from_settings`` 无鉴权客户端。
+        4. 否则直接报错，禁止匿名回退。
 
         Args:
             access_context: 可选的已认证用户安全上下文。
@@ -67,7 +68,15 @@ class RuoYiServiceMixin:
 
         if not self._uses_default_factory():
             return self._client_factory
-        return build_client_factory(access_context, request_auth=request_auth)
+        try:
+            return build_client_factory(access_context, request_auth=request_auth)
+        except ValueError as exc:
+            raise AppError(
+                code="RUOYI_REQUEST_AUTH_REQUIRED",
+                message="当前链路缺少显式 RuoYi 请求鉴权，禁止静默回退到匿名客户端或进程级 token",
+                status_code=500,
+                details={"resource": self._RESOURCE},
+            ) from exc
 
     def _resolve_authenticated_factory(
         self,

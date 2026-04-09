@@ -11,9 +11,10 @@
 1. 不再把 RuoYi `access_token` 当成通用环境变量塞进 dotenv。
 2. 旧 `.env` 兼容入口与 `FASTAPI_ENV_FILE` 已彻底废弃；必须按正式环境分层加载。
 3. 业务链路禁止再引入 “service auth / token file / 进程级默认 token”。
-4. 用户请求发起的 RuoYi 调用，统一走当前请求态 Bearer token 透传。
-5. 后台 worker 如需继续访问 RuoYi，只能使用任务创建时写入 Redis 运行态的短 TTL 请求鉴权；任务结束后立即清理。
-6. `GET /api/v1/video/published` 是登录态发现区接口，不再定义为匿名公开回源。
+4. student-web 的认证主链统一先打 FastAPI `/api/v1/auth/*`，再由 FastAPI 代理到 RuoYi。
+5. 用户请求发起的其它 RuoYi 调用，统一走当前请求态 Bearer token 透传。
+6. 后台 worker 如需继续访问 RuoYi，只能使用任务创建时写入 Redis 运行态的短 TTL 请求鉴权；任务结束后立即清理。
+7. `GET /api/v1/video/published` 是登录态发现区接口，不再定义为匿名公开回源。
 
 ## 推荐 env 结构
 
@@ -45,8 +46,14 @@ FastAPI 当前按以下顺序加载配置，越靠后优先级越高：
 ### 用户请求链路
 
 - 来源：`Authorization: Bearer <user-token>`
-- 适用：`/video/tasks/*`、`/video/published`、`/classroom/*`、`/companion/*`、`/knowledge/*`、`/learning/*`
+- 适用：`/auth/me`、`/video/tasks/*`、`/video/published`、`/classroom/*`、`/companion/*`、`/knowledge/*`、`/learning/*`
 - 要求：通过 `AccessContext` 或显式 `RuoYiRequestAuth` 透传，不允许依赖默认全局 token
+
+### 认证代理链路
+
+- 入口：`/api/v1/auth/login`、`/api/v1/auth/logout`、`/api/v1/auth/code`、`/api/v1/auth/register/enabled`、`/api/v1/auth/binding/*`、`/api/v1/auth/me`
+- 说明：FastAPI 负责把前端明文登录/注册请求转换成 RuoYi `@ApiEncrypt` 协议，并在登录成功后把在线 token 写入 FastAPI 运行态。
+- 要求：认证代理使用的是公私钥加解密配置，不属于业务 access_token；禁止把任何用户 token 写进 env。
 
 ### Worker 链路
 
