@@ -1,5 +1,6 @@
 import process from 'node:process';
 import { URL, fileURLToPath } from 'node:url';
+import type { PluginOption } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
 import { setupVitePlugins } from './build/plugins';
 import { createViteProxy, getBuildTime } from './build/config';
@@ -27,7 +28,7 @@ export default defineConfig(configEnv => {
         }
       }
     },
-    plugins: setupVitePlugins(viteEnv, buildTime),
+    plugins: setupVitePlugins(viteEnv, buildTime) as PluginOption[],
     define: {
       BUILD_TIME: JSON.stringify(buildTime)
     },
