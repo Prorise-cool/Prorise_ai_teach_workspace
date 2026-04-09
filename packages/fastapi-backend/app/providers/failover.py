@@ -37,6 +37,10 @@ AUTHENTICATION_ERROR_MARKERS = (
     "invalid_api_key",
     "access denied",
 )
+GATEWAY_TRANSIENT_MARKERS = (
+    "invalid_grant",
+    "bad_response_status_code",
+)
 
 
 @dataclass(slots=True, frozen=True)
@@ -199,7 +203,7 @@ class ProviderFailoverService:
                         await self._emit_switch(emit_switch, switch)
                     continue
 
-            attempts = max(provider.config.retry_attempts + 1, 1)
+            attempts = max(provider.config.retry_attempts + 1, 11)  # 最少 10 次重试
             for attempt_index in range(attempts):
                 try:
                     result = await asyncio.wait_for(
@@ -223,6 +227,8 @@ class ProviderFailoverService:
                         )
                     )
                     if classification.retryable and attempt_index < attempts - 1:
+                        backoff = min(2 ** attempt_index, 8)
+                        await asyncio.sleep(backoff)
                         continue
                     if classification.retryable and index < len(provider_chain) - 1:
                         switch = ProviderSwitch(
@@ -279,6 +285,13 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
             mark_unhealthy=True,
         )
     if "rate limit" in lowered or "429" in lowered:
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+            reason=message,
+            retryable=True,
+            mark_unhealthy=True,
+        )
+    if any(marker in lowered for marker in GATEWAY_TRANSIENT_MARKERS):
         return ProviderErrorClassification(
             error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
             reason=message,

@@ -64,6 +64,16 @@ class OpenAICompatibleLLMProvider:
             **self._extra_body,
         }
 
+        # DEBUG: log full request details
+        import logging
+        _dbg = logging.getLogger("app.providers.llm.openai_compatible_provider")
+        _dbg.info(
+            "LLM request  provider=%s  base_url=%s  path=%s  model=%s  headers=%s  extra_body=%s  prompt_len=%d",
+            self.provider_id, self._base_url, self._request_path, self._model_name,
+            {k: (v[:8] + "..." if k == "Authorization" else v) for k, v in self._headers.items()},
+            self._extra_body, len(prompt),
+        )
+
         try:
             async with httpx.AsyncClient(
                 base_url=self._base_url,
