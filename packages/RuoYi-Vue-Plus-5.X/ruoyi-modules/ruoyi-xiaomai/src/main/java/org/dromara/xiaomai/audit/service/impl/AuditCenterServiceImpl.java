@@ -3,6 +3,8 @@ package org.dromara.xiaomai.audit.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.exception.ServiceException;
+import cn.hutool.core.bean.BeanUtil;
+import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.xiaomai.audit.domain.bo.AuditRecordBo;
@@ -31,7 +33,7 @@ public class AuditCenterServiceImpl implements IAuditCenterService {
     @Override
     public TableDataInfo<AuditRecordVo> queryPage(AuditRecordBo bo, PageQuery pageQuery) {
         AuditRecordBo query = copyQuery(bo);
-        PageQuery pageable = pageQuery == null ? new PageQuery(10, 1) : pageQuery;
+        PageQuery pageable = pageQuery == null ? new PageQuery(PageQuery.DEFAULT_PAGE_SIZE, PageQuery.DEFAULT_PAGE_NUM) : pageQuery;
         Page<AuditRecordVo> page = pageable.build();
         long total = baseMapper.countAuditRecords(query);
         if (total <= 0) {
@@ -62,21 +64,7 @@ public class AuditCenterServiceImpl implements IAuditCenterService {
     }
 
     private AuditRecordBo copyQuery(AuditRecordBo bo) {
-        AuditRecordBo query = new AuditRecordBo();
-        if (bo == null) {
-            return query;
-        }
-        query.setUserId(bo.getUserId());
-        query.setResultType(bo.getResultType());
-        query.setSourceType(bo.getSourceType());
-        query.setSourceTable(bo.getSourceTable());
-        query.setStatus(bo.getStatus());
-        query.setKeyword(bo.getKeyword());
-        query.setFavorite(bo.getFavorite());
-        query.setDeleted(bo.getDeleted());
-        query.setBeginSourceTime(bo.getBeginSourceTime());
-        query.setEndSourceTime(bo.getEndSourceTime());
-        return query;
+        return bo == null ? new AuditRecordBo() : BeanUtil.toBean(bo, AuditRecordBo.class);
     }
 
     private void validateExportQuery(AuditRecordBo query) {

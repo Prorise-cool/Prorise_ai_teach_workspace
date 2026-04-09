@@ -7,6 +7,8 @@ import org.dromara.common.excel.annotation.ExcelDictFormat;
 import org.dromara.common.excel.convert.ExcelDictConvert;
 import io.github.linpeilie.annotations.AutoMapper;
 import lombok.Data;
+import org.dromara.common.translation.annotation.Translation;
+import org.dromara.common.translation.constant.TransConstant;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -39,6 +41,12 @@ public class XmUserWorkVo implements Serializable {
      */
     @ExcelProperty(value = "作品所有者")
     private Long userId;
+
+    /**
+     * 作品所有者名称
+     */
+    @Translation(type = TransConstant.USER_ID_TO_NAME, mapper = "userId")
+    private String userName;
 
     /**
      * 作品类型（video / classroom）
@@ -75,6 +83,7 @@ public class XmUserWorkVo implements Serializable {
      * 封面图直链（冗余缓存，避免高频 JOIN sys_oss）
      */
     @ExcelProperty(value = "封面图直链")
+    @Translation(type = TransConstant.OSS_ID_TO_URL, mapper = "coverOssId")
     private String coverUrl;
 
     /**

@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/xiaomai/learning")
-public class LearningResultController extends BaseController {
+public class XmLearningResultController extends BaseController {
 
     private final ILearningResultService learningResultService;
 

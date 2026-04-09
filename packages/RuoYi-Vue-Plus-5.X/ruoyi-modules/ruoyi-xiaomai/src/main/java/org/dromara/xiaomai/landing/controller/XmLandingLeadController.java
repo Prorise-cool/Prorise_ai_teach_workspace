@@ -97,6 +97,7 @@ public class XmLandingLeadController extends BaseController {
      */
     @SaCheckPermission("xiaomai:landingLead:remove")
     @Log(title = "营销落地页线索", businessType = BusinessType.DELETE)
+    @RepeatSubmit()
     @DeleteMapping("/{ids}")
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {

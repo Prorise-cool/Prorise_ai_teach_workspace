@@ -7,6 +7,7 @@ import org.dromara.common.log.annotation.Log;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.satoken.utils.LoginHelper;
 import org.dromara.xiaomai.user.profile.domain.bo.XmUserProfileBo;
+import org.dromara.xiaomai.user.profile.domain.vo.XmProfileCompletedVo;
 import org.dromara.xiaomai.user.profile.domain.vo.XmUserProfileVo;
 import org.dromara.xiaomai.user.profile.service.IXmUserProfileService;
 import org.springframework.validation.annotation.Validated;
@@ -46,8 +47,8 @@ public class XmUserProfileAppController {
      * @return 当前登录用户配置完成状态
      */
     @GetMapping("/completed")
-    public R<ProfileCompletedVo> getCompletedStatus() {
-        return R.ok(new ProfileCompletedVo(xmUserProfileService.isCompleted(LoginHelper.getUserId())));
+    public R<XmProfileCompletedVo> getCompletedStatus() {
+        return R.ok(new XmProfileCompletedVo(xmUserProfileService.isCompleted(LoginHelper.getUserId())));
     }
 
     /**
@@ -74,13 +75,5 @@ public class XmUserProfileAppController {
     @PutMapping
     public R<XmUserProfileVo> updateCurrentProfile(@RequestBody XmUserProfileBo bo) {
         return R.ok(xmUserProfileService.saveCurrentProfile(LoginHelper.getUserId(), bo));
-    }
-
-    /**
-     * 配置完成状态。
-     *
-     * @param isCompleted 是否完成配置
-     */
-    public record ProfileCompletedVo(Boolean isCompleted) {
     }
 }
