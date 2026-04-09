@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 课堂构建与探索 (高保真版)</title>
+
+	<!-- 引入 Google Fonts 提升字体质感 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+
+	<!-- 引入 Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Lucide 图标库 -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<!-- 严格配置 Tailwind 以使用小麦设计系统 Tokens -->
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', '2xl': '32px', 'full': '9999px',
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		/* ================= 基础主题与平滑过渡 ================= */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+		}
+
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		/* ================= 高级背景修饰 (网格 + 渐隐) ================= */
+		.bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(59, 23, 1, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.03) 1px, transparent 1px);
+			background-size: 40px 40px;
+			mask-image: radial-gradient(ellipse at top, black 40%, transparent 90%);
+			-webkit-mask-image: radial-gradient(ellipse at top, black 40%, transparent 90%);
+		}
+
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.02) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.02) 1px, transparent 1px);
+		}
+
+		/* 玻璃拟态导航栏 (全站顶栏保留极简模糊) */
+		.glass-nav {
+			background: rgba(255, 255, 255, 0.85);
+			backdrop-filter: blur(24px);
+			-webkit-backdrop-filter: blur(24px);
+		}
+
+		html.dark .glass-nav {
+			background: rgba(31, 26, 24, 0.85);
+		}
+
+		/* 隐藏滚动条 */
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
+		}
+
+		/* ================= 核心：瀑布流布局 ================= */
+		.waterfall-container {
+			column-count: 1;
+			column-gap: 1.5rem;
+		}
+
+		@media (min-width: 640px) {
+			.waterfall-container {
+				column-count: 2;
+			}
+		}
+
+		@media (min-width: 1024px) {
+			.waterfall-container {
+				column-count: 3;
+			}
+		}
+
+		.waterfall-item {
+			break-inside: avoid;
+			margin-bottom: 1.5rem;
+			display: inline-block;
+			width: 100%;
+		}
+
+		/* 优雅的入场与 Hover 动效 */
+		@keyframes fadeSlideUp {
+			from {
+				opacity: 0;
+				transform: translateY(15px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.card-enter {
+			animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+			opacity: 0;
+		}
+
+		.btn-transition {
+			transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.btn-hover-scale {
+			transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.btn-hover-scale:hover {
+			transform: scale(1.02);
+		}
+
+		.btn-hover-scale:active {
+			transform: scale(0.97);
+		}
+
+		/* 坚实卡片 Hover 规范 */
+		.hover-card-soft {
+			transition: border-color 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.hover-card-soft:hover {
+			border-color: var(--tw-border-opacity);
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+		}
+
+		html.dark .hover-card-soft:hover {
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+		}
+
+		.dropdown-open {
+			opacity: 1 !important;
+			transform: scale(1) translateY(0) !important;
+			pointer-events: auto !important;
+		}
+
+		/* 面板显示/隐藏动效 */
+		.hidden-state {
+			max-height: 0;
+			opacity: 0;
+			margin-top: 0;
+			padding-top: 0;
+			padding-bottom: 0;
+			border-width: 0;
+			overflow: hidden;
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.visible-state {
+			max-height: 300px;
+			opacity: 1;
+			margin-top: 1rem;
+			border-width: 1px;
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			overflow: hidden;
+		}
+
+		/* 联网状态呼吸灯 */
+		.network-active .ping-dot {
+			background-color: #52c41a;
+		}
+
+		.network-active .ping-ring {
+			animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+			border-color: #52c41a;
+		}
+
+		/* 拖拽虚线 */
+		.dash-border {
+			background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23f5c547' stroke-width='4' stroke-dasharray='10%2c 14' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+			border-radius: 16px;
+			animation: dash 20s linear infinite;
+		}
+
+		@keyframes dash {
+			to {
+				stroke-dashoffset: 1000;
+			}
+		}
+	</style>
+</head>
+
+<body
+	class="min-h-screen flex flex-col relative overflow-y-auto selection:bg-brand/30 selection:text-text-primary overflow-x-hidden">
+
+	<!-- ==================== 0. 背景层：顶部纯净弥散光晕 + 渐隐网格 ==================== -->
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/15 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<!-- ==================== 1. 悬浮全局导航 ==================== -->
+	<header
+		class="w-[94%] max-w-7xl mx-auto mt-6 sticky top-6 z-50 rounded-full flex justify-between items-center p-3 px-4 glass-nav border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+
+		<!-- 左侧 Logo -->
+		<a href="#" class="font-bold text-lg flex items-center gap-3 btn-hover-scale">
+			<div
+				class="w-8 h-8 bg-text-primary dark:bg-text-primary-dark rounded-md flex items-center justify-center shadow-sm">
+				<i data-lucide="leaf" class="w-4 h-4 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block">XiaoMai</span>
+		</a>
+
+		<!-- 中央 核心路由 Tabs -->
+		<nav
+			class="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-surface-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
+			<!-- 虚拟课堂为激活状态 -->
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light dark:bg-[#2c2522] text-text-primary dark:text-text-primary-dark shadow-sm btn-transition">
+				<i data-lucide="layout-template" class="w-4 h-4"></i> 虚拟课堂
+			</a>
+			<!-- 单题讲解为未激活 -->
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 btn-transition">
+				<i data-lucide="play-square" class="w-4 h-4"></i> 单题讲解
+			</a>
+			<a href="#"
+				class="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 btn-transition">
+				<i data-lucide="book-open" class="w-4 h-4"></i> 学习中心
+			</a>
+		</nav>
+
+		<!-- 右侧 全局操作 -->
+		<div class="flex items-center gap-2 md:gap-3">
+			<button id="langToggle"
+				class="hidden sm:flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark btn-transition">
+				<i data-lucide="globe" class="w-3.5 h-3.5"></i>
+				<span id="langText">中/EN</span>
+			</button>
+			<div class="w-px h-5 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 hidden sm:block"></div>
+			<button id="themeToggle"
+				class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark btn-transition">
+				<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+				<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+			</button>
+			<!-- 个人中心入口 -->
+			<button
+				class="w-8 h-8 rounded-full border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden hover:ring-2 hover:border-brand btn-transition shadow-sm shrink-0">
+				<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
+			</button>
+		</div>
+	</header>
+
+	<!-- ==================== 2. 核心沉浸式输入区 (Classroom Builder) ==================== -->
+	<main
+		class="flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-start px-4 pt-[10vh] pb-12 relative z-20">
+
+		<div class="text-center mb-10 space-y-4 card-enter">
+			<span
+				class="inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark shadow-sm uppercase tracking-widest">
+				<i data-lucide="layout-template" class="w-3.5 h-3.5"></i> Classroom Builder
+			</span>
+			<h1
+				class="text-[32px] md:text-[44px] font-black tracking-tight leading-tight text-text-primary dark:text-text-primary-dark">
+				输入主题，即刻生成<br class="md:hidden" />
+				<span class="bg-gradient-to-r from-brand to-[#ff8c00] bg-clip-text text-transparent">完整虚拟课堂</span>
+			</h1>
+		</div>
+
+		<!-- 核心大输入框容器 -->
+		<div id="dropContainer" class="w-full max-w-[800px] relative group card-enter" style="animation-delay: 0.1s;">
+
+			<!-- 拖拽覆盖层 (彻底实体化背景) -->
+			<div id="dropOverlay" class="absolute inset-0 z-50 p-2 hidden">
+				<div
+					class="w-full h-full dash-border bg-surface-light dark:bg-[#1a1614] flex flex-col items-center justify-center rounded-xl shadow-lg">
+					<div
+						class="w-16 h-16 rounded-full bg-brand flex items-center justify-center mb-3 shadow-md animate-bounce">
+						<i data-lucide="file-plus" class="w-8 h-8 text-[#3b1701]"></i>
+					</div>
+					<h3 class="text-xl font-black text-text-primary dark:text-text-primary-dark">松开鼠标上传课件或大纲</h3>
+					<p class="text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark mt-2">支持 PDF /
+						Word
+						/ 图片解析</p>
+				</div>
+			</div>
+
+			<!-- 外壳：纯正的实体卡片材质 -->
+			<div
+				class="relative w-full rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark shadow-md transition-shadow duration-300 focus-within:shadow-lg flex flex-col min-h-[280px]">
+
+				<!-- 顶栏：智能匹配提示 (纯实底) -->
+				<div
+					class="relative z-30 flex items-center justify-between px-4 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] rounded-t-2xl">
+
+					<!-- 智能师生匹配提示 -->
+					<div class="flex items-center gap-2">
+						<div class="w-7 h-7 rounded-lg bg-brand flex items-center justify-center shadow-sm">
+							<i data-lucide="sparkles" class="w-4 h-4 text-[#3b1701]"></i>
+						</div>
+						<div class="flex flex-col">
+							<span
+								class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark">智能师生匹配</span>
+							<span
+								class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">根据您的配置自动适配
+								AI 老师</span>
+						</div>
+					</div>
+
+					<!-- 模式提示 -->
+					<span
+						class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark hidden md:flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2.5 py-1 rounded-md border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+						<i data-lucide="users" class="w-3.5 h-3.5"></i> 支持多 Agent 讨论模式
+					</span>
+				</div>
+				</button>
+
+				<!-- 核心文本输入区 -->
+				<div class="p-6 flex-1 relative z-20 flex flex-col gap-4">
+					<textarea placeholder="你想系统地学点什么？&#10;&#10;例如：&#10;「结合生活案例，系统讲解一下微积分中的链式法则」&#10;「什么是三相异步电机及其工作原理？」"
+						class="w-full resize-none border-0 bg-transparent text-[16px] leading-relaxed placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 text-text-primary dark:text-text-primary-dark font-medium focus:ring-0 focus:outline-none min-h-[120px]"
+						rows="4"></textarea>
+
+					<!-- 1. 解析异常状态 (组件化折叠，通过 Debug 按钮触发) -->
+					<div id="fileWarningBox"
+						class="hidden-state rounded-xl border border-warning dark:border-[#cc5200] bg-[#fff8eb] dark:bg-[#332210] px-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+						<div class="flex items-start gap-3 py-4">
+							<div
+								class="w-8 h-8 rounded-full bg-warning flex items-center justify-center shrink-0 shadow-sm border border-warning">
+								<i data-lucide="file-warning" class="w-4 h-4 text-white"></i>
+							</div>
+							<div>
+								<div
+									class="flex flex-wrap items-center gap-2 text-[13px] font-black text-text-primary dark:text-[#f5ede1] mb-1">
+									<span>课件解析异常</span>
+									<span
+										class="px-1.5 py-0.5 rounded text-[10px] bg-white dark:bg-[#1f1a18] border border-warning text-warning">关键信息缺失</span>
+								</div>
+								<p
+									class="text-[12px] font-medium text-text-secondary dark:text-[#c4b8a8] leading-relaxed">
+									上传的文档提取失败。您可以直接在上方手动补充关键大纲，或重新上传标准 PDF 格式文件。</p>
+							</div>
+						</div>
+						<div class="flex flex-wrap items-center gap-2 md:justify-end pb-4 md:pb-0">
+							<button
+								class="px-4 py-2 rounded-lg border border-warning text-[12px] font-bold text-warning hover:bg-warning hover:text-white btn-transition shadow-sm">
+								重新上传
+							</button>
+							<button onclick="toggleFileWarning()"
+								class="px-4 py-2 rounded-lg bg-text-primary dark:bg-surface-dark border border-transparent dark:border-bordercolor-dark text-[12px] font-bold text-bg-light dark:text-bg-dark hover:opacity-90 btn-transition shadow-sm">
+								我已手动输入
+							</button>
+						</div>
+					</div>
+
+					<!-- 2. 资料增强范围面板 (被收纳为隐藏面板，点击底部“增强设置”按钮触发) -->
+					<div id="scopePanel"
+						class="hidden-state rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] px-5 flex flex-col gap-4 shadow-sm">
+						<div class="pt-4 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+							<div class="flex items-start gap-3">
+								<div
+									class="w-9 h-9 rounded-lg bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0 shadow-sm">
+									<i data-lucide="scan-search"
+										class="w-4.5 h-4.5 text-text-primary dark:text-text-primary-dark"></i>
+								</div>
+								<div>
+									<div class="flex flex-wrap items-center gap-2">
+										<p class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">
+											资料增强范围</p>
+										<span
+											class="px-1.5 py-0.5 rounded border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-widest shadow-sm">Optional</span>
+									</div>
+									<p
+										class="text-[12px] leading-relaxed text-text-secondary dark:text-text-secondary-dark mt-1 font-medium">
+										除公开网页外，还可勾选是否允许系统读取您的历史收藏与文档。若无网络，系统会自动降级为仅本地输入。
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex flex-wrap gap-2 pb-5">
+							<!-- 选中态：主色背景 -->
+							<button
+								class="px-3 py-1.5 rounded-lg bg-text-primary dark:bg-text-primary-dark text-[12px] font-bold text-surface-light dark:text-surface-dark shadow-sm btn-transition">公开网页</button>
+							<!-- 未选态：实心底色 -->
+							<button
+								class="px-3 py-1.5 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">上传课件</button>
+							<button
+								class="px-3 py-1.5 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">历史收藏案例</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- 底部：工具栏 & 发送按钮 (绝对坚实底色) -->
+				<div
+					class="px-4 py-4 border-t border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-between bg-surface-light dark:bg-surface-dark rounded-b-2xl relative z-20">
+					<div class="flex items-center gap-2">
+						<button
+							class="w-10 h-10 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] flex items-center justify-center text-text-secondary hover:text-text-primary dark:text-text-secondary-dark dark:hover:text-text-primary-dark btn-transition shadow-sm"
+							title="上传课件/PDF">
+							<i data-lucide="paperclip" class="w-4.5 h-4.5"></i>
+						</button>
+						<button
+							class="w-10 h-10 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] flex items-center justify-center text-text-secondary hover:text-text-primary dark:text-text-secondary-dark dark:hover:text-text-primary-dark btn-transition shadow-sm"
+							title="语音输入">
+							<i data-lucide="mic" class="w-4.5 h-4.5"></i>
+						</button>
+
+						<div class="w-px h-6 bg-bordercolor-light dark:bg-bordercolor-dark mx-2 hidden sm:block"></div>
+
+						<!-- 点击触发“资料增强范围”面板 -->
+						<button onclick="toggleScopePanel()"
+							class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#1a1614] hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">
+							<i data-lucide="settings-2" class="w-3.5 h-3.5"></i> 增强设置
+						</button>
+
+						<!-- 开启联网 (去除无意义动效，采用专业级颜色变化) -->
+						<button id="networkToggle"
+							class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm">
+							<div class="w-2 h-2 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark transition-colors"
+								id="networkDot"></div>
+							<span id="networkText">开启联网</span>
+						</button>
+					</div>
+
+					<!-- 生成课堂大按钮 -->
+					<button
+						class="flex items-center gap-2.5 px-8 py-3 rounded-xl bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark font-bold shadow-sm btn-transition hover:opacity-90 text-[14px]">
+						<span>生成课堂</span>
+						<i data-lucide="arrow-right" class="w-4.5 h-4.5"></i>
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- 灵感快捷指令 (去除无意义的动效缩放) -->
+		<div class="flex flex-wrap justify-center items-center gap-3 mt-8 view-enter" style="animation-delay: 0.2s;">
+			<span
+				class="text-[11px] font-black uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mr-1">Try
+				These</span>
+			<button
+				class="px-4 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:border-brand hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition shadow-sm flex items-center gap-1.5">
+				<i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i> 二叉树原理图解
+			</button>
+			<button
+				class="px-4 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:border-brand hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition shadow-sm flex items-center gap-1.5">
+				<i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i> 泰勒展开式推导
+			</button>
+			<!-- Debug：测试解析失败面板显示/隐藏 -->
+			<button onclick="toggleFileWarning()"
+				class="px-4 py-1.5 rounded-full border border-warning bg-warning/10 text-[12px] font-bold text-warning hover:bg-warning hover:text-white btn-transition shadow-sm flex items-center gap-1.5 ml-auto">
+				<i data-lucide="bug" class="w-3.5 h-3.5"></i> 测 解析异常
+			</button>
+		</div>
+	</main>
+
+	<!-- ==================== 3. 瀑布流前导说明 (彻底统一的三张卡片) ==================== -->
+	<section class="w-full max-w-6xl mx-auto px-6 relative z-10 view-enter" style="animation-delay: 0.3s;">
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+
+			<!-- Card 1 -->
+			<div
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 shadow-sm hover-card-soft btn-transition flex flex-col gap-4">
+				<div
+					class="w-10 h-10 rounded-xl bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-primary dark:text-text-primary-dark shadow-sm">
+					<i data-lucide="package-search" class="w-5 h-5"></i>
+				</div>
+				<div>
+					<h3 class="text-[15px] font-black text-text-primary dark:text-text-primary-dark mb-1.5">没找到合适讲解？
+					</h3>
+					<p
+						class="text-[13px] font-medium text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+						如果推荐区里暂时没有相似内容，也不会影响你继续上传课件或直接生成新课堂。</p>
+				</div>
+			</div>
+
+			<!-- Card 2 -->
+			<div
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 shadow-sm hover-card-soft btn-transition flex flex-col gap-4">
+				<div
+					class="w-10 h-10 rounded-xl bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-primary dark:text-text-primary-dark shadow-sm">
+					<i data-lucide="shield-alert" class="w-5 h-5"></i>
+				</div>
+				<div>
+					<h3 class="text-[15px] font-black text-text-primary dark:text-text-primary-dark mb-1.5">登录后看更多</h3>
+					<p
+						class="text-[13px] font-medium text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+						登录即可解锁更多公开课件。即使暂未登录，主流程仍然照常可用，绝不卡点。</p>
+				</div>
+			</div>
+
+			<!-- Card 3 -->
+			<div
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 shadow-sm hover-card-soft btn-transition flex flex-col gap-4">
+				<div
+					class="w-10 h-10 rounded-xl bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-primary dark:text-text-primary-dark shadow-sm">
+					<i data-lucide="wifi-off" class="w-5 h-5"></i>
+				</div>
+				<div>
+					<h3 class="text-[15px] font-black text-text-primary dark:text-text-primary-dark mb-1.5">网络不稳也能继续
+					</h3>
+					<p
+						class="text-[13px] font-medium text-text-secondary dark:text-text-secondary-dark leading-relaxed">
+						推荐内容加载慢时，先继续构思更高效。推荐区变慢不影响核心的课程生成。</p>
+				</div>
+			</div>
+
+		</div>
+	</section>
+
+	<!-- ==================== 4. 社区案例画廊 ==================== -->
+	<section class="w-full max-w-6xl mx-auto px-6 pb-24 relative z-10 view-enter" style="animation-delay: 0.4s;">
+
+		<!-- 画廊头部 -->
+		<div
+			class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-bordercolor-light dark:border-bordercolor-dark pb-4">
+			<div>
+				<h2 class="text-[28px] font-black mb-1 text-text-primary dark:text-text-primary-dark tracking-tight">
+					探索优质课堂案例</h2>
+				<p class="text-[14px] font-medium text-text-secondary dark:text-text-secondary-dark">看看大家都在用小麦学什么系统课程
+				</p>
+			</div>
+			<div class="flex gap-5 text-sm font-bold mt-4 md:mt-0">
+				<button
+					class="border-b-[3px] border-text-primary dark:border-text-primary-dark text-text-primary dark:text-text-primary-dark pb-1">推荐精选</button>
+				<button
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark pb-1 btn-transition">理工科</button>
+				<button
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark pb-1 btn-transition">经管文法</button>
+			</div>
+		</div>
+
+		<!-- 瀑布流容器 -->
+		<div id="feedContainer" class="waterfall-container">
+			<!-- JS 动态注入 -->
+		</div>
+
+		<!-- 加载状态与按钮 -->
+		<div class="flex flex-col items-center justify-center mt-10 h-12 relative">
+			<button id="loadMoreBtn"
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-8 py-3 rounded-xl font-bold text-[14px] hover:bg-secondary dark:hover:bg-[#1a1614] btn-transition flex items-center gap-2 shadow-sm disabled:opacity-80 disabled:cursor-not-allowed">
+				<span class="btn-text">加载更多案例</span>
+				<i data-lucide="arrow-down" class="w-4 h-4 btn-icon"></i>
+				<i data-lucide="loader-2" class="w-4 h-4 animate-spin hidden loading-icon text-brand"></i>
+			</button>
+		</div>
+	</section>
+
+	<script>
+		// 1. 初始化图标
+		lucide.createIcons();
+
+		// 2. 主题与语言
+		const themeToggle = document.getElementById('themeToggle');
+		const html = document.documentElement;
+		const THEME_KEY = 'xiaomai-theme';
+
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem(THEME_KEY, theme);
+		}
+
+		applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+		themeToggle.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+
+		const langToggle = document.getElementById('langToggle');
+		const langText = document.getElementById('langText');
+		if (langToggle && langText) {
+			langToggle.addEventListener('click', () => {
+				langText.innerText = langText.innerText === '中/EN' ? 'EN/中' : '中/EN';
+			});
+		}
+
+		// 3. 联网开关交互 (克制纯色)
+		let isNetworkActive = false;
+		const networkToggle = document.getElementById('networkToggle');
+		const networkDot = document.getElementById('networkDot');
+		const networkText = document.getElementById('networkText');
+
+		networkToggle.addEventListener('click', () => {
+			isNetworkActive = !isNetworkActive;
+			if (isNetworkActive) {
+				networkDot.classList.replace('bg-bordercolor-light', 'bg-success');
+				networkDot.classList.replace('dark:bg-bordercolor-dark', 'dark:bg-success');
+				networkDot.classList.add('shadow-[0_0_8px_rgba(82,196,26,0.6)]');
+				networkText.innerText = '已连接知识库';
+				networkText.classList.replace('text-text-secondary', 'text-success');
+				networkText.classList.replace('dark:text-text-secondary-dark', 'dark:text-success');
+				networkToggle.classList.add('border-success/30');
+			} else {
+				networkDot.classList.replace('bg-success', 'bg-bordercolor-light');
+				networkDot.classList.replace('dark:bg-success', 'dark:bg-bordercolor-dark');
+				networkDot.classList.remove('shadow-[0_0_8px_rgba(82,196,26,0.6)]');
+				networkText.innerText = '开启联网';
+				networkText.classList.replace('text-success', 'text-text-secondary');
+				networkText.classList.replace('dark:text-success', 'dark:text-text-secondary-dark');
+				networkToggle.classList.remove('border-success/30');
+			}
+		});
+
+		// 4. 面板显隐逻辑 (解析异常 / 增强范围)
+		function toggleFileWarning() {
+			const box = document.getElementById('fileWarningBox');
+			if (box.classList.contains('hidden-state')) {
+				box.classList.remove('hidden-state');
+				box.classList.add('visible-state');
+			} else {
+				box.classList.remove('visible-state');
+				box.classList.add('hidden-state');
+			}
+		}
+
+		function toggleScopePanel() {
+			const panel = document.getElementById('scopePanel');
+			if (panel.classList.contains('hidden-state')) {
+				panel.classList.remove('hidden-state');
+				panel.classList.add('visible-state');
+			} else {
+				panel.classList.remove('visible-state');
+				panel.classList.add('hidden-state');
+			}
+		}
+
+		// 5. 拖拽逻辑
+		const dropContainer = document.getElementById('dropContainer');
+		const dropOverlay = document.getElementById('dropOverlay');
+		dropContainer.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.classList.remove('hidden'); });
+		dropOverlay.addEventListener('dragleave', (e) => { e.preventDefault(); dropOverlay.classList.add('hidden'); });
+		dropOverlay.addEventListener('drop', (e) => { e.preventDefault(); dropOverlay.classList.add('hidden'); });
+
+		// 6. 下拉菜单
+		function setupDropdown(btnId, menuId) {
+			const btn = document.getElementById(btnId);
+			const menu = document.getElementById(menuId);
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				document.querySelectorAll('.dropdown-open').forEach(el => {
+					if (el !== menu) el.classList.remove('dropdown-open');
+				});
+				menu.classList.toggle('dropdown-open');
+			});
+			menu.addEventListener('click', (e) => e.stopPropagation());
+		}
+		// 老师下拉菜单已移除
+		// 老师下拉菜单已移除，改用智能师生匹配
+		document.addEventListener('click', () => {
+			document.querySelectorAll('.dropdown-open').forEach(menu => {
+				menu.classList.remove('dropdown-open');
+			});
+		});
+
+		// 7. 瀑布流渲染 (与上一版严格对齐的纯实体卡片)
+		const feedContainer = document.getElementById('feedContainer');
+		const loadMoreBtn = document.getElementById('loadMoreBtn');
+		const btnText = loadMoreBtn.querySelector('.btn-text');
+		const btnIcon = loadMoreBtn.querySelector('.btn-icon');
+		const loadingIcon = loadMoreBtn.querySelector('.loading-icon');
+
+		const mockTemplates = [
+			{ title: "C语言指针基础与内存模型深度解析", tag: "编程基础", likes: "1.2k 看过", aspect: "aspect-video" },
+			{ title: "PLC 顺序功能图 (SFC) 编程入门实战", tag: "工控自动化", likes: "856 看过", aspect: "aspect-[3/4]" },
+			{ title: "机械制图：三视图投影规律与空间想象构建", tag: "工程制图", likes: "2.3k 看过", aspect: "aspect-[4/3]" },
+			{ title: "10分钟系统掌握微积分链式法则", tag: "高等数学", likes: "3.1k 看过", aspect: "aspect-[21/9]" },
+			{ title: "财务会计：借贷记账法的底层逻辑与生活化解析", tag: "财务管理", likes: "1.8k 看过", aspect: "aspect-square" },
+			{ title: "新能源汽车电池管理系统 (BMS) 工作机制详解", tag: "汽车电子", likes: "920 看过", aspect: "aspect-[3/5]" }
+		];
+
+		function generateCardHTML(index) {
+			const tpl = mockTemplates[Math.floor(Math.random() * mockTemplates.length)];
+			const imgUrl = `https://picsum.photos/seed/${Math.random()}/600/400`;
+
+			const delay = (index % 10) * 80;
+
+			return `
+                <div class="waterfall-item card-enter" style="animation-delay: ${delay}ms">
+                    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden hover-card-soft shadow-sm flex flex-col group">
+                        <div class="w-full ${tpl.aspect} bg-secondary dark:bg-[#1a1614] relative flex flex-col items-center justify-center overflow-hidden border-b border-bordercolor-light dark:border-bordercolor-dark">
+                            <img src="${imgUrl}" alt="Cover" class="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-luminosity transition-transform duration-500 group-hover:scale-105">
+                            
+                            <!-- 纯实底中心按钮 (无任何毛玻璃或透明黑框) -->
+                            <div class="w-12 h-12 bg-text-primary dark:bg-surface-dark border border-transparent dark:border-bordercolor-dark rounded-full flex items-center justify-center text-surface-light dark:text-text-primary-dark shadow-md z-10 transition-transform duration-300 group-hover:scale-110">
+                                <i data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
+                            </div>
+                        </div>
+                        <div class="p-5 flex flex-col">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-[10px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-1.5 py-0.5 rounded shadow-sm tracking-wider">互动课堂</span>
+                            </div>
+                            <h3 class="font-black text-[16px] tracking-tight leading-snug mb-4 text-text-primary dark:text-text-primary-dark line-clamp-2 group-hover:text-brand-dark dark:group-hover:text-brand btn-transition">${tpl.title}</h3>
+                            <div class="flex justify-between items-center pt-4 border-t border-bordercolor-light dark:border-bordercolor-dark mt-auto">
+                                <span class="text-[11px] font-bold bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark px-2 py-1 rounded-md">${tpl.tag}</span>
+                                <span class="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-1"><i data-lucide="eye" class="w-3.5 h-3.5"></i> ${tpl.likes}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+		}
+
+		function renderCards(count) {
+			let cardsHTML = '';
+			for (let i = 0; i < count; i++) {
+				cardsHTML += generateCardHTML(i);
+			}
+			feedContainer.insertAdjacentHTML('beforeend', cardsHTML);
+			lucide.createIcons();
+		}
+
+		// 默认加载 8 个
+		renderCards(8);
+
+		// 点击加载
+		loadMoreBtn.addEventListener('click', () => {
+			loadMoreBtn.disabled = true;
+			btnText.innerText = '正在为您检索课程...';
+			btnIcon.classList.add('hidden');
+			loadingIcon.classList.remove('hidden');
+
+			setTimeout(() => {
+				renderCards(8);
+
+				loadMoreBtn.disabled = false;
+				btnText.innerText = '加载更多案例';
+				btnIcon.classList.remove('hidden');
+				loadingIcon.classList.add('hidden');
+			}, 1200);
+		});
+	</script>
+	<script src="../../_shared/page-hub.js" defer data-page-hub></script>
+</body>
+
+</html>

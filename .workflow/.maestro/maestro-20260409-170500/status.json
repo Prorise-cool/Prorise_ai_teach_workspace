@@ -1,0 +1,29 @@
+{
+  "session_id": "maestro-20260409-170500",
+  "created_at": "2026-04-09T17:05:00+08:00",
+  "intent": "优先阅读视频管道调查报告，遵守工作流，先进行多 agent 并行调研 references/manim-to-video-claw 与 packages/fastapi-backend，明确如何在复用现有基础设施前提下实现优于原项目的 TTS/模板/视频管道方案",
+  "task_type": "analyze",
+  "chain_name": "analyze",
+  "phase": 1,
+  "auto_mode": false,
+  "steps": [
+    {
+      "index": 0,
+      "skill": "maestro-analyze",
+      "args": "video pipeline / tts / template-layer comparison",
+      "status": "running",
+      "started_at": "2026-04-09T17:05:00+08:00",
+      "completed_at": null
+    }
+  ],
+  "current_step": 0,
+  "status": "running",
+  "notes": {
+    "scope": [
+      "docs/视频管道调查报告.md",
+      "references/manim-to-video-claw",
+      "packages/fastapi-backend"
+    ],
+    "constraint": "在调研充分完成前不得修改代码"
+  }
+}

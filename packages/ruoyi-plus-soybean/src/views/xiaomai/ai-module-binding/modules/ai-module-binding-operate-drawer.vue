@@ -60,7 +60,10 @@ function createDefaultModel(): Model {
   };
 }
 
-type RuleKey = Extract<keyof Model, 'moduleId' | 'stageCode' | 'capability' | 'resourceId' | 'healthSource' | 'status' | 'isDefault'>;
+type RuleKey = Extract<
+  keyof Model,
+  'moduleId' | 'stageCode' | 'capability' | 'resourceId' | 'healthSource' | 'status' | 'isDefault'
+>;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
   moduleId: createRequiredRule('模块主键不能为空'),
@@ -160,7 +163,12 @@ watch(visible, () => {
           <DictSelect v-model:value="model.healthSource" placeholder="请选择健康来源" dict-code="xm_ai_health_source" />
         </NFormItem>
         <NFormItem label="运行时配置 JSON" path="runtimeSettingsJson">
-          <NInput v-model:value="model.runtimeSettingsJson" :rows="3" type="textarea" placeholder="请输入运行时配置 JSON" />
+          <NInput
+            v-model:value="model.runtimeSettingsJson"
+            :rows="3"
+            type="textarea"
+            placeholder="请输入运行时配置 JSON"
+          />
         </NFormItem>
         <NFormItem label="状态" path="status">
           <DictRadio v-model:value="model.status" dict-code="sys_normal_disable" />

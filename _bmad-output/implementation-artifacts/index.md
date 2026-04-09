@@ -178,8 +178,12 @@
 
 ### Story 4.7: 视频等待页前端状态机、恢复与降级
 - [文档](./4-7-视频等待页前端状态机恢复与降级.md)
-- **状态**: ready-for-dev
+- **状态**: review
 - **说明**: zustand 状态机、SSE 事件消费、status 轮询降级、manim_fix 修复态 UI
+- [调查记录](./4-7-视频等待页SSE实时状态故障调查-20260409.md)
+- [修复记录](./4-7-视频等待页SSE实时状态修复-20260409.md)
+- **调查结论**: 当前实时状态丢失的主因是前端把 `text/event-stream` 用 `response.text()` 整体读完后再解析，导致长连接期间不会产出任何事件；同时后端 `connected` / `heartbeat` 缺少 `id` / `sequence`，会被前端 parser 丢弃
+- **修复摘要**: `student-web` 已改为基于 `ReadableStream` 的增量 SSE 解析，并为缺失契约身份的 `connected` / `heartbeat` 生成仅本地使用的 transient id，避免等待页卡死且不污染 `Last-Event-ID`
 
 ### Story 4.8: 视频结果页、播放器与结果操作
 - [文档](./4-8-视频结果页播放器与结果操作.md)

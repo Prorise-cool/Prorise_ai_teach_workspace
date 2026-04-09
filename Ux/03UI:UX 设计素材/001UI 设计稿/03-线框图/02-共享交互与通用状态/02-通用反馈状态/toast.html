@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - Toast 提示</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen bg-grid p-8 relative flex flex-col items-center gap-4">
+
+	<div class="text-sm font-bold text-gray-500 mb-8 border-b-2 border-black pb-2">模拟各种 Toast 状态 (固定在页面顶部或中上部)</div>
+
+	<!-- 1. Success Toast -->
+	<div
+		class="bg-black text-white wf-border border-black px-6 py-3 flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+		<span class="text-green-400 font-bold">✓</span>
+		<span class="text-sm font-bold">已成功添加到收藏夹</span>
+	</div>
+
+	<!-- 2. Error Toast -->
+	<div
+		class="bg-white text-black wf-border border-red-500 px-6 py-3 flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(239,68,68,0.2)]">
+		<span class="text-red-500 font-bold">✕</span>
+		<span class="text-sm font-bold">网络异常，保存失败</span>
+	</div>
+
+	<!-- 3. Info/Warning Toast -->
+	<div
+		class="bg-[#f5c547] text-black wf-border border-black px-6 py-3 flex items-center gap-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+		<span class="font-bold">!</span>
+		<span class="text-sm font-bold">请先登录后再进行收藏操作</span>
+	</div>
+
+</body>
+
+</html>

@@ -44,7 +44,12 @@ async function search() {
               <NInputNumber v-model:value="model.userId" placeholder="请输入用户 ID" class="w-full" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="作品类型" label-width="auto" path="workType" class="pr-24px">
-              <DictSelect v-model:value="model.workType" placeholder="请选择作品类型" dict-code="xm_user_work_type" clearable />
+              <DictSelect
+                v-model:value="model.workType"
+                placeholder="请选择作品类型"
+                dict-code="xm_user_work_type"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="来源任务 ID" label-width="auto" path="taskRefId" class="pr-24px">
               <NInput v-model:value="model.taskRefId" placeholder="请输入来源任务 ID" />
@@ -53,10 +58,20 @@ async function search() {
               <NInput v-model:value="model.title" placeholder="请输入作品标题" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="公开状态" label-width="auto" path="isPublic" class="pr-24px">
-              <DictSelect v-model:value="model.isPublic" placeholder="请选择公开状态" dict-code="xm_yes_no_numeric" clearable />
+              <DictSelect
+                v-model:value="model.isPublic"
+                placeholder="请选择公开状态"
+                dict-code="xm_yes_no_numeric"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="管理状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect v-model:value="model.status" placeholder="请选择管理状态" dict-code="xm_user_work_status" clearable />
+              <DictSelect
+                v-model:value="model.status"
+                placeholder="请选择管理状态"
+                dict-code="xm_user_work_status"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi :show-feedback="false" span="24" class="pr-24px">
               <NSpace class="w-full" justify="end">

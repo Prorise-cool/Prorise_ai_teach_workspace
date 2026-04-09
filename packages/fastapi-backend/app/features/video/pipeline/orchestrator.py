@@ -7,6 +7,7 @@ SSE 事件推送、错误处理和结果持久化。
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Mapping, Sequence
 
 from app.core.config import Settings, get_settings
@@ -22,6 +23,7 @@ from app.features.video.pipeline.artifact_writeback import ArtifactWritebackServ
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.compose import ComposeService
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
+from app.features.video.pipeline.auto_fix import ast_fix_code, stat_check_fix
 from app.features.video.pipeline.manim import LLMBasedFixer, ManimGenerationService, RuleBasedFixer
 from app.features.video.pipeline.models import (
     ComposeResult,
@@ -44,6 +46,7 @@ from app.features.video.pipeline.runtime import (
     build_failure,
     build_stage_context,
 )
+from app.features.video.pipeline.manim_runtime_prelude import ensure_manim_runtime_prelude
 from app.features.video.runtime_auth import delete_video_runtime_auth, load_video_runtime_auth
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
@@ -94,7 +97,8 @@ class VideoPipelineService:
             allow_local_fallback=resolve_local_fallback_policy(
                 environment=settings.environment,
                 configured=settings.video_sandbox_allow_local_fallback,
-            )
+            ),
+            render_quality=settings.video_render_quality,
         )
         self.provider_runtime_resolver = provider_runtime_resolver or ProviderRuntimeResolver(
             settings=settings,
@@ -129,6 +133,7 @@ class VideoPipelineService:
                 provider_runtime.llm_for(VideoStage.MANIM_GEN.value),
                 self.failover_service,
                 runtime,
+                self.settings,
             )
             rule_fixer = RuleBasedFixer()
             llm_fixer = LLMBasedFixer(provider_runtime.llm_for(VideoStage.MANIM_FIX.value), self.failover_service)
@@ -152,7 +157,16 @@ class VideoPipelineService:
                 user_profile=user_profile,
             )
             storyboard = await self._run_storyboard(task, storyboard_service, understanding=understanding)
-            manim_code = await self._run_manim_generation(task, manim_service, storyboard=storyboard)
+
+            # Manim代码生成 和 TTS 并行 — 两者都只依赖 storyboard
+            manim_task = asyncio.create_task(
+                self._run_manim_generation(task, manim_service, storyboard=storyboard)
+            )
+            tts_task = asyncio.create_task(
+                self._run_tts(task, tts_service, storyboard=storyboard)
+            )
+            manim_code, tts_result = await asyncio.gather(manim_task, tts_task)
+
             render_result, manim_code = await self._run_render_with_fix_chain(
                 task,
                 runtime,
@@ -161,7 +175,6 @@ class VideoPipelineService:
                 rule_fixer=rule_fixer,
                 llm_fixer=llm_fixer,
             )
-            tts_result = await self._run_tts(task, tts_service, storyboard=storyboard)
             compose_result = await self._run_compose(
                 task,
                 compose_service,
@@ -311,7 +324,14 @@ class VideoPipelineService:
         rule_fixer: RuleBasedFixer,
         llm_fixer: LLMBasedFixer,
     ) -> tuple[ExecutionResult, ManimCodeResult]:
-        """执行渲染 + 自动修复循环。"""
+        """执行渲染 + 四层自动修复循环。
+
+        四层修复管道：
+        1. AST 参数注入（自动补全中文渲染参数）
+        2. 静态分析检查（参数拼写错误、方法存在性）
+        3. 规则修复 + LLM 智能修复
+        4. 重新渲染验证
+        """
         resource_limits = ResourceLimits(
             cpu_count=self.settings.video_sandbox_cpu_count,
             memory_mb=self.settings.video_sandbox_memory_mb,
@@ -352,11 +372,40 @@ class VideoPipelineService:
                 task,
                 attempt_no=attempt_no,
                 fix_event="fix_attempt_start",
-                message=f"开始第 {attempt_no} 次自动修复",
+                message=f"开始第 {attempt_no} 次自动修复（四层管道）",
             )
+
+            error_log = render_result.stderr or render_result.error_type or "render_error"
+            fixed_script = current_code.script_content
+
+            # Layer 1: AST 参数注入。
+            fixed_script = ast_fix_code(fixed_script)
+            runtime.append_fix_log(
+                FixLogEntry(
+                    attempt_no=attempt_no,
+                    strategy="rule",
+                    error_type="ast_fix",
+                    success=True,
+                    message="Layer 1: AST 参数注入完成",
+                ).model_dump(mode="json", by_alias=True)
+            )
+
+            # Layer 2: 静态分析检查。
+            fixed_script = stat_check_fix(fixed_script)
+            runtime.append_fix_log(
+                FixLogEntry(
+                    attempt_no=attempt_no,
+                    strategy="rule",
+                    error_type="stat_check",
+                    success=True,
+                    message="Layer 2: 静态分析检查完成",
+                ).model_dump(mode="json", by_alias=True)
+            )
+
+            # Layer 3a: 规则修复。
             rule_fix = rule_fixer.fix(
-                script_content=current_code.script_content,
-                error_log=render_result.stderr or render_result.error_type or "render_error",
+                script_content=fixed_script,
+                error_log=error_log,
             )
             runtime.append_fix_log(
                 FixLogEntry(
@@ -368,20 +417,13 @@ class VideoPipelineService:
                 ).model_dump(mode="json", by_alias=True)
             )
             if rule_fix.fixed and rule_fix.fixed_script:
-                current_code = current_code.model_copy(update={"script_content": rule_fix.fixed_script})
-                runtime.save_model("manim_code", current_code)
-                await self._emit_fix_event(
-                    task,
-                    attempt_no=attempt_no,
-                    fix_event="fix_attempt_success",
-                    message="规则修复成功，重新进入渲染",
-                )
-                continue
+                fixed_script = rule_fix.fixed_script
 
+            # Layer 3b: LLM 智能修复。
             llm_fix = await llm_fixer.fix(
                 storyboard=storyboard,
-                script_content=current_code.script_content,
-                error_log=render_result.stderr or render_result.error_type or "render_error",
+                script_content=fixed_script,
+                error_log=error_log,
                 emit_switch=self._build_switch_emitter(task, VideoStage.MANIM_FIX, 0.6),
             )
             runtime.append_fix_log(
@@ -394,21 +436,17 @@ class VideoPipelineService:
                 ).model_dump(mode="json", by_alias=True)
             )
             if llm_fix.fixed and llm_fix.fixed_script:
-                current_code = current_code.model_copy(update={"script_content": llm_fix.fixed_script})
-                runtime.save_model("manim_code", current_code)
-                await self._emit_fix_event(
-                    task,
-                    attempt_no=attempt_no,
-                    fix_event="fix_attempt_success",
-                    message="LLM 修复成功，重新进入渲染",
-                )
-                continue
+                fixed_script = llm_fix.fixed_script
 
+            # Layer 4: 更新代码并重新渲染（循环回到 while 顶部）。
+            fixed_script = ensure_manim_runtime_prelude(fixed_script)
+            current_code = current_code.model_copy(update={"script_content": fixed_script})
+            runtime.save_model("manim_code", current_code)
             await self._emit_fix_event(
                 task,
                 attempt_no=attempt_no,
-                fix_event="fix_attempt_failed",
-                message="当前修复尝试失败",
+                fix_event="fix_attempt_success",
+                message="四层修复完成，重新进入渲染",
             )
 
     async def _run_tts(

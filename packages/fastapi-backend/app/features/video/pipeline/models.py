@@ -134,20 +134,39 @@ class UnderstandingResult(VideoCamelModel):
 
 
 class Scene(VideoCamelModel):
-    """分镜场景数据。"""
+    """分镜场景数据。
+
+    voice_text: TTS 语音文本（数学符号口语化，如 x² → "x的平方"）。
+    image_desc: Manim 场景视觉描述（公式用 LaTeX）。
+    voice_role: TTS 音色角色标识。
+    """
+
     scene_id: str
     title: str
     narration: str
     visual_description: str
-    duration_hint: int = Field(ge=1)
+    duration_hint: int = Field(default=0, ge=0)
     order: int = Field(ge=1)
+    voice_text: str = ""
+    image_desc: str = ""
+    voice_role: str = "default_teacher"
+
+
+class VideoConfig(VideoCamelModel):
+    """视频渲染配置。"""
+
+    background_color: str = "#1a1a2e"
+    aspect_ratio: str = "16:9"
+    quality: str = "m"
 
 
 class Storyboard(VideoCamelModel):
     """完整分镜脚本。"""
+
     scenes: list[Scene]
-    total_duration: int = Field(ge=1)
-    target_duration: int = Field(ge=90, le=180)
+    total_duration: int = Field(default=0, ge=0)
+    target_duration: int = Field(default=0, ge=0)
+    video_config: VideoConfig = Field(default_factory=VideoConfig)
     provider_used: str
     generated_at: str = Field(default_factory=format_trace_timestamp)
 
@@ -166,6 +185,14 @@ class ManimCodeResult(VideoCamelModel):
     scene_mapping: list[SceneCodeMapping]
     provider_used: str
     generated_at: str = Field(default_factory=format_trace_timestamp)
+
+
+class SceneGenerationContext(VideoCamelModel):
+    """逐场景代码生成上下文，用于增量拼接。"""
+
+    scene_id: str
+    scene_code: str
+    prev_code_summary: str = ""
 
 
 class FixResult(VideoCamelModel):

@@ -10,6 +10,10 @@ import json
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from app.core.logging import get_logger
+
+logger = get_logger("app.features.video.pipeline.understanding")
+
 from app.features.video.pipeline._helpers import (
     extract_json_object,
     extract_source_text,
@@ -67,6 +71,54 @@ def _build_default_understanding(
     )
 
 
+def _normalize_solution_step(
+    step: dict[str, object],
+    *,
+    index: int,
+    fallback_text: str,
+) -> SolutionStep | None:
+    """将常见 LLM 步骤字段别名规整为 ``SolutionStep``。"""
+    explanation = first_non_empty(
+        [
+            str(step.get("explanation") or "").strip(),
+            str(step.get("action") or "").strip(),
+            str(step.get("description") or "").strip(),
+            str(step.get("desc") or "").strip(),
+            str(step.get("content") or "").strip(),
+            str(step.get("narration") or "").strip(),
+        ],
+        fallback="",
+    )
+    title = first_non_empty(
+        [
+            str(step.get("title") or "").strip(),
+            str(step.get("name") or "").strip(),
+            str(step.get("heading") or "").strip(),
+            str(step.get("label") or "").strip(),
+        ],
+        fallback="",
+    )
+    step_no = step.get("step") or step.get("index") or index
+    try:
+        step_no = int(step_no)
+    except (TypeError, ValueError):
+        step_no = index
+
+    if not explanation:
+        explanation = fallback_text.strip()
+    if not explanation:
+        return None
+
+    if not title:
+        title = f"步骤 {step_no}"
+
+    return SolutionStep(
+        step_id=str(step.get("stepId") or step.get("step_id") or f"step_{step_no}"),
+        title=title,
+        explanation=explanation,
+    )
+
+
 @dataclass(slots=True)
 class UnderstandingService:
     """题目理解服务，调用 LLM 将原始题目转换为结构化理解结果。"""
@@ -103,13 +155,20 @@ class UnderstandingService:
                 message=str(exc),
             ) from exc
 
+        logger.debug("[理解] LLM响应 (前500字): %s", provider_result.content[:500])
         parsed = extract_json_object(provider_result.content)
         if parsed is not None:
-            solution_steps = [
-                SolutionStep.model_validate(step)
-                for step in parsed.get("solutionSteps", [])
-                if isinstance(step, dict)
-            ]
+            solution_steps: list[SolutionStep] = []
+            for index, step in enumerate(parsed.get("solutionSteps", []), start=1):
+                if not isinstance(step, dict):
+                    continue
+                normalized_step = _normalize_solution_step(
+                    step,
+                    index=index,
+                    fallback_text=source_text[:80],
+                )
+                if normalized_step is not None:
+                    solution_steps.append(normalized_step)
             understanding = UnderstandingResult.model_validate(
                 {
                     "topicSummary": parsed.get("topicSummary") or source_text[:120],
@@ -130,4 +189,5 @@ class UnderstandingService:
             )
 
         self.runtime.save_model("understanding", understanding)
+        logger.info("[理解完成] topic=%s steps=%d provider=%s", understanding.topic_summary[:40], len(understanding.solution_steps), understanding.provider_used)
         return understanding

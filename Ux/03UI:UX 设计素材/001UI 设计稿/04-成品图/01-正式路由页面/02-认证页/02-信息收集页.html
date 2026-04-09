@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 XiaoMai - 信息收集</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
+	<!-- 引入 Remix Icon -->
+	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+	<script>
+		(function () {
+			const savedTheme = localStorage.getItem('xiaomai-theme') || 'light';
+			document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+			document.documentElement.classList.toggle('light', savedTheme !== 'dark');
+		})();
+	</script>
+
+	<style>
+		:root {
+			--bg-main: #f5ede1;
+			--bg-panel: #ffffff;
+			--bg-input: #fbf6ef;
+			--border-color: #e6dcc8;
+			--text-main: #3b1701;
+			--text-muted: #6b4421;
+			--brand-yellow: #f5c547;
+			--brand-yellow-hover: #e6b841;
+		}
+
+		html.dark {
+			--bg-main: #110e0d;
+			--bg-panel: #1f1a18;
+			--bg-input: #181412;
+			--border-color: #302824;
+			--text-main: #f5ede1;
+			--text-muted: #a89f91;
+			--brand-yellow: #f5c547;
+			--brand-yellow-hover: #e6b841;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+			font-family: 'Inter', 'Noto Sans SC', sans-serif;
+		}
+
+		body {
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			background-color: var(--bg-panel);
+			color: var(--text-main);
+			overflow-x: hidden;
+			transition: background-color 0.4s ease, color 0.4s ease;
+		}
+
+		.top-nav {
+			width: 100%;
+			padding: 24px 40px;
+			display: flex;
+			align-items: center;
+		}
+
+		.back-btn {
+			width: 40px;
+			height: 40px;
+			border: none;
+			background: transparent;
+			color: var(--text-main);
+			font-size: 24px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 50%;
+			transition: background 0.2s;
+		}
+		
+		.back-btn:hover {
+			background: var(--bg-input);
+		}
+
+		.container {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 40px 20px 80px;
+			width: 100%;
+			max-width: 600px;
+			margin: 0 auto;
+		}
+
+		.step-section {
+			display: none;
+			flex-direction: column;
+			align-items: center;
+			width: 100%;
+			animation: fadeIn 0.4s ease forwards;
+		}
+
+		.step-section.active {
+			display: flex;
+		}
+
+		@keyframes fadeIn {
+			from { opacity: 0; transform: translateY(10px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+
+		.title {
+			font-size: 28px;
+			font-weight: 700;
+			text-align: center;
+			margin-bottom: 16px;
+			line-height: 1.4;
+		}
+
+		.subtitle {
+			font-size: 15px;
+			color: var(--text-muted);
+			text-align: center;
+			margin-bottom: 48px;
+			line-height: 1.5;
+		}
+
+		/* List Options (Step 1) */
+		.options-list {
+			width: 100%;
+			max-width: 320px;
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+			margin-bottom: 60px;
+		}
+
+		.option-item {
+			display: flex;
+			align-items: center;
+			padding: 16px 20px;
+			background: var(--bg-panel);
+			border: 1px solid transparent;
+			border-radius: 16px;
+			cursor: pointer;
+			transition: all 0.2s;
+			font-size: 16px;
+			font-weight: 500;
+			gap: 16px;
+		}
+
+		.option-item:hover, .option-item.selected {
+			background: var(--bg-input);
+			border-color: var(--border-color);
+		}
+
+		.option-item i {
+			font-size: 22px;
+			color: var(--text-main);
+			opacity: 0.8;
+		}
+
+		/* Pill Options (Step 2) */
+		.pills-grid {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			justify-content: center;
+			width: 100%;
+			max-width: 500px;
+			margin-bottom: 60px;
+		}
+
+		.pill-item {
+			display: flex;
+			align-items: center;
+			padding: 10px 20px;
+			background: var(--bg-panel);
+			border: 1px solid var(--border-color);
+			border-radius: 999px;
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.2s;
+			gap: 8px;
+			user-select: none;
+		}
+
+		.pill-item:hover, .pill-item.selected {
+			background: var(--bg-input);
+			border-color: var(--text-main);
+		}
+
+		.pill-item i {
+			font-size: 18px;
+		}
+
+		/* Action Buttons */
+		.actions {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			width: 100%;
+			max-width: 320px;
+			gap: 16px;
+		}
+
+		.btn-primary {
+			width: 100%;
+			height: 48px;
+			background: var(--text-main);
+			color: var(--bg-panel);
+			border: none;
+			border-radius: 9999px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: transform 0.1s, opacity 0.2s;
+		}
+		
+		html.dark .btn-primary {
+			background: var(--text-main);
+			color: var(--bg-panel);
+		}
+
+		.btn-primary:active {
+			transform: scale(0.98);
+		}
+
+		.btn-primary:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.btn-skip {
+			background: none;
+			border: none;
+			color: var(--text-main);
+			font-size: 15px;
+			font-weight: 600;
+			cursor: pointer;
+			padding: 8px;
+		}
+		
+		.btn-skip:hover {
+			text-decoration: underline;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="top-nav">
+		<button class="back-btn" onclick="goBack()" id="backBtn" style="visibility: hidden;">
+			<i class="ri-arrow-left-s-line"></i>
+		</button>
+	</div>
+
+	<div class="container">
+		
+		<!-- ================= 第1步：使用目的 ================= -->
+		<div class="step-section active" id="step1">
+			<h1 class="title">你的日常性格更偏向于<br>哪一类？</h1>
+			<p class="subtitle">这有助于大模型为您匹配最适合你的学习节奏与交流方式。</p>
+
+			<div class="options-list">
+				<div class="option-item" onclick="selectSingleOption(this)"><i class="ri-focus-3-line"></i> 目标明确，专注结果的行动派</div>
+				<div class="option-item" onclick="selectSingleOption(this)"><i class="ri-lightbulb-line"></i> 对世界充满好奇的探索者</div>
+				<div class="option-item" onclick="selectSingleOption(this)"><i class="ri-draft-line"></i> 踏实严谨，喜欢按部就班</div>
+				<div class="option-item" onclick="selectSingleOption(this)"><i class="ri-chat-smile-3-line"></i> 乐于交流，思维发散的社交派</div>
+				<div class="option-item" onclick="selectSingleOption(this)"><i class="ri-paint-brush-line"></i> 天马行空，不拘一格的创意家</div>
+			</div>
+
+			<div class="actions">
+				<button class="btn-primary" id="btnNext1" disabled onclick="nextStep(2)">下一步</button>
+				<button class="btn-skip" onclick="skipToTour()">跳过</button>
+			</div>
+		</div>
+
+		<!-- ================= 第2步：偏好功能 ================= -->
+		<div class="step-section" id="step2">
+			<h1 class="title">你希望匹配什么样的专属<br>AI 导师？</h1>
+			<p class="subtitle" style="margin-bottom: 30px;">选择你喜欢的性格标签（可多选）</p>
+
+			<div class="pills-grid">
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-emoticon-happy-line"></i> 幽默风趣</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-mind-map"></i> 严密逻辑</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-magic-line"></i> 脑洞大开</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-shield-user-line"></i> 严格督学</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-heart-3-line"></i> 循循善诱</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-user-smile-line"></i> 朋友般陪伴</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-focus-2-line"></i> 直击核心</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-book-3-line"></i> 旁征博引</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-thumb-up-line"></i> 温和鼓励</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-question-answer-line"></i> 互动狂魔</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-vip-diamond-line"></i> 冷静客观</div>
+				<div class="pill-item" onclick="toggleMultiOption(this)"><i class="ri-fire-line"></i> 充满激情</div>
+			</div>
+
+			<div class="actions">
+				<button class="btn-primary" id="btnNext2" onclick="skipToTour()">继续</button>
+				<button class="btn-skip" onclick="skipToTour()">跳过</button>
+			</div>
+		</div>
+
+	</div>
+
+	<script>
+		let currentStep = 1;
+
+		function selectSingleOption(el) {
+			document.querySelectorAll('#step1 .option-item').forEach(item => item.classList.remove('selected'));
+			el.classList.add('selected');
+			document.getElementById('btnNext1').disabled = false;
+		}
+
+		function toggleMultiOption(el) {
+			el.classList.toggle('selected');
+			// step 2 无论是否选择都可以点继续，所以不需要禁用逻辑，但也算是交互
+		}
+
+		function nextStep(step) {
+			document.getElementById(`step${currentStep}`).classList.remove('active');
+			currentStep = step;
+			document.getElementById(`step${currentStep}`).classList.add('active');
+			document.getElementById('backBtn').style.visibility = 'visible';
+		}
+
+		function goBack() {
+			if (currentStep > 1) {
+				document.getElementById(`step${currentStep}`).classList.remove('active');
+				currentStep--;
+				document.getElementById(`step${currentStep}`).classList.add('active');
+			}
+			if (currentStep === 1) {
+				document.getElementById('backBtn').style.visibility = 'hidden';
+			}
+		}
+
+		function skipToTour() {
+			window.location.href = '03-导览页.html';
+		}
+	</script>
+
+</body>
+</html>

@@ -40,17 +40,39 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="xiaomai-ai-provider-search">
         <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" label="Provider 编码" label-width="auto" path="providerCode" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="Provider 编码"
+              label-width="auto"
+              path="providerCode"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.providerCode" placeholder="请输入 Provider 编码" />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="Provider 名称" label-width="auto" path="providerName" class="pr-24px">
+            <NFormItemGi
+              span="24 s:12 m:6"
+              label="Provider 名称"
+              label-width="auto"
+              path="providerName"
+              class="pr-24px"
+            >
               <NInput v-model:value="model.providerName" placeholder="请输入 Provider 名称" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="供应商" label-width="auto" path="vendorCode" class="pr-24px">
-              <DictSelect v-model:value="model.vendorCode" placeholder="请选择供应商" dict-code="xm_ai_vendor_code" clearable />
+              <DictSelect
+                v-model:value="model.vendorCode"
+                placeholder="请选择供应商"
+                dict-code="xm_ai_vendor_code"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="鉴权类型" label-width="auto" path="authType" class="pr-24px">
-              <DictSelect v-model:value="model.authType" placeholder="请选择鉴权类型" dict-code="xm_ai_auth_type" clearable />
+              <DictSelect
+                v-model:value="model.authType"
+                placeholder="请选择鉴权类型"
+                dict-code="xm_ai_auth_type"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="请求地址" label-width="auto" path="endpointUrl" class="pr-24px">
               <NInput v-model:value="model.endpointUrl" placeholder="请输入请求地址" />
@@ -59,7 +81,12 @@ async function search() {
               <NInput v-model:value="model.appId" placeholder="请输入应用 ID" />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect v-model:value="model.status" placeholder="请选择状态" dict-code="sys_normal_disable" clearable />
+              <DictSelect
+                v-model:value="model.status"
+                placeholder="请选择状态"
+                dict-code="sys_normal_disable"
+                clearable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="排序号" label-width="auto" path="sortOrder" class="pr-24px">
               <NInputNumber v-model:value="model.sortOrder" placeholder="请输入排序号" class="w-full" />

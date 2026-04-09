@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 XiaoMai - 视频生成中</title>
+	<!-- 引入 Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Remix Icon -->
+	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+	<!-- 引入 Inter 字体 -->
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
+
+	<!-- 配置 Tailwind 及 XiaoMai Design Tokens -->
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+			theme: {
+				extend: {
+					fontFamily: {
+						sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'sans-serif'],
+						mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+					},
+					colors: {
+						brand: {
+							primary: '#f5c547',
+							'primary-dark': '#e6b841',
+							secondary: '#f5ede1',
+							'secondary-dark': '#2a2420',
+							decorative: '#3b1701',
+							'bg-light': '#f5ede1',
+							'surface-light': '#ffffff',
+							'text-primary': '#3b1701',
+							'text-secondary': '#6b4421',
+							'border-light': '#e6dcc8',
+							'bg-dark': '#1a1614',
+							'surface-dark': '#2a2420',
+							'text-primary-dark': '#f5ede1',
+							'text-secondary-dark': '#c4b8a8',
+							'border-dark': '#3d3630',
+							success: '#52c41a',
+							warning: '#ff6700',
+							error: '#f82834',
+						}
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.06)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'inner-soft': 'inset 0 2px 10px rgba(0, 0, 0, 0.03)',
+						'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<!-- 主题初始化脚本 (防止闪烁) -->
+	<script>
+		if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+	</script>
+
+	<style>
+		/* ================= 核心 CSS 变量 ================= */
+		:root {
+			/* 背景系统 */
+			--bg-color: #fcfaf7;
+			--grid-color: rgba(107, 68, 33, 0.06);
+			--glow-color: rgba(245, 197, 71, 0.15);
+			/* 日志面板玻璃态 */
+			--glass-bg: rgba(255, 255, 255, 0.5);
+			--glass-border: rgba(230, 220, 200, 0.5);
+			--log-mask-end: rgba(255, 255, 255, 1);
+
+			/* 原版 Loading 动画颜色适配 */
+			--loader-text: #3b1701;
+			--loader-spotlight-main: rgba(59, 23, 1, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		}
+
+		.dark {
+			/* 背景系统 */
+			--bg-color: #151210;
+			--grid-color: rgba(245, 237, 225, 0.04);
+			--glow-color: rgba(245, 197, 71, 0.08);
+			/* 日志面板玻璃态 */
+			--glass-bg: rgba(42, 36, 32, 0.4);
+			--glass-border: rgba(61, 54, 48, 0.5);
+			--log-mask-end: rgba(21, 18, 16, 1);
+
+			/* 原版 Loading 动画颜色适配 (解决暗色下显脏的问题) */
+			--loader-text: #f5ede1;
+			/* 暗色下聚光灯变为极其清透的米白发光体 */
+			--loader-spotlight-main: rgba(245, 237, 225, 0.9);
+			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		}
+
+		/* 沉浸式网格背景 */
+		body {
+			background-color: var(--bg-color);
+			background-image:
+				linear-gradient(var(--grid-color) 1px, transparent 1px),
+				linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+			background-size: 32px 32px;
+			transition: background-color 0.5s ease, background-image 0.5s ease;
+		}
+
+		/* 居中环境光晕 */
+		.ambient-glow {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 80vw;
+			height: 80vh;
+			background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+			pointer-events: none;
+			z-index: -1;
+			transition: background 0.5s ease;
+		}
+
+		/* ================= 原汁原味的 Loading 动画 ================= */
+		.loader-wrapper {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 2.75rem;
+			/* 稍微放大一点点增强视觉冲击力 */
+			font-weight: 900;
+			user-select: none;
+			color: var(--loader-text);
+			letter-spacing: 0.1em;
+			overflow: hidden;
+			font-family: 'Inter', sans-serif;
+			text-transform: uppercase;
+			transition: color 0.5s ease;
+		}
+
+		.loader {
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			background-color: transparent;
+			/* 经典的条纹遮罩 */
+			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+		}
+
+		.loader::after {
+			content: "";
+			position: absolute;
+			inset: 0;
+			/* 聚光灯：引用CSS变量，使得暗色模式下发白光，亮色模式下发深色光 */
+			background-image:
+				radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
+				radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
+			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+			animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
+		}
+
+		.loader-letter {
+			position: relative;
+			display: inline-block;
+			opacity: 0.15;
+			animation: loader-letter-anim 4.2s infinite linear;
+			z-index: 2;
+		}
+
+		/* 字母延迟动画 */
+		.loader-letter:nth-child(1) {
+			animation-delay: 0.1s;
+		}
+
+		.loader-letter:nth-child(2) {
+			animation-delay: 0.22s;
+		}
+
+		.loader-letter:nth-child(3) {
+			animation-delay: 0.34s;
+		}
+
+		.loader-letter:nth-child(4) {
+			animation-delay: 0.46s;
+		}
+
+		.loader-letter:nth-child(5) {
+			animation-delay: 0.58s;
+		}
+
+		.loader-letter:nth-child(6) {
+			animation-delay: 0.70s;
+		}
+
+		.loader-letter:nth-child(7) {
+			animation-delay: 0.82s;
+		}
+
+		.loader-letter:nth-child(8) {
+			animation-delay: 0.94s;
+		}
+
+		.loader-letter:nth-child(9) {
+			animation-delay: 1.06s;
+		}
+
+		.loader-letter:nth-child(10) {
+			animation-delay: 1.18s;
+		}
+
+		@keyframes transform-animation {
+			0% {
+				transform: translate(-60%);
+			}
+
+			100% {
+				transform: translate(60%);
+			}
+		}
+
+		@keyframes opacity-animation {
+
+			0%,
+			100% {
+				opacity: 0;
+			}
+
+			18% {
+				opacity: 1;
+			}
+
+			64% {
+				opacity: 0.2;
+			}
+		}
+
+		@keyframes loader-letter-anim {
+			0% {
+				opacity: 0.15;
+				filter: blur(0);
+			}
+
+			6% {
+				opacity: 1;
+				filter: blur(0);
+				transform: scale(1.03) translateY(-2px);
+			}
+
+			22% {
+				opacity: 0.4;
+			}
+
+			100% {
+				opacity: 0.15;
+				filter: blur(2px);
+			}
+		}
+
+		/* ================= 进度条动效 ================= */
+		.progress-fill {
+			height: 100%;
+			width: 50%;
+			border-radius: 9999px;
+			background-color: #f5c547;
+			background-image: linear-gradient(-45deg,
+					rgba(255, 255, 255, 0.4) 25%, transparent 25%, transparent 50%,
+					rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 75%, transparent);
+			background-size: 32px 32px;
+			animation: progress-pan 1.5s linear infinite;
+			transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+			position: relative;
+		}
+
+		.progress-fill::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: 9999px;
+			box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
+			opacity: 0.7;
+		}
+
+		@keyframes progress-pan {
+			0% {
+				background-position: 0 0;
+			}
+
+			100% {
+				background-position: 32px 0;
+			}
+		}
+
+		/* ================= 玻璃态日志面板 ================= */
+		.glass-panel {
+			background: var(--glass-bg);
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
+			border: 1px solid var(--glass-border);
+			/* 添加上下渐隐效果，融入背景 */
+			mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+		}
+
+		.log-scroll::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.log-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.log-scroll::-webkit-scrollbar-thumb {
+			background: var(--glass-border);
+			border-radius: 4px;
+		}
+
+		.log-item {
+			animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			opacity: 0;
+			transform: translateX(-8px);
+		}
+
+		@keyframes slideIn {
+			to {
+				opacity: 1;
+				transform: translateX(0);
+			}
+		}
+
+		@keyframes blink {
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0;
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 6px;
+			height: 14px;
+			background-color: #f5c547;
+			animation: blink 1s step-end infinite;
+			vertical-align: middle;
+			margin-left: 6px;
+			border-radius: 2px;
+		}
+
+		/* Tips 动画 */
+		.tip-transition {
+			transition: opacity 0.5s ease, transform 0.5s ease;
+		}
+
+		.tip-hidden {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+
+		.tip-visible {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	</style>
+</head>
+
+<body
+	class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 text-brand-text-primary dark:text-brand-text-primary-dark transition-colors duration-500 relative z-0 overflow-hidden">
+
+	<!-- 环境光晕 -->
+	<div class="ambient-glow"></div>
+
+	<!-- 顶部控制区 (返回工作台 & 主题切换) -->
+	<header class="fixed top-0 left-0 w-full px-8 py-6 flex items-center justify-between z-50">
+		<a href="#"
+			class="text-sm font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-text-primary dark:hover:text-brand-text-primary-dark flex items-center gap-2 transition-colors group">
+			<div
+				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center group-hover:bg-brand-border-light dark:group-hover:bg-brand-border-dark transition-colors backdrop-blur-sm">
+				<i class="ri-arrow-left-line text-lg"></i>
+			</div>
+			返回工作台
+		</a>
+
+		<!-- 主题切换按钮 -->
+		<button onclick="toggleTheme()"
+			class="w-10 h-10 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center text-brand-text-secondary dark:text-brand-text-secondary-dark hover:bg-brand-border-light dark:hover:bg-brand-border-dark transition-all backdrop-blur-sm shadow-sm group">
+			<i
+				class="ri-sun-line text-lg block dark:hidden group-hover:rotate-45 transition-transform duration-300"></i>
+			<i
+				class="ri-moon-line text-lg hidden dark:block group-hover:-rotate-12 transition-transform duration-300"></i>
+		</button>
+	</header>
+
+	<!-- 左下角状态模拟器 (弱化显示) -->
+	<div
+		class="fixed bottom-6 left-6 flex flex-col gap-2 z-50 opacity-40 hover:opacity-100 transition-opacity duration-300">
+		<span
+			class="text-[10px] font-bold uppercase tracking-widest text-brand-text-secondary dark:text-brand-text-secondary-dark ml-2 mb-1">Debug
+			Controls</span>
+		<div
+			class="flex flex-col gap-2 bg-white/50 dark:bg-black/30 backdrop-blur-md p-2 rounded-xl border border-brand-border-light dark:border-brand-border-dark">
+			<button onclick="simulateSSE('normal')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-primary px-3 py-1.5 rounded-md text-xs font-medium transition-colors">1.
+				渲染动画 (50%)</button>
+			<button onclick="simulateSSE('fix')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-warning px-3 py-1.5 rounded-md text-xs font-medium transition-colors">2.
+				触发修复 (60%)</button>
+			<button onclick="simulateSSE('tts')"
+				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-success px-3 py-1.5 rounded-md text-xs font-medium transition-colors">3.
+				合成视频 (90%)</button>
+		</div>
+	</div>
+
+	<!-- ==================== 核心内容区 (无盒子设计) ==================== -->
+	<main class="w-full max-w-2xl relative z-10 flex flex-col items-center mt-8">
+
+		<!-- 还原的原版 Loading 动效 -->
+		<div class="mb-14 mt-4">
+			<div class="loader-wrapper" aria-label="Generating">
+				<span class="loader-letter">G</span>
+				<span class="loader-letter">E</span>
+				<span class="loader-letter">N</span>
+				<span class="loader-letter">E</span>
+				<span class="loader-letter">R</span>
+				<span class="loader-letter">A</span>
+				<span class="loader-letter">T</span>
+				<span class="loader-letter">I</span>
+				<span class="loader-letter">N</span>
+				<span class="loader-letter">G</span>
+				<div class="loader"></div>
+			</div>
+		</div>
+
+		<!-- 进度与状态文字区 -->
+		<div class="w-full mb-10 px-4 md:px-0">
+			<div class="flex justify-between items-end mb-4 px-1">
+				<div class="flex flex-col">
+					<span class="text-xl font-bold mb-1 transition-colors" id="status-title">正在渲染动画帧</span>
+					<span class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80"
+						id="eta-text">预计还需要 2 分 30 秒</span>
+				</div>
+				<span id="progress-text"
+					class="text-4xl font-black font-mono tracking-tighter drop-shadow-sm">50%</span>
+			</div>
+
+			<!-- 进度条轨道 -->
+			<div
+				class="h-3 w-full bg-brand-border-light/50 dark:bg-brand-border-dark/50 rounded-full shadow-inner-soft overflow-hidden p-0.5 backdrop-blur-sm">
+				<div class="progress-fill shadow-sm" id="progress-bar"></div>
+			</div>
+		</div>
+
+		<!-- 玻璃态无界日志面板 -->
+		<div
+			class="w-full glass-panel rounded-2xl font-mono text-[13px] relative shadow-glass overflow-hidden flex flex-col h-48">
+			<div class="log-scroll flex-1 overflow-y-auto p-6 space-y-4 relative">
+				<!-- 常规阶段内容 -->
+				<div class="log-normal space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">题目语义解析完成 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Understanding</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
+						style="animation-delay: 0.1s;">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
+								Gen</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱环境运行中：正在渲染 Manim 动画帧<span class="cursor-blink"></span></span>
+					</div>
+				</div>
+
+				<!-- 修复阶段内容 -->
+				<div class="log-fix hidden space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
+								Gen</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 text-brand-warning font-medium">
+						<i class="ri-error-warning-fill mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱渲染异常，触发自动修复链 <span
+								class="text-[10px] ml-1.5 bg-brand-warning/10 border border-brand-warning/30 px-1.5 py-0.5 rounded text-brand-warning">Auto-Fix
+								1/2</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 font-medium mt-2">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">正在重新编译代码并渲染...<span class="cursor-blink"></span></span>
+					</div>
+				</div>
+
+				<!-- TTS/合成阶段内容 -->
+				<div class="log-tts hidden space-y-4">
+					<div
+						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">沙箱渲染 Manim 动画帧成功 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Render
+								Completed</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
+						style="animation-delay: 0.1s;">
+						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
+						<span class="leading-relaxed">TTS 语音轨道合成完毕 <span
+								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Audio
+								Gen</span></span>
+					</div>
+					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
+						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
+						<span class="leading-relaxed">正在合成最终视频并推送到云端...<span class="cursor-blink"></span></span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 极简 Tips 提示 -->
+		<div class="mt-8 flex items-center justify-center gap-2 max-w-lg w-full">
+			<i class="ri-sparkling-fill text-brand-primary animate-pulse text-lg"></i>
+			<div
+				class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80 font-medium overflow-hidden h-5 w-full relative">
+				<div id="tip-text" class="absolute w-full tip-transition tip-visible truncate text-center">
+					小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦
+				</div>
+			</div>
+		</div>
+
+	</main>
+
+	<!-- 交互脚本 -->
+	<script>
+		// 主题切换逻辑
+		function toggleTheme() {
+			if (document.documentElement.classList.contains('dark')) {
+				document.documentElement.classList.remove('dark');
+				localStorage.theme = 'light';
+			} else {
+				document.documentElement.classList.add('dark');
+				localStorage.theme = 'dark';
+			}
+		}
+
+		// 轮播 Tips 数据
+		const tips = [
+			"小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦",
+			"你知道吗？复杂的数学公式推导，小麦会自动为您添加高亮引导",
+			"视频渲染过程需要在云端沙箱进行大量计算，感谢您的耐心等待",
+			"小麦可以根据您的需求，随时切换板书风格和讲述人声音",
+			"生成历史会自动保存在您的工作台，随时可以回来查看或修改"
+		];
+		let currentTipIndex = 0;
+		const tipElement = document.getElementById('tip-text');
+
+		// 轮播逻辑
+		setInterval(() => {
+			tipElement.classList.remove('tip-visible');
+			tipElement.classList.add('tip-hidden');
+
+			setTimeout(() => {
+				currentTipIndex = (currentTipIndex + 1) % tips.length;
+				tipElement.innerText = tips[currentTipIndex];
+				tipElement.classList.remove('tip-hidden');
+				tipElement.classList.add('tip-visible');
+			}, 500);
+		}, 6000);
+
+		// 模拟状态切换逻辑
+		function simulateSSE(stage) {
+			const progressBar = document.getElementById('progress-bar');
+			const progressText = document.getElementById('progress-text');
+			const etaText = document.getElementById('eta-text');
+			const statusTitle = document.getElementById('status-title');
+
+			// 隐藏所有日志
+			document.querySelector('.log-normal').classList.add('hidden');
+			document.querySelector('.log-fix').classList.add('hidden');
+			document.querySelector('.log-tts').classList.add('hidden');
+
+			// 移除可能附加的特殊颜色类
+			statusTitle.classList.remove('text-brand-warning', 'text-brand-success');
+
+			if (stage === 'normal') {
+				progressBar.style.width = '50%';
+				progressText.innerText = '50%';
+				statusTitle.innerText = '正在渲染动画帧';
+				document.querySelector('.log-normal').classList.remove('hidden');
+				etaText.innerText = '预计还需要 2 分 30 秒，后台会自动完成';
+			}
+			else if (stage === 'fix') {
+				progressBar.style.width = '60%';
+				progressText.innerText = '60%';
+				statusTitle.innerText = '自动优化代码逻辑';
+				statusTitle.classList.add('text-brand-warning');
+				document.querySelector('.log-fix').classList.remove('hidden');
+				etaText.innerText = '系统正在尝试自动修复动画 (1/2)，请多花一点点耐心';
+			}
+			else if (stage === 'tts') {
+				progressBar.style.width = '90%';
+				progressText.innerText = '90%';
+				statusTitle.innerText = '视频合成中';
+				statusTitle.classList.add('text-brand-success');
+				document.querySelector('.log-tts').classList.remove('hidden');
+				etaText.innerText = '马上就好！即将为您展现最终内容...';
+			}
+		}
+	</script>
+
+
+	<script>
+		// 初始化图标
+		if (window.lucide) {
+			window.lucide.createIcons();
+		}
+		// 亮暗色切换
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		function applyTheme(theme) {
+			document.documentElement.classList.toggle('dark', theme === 'dark');
+			document.documentElement.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		if (themeToggleBtn) {
+			themeToggleBtn.addEventListener('click', () => {
+				const isDark = document.documentElement.classList.contains('dark');
+				applyTheme(isDark ? 'light' : 'dark');
+			});
+		}
+	</script>
+	<script src="../../_shared/page-hub.js" defer data-page-hub></script>
+</body>
+
+</html>

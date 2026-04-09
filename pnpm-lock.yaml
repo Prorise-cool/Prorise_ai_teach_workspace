@@ -6,7 +6,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      simple-git-hooks:
+        specifier: ^2.13.0
+        version: 2.13.1
 
   packages/ruoyi-plus-soybean:
     dependencies:
@@ -1529,6 +1533,7 @@ packages:
 
   '@imgly/background-removal@1.5.5':
     resolution: {integrity: sha512-tULjwGmuPTUCWVQsP2KpSOEv7/mNGQhULM3WEe+eap1nmobGkQp3Gwj3gmVK7mw/b9FSzoM5nD4pJdvffYmr5A==}
+    bundledDependencies: []
 
   '@inquirer/ansi@1.0.2':
     resolution: {integrity: sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ==}

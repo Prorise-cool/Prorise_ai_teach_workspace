@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小麦 - 个人资料页 (/profile) 线框图</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 强制线框图风格：无圆角、无阴影、极简黑白灰 */
+        * {
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            font-family: monospace, sans-serif;
+        }
+        .wf-border {
+            border: 2px solid #000;
+        }
+        .wf-border-dashed {
+            border: 2px dashed #000;
+        }
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+        }
+        .ux-annotation {
+            position: absolute;
+            background: #000;
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 6px;
+            z-index: 50;
+            pointer-events: none;
+            font-weight: bold;
+        }
+        .ux-annotation-blue {
+            background: #2563eb;
+        }
+        /* 表单元素伪类 */
+        input:focus, textarea:focus, select:focus {
+            outline: 2px solid #000;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-black min-h-screen bg-grid pb-20">
+
+    <!-- ==================== 全局导航 ==================== -->
+    <header class="w-[94%] max-w-6xl mx-auto mt-6 wf-border bg-white p-3 flex justify-between items-center sticky top-6 z-40">
+	        <a href="../01-首页与入口/02-home.html" class="flex items-center gap-3 font-bold px-2 text-black">
+	            <div class="w-8 h-8 flex items-center justify-center bg-gray-100 border-2 border-dashed border-black text-[10px]">LG</div>
+	            <span class="text-lg">XiaoMai</span>
+	        </a>
+	        <nav class="hidden md:flex gap-1 border-2 border-black p-1 bg-gray-50">
+	            <!-- 注意：进入个人中心域，业务主 Tabs 失去焦点，提供显式的返回入口 -->
+	            <a href="../01-首页与入口/02-home.html" class="px-5 py-1.5 text-sm font-bold text-gray-500 hover:bg-gray-200 hover:text-black">&larr; 返回工作台</a>
+	        </nav>
+        <div class="flex items-center gap-4 px-2">
+            <button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">EN/中</button>
+            <button class="wf-border px-2 py-1 text-xs font-bold hover:bg-gray-100">☼/☾</button>
+            <div class="w-8 h-8 flex items-center justify-center border-2 border-black bg-black text-white text-[10px]" title="当前位置">Usr</div>
+        </div>
+    </header>
+
+    <!-- ==================== 主内容区 (SaaS 账号设置布局) ==================== -->
+    <main class="w-[94%] max-w-6xl mx-auto mt-10 grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 relative">
+        
+        <div class="ux-annotation -top-3 -left-1">/profile：纯粹的资料管理域，剥离一切学习业务指标</div>
+
+        <!-- 左侧：设置域导航 (Setting Sidebar) -->
+        <aside class="flex flex-col gap-2">
+            <h2 class="text-xs font-bold tracking-widest text-gray-500 mb-2 px-4 uppercase">User Settings</h2>
+            
+            <!-- 当前激活 -->
+	            <a href="01-profile.html" class="wf-border border-[3px] bg-white px-4 py-3 font-bold text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex justify-between items-center text-black">
+	                <span>个人资料</span>
+	                <span>&rarr;</span>
+	            </a>
+            
+            <!-- 跳转至 /settings (下方的项仅做示意，表示它们在同一视觉框架内) -->
+	            <a href="../16-设置页/01-settings.html" class="border-2 border-transparent hover:wf-border px-4 py-3 font-bold text-sm text-gray-600 hover:text-black hover:bg-white transition-all flex items-center gap-2">
+	                <span>账号与安全</span>
+	            </a>
+	            <a href="../16-设置页/01-settings.html" class="border-2 border-transparent hover:wf-border px-4 py-3 font-bold text-sm text-gray-600 hover:text-black hover:bg-white transition-all flex items-center gap-2">
+	                <span>平台偏好</span>
+	            </a>
+        </aside>
+
+        <!-- 右侧：资料表单区 -->
+        <div class="flex flex-col gap-8">
+            
+            <!-- 页头 -->
+            <div class="mb-2">
+                <h1 class="text-3xl font-black mb-2">个人资料</h1>
+                <p class="text-sm text-gray-600">管理您在小麦平台的基础公开信息与教育背景。</p>
+            </div>
+
+            <!-- 区块 1：头像设置 -->
+            <section class="bg-white wf-border p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                <div class="ux-annotation -top-3 -right-1 ux-annotation-blue">支持图片裁切器</div>
+                <div class="w-24 h-24 rounded-full! wf-border-dashed bg-gray-50 flex items-center justify-center text-xs text-gray-400 font-bold overflow-hidden relative group cursor-pointer">
+                    [原头像]
+                    <div class="absolute inset-0 bg-black/50 text-white hidden group-hover:flex items-center justify-center">
+                        上传
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="flex gap-3">
+                        <button class="wf-border bg-white px-4 py-2 text-xs font-bold hover:bg-gray-100">上传新头像</button>
+                        <button class="wf-border border-gray-300 text-gray-500 px-4 py-2 text-xs font-bold hover:bg-gray-50">移除</button>
+                    </div>
+                    <p class="text-[10px] text-gray-500 font-bold">支持 JPG, PNG 或 GIF 格式。最大不超过 2MB。</p>
+                </div>
+            </section>
+
+            <!-- 区块 2：基础信息表单 -->
+            <section class="bg-white wf-border p-6">
+                <h2 class="text-lg font-black mb-6 border-b-2 border-black pb-2">基础信息</h2>
+                
+                <div class="flex flex-col gap-5">
+                    <!-- Field -->
+                    <div class="flex flex-col gap-2 max-w-lg">
+                        <label class="text-sm font-bold flex justify-between">
+                            <span>用户昵称 <span class="text-red-500">*</span></span>
+                        </label>
+                        <input type="text" value="王小麦" class="wf-border p-3 text-sm bg-gray-50" placeholder="请输入昵称">
+                        <p class="text-[10px] text-gray-500 font-bold">这是您在课堂讨论和公开场景中显示的名字。</p>
+                    </div>
+
+                    <!-- Field -->
+                    <div class="flex flex-col gap-2 max-w-lg">
+                        <label class="text-sm font-bold">登录账号</label>
+                        <!-- 不可编辑态 -->
+                        <div class="wf-border-dashed p-3 text-sm bg-gray-100 text-gray-500 flex justify-between items-center">
+                            <span>user_789456</span>
+                            <span class="text-[10px] bg-gray-200 px-2 py-0.5">不可修改</span>
+                        </div>
+                    </div>
+
+                    <!-- Field -->
+                    <div class="flex flex-col gap-2 max-w-lg">
+                        <label class="text-sm font-bold">个人简介</label>
+                        <textarea class="wf-border p-3 text-sm bg-white h-24 resize-none" placeholder="一句话介绍一下自己（选填）">高等数学狂热爱好者，正在努力攻克微积分。</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 区块 3：教育背景表单 -->
+            <section class="bg-white wf-border p-6 relative">
+                <div class="ux-annotation -top-3 -left-1 ux-annotation-blue">对接 RuoYi 字典表数据</div>
+                <h2 class="text-lg font-black mb-6 border-b-2 border-black pb-2">教育背景</h2>
+                
+                <div class="flex flex-col gap-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl">
+                        <!-- Field -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-bold">所在学校</label>
+                            <input type="text" value="示例职业技术学院" class="wf-border p-3 text-sm bg-white" placeholder="请输入学校名称">
+                        </div>
+                        
+                        <!-- Field -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-bold">院系/专业</label>
+                            <input type="text" value="机电工程系" class="wf-border p-3 text-sm bg-white" placeholder="例如：软件工程">
+                        </div>
+
+                        <!-- Field (Select) -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-bold">当前身份</label>
+                            <div class="relative">
+                                <select class="w-full wf-border p-3 text-sm bg-white appearance-none cursor-pointer">
+                                    <option>请选择身份</option>
+                                    <option selected>高职学生</option>
+                                    <option>高职教师</option>
+                                    <option>自学者</option>
+                                </select>
+                                <div class="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">▼</div>
+                            </div>
+                        </div>
+
+                        <!-- Field (Select) -->
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-bold">当前学段</label>
+                            <div class="relative">
+                                <select class="w-full wf-border p-3 text-sm bg-white appearance-none cursor-pointer">
+                                    <option>请选择学段</option>
+                                    <option selected>大一</option>
+                                    <option>大二</option>
+                                    <option>大三</option>
+                                    <option>毕业生/社会人员</option>
+                                </select>
+                                <div class="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">▼</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 底部悬浮操作区 -->
+            <div class="bg-white wf-border p-4 flex justify-end gap-4 sticky bottom-6 z-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <button class="wf-border px-6 py-2 text-sm font-bold bg-gray-50 hover:bg-gray-100 transition-colors">取消更改</button>
+                <!-- 模拟按钮变脏（dirty）可提交的状态 -->
+                <button class="wf-border px-8 py-2 text-sm font-bold bg-black text-white hover:bg-gray-800 transition-colors flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full! bg-green-400 animate-pulse"></span>
+                    保存个人资料
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+</body>
+</html>

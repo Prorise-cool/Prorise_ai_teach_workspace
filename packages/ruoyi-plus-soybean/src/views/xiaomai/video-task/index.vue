@@ -6,12 +6,12 @@ import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { useDownload } from '@/hooks/business/download';
 import { defaultTransform, useNaivePaginatedTable, useTableOperate } from '@/hooks/common/table';
+import { useDict } from '@/hooks/business/dict';
 import { $t } from '@/locales';
 import ButtonIcon from '@/components/custom/button-icon.vue';
 import DictTag from '@/components/custom/dict-tag.vue';
 import VideoTaskOperateDrawer from './modules/video-task-operate-drawer.vue';
 import VideoTaskSearch from './modules/video-task-search.vue';
-import { useDict } from '@/hooks/business/dict';
 
 defineOptions({
   name: 'VideoTaskList'
@@ -42,173 +42,173 @@ const searchParams = ref<Api.Xiaomai.VideoTaskSearchParams>({
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination, scrollX } =
   useNaivePaginatedTable({
-  api: () => fetchGetVideoTaskList(searchParams.value),
-  transform: response => defaultTransform(response),
-  onPaginationParamsChange: params => {
-    searchParams.value.pageNum = params.page;
-    searchParams.value.pageSize = params.pageSize;
-  },
-  columns: () => [
-    {
-      type: 'selection',
-      align: 'center',
-      width: 48
+    api: () => fetchGetVideoTaskList(searchParams.value),
+    transform: response => defaultTransform(response),
+    onPaginationParamsChange: params => {
+      searchParams.value.pageNum = params.page;
+      searchParams.value.pageSize = params.pageSize;
     },
-    {
-      key: 'index',
-      title: $t('common.index'),
-      align: 'center',
-      width: 64,
-      render: (_, index) => index + 1
-    },
-    {
-      key: 'id',
-      title: '主键',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'taskId',
-      title: '任务ID',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'userId',
-      title: '用户ID（关联 sys_user.user_id）',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'taskType',
-      title: '任务类型',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'taskState',
-      title: '任务状态',
-      align: 'center',
-      minWidth: 120,
-      render(row) {
-        return <DictTag value={row.taskState} dictCode="xm_task_status" />;
-      }
-    },
-    {
-      key: 'summary',
-      title: '任务摘要',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'resultRef',
-      title: '结果资源标识',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'detailRef',
-      title: '结果详情标识',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'errorSummary',
-      title: '失败摘要',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'sourceSessionId',
-      title: '来源会话ID',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'sourceArtifactRef',
-      title: '来源产物引用',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'replayHint',
-      title: '回看定位提示',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'startTime',
-      title: '开始时间',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'completeTime',
-      title: '完成时间',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'failTime',
-      title: '失败时间',
-      align: 'center',
-      minWidth: 120
-    },
-    {
-      key: 'operate',
-      title: $t('common.operate'),
-      align: 'center',
-      width: 130,
-      render: row => {
-        const divider = () => {
-          if (!hasAuth('video:task:edit') || !hasAuth('video:task:remove')) {
-            return null;
-          }
-          return <NDivider vertical />;
-        };
+    columns: () => [
+      {
+        type: 'selection',
+        align: 'center',
+        width: 48
+      },
+      {
+        key: 'index',
+        title: $t('common.index'),
+        align: 'center',
+        width: 64,
+        render: (_, index) => index + 1
+      },
+      {
+        key: 'id',
+        title: '主键',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'taskId',
+        title: '任务ID',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'userId',
+        title: '用户ID（关联 sys_user.user_id）',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'taskType',
+        title: '任务类型',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'taskState',
+        title: '任务状态',
+        align: 'center',
+        minWidth: 120,
+        render(row) {
+          return <DictTag value={row.taskState} dictCode="xm_task_status" />;
+        }
+      },
+      {
+        key: 'summary',
+        title: '任务摘要',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'resultRef',
+        title: '结果资源标识',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'detailRef',
+        title: '结果详情标识',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'errorSummary',
+        title: '失败摘要',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'sourceSessionId',
+        title: '来源会话ID',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'sourceArtifactRef',
+        title: '来源产物引用',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'replayHint',
+        title: '回看定位提示',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'startTime',
+        title: '开始时间',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'completeTime',
+        title: '完成时间',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'failTime',
+        title: '失败时间',
+        align: 'center',
+        minWidth: 120
+      },
+      {
+        key: 'operate',
+        title: $t('common.operate'),
+        align: 'center',
+        width: 130,
+        render: row => {
+          const divider = () => {
+            if (!hasAuth('video:task:edit') || !hasAuth('video:task:remove')) {
+              return null;
+            }
+            return <NDivider vertical />;
+          };
 
-        const editBtn = () => {
-          if (!hasAuth('video:task:edit')) {
-            return null;
-          }
+          const editBtn = () => {
+            if (!hasAuth('video:task:edit')) {
+              return null;
+            }
+            return (
+              <ButtonIcon
+                text
+                type="primary"
+                icon="material-symbols:drive-file-rename-outline-outline"
+                tooltipContent={$t('common.edit')}
+                onClick={() => edit(row.id)}
+              />
+            );
+          };
+
+          const deleteBtn = () => {
+            if (!hasAuth('video:task:remove')) {
+              return null;
+            }
+            return (
+              <ButtonIcon
+                text
+                type="error"
+                icon="material-symbols:delete-outline"
+                tooltipContent={$t('common.delete')}
+                popconfirmContent={$t('common.confirmDelete')}
+                onPositiveClick={() => handleDelete(row.id)}
+              />
+            );
+          };
+
           return (
-            <ButtonIcon
-              text
-              type="primary"
-              icon="material-symbols:drive-file-rename-outline-outline"
-              tooltipContent={$t('common.edit')}
-              onClick={() => edit(row.id)}
-            />
+            <div class="flex-center gap-8px">
+              {editBtn()}
+              {divider()}
+              {deleteBtn()}
+            </div>
           );
-        };
-
-        const deleteBtn = () => {
-          if (!hasAuth('video:task:remove')) {
-            return null;
-          }
-          return (
-            <ButtonIcon
-              text
-              type="error"
-              icon="material-symbols:delete-outline"
-              tooltipContent={$t('common.delete')}
-              popconfirmContent={$t('common.confirmDelete')}
-              onPositiveClick={() => handleDelete(row.id)}
-            />
-          );
-        };
-
-        return (
-          <div class="flex-center gap-8px">
-            {editBtn()}
-            {divider()}
-            {deleteBtn()}
-          </div>
-        );
+        }
       }
-    }
-  ]
-});
+    ]
+  });
 
 const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys, onBatchDeleted, onDeleted } =
   useTableOperate(data, 'id', getData);

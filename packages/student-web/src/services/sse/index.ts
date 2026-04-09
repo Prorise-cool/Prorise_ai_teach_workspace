@@ -3,32 +3,32 @@
  * 该模块统一承接任务 SSE 的恢复、补帧和 snapshot 回退策略。
  */
 import {
-  createParser,
-  type EventSourceMessage,
-  type ParseError,
+	createParser,
+	type EventSourceMessage,
+	type ParseError,
 } from "eventsource-parser";
 
 import { parseJsonText, readJsonBody } from "@/lib/type-guards";
-import { resolveFastapiBaseUrl } from "@/services/api/fastapi-base-url";
 import { resolveRuntimeMode } from "@/services/api/adapters/base-adapter";
 import {
-  resolveTaskAdapter,
-  type TaskAdapter,
+	resolveTaskAdapter,
+	type TaskAdapter,
 } from "@/services/api/adapters/task-adapter";
+import { resolveFastapiBaseUrl } from "@/services/api/fastapi-base-url";
 import { useAuthSessionStore } from "@/stores/auth-session-store";
 import type {
-  TaskErrorCode,
-  TaskEventName,
-  TaskLifecycleStatus,
-  TaskMockScenario,
-  TaskSnapshot,
-  TaskStreamEventPayload,
+	TaskErrorCode,
+	TaskEventName,
+	TaskLifecycleStatus,
+	TaskMockScenario,
+	TaskSnapshot,
+	TaskStreamEventPayload,
 } from "@/types/task";
 import {
-  TASK_ERROR_CODE_VALUES,
-  TASK_EVENT_ID_SEPARATOR,
-  TASK_EVENT_NAME_VALUES,
-  TASK_STATUS_VALUES,
+	TASK_ERROR_CODE_VALUES,
+	TASK_EVENT_ID_SEPARATOR,
+	TASK_EVENT_NAME_VALUES,
+	TASK_STATUS_VALUES,
 } from "@/types/task";
 
 import cancelledSequence from "../../../../../mocks/tasks/sse.sequence.cancelled.json";
@@ -63,14 +63,16 @@ type RawSseMessage = {
   eventName: string | null;
   eventId: string | null;
   data: string;
+  fallbackId?: string | null;
+  fallbackSequence?: number | null;
 };
 
 type TaskRecoveryMode = "replay" | "snapshot-required";
 
-type TaskSseAttemptResult = {
-  events: TaskStreamEventPayload[];
+type TaskSseAttempt = {
+  response: Response;
   recoveryMode: TaskRecoveryMode;
-  lastEventId: string | null;
+  lastEventIdHeader: string | null;
 };
 
 type TaskEventTemplate = Omit<TaskStreamEventPayload, "taskId" | "id"> & {
@@ -142,6 +144,24 @@ function parseTaskEventId(eventId: string): number | null {
  */
 export function buildTaskEventId(taskId: string, sequence: number) {
   return `${taskId}${TASK_EVENT_ID_SEPARATOR}${String(sequence).padStart(6, "0")}`;
+}
+
+function buildTransientTaskEventId(
+  taskId: string,
+  eventName: "connected" | "heartbeat",
+  sequence: number,
+) {
+  return `transient:${taskId}:${eventName}:${String(sequence).padStart(6, "0")}`;
+}
+
+function isStandardTaskEventId(eventId: string | null | undefined) {
+  return typeof eventId === "string" && parseTaskEventId(eventId) !== null;
+}
+
+function isTransientTaskEventName(
+  eventName: unknown,
+): eventName is "connected" | "heartbeat" {
+  return eventName === "connected" || eventName === "heartbeat";
 }
 
 /**
@@ -295,11 +315,11 @@ function pickLatestEventId(
   currentEventId: string | null,
   candidateEventId: string | null,
 ) {
-  if (!candidateEventId) {
+  if (!isStandardTaskEventId(candidateEventId)) {
     return currentEventId;
   }
 
-  if (!currentEventId) {
+  if (!isStandardTaskEventId(currentEventId)) {
     return candidateEventId;
   }
 
@@ -409,7 +429,7 @@ async function waitWithSignal(ms: number, signal?: AbortSignal) {
  */
 function normalizeTaskEventPayload(
   rawPayload: unknown,
-  metadata: Pick<RawSseMessage, "eventName" | "eventId">,
+  metadata: Pick<RawSseMessage, "eventName" | "eventId" | "fallbackId" | "fallbackSequence">,
   logger: TaskEventParserLogger = console,
 ): TaskStreamEventPayload | null {
   if (!isRecord(rawPayload)) {
@@ -418,13 +438,20 @@ function normalizeTaskEventPayload(
   }
 
   const eventName = metadata.eventName ?? rawPayload.event;
-  const eventId = metadata.eventId ?? rawPayload.id;
+  const preferredEventId =
+    metadata.eventId ??
+    (typeof rawPayload.id === "string" ? rawPayload.id : null);
+  const eventId =
+    isStandardTaskEventId(preferredEventId)
+      ? preferredEventId
+      : metadata.fallbackId ??
+        (typeof preferredEventId === "string" ? preferredEventId : null);
   const sequence =
     typeof rawPayload.sequence === "number"
       ? rawPayload.sequence
       : typeof eventId === "string"
-        ? parseTaskEventId(eventId)
-        : null;
+        ? parseTaskEventId(eventId) ?? metadata.fallbackSequence ?? null
+        : metadata.fallbackSequence ?? null;
 
   if (!isTaskEventName(eventName)) {
     warnParseIssue(logger, "Ignoring unknown task SSE event type", rawPayload);
@@ -530,6 +557,61 @@ function normalizeTaskEventPayload(
   return payload;
 }
 
+function parseTaskEventMessage(
+  message: RawSseMessage,
+  logger: TaskEventParserLogger,
+  transientSequence: number,
+) {
+  try {
+    const rawPayload = parseJsonText(message.data);
+    const rawRecord = isRecord(rawPayload) ? rawPayload : null;
+    const rawEventId =
+      message.eventId ??
+      (typeof rawRecord?.id === "string" ? rawRecord.id : null);
+    const rawSequence =
+      typeof rawRecord?.sequence === "number"
+        ? rawRecord.sequence
+        : typeof rawEventId === "string"
+          ? parseTaskEventId(rawEventId)
+          : null;
+    const rawEventName = message.eventName ?? rawRecord?.event;
+    const rawTaskId =
+      typeof rawRecord?.taskId === "string" ? rawRecord.taskId : null;
+
+    const shouldUseTransientIdentity =
+      isTransientTaskEventName(rawEventName) &&
+      rawTaskId !== null &&
+      (typeof rawEventId !== "string" || rawSequence === null);
+
+    const normalizedMessage: RawSseMessage = shouldUseTransientIdentity
+      ? {
+          ...message,
+          fallbackId: buildTransientTaskEventId(
+            rawTaskId,
+            rawEventName,
+            transientSequence,
+          ),
+          fallbackSequence: transientSequence,
+        }
+      : message;
+
+    return {
+      event: normalizeTaskEventPayload(rawPayload, normalizedMessage, logger),
+      usedTransientIdentity: shouldUseTransientIdentity,
+    };
+  } catch (error) {
+    warnParseIssue(
+      logger,
+      `Ignoring invalid task SSE JSON payload: ${String(error)}`,
+      message.data,
+    );
+    return {
+      event: null,
+      usedTransientIdentity: false,
+    };
+  }
+}
+
 /**
  * 使用 `eventsource-parser` 按 SSE 协议拆分原始文本为消息数组。
  *
@@ -572,11 +654,10 @@ function parseSseMessages(
  * @param logger - 解析日志输出器。
  * @returns 单次拉流结果。
  */
-async function streamSseAttempt(
+async function openSseAttempt(
   taskId: string,
   options: Pick<TaskEventStreamOptions, "signal" | "lastEventId" | "module">,
-  logger: TaskEventParserLogger,
-): Promise<TaskSseAttemptResult> {
+): Promise<TaskSseAttempt> {
   const headers: Record<string, string> = {
     Accept: "text/event-stream, application/json",
   };
@@ -605,23 +686,12 @@ async function streamSseAttempt(
     throw new Error(`任务事件流初始化失败：${response.status}`);
   }
 
-  const events = await parseTaskEventResponse(response, logger);
   const recoveryModeHeader = response.headers.get("x-task-recovery-mode");
-  const recoveryMode: TaskRecoveryMode =
-    recoveryModeHeader === "snapshot-required" ? "snapshot-required" : "replay";
-  const latestEventIdHeader = response.headers.get("x-task-last-event-id");
-  let lastEventId = options.lastEventId ?? null;
-
-  for (const event of events) {
-    lastEventId = pickLatestEventId(lastEventId, event.id);
-  }
-
-  lastEventId = pickLatestEventId(lastEventId, latestEventIdHeader);
-
   return {
-    events,
-    recoveryMode,
-    lastEventId,
+    response,
+    recoveryMode:
+      recoveryModeHeader === "snapshot-required" ? "snapshot-required" : "replay",
+    lastEventIdHeader: response.headers.get("x-task-last-event-id"),
   };
 }
 
@@ -702,26 +772,130 @@ export async function parseTaskEventResponse(
     });
   }
 
-  const rawBody = await response.text();
+  if (response.body === null) {
+    const rawBody = await response.text();
+    let transientSequence = 0;
 
-  return parseSseMessages(rawBody, logger).flatMap((message) => {
-    try {
-      const event = normalizeTaskEventPayload(
-        parseJsonText(message.data),
+    return parseSseMessages(rawBody, logger).flatMap((message) => {
+      const parsed = parseTaskEventMessage(
         message,
         logger,
+        transientSequence + 1,
       );
 
-      return event ? [event] : [];
-    } catch (error) {
+      if (parsed.usedTransientIdentity) {
+        transientSequence += 1;
+      }
+
+      return parsed.event ? [parsed.event] : [];
+    });
+  }
+
+  const rawBody = await response.text();
+  let transientSequence = 0;
+
+  return parseSseMessages(rawBody, logger).flatMap((message) => {
+    const parsed = parseTaskEventMessage(
+      message,
+      logger,
+      transientSequence + 1,
+    );
+
+    if (parsed.usedTransientIdentity) {
+      transientSequence += 1;
+    }
+
+    return parsed.event ? [parsed.event] : [];
+  });
+}
+
+async function* streamTaskEventResponse(
+  response: Response,
+  logger: TaskEventParserLogger = console,
+): AsyncIterable<TaskStreamEventPayload> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json") || response.body === null) {
+    for (const event of await parseTaskEventResponse(response, logger)) {
+      yield event;
+    }
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const messages: RawSseMessage[] = [];
+  let transientSequence = 0;
+  let streamCompleted = false;
+  const parser = createParser({
+    onEvent(event: EventSourceMessage) {
+      messages.push({
+        eventName: event.event ?? null,
+        eventId: event.id ?? null,
+        data: event.data,
+      });
+    },
+    onError(error: ParseError) {
       warnParseIssue(
         logger,
-        `Ignoring invalid task SSE JSON payload: ${String(error)}`,
-        message.data,
+        `Ignoring malformed SSE protocol line: ${error.message}`,
+        error.line ?? error.value ?? "[stream-chunk]",
       );
-      return [];
-    }
+    },
   });
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        streamCompleted = true;
+        break;
+      }
+
+      parser.feed(decoder.decode(value, { stream: true }));
+
+      while (messages.length > 0) {
+        const parsed = parseTaskEventMessage(
+          messages.shift()!,
+          logger,
+          transientSequence + 1,
+        );
+
+        if (parsed.usedTransientIdentity) {
+          transientSequence += 1;
+        }
+
+        if (parsed.event) {
+          yield parsed.event;
+        }
+      }
+    }
+
+    parser.feed(`${decoder.decode()}\n\n`);
+
+    while (messages.length > 0) {
+      const parsed = parseTaskEventMessage(
+        messages.shift()!,
+        logger,
+        transientSequence + 1,
+      );
+
+      if (parsed.usedTransientIdentity) {
+        transientSequence += 1;
+      }
+
+      if (parsed.event) {
+        yield parsed.event;
+      }
+    }
+  } finally {
+    if (!streamCompleted) {
+      await reader.cancel().catch(() => undefined);
+    }
+
+    reader.releaseLock();
+  }
 }
 
 /**
@@ -858,19 +1032,21 @@ export function createRealTaskEventStream(
 
       while (!(options?.signal?.aborted ?? false)) {
         try {
-          const attempt = await streamSseAttempt(
+          const attempt = await openSseAttempt(
             taskId,
             {
               signal: options?.signal,
               lastEventId,
               module: options?.module ?? defaults.module,
             },
-            console,
           );
 
-          for (const event of attempt.events) {
-            sequence = Math.max(sequence, event.sequence);
-            lastEventId = event.id;
+          for await (const event of streamTaskEventResponse(attempt.response, console)) {
+            if (isStandardTaskEventId(event.id)) {
+              sequence = Math.max(sequence, event.sequence);
+              lastEventId = pickLatestEventId(lastEventId, event.id);
+            }
+
             yield event;
 
             if (isTerminalTaskStatus(event.status)) {
@@ -878,7 +1054,7 @@ export function createRealTaskEventStream(
             }
           }
 
-          lastEventId = pickLatestEventId(lastEventId, attempt.lastEventId);
+          lastEventId = pickLatestEventId(lastEventId, attempt.lastEventIdHeader);
           sequence = Math.max(sequence, parseEventSequenceFromId(lastEventId));
 
           if (attempt.recoveryMode === "snapshot-required") {

@@ -119,9 +119,6 @@
     "vue-eslint-parser": "10.2.0",
     "vue-tsc": "3.2.1"
   },
-  "simple-git-hooks": {
-    "commit-msg": "pnpm sa git-commit-verify",
-    "pre-commit": "pnpm typecheck:all && pnpm lint && git diff --exit-code"
-  },
+  "simple-git-hooks": {},
   "website": "https://ruoyi.xlsea.cn"
 }

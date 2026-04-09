@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>小麦 - 500</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<style>
+		* {
+			border-radius: 0 !important;
+			box-shadow: none !important;
+			font-family: monospace, sans-serif;
+		}
+
+		.wf-border {
+			border: 2px solid #000;
+		}
+
+		.bg-grid {
+			background-size: 40px 40px;
+			background-image: linear-gradient(to right, #e5e7eb 1px, transparent 1px), linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+		}
+	</style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex items-center justify-center bg-grid p-4">
+
+	<div class="flex flex-col items-center justify-center text-center">
+		<h1 class="text-[120px] leading-none font-black tracking-tighter mb-2 text-red-600"
+			style="text-shadow: 6px 6px 0px #ccc;">500</h1>
+		<div class="bg-red-600 text-white px-4 py-1 font-bold tracking-widest uppercase mb-6 text-sm">Server Error</div>
+
+		<h2 class="text-2xl font-bold mb-4">服务器开小差了</h2>
+		<p class="text-sm text-gray-600 mb-4 max-w-md">后端接口响应异常或服务暂时不可用。攻城狮正在紧急处理中。</p>
+
+		<div
+			class="bg-white wf-border p-3 text-xs text-left font-mono text-red-500 mb-8 w-full max-w-md overflow-x-auto">
+			Error: Internal Server Error<br>
+			TraceID: req_8f7d9a2c_500<br>
+			Detail: Failed to connect to RuoYi backend.
+		</div>
+
+		<div class="flex gap-4">
+			<button class="wf-border bg-black text-white px-8 py-3 text-sm font-bold hover:bg-gray-800">
+				刷新重试
+			</button>
+		</div>
+	</div>
+
+</body>
+
+</html>

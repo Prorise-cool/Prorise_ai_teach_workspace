@@ -131,13 +131,45 @@ class Settings(BaseSettings):
     video_target_duration_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_TARGET_DURATION_SECONDS")
     video_min_duration_seconds: int = Field(default=90, alias="FASTAPI_VIDEO_MIN_DURATION_SECONDS")
     video_max_duration_seconds: int = Field(default=180, alias="FASTAPI_VIDEO_MAX_DURATION_SECONDS")
+    video_render_quality: str = Field(default="m", alias="FASTAPI_VIDEO_RENDER_QUALITY")
     video_fix_max_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS")
+    video_fix_render_max_retries: int = Field(default=6, alias="FASTAPI_VIDEO_FIX_RENDER_MAX_RETRIES")
+    video_storyboard_max_rounds: int = Field(default=20, alias="FASTAPI_VIDEO_STORYBOARD_MAX_ROUNDS")
+    video_debug_log: bool = Field(default=False, alias="FASTAPI_VIDEO_DEBUG_LOG")
     video_ffmpeg_timeout_seconds: int = Field(default=60, alias="FASTAPI_VIDEO_FFMPEG_TIMEOUT_SECONDS")
     video_upload_retry_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_UPLOAD_RETRY_ATTEMPTS")
     video_publish_cache_ttl_seconds: int = Field(default=600, alias="FASTAPI_VIDEO_PUBLISH_CACHE_TTL_SECONDS")
     video_output_audio_format: str = Field(default="mp3", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_FORMAT")
     video_output_audio_sample_rate: int = Field(default=44100, alias="FASTAPI_VIDEO_OUTPUT_AUDIO_SAMPLE_RATE")
     video_output_audio_bitrate: str = Field(default="192k", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_BITRATE")
+    video_narration_chars_per_second: float = Field(
+        default=4.8,
+        alias="FASTAPI_VIDEO_NARRATION_CHARS_PER_SECOND",
+    )
+    video_narration_sentence_pause_seconds: float = Field(
+        default=0.35,
+        alias="FASTAPI_VIDEO_NARRATION_SENTENCE_PAUSE_SECONDS",
+    )
+    video_scene_min_duration_seconds: int = Field(
+        default=4,
+        alias="FASTAPI_VIDEO_SCENE_MIN_DURATION_SECONDS",
+    )
+    video_scene_max_duration_seconds: int = Field(
+        default=28,
+        alias="FASTAPI_VIDEO_SCENE_MAX_DURATION_SECONDS",
+    )
+    video_scene_ambient_motion_chunk_seconds: float = Field(
+        default=4.0,
+        alias="FASTAPI_VIDEO_SCENE_AMBIENT_MOTION_CHUNK_SECONDS",
+    )
+    video_compose_max_pad_seconds: float = Field(
+        default=12.0,
+        alias="FASTAPI_VIDEO_COMPOSE_MAX_PAD_SECONDS",
+    )
+    video_compose_max_pad_ratio: float = Field(
+        default=0.25,
+        alias="FASTAPI_VIDEO_COMPOSE_MAX_PAD_RATIO",
+    )
     video_sandbox_cpu_count: float = Field(default=1.0, alias="FASTAPI_VIDEO_SANDBOX_CPU_COUNT")
     video_sandbox_memory_mb: int = Field(default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB")
     video_sandbox_timeout_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS")

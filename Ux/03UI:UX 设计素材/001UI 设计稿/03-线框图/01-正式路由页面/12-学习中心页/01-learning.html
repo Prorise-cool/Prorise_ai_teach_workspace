@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦 XiaoMai - 学习中心</title>
+
+	<!-- 引入 Google Fonts 提升字体质感 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+
+	<!-- 引入 Tailwind CSS -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- 引入 Lucide 图标库 -->
+	<script src="https://unpkg.com/lucide@latest"></script>
+
+	<!-- 严格配置 Tailwind，注入设计系统规范 -->
+	<script>
+		tailwind.config = {
+			darkMode: "class",
+			theme: {
+				extend: {
+					colors: {
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', '2xl': '32px', 'full': '9999px',
+					},
+					boxShadow: {
+						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
+						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
+						'dock': '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04)',
+						'island': '0 10px 30px -5px rgba(0, 0, 0, 0.2)',
+					}
+				}
+			}
+		}
+	</script>
+
+	<style>
+		/* ================= 基础主题与 CSS 变量 ================= */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
+		}
+
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
+		}
+
+		body {
+			transition: background-color 0.4s ease, color 0.4s ease;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		.custom-scroll::-webkit-scrollbar {
+			width: 4px;
+			height: 4px;
+		}
+
+		.custom-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.custom-scroll::-webkit-scrollbar-thumb {
+			background: #e6dcc8;
+			border-radius: 4px;
+		}
+
+		html.dark .custom-scroll::-webkit-scrollbar-thumb {
+			background: #302824;
+		}
+
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
+		}
+
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
+		}
+
+		/* 统一的高级背景修饰 (网格) */
+		.bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: 32px 32px;
+			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+		}
+
+		html.dark .bg-grid-pattern {
+			background-image:
+				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
+		}
+
+		/* 视图入场动画 */
+		@keyframes fadeSlideUp {
+			from {
+				opacity: 0;
+				transform: translateY(15px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.view-enter {
+			animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+			opacity: 0;
+		}
+
+		.stagger-1 {
+			animation-delay: 0.05s;
+		}
+
+		.stagger-2 {
+			animation-delay: 0.10s;
+		}
+
+		.stagger-3 {
+			animation-delay: 0.15s;
+		}
+
+		.stagger-4 {
+			animation-delay: 0.20s;
+		}
+
+		/* 克制的交互过渡 */
+		.btn-transition {
+			transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.hover-card-soft:hover {
+			border-color: rgba(245, 197, 71, 0.5);
+			transform: translateY(-2px);
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+		}
+
+		html.dark .hover-card-soft:hover {
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+		}
+
+		/* Dock Icon 悬停动效 */
+		.dock-icon {
+			transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+			transform-origin: bottom;
+		}
+
+		.dock-icon:hover {
+			transform: scale(1.15) translateY(-4px);
+			z-index: 10;
+		}
+
+		/* 环形进度条动画 */
+		.circle-progress {
+			transition: stroke-dashoffset 1s ease-out;
+		}
+	</style>
+</head>
+
+<body class="min-h-screen flex flex-col relative overflow-y-auto custom-scroll overflow-x-hidden">
+
+	<!-- ==================== 0. 全局背景层 ==================== -->
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
+		<div
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/10 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
+		</div>
+	</div>
+
+	<!-- ==================== 1. 顶部：灵动岛状态栏 & 独立 Logo ==================== -->
+	<header
+		class="w-full max-w-6xl mx-auto mt-6 px-6 z-40 relative flex justify-between items-start pointer-events-none">
+		<!-- 独立 Logo -->
+		<a href="#"
+			class="font-bold text-lg flex items-center gap-3 pointer-events-auto btn-transition hover:opacity-80">
+			<div
+				class="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
+				<i data-lucide="leaf" class="w-4.5 h-4.5 text-bg-light dark:text-bg-dark"></i>
+			</div>
+			<span
+				class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block text-xl">XiaoMai</span>
+		</a>
+
+		<!-- 灵动岛 (Dynamic Island) -->
+		<div class="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto cursor-pointer group">
+			<div
+				class="bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark rounded-full px-5 py-2.5 flex items-center gap-3 shadow-island border border-transparent dark:border-bordercolor-dark transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg">
+				<div class="flex items-center justify-center w-5 h-5 rounded-full bg-brand/20 dark:bg-brand/10">
+					<i data-lucide="flame" class="w-3.5 h-3.5 text-brand fill-brand"></i>
+				</div>
+				<span class="text-sm font-bold tracking-wide">学习连击 4 天</span>
+				<i data-lucide="chevron-right"
+					class="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
+			</div>
+		</div>
+	</header>
+
+	<!-- ==================== 2. 主内容区 (Dashboard 布局) ==================== -->
+	<!-- 增加 pb-32 为底部的 Dock 留出空间 -->
+	<main
+		class="w-[94%] max-w-6xl mx-auto mt-10 mb-8 pb-32 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 relative z-10">
+
+		<!-- 左侧主列 (占据 8 列) -->
+		<div class="lg:col-span-8 flex flex-col gap-6 md:gap-8">
+
+			<!-- 模块 1：欢迎语 -->
+			<section class="view-enter stagger-1 bg-transparent flex flex-col justify-center gap-1 mt-4 mb-2">
+				<h1
+					class="text-[28px] md:text-3xl font-black text-text-primary dark:text-text-primary-dark tracking-tight">
+					早上好，同学！</h1>
+				<p class="text-[15px] font-medium text-text-secondary dark:text-text-secondary-dark">
+					今天也要攻克新的知识点，保持学习的节奏。</p>
+			</section>
+
+			<!-- 模块 2：当前聚焦 (继续学习) -->
+			<!-- 坚实的卡片材质，放弃玻璃拟态 -->
+			<a href="#"
+				class="view-enter stagger-2 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 hover-card-soft btn-transition group block shadow-sm">
+				<div class="flex justify-between items-center mb-6">
+					<div class="flex items-center gap-2">
+						<span class="w-3 h-3 rounded-full bg-brand"></span>
+						<h2
+							class="text-[11px] font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark">
+							继续上次学习</h2>
+					</div>
+					<span
+						class="text-xs font-medium text-text-secondary/80 dark:text-text-secondary-dark/80 flex items-center gap-1.5"><i
+							data-lucide="clock" class="w-3.5 h-3.5"></i> 昨天 22:30</span>
+				</div>
+				<div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
+					<!-- 缩略图区域也保持圆角硬朗，去阴影 -->
+					<div
+						class="w-full sm:w-48 aspect-video bg-secondary/50 dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden group-hover:border-brand/50 btn-transition">
+						<img src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400"
+							class="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-luminosity group-hover:scale-105 btn-transition">
+						<div
+							class="w-10 h-10 rounded-full bg-text-primary dark:bg-surface-dark flex items-center justify-center border border-transparent dark:border-bordercolor-dark z-10 shadow-md">
+							<i data-lucide="play" class="w-4 h-4 fill-surface-light text-surface-light ml-0.5"></i>
+						</div>
+					</div>
+					<div class="flex-1">
+						<div class="flex items-center gap-2 mb-2">
+							<span
+								class="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark bg-secondary/50 dark:bg-[#2c2522]">主题课堂</span>
+							<h3
+								class="text-xl font-black text-text-primary dark:text-text-primary-dark tracking-tight group-hover:text-brand-dark dark:group-hover:text-brand btn-transition">
+								复合函数链式法则应用</h3>
+						</div>
+						<p class="text-[14px] text-text-secondary dark:text-text-secondary-dark mb-5 leading-relaxed">
+							上次停留在 Scene 03，距离完成本次课堂还有 2 页交互幻灯片及课后巩固。</p>
+						<button
+							class="bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark rounded-lg px-6 py-2.5 font-bold text-[13px] hover:opacity-90 flex items-center gap-2 btn-transition shadow-sm">
+							继续课堂 <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+						</button>
+					</div>
+				</div>
+			</a>
+
+			<!-- 模块 3：资源库快捷入口 (坚实的 App Grid) -->
+			<section class="view-enter stagger-3">
+				<h2
+					class="text-[15px] font-black mb-4 flex items-center gap-2 text-text-primary dark:text-text-primary-dark uppercase tracking-widest">
+					Library
+				</h2>
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+					<!-- 生成历史 -->
+					<a href="#"
+						class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft btn-transition flex flex-col justify-between h-32 group relative shadow-sm">
+						<div
+							class="w-8 h-8 rounded-lg bg-secondary dark:bg-[#1a1614] flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark group-hover:border-brand group-hover:bg-brand/10 btn-transition">
+							<i data-lucide="history"
+								class="w-4 h-4 text-text-primary dark:text-text-primary-dark group-hover:text-brand-dark dark:group-hover:text-brand"></i>
+						</div>
+						<div>
+							<h3 class="font-bold text-[14px] text-text-primary dark:text-text-primary-dark">生成历史</h3>
+							<p
+								class="text-[11px] text-text-secondary/70 dark:text-text-secondary-dark/70 mt-1 font-mono uppercase tracking-widest">
+								12 Files</p>
+						</div>
+					</a>
+
+					<!-- 我的收藏 -->
+					<a href="#"
+						class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft btn-transition flex flex-col justify-between h-32 group relative shadow-sm">
+						<div
+							class="w-8 h-8 rounded-lg bg-secondary dark:bg-[#1a1614] flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark group-hover:border-brand group-hover:bg-brand/10 btn-transition">
+							<i data-lucide="star"
+								class="w-4 h-4 text-text-primary dark:text-text-primary-dark group-hover:text-brand-dark dark:group-hover:text-brand group-hover:fill-brand/30"></i>
+						</div>
+						<div>
+							<h3 class="font-bold text-[14px] text-text-primary dark:text-text-primary-dark">我的收藏</h3>
+							<p
+								class="text-[11px] text-text-secondary/70 dark:text-text-secondary-dark/70 mt-1 font-mono uppercase tracking-widest">
+								5 Saved</p>
+						</div>
+					</a>
+
+					<!-- 错题本 -->
+					<a href="#"
+						class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft btn-transition flex flex-col justify-between h-32 group relative shadow-sm">
+						<div
+							class="w-8 h-8 rounded-lg bg-error/10 dark:bg-error/20 flex items-center justify-center border border-error/20 group-hover:bg-error group-hover:border-error btn-transition">
+							<i data-lucide="book-x" class="w-4 h-4 text-error group-hover:text-white"></i>
+						</div>
+						<div>
+							<h3 class="font-bold text-[14px] text-text-primary dark:text-text-primary-dark">错题本</h3>
+							<p class="text-[11px] font-bold text-error/80 mt-1">12 题待复习</p>
+						</div>
+					</a>
+
+					<!-- 依据溯源 (演示) -->
+					<div
+						class="bg-secondary/40 dark:bg-[#1a1614]/40 border border-dashed border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft btn-transition flex flex-col justify-between h-32 group cursor-pointer">
+						<div
+							class="w-8 h-8 rounded-lg bg-surface-light dark:bg-surface-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark group-hover:border-text-primary dark:group-hover:border-text-primary-dark btn-transition">
+							<i data-lucide="paperclip"
+								class="w-4 h-4 text-text-secondary dark:text-text-secondary-dark group-hover:text-text-primary dark:group-hover:text-text-primary-dark"></i>
+						</div>
+						<div>
+							<h3
+								class="font-bold text-[14px] text-text-secondary dark:text-text-secondary-dark group-hover:text-text-primary dark:group-hover:text-text-primary-dark btn-transition">
+								依据溯源</h3>
+							<p class="text-[11px] text-text-secondary/70 dark:text-text-secondary-dark/70 mt-1">演示入口</p>
+						</div>
+					</div>
+
+				</div>
+			</section>
+
+			<!-- 模块 4：最近动态列表 (无缝融入背景的极简列表) -->
+			<section class="view-enter stagger-4">
+				<div class="flex justify-between items-center mb-4">
+					<h2
+						class="text-[15px] font-black text-text-primary dark:text-text-primary-dark uppercase tracking-widest">
+						Recent Activity
+					</h2>
+					<a href="#"
+						class="text-xs font-bold text-text-secondary hover:text-text-primary dark:text-text-secondary-dark dark:hover:text-text-primary-dark btn-transition">View
+						All &rarr;</a>
+				</div>
+				<div
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-2 shadow-sm">
+					<!-- 动态 1 -->
+					<a href="#"
+						class="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/50 dark:hover:bg-[#1a1614] btn-transition group">
+						<div class="flex items-center gap-4">
+							<div
+								class="w-10 h-10 rounded-xl bg-secondary dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-secondary shadow-sm group-hover:border-brand/50 btn-transition">
+								<i data-lucide="play-square"
+									class="w-5 h-5 group-hover:text-brand-dark dark:group-hover:text-brand"></i>
+							</div>
+							<div>
+								<h4 class="font-bold text-[14px] text-text-primary dark:text-text-primary-dark">
+									单题讲解：洛必达法则几何意义</h4>
+								<p
+									class="text-xs text-text-secondary/80 dark:text-text-secondary-dark/80 mt-1 font-medium">
+									今天 09:15 · 生成成功</p>
+							</div>
+						</div>
+						<i data-lucide="chevron-right"
+							class="w-4 h-4 text-text-secondary opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 btn-transition"></i>
+					</a>
+					<!-- 动态 2 -->
+					<a href="#"
+						class="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/50 dark:hover:bg-[#1a1614] btn-transition group">
+						<div class="flex items-center gap-4">
+							<div
+								class="w-10 h-10 rounded-xl bg-secondary dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-secondary shadow-sm group-hover:border-brand/50 btn-transition">
+								<i data-lucide="bot"
+									class="w-5 h-5 group-hover:text-brand-dark dark:group-hover:text-brand"></i>
+							</div>
+							<div>
+								<h4 class="font-bold text-[14px] text-text-primary dark:text-text-primary-dark">
+									伴学提问：傅里叶变换的物理意义</h4>
+								<p
+									class="text-xs text-text-secondary/80 dark:text-text-secondary-dark/80 mt-1 font-medium">
+									昨天 14:20 · 包含白板解答</p>
+							</div>
+						</div>
+						<i data-lucide="chevron-right"
+							class="w-4 h-4 text-text-secondary opacity-0 group-hover:opacity-100 transform -translate-x-2 group-hover:translate-x-0 btn-transition"></i>
+					</a>
+				</div>
+			</section>
+
+		</div>
+
+		<!-- 右侧副列 (占据 4 列)：Learning Coach 专属区 -->
+		<div class="lg:col-span-4 flex flex-col gap-6 md:gap-8 pt-2">
+
+			<!-- 模块 5：学习路径卡片 (反色强调，去掉花哨阴影，保留坚实对比) -->
+			<a href="#"
+				class="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 hover:-translate-y-1 btn-transition relative overflow-hidden block shadow-lg">
+				<div class="absolute -right-6 -top-6 opacity-[0.08]">
+					<i data-lucide="compass" class="w-32 h-32 text-surface-light dark:text-brand"></i>
+				</div>
+				<div class="relative z-10">
+					<div class="flex items-center justify-between mb-6">
+						<h2
+							class="text-xs font-bold uppercase tracking-widest text-surface-light/70 dark:text-text-secondary-dark">
+							Current Path</h2>
+						<span
+							class="text-[10px] font-bold bg-brand text-[#3b1701] px-2 py-0.5 rounded shadow-sm">Target</span>
+					</div>
+					<h3 class="text-2xl md:text-3xl font-black mb-8 tracking-tight">微积分求导<br>进阶攻坚</h3>
+
+					<div
+						class="flex justify-between text-xs font-bold mb-3 text-surface-light/80 dark:text-text-secondary-dark">
+						<span>完成进度</span>
+						<span>25% (1/4)</span>
+					</div>
+					<!-- 极简纯色进度条，无斑马线 -->
+					<div class="w-full h-1.5 bg-surface-light/20 dark:bg-[#1a1614] rounded-full overflow-hidden">
+						<div class="h-full bg-brand rounded-full w-[25%]"></div>
+					</div>
+				</div>
+			</a>
+
+			<!-- 模块 6：小测健康度 (Quiz Stats) -->
+			<section
+				class="view-enter stagger-2 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 shadow-sm">
+				<h2
+					class="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mb-6 flex items-center gap-2">
+					<i data-lucide="activity" class="w-4 h-4"></i> 测验健康度
+				</h2>
+
+				<div class="flex items-center gap-5 mb-6">
+					<!-- SVG 环形进度条 -->
+					<div class="relative w-[72px] h-[72px] shrink-0">
+						<svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+							<circle cx="50" cy="50" r="42" fill="none" class="stroke-secondary dark:stroke-[#1a1614]"
+								stroke-width="8" stroke-linecap="round"></circle>
+							<circle cx="50" cy="50" r="42" fill="none" class="stroke-success circle-progress"
+								stroke-width="8" stroke-linecap="round" stroke-dasharray="263.89"
+								stroke-dashoffset="36.94"></circle>
+						</svg>
+						<div class="absolute inset-0 flex items-center justify-center flex-col">
+							<span
+								class="text-xl font-black font-mono text-text-primary dark:text-text-primary-dark tracking-tighter">86</span>
+						</div>
+					</div>
+					<div>
+						<p class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark mb-1">近期平均分</p>
+						<p class="text-xs font-bold text-success flex items-center gap-1"><i data-lucide="trending-up"
+								class="w-3 h-3"></i> 较上周提升 12%</p>
+					</div>
+				</div>
+
+				<p
+					class="text-[13px] text-text-secondary dark:text-text-secondary-dark leading-relaxed mb-6 font-medium">
+					系统发现您在「隐函数求导」模块失分较多，建议重点复习对应内容。</p>
+				<button
+					class="w-full border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/50 dark:bg-[#1a1614]/50 text-[13px] font-bold py-2.5 rounded-xl hover:bg-secondary dark:hover:bg-[#2c2522] text-text-primary dark:text-text-primary-dark btn-transition shadow-sm">
+					进入错题本专项练习
+				</button>
+			</section>
+
+			<!-- 模块 7：AI 智能推荐 (Recommendation) -->
+			<section
+				class="view-enter stagger-3 bg-brand/5 dark:bg-brand/10 border border-brand/20 dark:border-brand/20 rounded-2xl p-6 md:p-8 shadow-sm">
+				<h2
+					class="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mb-5 flex items-center gap-2">
+					<i data-lucide="sparkles" class="w-4 h-4 text-brand-dark dark:text-brand"></i> 小麦推荐
+				</h2>
+				<div class="space-y-3">
+					<a href="#"
+						class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4 rounded-xl hover:border-brand/50 btn-transition block group shadow-sm">
+						<span
+							class="text-[10px] font-bold bg-brand text-[#3b1701] px-1.5 py-0.5 rounded-sm mb-2 inline-block shadow-sm">基于错题</span>
+						<h3
+							class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark leading-snug line-clamp-2 group-hover:text-brand-dark dark:group-hover:text-brand btn-transition">
+							生成单题讲解：隐函数求导的几何推导过程</h3>
+					</a>
+					<a href="#"
+						class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4 rounded-xl hover:border-brand/50 btn-transition block group shadow-sm">
+						<span
+							class="text-[10px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-1.5 py-0.5 rounded-sm mb-2 inline-block shadow-sm">基于收藏</span>
+						<h3
+							class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark leading-snug line-clamp-2 group-hover:text-brand-dark dark:group-hover:text-brand btn-transition">
+							延伸课堂：从偏导数到全微分</h3>
+					</a>
+				</div>
+			</section>
+
+		</div>
+	</main>
+
+	<!-- ==================== 3. 底部：macOS 风格专属 Dock ==================== -->
+	<div class="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-50">
+		<!-- 坚实的面板，无过多玻璃拟态，依靠阴影和边框悬浮 -->
+		<div
+			class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-2 rounded-[24px] shadow-dock flex items-end gap-2 overflow-x-auto no-scrollbar max-w-[90vw]">
+
+			<!-- App Icon: 单题讲解 -->
+			<a href="#" class="dock-icon flex flex-col items-center gap-1 min-w-[64px] group">
+				<div
+					class="w-12 h-12 rounded-[14px] bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-primary dark:text-text-primary-dark shadow-sm group-hover:bg-text-primary group-hover:text-surface-light dark:group-hover:bg-surface-light dark:group-hover:text-surface-dark transition-colors">
+					<i data-lucide="play-square" class="w-6 h-6"></i>
+				</div>
+				<span
+					class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark opacity-0 group-hover:opacity-100 transition-opacity">单题讲解</span>
+			</a>
+
+			<!-- App Icon: 主题课堂 -->
+			<a href="#" class="dock-icon flex flex-col items-center gap-1 min-w-[64px] group">
+				<div
+					class="w-12 h-12 rounded-[14px] bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-primary dark:text-text-primary-dark shadow-sm group-hover:bg-text-primary group-hover:text-surface-light dark:group-hover:bg-surface-light dark:group-hover:text-surface-dark transition-colors">
+					<i data-lucide="layout-template" class="w-6 h-6"></i>
+				</div>
+				<span
+					class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark opacity-0 group-hover:opacity-100 transition-opacity">主题课堂</span>
+			</a>
+
+			<!-- App Icon: 学习中心 (当前 Active) -->
+			<a href="#" class="dock-icon flex flex-col items-center gap-1 min-w-[64px] group relative">
+				<!-- 底部激活指示点 -->
+				<div
+					class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-text-primary dark:bg-text-primary-dark">
+				</div>
+				<div
+					class="w-12 h-12 rounded-[14px] bg-brand text-[#3b1701] border border-brand-dark/20 flex items-center justify-center shadow-md">
+					<i data-lucide="book-open" class="w-6 h-6"></i>
+				</div>
+				<span
+					class="text-[10px] font-bold text-text-primary dark:text-text-primary-dark opacity-100 transition-opacity">学习中心</span>
+			</a>
+
+			<!-- 分割线 -->
+			<div class="w-px h-10 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 self-center mb-4"></div>
+
+			<!-- 工具图标: 亮暗色切换 -->
+			<button id="dockThemeToggle" class="dock-icon flex flex-col items-center gap-1 min-w-[56px] group">
+				<div
+					class="w-11 h-11 rounded-[12px] bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-secondary dark:text-text-secondary-dark shadow-sm hover:bg-secondary dark:hover:bg-[#1a1614] transition-colors">
+					<i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+					<i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+				</div>
+				<span
+					class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark opacity-0 group-hover:opacity-100 transition-opacity">主题</span>
+			</button>
+
+			<!-- 工具图标: 用户设置 -->
+			<a href="#" class="dock-icon flex flex-col items-center gap-1 min-w-[56px] group">
+				<div
+					class="w-11 h-11 rounded-[12px] overflow-hidden border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
+					<img src="https://i.pravatar.cc/150?img=68" alt="User" class="w-full h-full object-cover">
+				</div>
+				<span
+					class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark opacity-0 group-hover:opacity-100 transition-opacity">设置</span>
+			</a>
+
+		</div>
+	</div>
+
+	<script>
+		// 初始化图标
+		lucide.createIcons();
+
+		// 亮暗色切换 (绑定 Dock 里的切换按钮)
+		const themeToggleBtn = document.getElementById('dockThemeToggle');
+		const html = document.documentElement;
+		function applyTheme(theme) {
+			html.classList.toggle('dark', theme === 'dark');
+			html.classList.toggle('light', theme !== 'dark');
+			localStorage.setItem('xiaomai-theme', theme);
+		}
+		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
+		themeToggleBtn.addEventListener('click', () => {
+			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		});
+
+		// 环形进度条动画触发
+		window.addEventListener('load', () => {
+			const circle = document.querySelector('.circle-progress');
+			if (circle) {
+				setTimeout(() => {
+					// 263.89 是圆的周长 (2 * pi * r = 2 * 3.14 * 42), 86% 进度意味着 offset 是 263.89 * (1 - 0.86) = ~36.94
+					circle.style.strokeDashoffset = "36.94";
+				}, 300);
+			}
+		});
+	</script>
+</body>
+
+</html>
