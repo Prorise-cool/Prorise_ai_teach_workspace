@@ -1,6 +1,7 @@
 """OpenAI Compatible LLM Provider 实现。"""
 from __future__ import annotations
 
+import asyncio
 
 import json
 from typing import Any, Mapping
@@ -54,6 +55,23 @@ class OpenAICompatibleLLMProvider:
         if isinstance(extra_headers, Mapping):
             self._headers.update({str(key): str(value) for key, value in extra_headers.items()})
         self._extra_body = dict(extra_body) if isinstance(extra_body, Mapping) else {}
+        self._client: httpx.AsyncClient | None = None
+        self._client_lock = asyncio.Lock()
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """复用同一 provider 实例的 HTTP client，避免并行场景重复建连。"""
+        if self._client is not None:
+            return self._client
+
+        async with self._client_lock:
+            if self._client is None:
+                self._client = httpx.AsyncClient(
+                    base_url=self._base_url,
+                    timeout=self.config.timeout_seconds,
+                    headers=self._headers,
+                    transport=self._transport,
+                )
+        return self._client
 
     async def generate(self, prompt: str) -> ProviderResult:
         """调用 OpenAI compatible API 生成文本。"""
@@ -75,13 +93,8 @@ class OpenAICompatibleLLMProvider:
         )
 
         try:
-            async with httpx.AsyncClient(
-                base_url=self._base_url,
-                timeout=self.config.timeout_seconds,
-                headers=self._headers,
-                transport=self._transport,
-            ) as client:
-                response = await client.post(self._request_path, json=payload)
+            client = await self._get_client()
+            response = await client.post(self._request_path, json=payload)
         except Exception as exc:
             handle_provider_request_error(self.provider_id, exc)
 
@@ -115,4 +128,3 @@ class OpenAICompatibleLLMProvider:
                 "healthSource": self.config.health_source,
             },
         )
-

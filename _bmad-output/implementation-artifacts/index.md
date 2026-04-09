@@ -182,8 +182,10 @@
 - **说明**: zustand 状态机、SSE 事件消费、status 轮询降级、manim_fix 修复态 UI
 - [调查记录](./4-7-视频等待页SSE实时状态故障调查-20260409.md)
 - [修复记录](./4-7-视频等待页SSE实时状态修复-20260409.md)
+- [补充修复记录](./4-7-并行阶段SSE进度防倒退与性能恢复-20260409.md)
 - **调查结论**: 当前实时状态丢失的主因是前端把 `text/event-stream` 用 `response.text()` 整体读完后再解析，导致长连接期间不会产出任何事件；同时后端 `connected` / `heartbeat` 缺少 `id` / `sequence`，会被前端 parser 丢弃
 - **修复摘要**: `student-web` 已改为基于 `ReadableStream` 的增量 SSE 解析，并为缺失契约身份的 `connected` / `heartbeat` 生成仅本地使用的 transient id，避免等待页卡死且不污染 `Last-Event-ID`
+- **补充摘要**: 2026-04-10 已补齐后端并行阶段的防倒退处理与 Provider 连接复用：恢复性能优化后，同步调整 stage 区间、在 `_emit_stage` 中阻止 `progress` 回退，并记录真实链路下 `181.26s` 的成功样本与重载样本观察
 
 ### Story 4.8: 视频结果页、播放器与结果操作
 - [文档](./4-8-视频结果页播放器与结果操作.md)

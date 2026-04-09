@@ -41,6 +41,18 @@ class TimeoutLLMProvider:
         raise TimeoutError(f"{self.provider_id} timed out while handling {prompt}")
 
 
+class CountingTimeoutLLMProvider:
+    calls = 0
+
+    def __init__(self, config: ProviderRuntimeConfig) -> None:
+        self.config = config
+        self.provider_id = config.provider_id
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        CountingTimeoutLLMProvider.calls += 1
+        raise TimeoutError(f"{self.provider_id} timed out while handling {prompt}")
+
+
 class BackupLLMProvider:
     def __init__(self, config: ProviderRuntimeConfig) -> None:
         self.config = config
@@ -89,6 +101,7 @@ def _build_factory() -> ProviderFactory:
     registry = ProviderRegistry()
     registry.register(ProviderCapability.LLM, "primary-chat", PrimaryLLMProvider, default_priority=1)
     registry.register(ProviderCapability.LLM, "timeout-chat", TimeoutLLMProvider, default_priority=1)
+    registry.register(ProviderCapability.LLM, "counting-timeout-chat", CountingTimeoutLLMProvider, default_priority=1)
     registry.register(ProviderCapability.LLM, "backup-chat", BackupLLMProvider, default_priority=10)
     registry.register(ProviderCapability.LLM, "broken-chat", BrokenLLMProvider, default_priority=20)
     registry.register(ProviderCapability.LLM, "invalid-chat", InvalidInputLLMProvider, default_priority=5)
@@ -146,6 +159,29 @@ def test_failover_switches_to_backup_and_emits_provider_switch_event() -> None:
     assert event.to == "backup-chat"
     assert runtime_store.get_provider_health("timeout-chat")["metadata"]["errorCode"] == "TASK_PROVIDER_TIMEOUT"
     assert runtime_store.get_provider_health("backup-chat")["isHealthy"] is True
+
+
+def test_failover_respects_configured_retry_attempts_before_switching() -> None:
+    factory = _build_factory()
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    switches: list[ProviderSwitch] = []
+    CountingTimeoutLLMProvider.calls = 0
+
+    result = asyncio.run(
+        factory.generate_with_failover(
+            [
+                {"provider": "counting-timeout-chat", "priority": 1, "retry_attempts": 1},
+                {"provider": "backup-chat", "priority": 2},
+            ],
+            "lesson",
+            runtime_store=runtime_store,
+            emit_switch=switches.append,
+        )
+    )
+
+    assert result.provider == "backup-chat"
+    assert CountingTimeoutLLMProvider.calls == 2
+    assert len(switches) == 1
 
 
 def test_failover_skips_cached_unhealthy_provider_until_ttl_expires() -> None:

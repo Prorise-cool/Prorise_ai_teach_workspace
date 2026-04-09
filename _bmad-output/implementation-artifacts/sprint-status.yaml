@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-09 20:33:05 +0800
+# last_updated: 2026-04-10 01:11:40 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-09 20:33:05 +0800
+last_updated: 2026-04-10 01:11:40 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -88,6 +88,13 @@ development_status:
   # 2026-04-09 修复收口：
   # - student-web SSE transport 已改为基于 ReadableStream 的增量解析，连接未关闭时也能实时产出事件。
   # - FastAPI connected/heartbeat 仍缺少 id/sequence；前端新增 transient identity 兼容，但不会把该类 id 写入 Last-Event-ID。
+  # 2026-04-09 并行阶段补充修复：
+  # - 已恢复 understanding+storyboard 合并、TTS 并行、Docker 预热等性能优化，并补齐对应测试兼容。
+  # - 已将 MANIM_GEN/TTS/MANIM_FIX/RENDER/COMPOSE 区间改为 26-42/43-58/59-65/66-78/79-94，前后端配置与 mock 契约同步。
+  # - 后端 _emit_stage 已阻止全局 progress 倒退；manim_fix 在 render 失败后的修复态会维持单调 progress，同时保留 stage=manim_fix。
+  # 2026-04-10 实机补充验证：
+  # - OpenAICompatibleLLMProvider 与 DoubaoTTSProvider 已复用 AsyncClient，减少并行场景与多段 TTS 的重复建连。
+  # - 成功样本 vtask_20260409165517_509ac64e 用时 181.26s，progress 全程单调；当前仍略高于 180s，残余瓶颈在上游 LLM 延迟与场景数量波动。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

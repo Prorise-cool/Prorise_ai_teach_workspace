@@ -134,7 +134,7 @@ def _finalize_storyboard(
     ]
     requested_duration = requested_target_duration or requested_total_duration
     if requested_duration <= 0:
-        requested_duration = sum(scene.duration_hint for scene in estimated_scenes) or settings.video_target_duration_seconds
+        requested_duration = settings.video_target_duration_seconds
 
     bounded_target = max(
         settings.video_min_duration_seconds,

@@ -4,7 +4,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from app.features.video.pipeline.models import ResourceLimits, VIDEO_STAGE_PROFILES, VideoStage, build_stage_snapshot
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.orchestrator import VideoPipelineService
+from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
@@ -26,9 +28,9 @@ def test_video_stage_profiles_are_contiguous_and_cover_full_progress_range() -> 
         VideoStage.UNDERSTANDING,
         VideoStage.STORYBOARD,
         VideoStage.MANIM_GEN,
+        VideoStage.TTS,
         VideoStage.MANIM_FIX,
         VideoStage.RENDER,
-        VideoStage.TTS,
         VideoStage.COMPOSE,
         VideoStage.UPLOAD,
     ]
@@ -50,7 +52,124 @@ def test_build_stage_snapshot_exposes_current_stage_label_and_stage_progress() -
     assert snapshot.current_stage == VideoStage.RENDER
     assert snapshot.stage_label == "渲染动画"
     assert snapshot.stage_progress == 50
-    assert snapshot.progress == 63
+    assert snapshot.progress == 72
+
+
+def test_video_pipeline_service_skips_regressive_parallel_progress_events(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="test",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
+        ),
+        asset_store=asset_store,
+    )
+
+    class _RecordingTask:
+        def __init__(self) -> None:
+            self.context = SimpleNamespace(task_id="video_progress_guard_case")
+            self.snapshots: list[dict[str, object]] = []
+
+        async def emit_runtime_snapshot(self, **payload) -> None:  # noqa: ANN003
+            self.snapshots.append(payload)
+
+    task = _RecordingTask()
+
+    asyncio.run(service._emit_stage(task, VideoStage.TTS, 1.0, "旁白生成完成"))
+    asyncio.run(service._emit_stage(task, VideoStage.MANIM_GEN, 1.0, "生成动画脚本完成"))
+
+    assert [snapshot["progress"] for snapshot in task.snapshots] == [58]
+    assert task.snapshots[0]["context"]["stage"] == VideoStage.TTS.value
+
+
+def test_video_pipeline_service_clamps_fix_stage_progress_without_hiding_fix_state(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="test",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
+        ),
+        asset_store=asset_store,
+    )
+
+    class _RecordingTask:
+        def __init__(self) -> None:
+            self.context = SimpleNamespace(task_id="video_fix_guard_case")
+            self.snapshots: list[dict[str, object]] = []
+
+        async def emit_runtime_snapshot(self, **payload) -> None:  # noqa: ANN003
+            self.snapshots.append(payload)
+
+    task = _RecordingTask()
+
+    asyncio.run(service._emit_stage(task, VideoStage.RENDER, 0.0, "正在渲染动画"))
+    asyncio.run(
+        service._emit_stage(
+            task,
+            VideoStage.MANIM_FIX,
+            0.4,
+            "开始第 1 次自动修复",
+            extra={"attemptNo": 1, "fixEvent": "fix_attempt_start"},
+        )
+    )
+
+    assert [snapshot["progress"] for snapshot in task.snapshots] == [66, 66]
+    assert task.snapshots[-1]["context"]["stage"] == VideoStage.MANIM_FIX.value
+    assert task.snapshots[-1]["context"]["stageProgress"] == 40
+
+
+def test_video_pipeline_service_clamps_failed_terminal_progress_without_hiding_failed_stage(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="test",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
+        ),
+        asset_store=asset_store,
+    )
+    service._max_emitted_progress = 58
+    task_runtime = VideoRuntimeStateStore(
+        RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        "video_failed_guard_case",
+    )
+
+    result = asyncio.run(
+        service._handle_pipeline_failure(
+            SimpleNamespace(task_id="video_failed_guard_case", user_id="u_1"),
+            task_runtime,
+            VideoPipelineError(
+                stage=VideoStage.MANIM_GEN,
+                error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
+                message="全部 Provider 均不可用：TimeoutError",
+            ),
+        )
+    )
+
+    assert result.progress == 58
+    assert result.context["stage"] == VideoStage.MANIM_GEN.value
+    assert result.context["failedStage"] == VideoStage.MANIM_GEN.value
+    assert result.context["progress"] == 58
 
 
 def test_script_scanner_blocks_forbidden_imports() -> None:

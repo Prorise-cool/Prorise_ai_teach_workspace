@@ -65,3 +65,44 @@ def test_doubao_tts_provider_maps_authentication_error_to_value_error() -> None:
 
     with pytest.raises(ValueError, match="authentication failed"):
         asyncio.run(provider.synthesize("你好"))
+
+
+def test_doubao_tts_provider_reuses_async_client_for_same_instance() -> None:
+    request_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        request_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={
+                "code": 3000,
+                "message": "Success",
+                "data": "SUQz",
+            },
+        )
+
+    provider = DoubaoTTSProvider(
+        ProviderRuntimeConfig(
+            provider_id="volcengine-tts",
+            settings={
+                "base_url": "https://openspeech.bytedance.com/api/v1/tts",
+                "api_key": "tts-key",
+                "voice_code": "zh_female_yingyujiaoxue_uranus_bigtts",
+                "cluster": "volcano_tts",
+                "transport": httpx.MockTransport(handler),
+            },
+        )
+    )
+
+    async def run_case() -> None:
+        await provider.synthesize("第一段")
+        cached_client = provider._client
+        await provider.synthesize("第二段")
+        assert provider._client is cached_client
+
+    asyncio.run(run_case())
+
+    assert request_urls == [
+        "https://openspeech.bytedance.com/api/v1/tts",
+        "https://openspeech.bytedance.com/api/v1/tts",
+    ]

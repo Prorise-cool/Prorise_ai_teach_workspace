@@ -203,7 +203,7 @@ class ProviderFailoverService:
                         await self._emit_switch(emit_switch, switch)
                     continue
 
-            attempts = max(provider.config.retry_attempts + 1, 11)  # 最少 10 次重试
+            attempts = max(provider.config.retry_attempts + 1, 1)
             for attempt_index in range(attempts):
                 try:
                     result = await asyncio.wait_for(
