@@ -44,6 +44,7 @@ from app.features.video.pipeline.runtime import (
     build_failure,
     build_stage_context,
 )
+from app.features.video.runtime_auth import delete_video_runtime_auth, load_video_runtime_auth
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     SandboxExecutor,
@@ -57,7 +58,7 @@ from app.features.video.pipeline.upload import UploadService
 from app.features.video.service import VideoService
 from app.providers.factory import ProviderFactory, get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
-from app.shared.ruoyi_auth import RuoYiRequestAuth, load_ruoyi_service_auth
+from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import (
@@ -104,14 +105,14 @@ class VideoPipelineService:
     async def run(self, task: BaseTask) -> TaskResult:
         """执行完整的视频生成流水线。"""
         runtime = VideoRuntimeStateStore(self.runtime_store, task.context.task_id)
-        service_request_auth = self._load_worker_request_auth(task_id=task.context.task_id)
+        request_auth = self._load_worker_request_auth(task_id=task.context.task_id)
         render_result: ExecutionResult | None = None
         tts_result: TTSResult | None = None
         compose_result: ComposeResult | None = None
         try:
             provider_runtime = await self.provider_runtime_resolver.resolve_video_pipeline(
-                access_token=service_request_auth.access_token if service_request_auth is not None else None,
-                client_id=service_request_auth.client_id if service_request_auth is not None else None,
+                access_token=request_auth.access_token if request_auth is not None else None,
+                client_id=request_auth.client_id if request_auth is not None else None,
             )
             understanding_service = UnderstandingService(
                 provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
@@ -186,7 +187,7 @@ class VideoPipelineService:
                 storyboard=storyboard,
                 tts_result=tts_result,
                 manim_code=manim_code,
-                request_auth=service_request_auth,
+                request_auth=request_auth,
             )
             final_context = build_stage_context(
                 VideoStage.UPLOAD,
@@ -207,7 +208,7 @@ class VideoPipelineService:
                 task.context,
                 runtime,
                 exc,
-                request_auth=service_request_auth,
+                request_auth=request_auth,
             )
         finally:
             cleanup_pipeline_temp_dirs(
@@ -216,26 +217,17 @@ class VideoPipelineService:
                 compose_result.video_path if compose_result is not None else None,
                 compose_result.cover_path if compose_result is not None else None,
             )
+            delete_video_runtime_auth(self.runtime_store, task_id=task.context.task_id)
 
     def _load_worker_request_auth(self, *, task_id: str) -> RuoYiRequestAuth | None:
-        """解析后台任务可用的服务级鉴权。
-
-        worker 链路不再把用户 token 固化到 Redis；若环境已配置服务级鉴权，
-        由任务运行时显式加载并透传给回源与写回链路。
-        """
-        auth_mode = getattr(self.settings, "ruoyi_service_auth_mode", None)
-        if auth_mode is None or str(auth_mode).lower() == "disabled":
-            return None
-
-        try:
-            return load_ruoyi_service_auth(self.settings)
-        except Exception:  # noqa: BLE001
+        """从任务运行态读取当前任务的显式请求鉴权。"""
+        request_auth = load_video_runtime_auth(self.runtime_store, task_id=task_id)
+        if request_auth is None:
             logger.warning(
-                "RuoYi service auth unavailable in video pipeline task_id=%s; background persistence may degrade",
+                "Video pipeline request auth missing task_id=%s; fallback to local provider settings and best-effort writeback",
                 task_id,
-                exc_info=True,
             )
-            return None
+        return request_auth
 
     # ------------------------------------------------------------------
     # 阶段执行方法

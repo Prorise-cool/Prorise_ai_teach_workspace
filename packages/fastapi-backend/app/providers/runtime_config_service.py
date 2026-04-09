@@ -113,6 +113,9 @@ class ProviderRuntimeResolver:
         fallback = self._build_from_settings()
         if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
             return fallback
+        if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
+            logger.info("Skip RuoYi provider runtime lookup without explicit request auth; fallback to settings")
+            return fallback
 
         try:
             module = await self._ruoyi_runtime_client.get_module_runtime(
@@ -145,6 +148,9 @@ class ProviderRuntimeResolver:
         """解析视频可用 TTS 音色列表。"""
         fallback = self._build_tts_voice_descriptors_from_providers(self._build_from_settings().default_tts)
         if str(getattr(self._settings, "provider_runtime_source", "settings")).lower() != "ruoyi":
+            return fallback
+        if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
+            logger.info("Skip RuoYi TTS runtime lookup without explicit request auth; fallback to settings")
             return fallback
 
         try:

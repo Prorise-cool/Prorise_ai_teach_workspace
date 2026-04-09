@@ -9,7 +9,6 @@
 - **[.env.staging.example](./.env.staging.example)** - FastAPI 预发环境变量示例
 - **[.env.production.example](./.env.production.example)** - FastAPI 生产环境变量示例
 - **[run_dev.py](./run_dev.py)** - 读取 package 内分层 env 配置的本地启动入口
-- **[scripts/migrate_legacy_ruoyi_env.py](./scripts/migrate_legacy_ruoyi_env.py)** - 迁移旧版 RuoYi token env 配置到 `.secrets/` token 文件
 
 ## Subdirectories
 

@@ -34,7 +34,6 @@ from app.features.video.pipeline.models import (
 from app.features.video.pipeline.runtime import build_video_runtime_key
 from app.features.video.schemas import VideoBootstrapResponse, VideoTaskMetadataCreateRequest
 from app.infra.redis_client import RuntimeStore
-from app.shared.ruoyi_auth import load_ruoyi_service_auth
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import TaskMetadataSnapshot, TaskType
 from app.shared.task_metadata_service import BaseTaskMetadataService
@@ -300,6 +299,7 @@ class VideoService(BaseTaskMetadataService):
         page_size: int = 12,
         runtime_store: RuntimeStore | None = None,
         access_context: AccessContext | None = None,
+        request_auth: "RuoYiRequestAuth | None" = None,
     ) -> PublishedVideoCardPage:
         """分页查询所有已公开发布的视频卡片。
 
@@ -311,14 +311,16 @@ class VideoService(BaseTaskMetadataService):
             page_size: 每页条数。
             runtime_store: 可选的 Redis 运行态存储实例。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
+            request_auth: 可选的显式请求鉴权信息，适用于非路由上下文。
         """
+        self._resolve_authenticated_factory(access_context, request_auth=request_auth)
+
         if runtime_store is not None:
             cached = runtime_store.get_runtime_value(build_video_runtime_key("published", "index"))
             if isinstance(cached, list):
                 cards = [PublishedVideoCard.model_validate(item) for item in cached]
                 return self._paginate_cards(cards, page=page, page_size=page_size)
 
-        service_request_auth = load_ruoyi_service_auth()
         cards: list[PublishedVideoCard] = []
         page_num = 1
         page_size_scan = 100
@@ -327,12 +329,17 @@ class VideoService(BaseTaskMetadataService):
             publication_page = await self._publication_service.list_publications(
                 page=page_num,
                 page_size=page_size_scan,
-                request_auth=service_request_auth,
+                access_context=access_context,
+                request_auth=request_auth,
             )
             total_seen += len(publication_page.rows)
             snapshots = await asyncio.gather(
                 *(
-                    self.get_task(item.task_ref_id, request_auth=service_request_auth)
+                    self.get_task(
+                        item.task_ref_id,
+                        access_context=access_context,
+                        request_auth=request_auth,
+                    )
                     for item in publication_page.rows
                 )
             )

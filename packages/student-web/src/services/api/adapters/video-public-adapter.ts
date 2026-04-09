@@ -304,6 +304,7 @@ async function requestVideoPublicList(
     url: appendVideoPublicQuery(path, query, options?.scenario),
     method: 'get',
     signal: options?.signal,
+    authFailureMode: 'manual',
   });
 
   return normalizeVideoPublicList(response.data);

@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
 import app.core.config as config_module
-from app.core.config import RuoYiServiceAuthMode, RuntimeEnvironment, Settings
+from app.core.config import RuntimeEnvironment, Settings
 
 
 def test_build_env_file_candidates_defaults_to_development(monkeypatch, tmp_path: Path) -> None:
@@ -42,24 +41,12 @@ def test_resolve_runtime_environment_rejects_unknown_alias(monkeypatch) -> None:
         config_module._resolve_runtime_environment()
 
 
-def test_settings_require_token_file_when_service_auth_uses_token_file(
-    monkeypatch,
-    tmp_path: Path,
-) -> None:
+def test_settings_accepts_clean_ruoyi_configuration_without_service_auth(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
 
-    with pytest.raises(ValidationError, match="FASTAPI_RUOYI_SERVICE_TOKEN_FILE"):
-        Settings(
-            _env_file=(),
-            ruoyi_service_auth_mode=RuoYiServiceAuthMode.TOKEN_FILE,
-        )
-
-
-def test_settings_resolve_token_file_relative_to_project_root(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
     settings = Settings(
         _env_file=(),
-        ruoyi_service_token_file=".secrets/ruoyi.token",
+        ruoyi_base_url="http://127.0.0.1:8080",
     )
 
-    assert settings.resolve_ruoyi_service_token_file() == tmp_path / ".secrets" / "ruoyi.token"
+    assert settings.ruoyi_base_url == "http://127.0.0.1:8080"

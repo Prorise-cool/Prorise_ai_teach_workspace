@@ -111,12 +111,11 @@ GPT-5 Codex
 - 已实现统一 `RuoYiClient`，支持单条与分页响应解包、请求头传播、超时与重试、错误映射。
 - 已实现 `RuoYiMapper`，用于字段名、状态值与日期格式的双向归一。
 - 已补充单元与集成测试，覆盖成功、分页、字段漂移、权限不足、资源不存在、网络异常与超时重试。
-- 2026-04-08 补记：已将 RuoYi 回源默认工厂切换为显式 `from_service_auth`，不再允许业务 service 静默回退到无鉴权 `from_settings`。
+- 2026-04-08 补记：已将 RuoYi 默认工厂收敛为无鉴权 `from_settings`，所有业务链路必须显式透传 `AccessContext` 或 `RuoYiRequestAuth`。
 - 2026-04-08 补记：已补齐 FastAPI 的环境分层加载规则，区分共享基础配置、本地覆盖、预发覆盖与生产覆盖，并同步 `.env.example` / `.env.local.example` / `.env.staging.example` / `.env.production.example`。
-- 2026-04-08 补记：已新增服务级 token file 规范文档，明确禁止继续把 RuoYi `access_token` 直接写入通用 `.env`。
-- 2026-04-08 补记：当前仍保留旧 `.env` 与 `FASTAPI_ENV_FILE` 的兼容读取能力，但推荐入口已切换为 `.env.defaults`、`.env.<env>`、`.env.<env>.local`、`.env.local`；同时新增 `packages/fastapi-backend/scripts/migrate_legacy_ruoyi_env.py` 用于清理历史 `FASTAPI_RUOYI_ACCESS_TOKEN` / `FASTAPI_RUOYI_CLIENT_ID`。
-- 2026-04-08 补记：服务级 token file 当前兼容三种格式：纯 JWT 字符串、`{"access_token":"...", "client_id":"..."}` JSON 对象，以及完整的 RuoYi 登录响应 envelope。
-- 2026-04-08 补记：视频 worker 已停止把用户 token 写入 Redis 运行态；后台异步写回、公开列表回源与 provider runtime 查询统一转向显式服务级鉴权。
+- 2026-04-09 补记：已彻底移除 FastAPI 的 service token / token file / `FASTAPI_ENV_FILE` 兼容叙述，业务鉴权不再从 env 或文件读取。
+- 2026-04-09 补记：视频 worker 改为只消费任务创建时写入 Redis 运行态的短 TTL 用户请求鉴权，任务结束后立即清理。
+- 2026-04-09 补记：`GET /api/v1/video/published` 改为登录态发现区接口，直接消费当前用户 Bearer token，不再走匿名服务级回源。
 
 ### File List
 
@@ -130,7 +129,9 @@ GPT-5 Codex
 - `packages/fastapi-backend/.env.local.example`
 - `packages/fastapi-backend/.env.staging.example`
 - `packages/fastapi-backend/.env.production.example`
-- `packages/fastapi-backend/scripts/migrate_legacy_ruoyi_env.py`
+- `packages/fastapi-backend/app/features/video/routes.py`
+- `packages/fastapi-backend/app/features/video/service.py`
+- `packages/fastapi-backend/app/features/video/runtime_auth.py`
 - `packages/fastapi-backend/app/features/video/pipeline/orchestrator.py`
 - `packages/fastapi-backend/app/features/video/services/create_task.py`
 - `packages/fastapi-backend/tests/unit/test_ruoyi_client.py`

@@ -5,7 +5,6 @@ import httpx
 import pytest
 
 from app.core.errors import AppError
-from app.core.config import RuoYiServiceAuthMode
 from app.core.security import AccessContext
 from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.ruoyi_client import RuoYiClient
@@ -16,7 +15,7 @@ class _DummyService(RuoYiServiceMixin):
     _RESOURCE = "dummy-resource"
 
     def __init__(self, client_factory=None) -> None:
-        self._client_factory = client_factory or RuoYiClient.from_service_auth
+        self._client_factory = client_factory or RuoYiClient.from_settings
 
 
 def _build_access_context() -> AccessContext:
@@ -141,12 +140,9 @@ def test_resolve_authenticated_factory_rejects_missing_request_auth_when_default
     assert exc_info.value.details == {"resource": "dummy-resource"}
 
 
-def test_resolve_factory_falls_back_to_service_auth_when_request_context_missing(
+def test_resolve_factory_falls_back_to_unauthenticated_client_when_request_context_missing(
     monkeypatch,
-    tmp_path,
 ) -> None:
-    token_file = tmp_path / "ruoyi-service.token"
-    token_file.write_text("service-token", encoding="utf-8")
     monkeypatch.setattr(
         "app.shared.ruoyi_client.get_settings",
         lambda: SimpleNamespace(
@@ -156,19 +152,11 @@ def test_resolve_factory_falls_back_to_service_auth_when_request_context_missing
             ruoyi_retry_delay_seconds=0.0,
         ),
     )
-    monkeypatch.setattr(
-        "app.shared.ruoyi_auth.get_settings",
-        lambda: SimpleNamespace(
-            ruoyi_service_auth_mode=RuoYiServiceAuthMode.TOKEN_FILE,
-            ruoyi_service_client_id="service-client-id",
-            resolve_ruoyi_service_token_file=lambda: token_file,
-        ),
-    )
     service = _DummyService()
 
     client = service._resolve_factory()()
     try:
-        assert client._client.headers.get("Authorization") == "Bearer service-token"
-        assert client._client.headers.get("Clientid") == "service-client-id"
+        assert client._client.headers.get("Authorization") is None
+        assert client._client.headers.get("Clientid") is None
     finally:
         asyncio.run(client.aclose())

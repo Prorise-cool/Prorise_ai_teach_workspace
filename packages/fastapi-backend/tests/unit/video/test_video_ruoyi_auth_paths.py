@@ -102,14 +102,10 @@ def _build_publication() -> VideoPublicationSnapshot:
     )
 
 
-def test_list_published_tasks_uses_explicit_service_request_auth(monkeypatch, tmp_path: Path) -> None:
-    service_request_auth = RuoYiRequestAuth(
-        access_token="service-token",
-        client_id="service-client-id",
-    )
-    monkeypatch.setattr(
-        "app.features.video.service.load_ruoyi_service_auth",
-        lambda: service_request_auth,
+def test_list_published_tasks_uses_explicit_request_auth(tmp_path: Path) -> None:
+    request_auth = RuoYiRequestAuth(
+        access_token="request-token",
+        client_id="request-client-id",
     )
 
     asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
@@ -123,14 +119,14 @@ def test_list_published_tasks_uses_explicit_service_request_auth(monkeypatch, tm
     )
     service.snapshot = _build_snapshot(detail_ref)
 
-    page = asyncio.run(service.list_published_tasks(page=1, page_size=12))
+    page = asyncio.run(service.list_published_tasks(page=1, page_size=12, request_auth=request_auth))
 
     assert page.total == 1
-    assert publication_service.request_auths == [service_request_auth]
-    assert service.get_task_request_auths == [service_request_auth]
+    assert publication_service.request_auths == [request_auth]
+    assert service.get_task_request_auths == [request_auth]
 
 
-def test_sync_artifact_graph_forwards_service_request_auth(tmp_path: Path) -> None:
+def test_sync_artifact_graph_forwards_explicit_request_auth(tmp_path: Path) -> None:
     asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
     publication_service = _RecordingPublicationService(_build_publication())
     artifact_index_service = _RecordingArtifactIndexService()
@@ -139,9 +135,9 @@ def test_sync_artifact_graph_forwards_service_request_auth(tmp_path: Path) -> No
         publication_service=publication_service,
         artifact_index_service=artifact_index_service,
     )
-    service_request_auth = RuoYiRequestAuth(
-        access_token="service-token",
-        client_id="service-client-id",
+    request_auth = RuoYiRequestAuth(
+        access_token="request-token",
+        client_id="request-client-id",
     )
     graph = VideoArtifactGraph(
         session_id="video-task-001",
@@ -152,8 +148,8 @@ def test_sync_artifact_graph_forwards_service_request_auth(tmp_path: Path) -> No
         service.sync_artifact_graph(
             graph,
             artifact_ref="https://cos.test/video/video-task-001/artifact-graph.json",
-            request_auth=service_request_auth,
+            request_auth=request_auth,
         )
     )
 
-    assert artifact_index_service.request_auths == [service_request_auth]
+    assert artifact_index_service.request_auths == [request_auth]
