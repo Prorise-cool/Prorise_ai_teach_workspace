@@ -132,6 +132,14 @@ class Settings(BaseSettings):
     video_min_duration_seconds: int = Field(default=90, alias="FASTAPI_VIDEO_MIN_DURATION_SECONDS")
     video_max_duration_seconds: int = Field(default=180, alias="FASTAPI_VIDEO_MAX_DURATION_SECONDS")
     video_render_quality: str = Field(default="m", alias="FASTAPI_VIDEO_RENDER_QUALITY")
+    video_manim_scene_by_scene_max_scenes: int = Field(
+        default=3,
+        alias="FASTAPI_VIDEO_MANIM_SCENE_BY_SCENE_MAX_SCENES",
+    )
+    video_manim_parallel_scene_concurrency: int = Field(
+        default=5,
+        alias="FASTAPI_VIDEO_MANIM_PARALLEL_SCENE_CONCURRENCY",
+    )
     video_fix_max_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS")
     video_fix_render_max_retries: int = Field(default=6, alias="FASTAPI_VIDEO_FIX_RENDER_MAX_RETRIES")
     video_storyboard_max_rounds: int = Field(default=20, alias="FASTAPI_VIDEO_STORYBOARD_MAX_ROUNDS")

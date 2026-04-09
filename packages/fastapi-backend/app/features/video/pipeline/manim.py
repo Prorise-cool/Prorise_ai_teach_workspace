@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import ast
 import re
 import textwrap
 from dataclasses import dataclass
@@ -102,12 +104,29 @@ def _compress_scene_waits_to_target(scene_code: str, *, target_duration: int) ->
     return _WAIT_CALL_PATTERN.sub(_replace, scene_code)
 
 
+def _is_valid_python_snippet(source: str) -> bool:
+    """判断场景代码片段是否仍是可解析的 Python 语句块。"""
+    try:
+        ast.parse(source)
+    except SyntaxError:
+        return False
+    return True
+
+
+def _build_parallel_scene_context() -> str:
+    """为独立场景并行生成提供统一上下文说明。"""
+    return (
+        "（独立场景生成：不要依赖前文变量、对象或其他场景状态；"
+        "只输出当前场景片段，并使用稳定的 self.add_elements / self.play 调用。）"
+    )
+
+
 @dataclass(slots=True)
 class ManimGenerationService:
-    """Manim 脚本生成服务 — 逐场景增量生成。
+    """Manim 脚本生成服务。
 
-    对每个分镜场景独立调用 LLM 生成代码片段，经 AST 修复 + 静态分析后
-    增量拼接为完整脚本。若增量生成失败，回退到单次全量生成。
+    小分镜保持逐场景增量生成，大分镜优先并行独立场景生成以控制总时延。
+    任一路径失败后，都回退到单次全量生成。
     """
 
     providers: Sequence[Any]
@@ -123,8 +142,32 @@ class ManimGenerationService:
     ) -> ManimCodeResult:
         """执行 Manim 脚本生成，返回 ``ManimCodeResult``。
 
-        优先使用逐场景增量生成；若失败回退到单次全量生成。
+        小分镜优先逐场景增量生成；大分镜优先并行独立场景生成。
         """
+        max_scene_by_scene_scenes = max(
+            int(getattr(self.settings, "video_manim_scene_by_scene_max_scenes", 3)),
+            0,
+        )
+        if max_scene_by_scene_scenes == 0 or len(storyboard.scenes) > max_scene_by_scene_scenes:
+            logger.info(
+                "[Manim] scene_count=%d threshold=%d, use parallel-scene generation",
+                len(storyboard.scenes),
+                max_scene_by_scene_scenes,
+            )
+            try:
+                parallel_result = await self._generate_parallel_scenes(
+                    storyboard=storyboard,
+                    emit_switch=emit_switch,
+                )
+                if parallel_result is not None:
+                    return parallel_result
+            except Exception:  # noqa: BLE001
+                logger.warning("并行独立场景生成失败，回退到单次全量生成", exc_info=True)
+            return await self._generate_single_pass(
+                storyboard=storyboard,
+                emit_switch=emit_switch,
+            )
+
         try:
             result = await self._generate_scene_by_scene(
                 storyboard=storyboard,
@@ -135,7 +178,7 @@ class ManimGenerationService:
         except Exception:  # noqa: BLE001
             logger.warning("逐场景增量生成失败，回退到单次全量生成")
 
-        return await self._fallback_single_generation(
+        return await self._generate_single_pass(
             storyboard=storyboard,
             emit_switch=emit_switch,
         )
@@ -164,9 +207,7 @@ class ManimGenerationService:
         )
         renderer = CodeRenderer()
         prev_code = ""
-        accumulated_code = ""
-        scene_codes: list[str] = []
-        mappings: list[SceneCodeMapping] = []
+        scene_codes: list[tuple[Any, str]] = []
 
         for index, scene in enumerate(storyboard.scenes, start=1):
             image_desc = scene.image_desc or scene.visual_description
@@ -192,26 +233,140 @@ class ManimGenerationService:
                 return None
 
             logger.debug("[Manim] 场景%d LLM响应 (前400字): %s", index, provider_result.content[:400])
-            scene_code = extract_code(provider_result.content) or ""
-            if not scene_code.strip():
-                logger.warning("场景 %s 的 LLM 返回为空，跳过", scene.scene_id)
-                continue
-
-            # 后处理：ShowCreation → Create + dedent。
-            scene_code = scene_code.replace("ShowCreation", "Create")
-            scene_code = textwrap.dedent(scene_code)
-
-            # Layer 1: AST 参数注入。
-            scene_code = ast_fix_code(scene_code)
-
-            # Layer 2: 静态分析检查。
-            scene_code = stat_check_fix(scene_code)
-            scene_code = _compress_scene_waits_to_target(
-                scene_code,
-                target_duration=scene.duration_hint,
+            scene_code = self._normalize_scene_code(
+                scene=scene,
+                raw_content=provider_result.content,
             )
+            if scene_code is None:
+                logger.warning("场景 %s 的增量代码不可用，回退到单次全量生成", scene.scene_id)
+                return None
 
-            # 增量拼接。
+            scene_codes.append((scene, scene_code))
+            prev_code = scene_code
+
+        if not scene_codes:
+            return None
+
+        return self._build_scene_script_result(
+            storyboard=storyboard,
+            scene_codes=scene_codes,
+            provider_used="scene-by-scene",
+            renderer=renderer,
+        )
+
+    async def _generate_parallel_scenes(
+        self,
+        *,
+        storyboard: Storyboard,
+        emit_switch=None,
+    ) -> ManimCodeResult | None:
+        """并行生成相互独立的场景代码，再本地装配完整脚本。"""
+        background_color = storyboard.video_config.background_color
+        system_prompt = build_code_gen_system_prompt(
+            background_color=background_color,
+        )
+        renderer = CodeRenderer()
+        concurrency = max(
+            int(getattr(self.settings, "video_manim_parallel_scene_concurrency", 3)),
+            1,
+        )
+        semaphore = asyncio.Semaphore(concurrency)
+        independent_context = _build_parallel_scene_context()
+
+        async def _generate_one(index: int, scene: Any) -> tuple[int, Any, str] | None:
+            image_desc = scene.image_desc or scene.visual_description
+            user_prompt = build_scene_code_prompt(
+                scene_title=scene.title,
+                scene_voice_text=scene.voice_text or scene.narration,
+                scene_image_desc=image_desc,
+                scene_duration_hint=scene.duration_hint,
+                current_code=independent_context,
+            )
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+            async with semaphore:
+                try:
+                    provider_result = await self.failover_service.generate(
+                        self.providers,
+                        full_prompt,
+                        emit_switch=emit_switch,
+                    )
+                except ProviderAllFailedError:
+                    logger.warning("场景 %s 的并行 LLM 生成失败", scene.scene_id)
+                    return None
+
+            logger.debug("[Manim] 并行场景%d LLM响应 (前400字): %s", index, provider_result.content[:400])
+            scene_code = self._normalize_scene_code(
+                scene=scene,
+                raw_content=provider_result.content,
+            )
+            if scene_code is None:
+                logger.warning("场景 %s 的并行代码不可解析", scene.scene_id)
+                return None
+            return index, scene, scene_code
+
+        results = await asyncio.gather(
+            *[
+                _generate_one(index, scene)
+                for index, scene in enumerate(storyboard.scenes, start=1)
+            ],
+            return_exceptions=True,
+        )
+        scene_codes: list[tuple[Any, str]] = []
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning("并行场景生成出现异常，回退到单次全量生成", exc_info=result)
+                return None
+            if result is None:
+                return None
+            _, scene, scene_code = result
+            scene_codes.append((scene, scene_code))
+
+        if not scene_codes:
+            return None
+
+        return self._build_scene_script_result(
+            storyboard=storyboard,
+            scene_codes=scene_codes,
+            provider_used="scene-parallel",
+            renderer=renderer,
+        )
+
+    def _normalize_scene_code(
+        self,
+        *,
+        scene: Any,
+        raw_content: str,
+    ) -> str | None:
+        """清洗单场景代码片段，保证后续本地装配安全。"""
+        scene_code = extract_code(raw_content) or ""
+        if not scene_code.strip():
+            return None
+
+        scene_code = scene_code.replace("ShowCreation", "Create")
+        scene_code = textwrap.dedent(scene_code)
+        scene_code = ast_fix_code(scene_code)
+        scene_code = stat_check_fix(scene_code)
+        scene_code = _compress_scene_waits_to_target(
+            scene_code,
+            target_duration=scene.duration_hint,
+        )
+        if not _is_valid_python_snippet(scene_code):
+            return None
+        return scene_code
+
+    def _build_scene_script_result(
+        self,
+        *,
+        storyboard: Storyboard,
+        scene_codes: list[tuple[Any, str]],
+        provider_used: str,
+        renderer: CodeRenderer,
+    ) -> ManimCodeResult:
+        """将场景片段本地装配为完整脚本并构建结果对象。"""
+        mappings: list[SceneCodeMapping] = []
+        accumulated_code = ""
+        for scene, scene_code in scene_codes:
             if accumulated_code:
                 accumulated_code = renderer.render_scene_increment(
                     prev_code=accumulated_code,
@@ -220,10 +375,6 @@ class ManimGenerationService:
             else:
                 accumulated_code = scene_code
 
-            scene_codes.append(scene_code)
-            prev_code = scene_code
-
-            # 记录行号映射（粗略估算）。
             line_count = accumulated_code.count("\n") + 1
             mappings.append(
                 SceneCodeMapping(
@@ -234,23 +385,23 @@ class ManimGenerationService:
                 )
             )
 
-        if not accumulated_code.strip():
-            return None
-
-        # 渲染完整脚本。
         video_config = storyboard.video_config.model_dump()
         scenes_data = []
-        total_scenes = len(storyboard.scenes)
-        for index, (scene, scene_code) in enumerate(zip(storyboard.scenes, scene_codes, strict=False), start=1):
+        total_scenes = len(scene_codes)
+        for index, (scene, scene_code) in enumerate(scene_codes, start=1):
             estimated_scene_duration = _estimate_scene_code_duration_seconds(scene_code)
             transition_buffer = 0.4 if index < total_scenes else 0.0
             scenes_data.append({
                 "scene_code": scene_code,
                 "scene_duration_hint": scene.duration_hint,
-                "scene_hold_duration": round(max(float(scene.duration_hint) - estimated_scene_duration - transition_buffer, 0.0), 3),
+                "scene_hold_duration": round(
+                    max(float(scene.duration_hint) - estimated_scene_duration - transition_buffer, 0.0),
+                    3,
+                ),
                 "voiceText": scene.voice_text or scene.narration,
                 "voiceRole": scene.voice_role,
             })
+
         full_script = renderer.render_full_script(
             scenes=scenes_data,
             video_config=video_config,
@@ -260,19 +411,24 @@ class ManimGenerationService:
         result = ManimCodeResult(
             script_content=full_script,
             scene_mapping=mappings,
-            provider_used="scene-by-scene",
+            provider_used=provider_used,
         )
         self.runtime.save_model("manim_code", result)
-        logger.info("[Manim完成] scenes=%d code_len=%d", len(scene_codes), len(full_script))
+        logger.info(
+            "[Manim完成] scenes=%d strategy=%s code_len=%d",
+            len(scene_codes),
+            provider_used,
+            len(full_script),
+        )
         return result
 
-    async def _fallback_single_generation(
+    async def _generate_single_pass(
         self,
         *,
         storyboard: Storyboard,
         emit_switch=None,
     ) -> ManimCodeResult:
-        """回退方案：单次全量生成 Manim 脚本。"""
+        """单次全量生成 Manim 脚本。"""
         prompt = (
             "请根据 storyboard 输出可执行的 Manim Python 脚本。\n"
             f"{storyboard.model_dump_json(by_alias=True)}"
@@ -318,6 +474,7 @@ class ManimGenerationService:
             provider_used=provider_result.provider,
         )
         self.runtime.save_model("manim_code", result)
+        logger.info("[Manim完成] scenes=%d strategy=single-pass code_len=%d", len(storyboard.scenes), len(script_content))
         return result
 
 

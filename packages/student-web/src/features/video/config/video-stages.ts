@@ -29,21 +29,21 @@ export interface VideoStageConfig {
  * 区间定义（连续无间隙，总覆盖 0–100）：
  * - understanding:  0–12
  * - storyboard:    13–25
- * - manim_gen:     26–45
- * - manim_fix:     46–55 (conditional)
- * - render:        56–70
- * - tts:           71–84
- * - compose:       85–94
+ * - manim_gen:     26–42
+ * - tts:           43–58
+ * - manim_fix:     59–65 (conditional)
+ * - render:        66–78
+ * - compose:       79–94
  * - upload:        95–100
  */
 export const VIDEO_STAGES: readonly VideoStageConfig[] = [
   { key: 'understanding', label: 'video.stages.understanding', progressStart: 0, progressEnd: 12, estimatedDuration: '3-8s', conditional: false, tag: 'Understanding' },
   { key: 'storyboard', label: 'video.stages.storyboard', progressStart: 13, progressEnd: 25, estimatedDuration: '5-10s', conditional: false, tag: 'Storyboard' },
-  { key: 'manim_gen', label: 'video.stages.manim_gen', progressStart: 26, progressEnd: 45, estimatedDuration: '8-20s', conditional: false, tag: 'Manim Gen' },
-  { key: 'manim_fix', label: 'video.stages.manim_fix', progressStart: 46, progressEnd: 55, estimatedDuration: '5-15s', conditional: true, tag: 'Auto-Fix' },
-  { key: 'render', label: 'video.stages.render', progressStart: 56, progressEnd: 70, estimatedDuration: '15-40s', conditional: false, tag: 'Render' },
-  { key: 'tts', label: 'video.stages.tts', progressStart: 71, progressEnd: 84, estimatedDuration: '8-20s', conditional: false, tag: 'TTS' },
-  { key: 'compose', label: 'video.stages.compose', progressStart: 85, progressEnd: 94, estimatedDuration: '5-12s', conditional: false, tag: 'Compose' },
+  { key: 'manim_gen', label: 'video.stages.manim_gen', progressStart: 26, progressEnd: 42, estimatedDuration: '8-20s', conditional: false, tag: 'Manim Gen' },
+  { key: 'tts', label: 'video.stages.tts', progressStart: 43, progressEnd: 58, estimatedDuration: '8-20s', conditional: false, tag: 'TTS' },
+  { key: 'manim_fix', label: 'video.stages.manim_fix', progressStart: 59, progressEnd: 65, estimatedDuration: '5-15s', conditional: true, tag: 'Auto-Fix' },
+  { key: 'render', label: 'video.stages.render', progressStart: 66, progressEnd: 78, estimatedDuration: '15-40s', conditional: false, tag: 'Render' },
+  { key: 'compose', label: 'video.stages.compose', progressStart: 79, progressEnd: 94, estimatedDuration: '5-12s', conditional: false, tag: 'Compose' },
   { key: 'upload', label: 'video.stages.upload', progressStart: 95, progressEnd: 100, estimatedDuration: '3-10s', conditional: false, tag: 'Upload' },
 ] as const;
 

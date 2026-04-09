@@ -17,6 +17,7 @@
 - [index.md](./implementation-artifacts/index.md) - 实施产物总索引与 Story 执行文档入口
 - [4-7-视频等待页SSE实时状态故障调查-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态故障调查-20260409.md) - 视频等待页实时状态丢失问题调查结论
 - [4-7-视频等待页SSE实时状态修复-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态修复-20260409.md) - 视频等待页 SSE 流式消费修复与验证记录
+- [4-7-并行阶段SSE进度防倒退与性能恢复-20260409.md](./implementation-artifacts/4-7-并行阶段SSE进度防倒退与性能恢复-20260409.md) - 并行阶段进度防倒退、Provider 连接复用与真实链路性能记录
 
 
 ### planning-artifacts/

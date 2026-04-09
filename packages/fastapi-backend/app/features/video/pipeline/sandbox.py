@@ -26,6 +26,10 @@ from app.features.video.pipeline.constants import (
 from app.features.video.pipeline.errors import VideoTaskErrorCode
 from app.features.video.pipeline.models import ExecutionResult, ResourceLimits
 
+from app.core.logging import get_logger
+
+logger = get_logger("app.features.video.pipeline.sandbox")
+
 FORBIDDEN_IMPORTS = {
     "os": VideoTaskErrorCode.SANDBOX_FS_VIOLATION,
     "pathlib": VideoTaskErrorCode.SANDBOX_FS_VIOLATION,
@@ -178,6 +182,36 @@ class DockerSandboxExecutor(SandboxExecutor):
         self.allow_local_fallback = allow_local_fallback
         self.render_quality = render_quality
         self._fallback_executor = LocalSandboxExecutor()
+        self._warmup_done = False
+
+    async def warm_up(self) -> None:
+        """预热 Docker 镜像，确保首次渲染不会因拉取镜像而延迟。"""
+        if self._warmup_done or shutil.which("docker") is None:
+            return
+        try:
+            inspect = await asyncio.to_thread(
+                subprocess.run,
+                ["docker", "image", "inspect", self.docker_image],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if inspect.returncode != 0:
+                logger.info("Docker 镜像 %s 未找到，正在拉取...", self.docker_image)
+                await asyncio.to_thread(
+                    subprocess.run,
+                    ["docker", "pull", self.docker_image],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                logger.info("Docker 镜像 %s 拉取完成", self.docker_image)
+            else:
+                logger.debug("Docker 镜像 %s 已存在，跳过拉取", self.docker_image)
+        except Exception:  # noqa: BLE001
+            logger.warning("Docker 镜像预热失败，将在渲染时按需拉取", exc_info=True)
+        finally:
+            self._warmup_done = True
 
     async def execute(
         self,

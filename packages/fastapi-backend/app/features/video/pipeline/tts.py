@@ -1,11 +1,12 @@
 """TTS 语音合成服务。
 
-遍历分镜场景，逐场景调用 TTS Provider 合成旁白音频，
+遍历分镜场景，并行调用 TTS Provider 合成旁白音频，
 支持音色偏好匹配和 failover 机制。
 """
 
 from __future__ import annotations
 
+import asyncio
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -60,7 +61,7 @@ class _BoundVoiceConfigProvider:
 
 @dataclass(slots=True)
 class TTSService:
-    """TTS 语音合成服务，逐场景合成旁白音频并汇总结果。"""
+    """TTS 语音合成服务，并行合成所有场景旁白音频并汇总结果。"""
 
     providers: Sequence[Any]
     failover_service: ProviderFailoverService
@@ -122,28 +123,16 @@ class TTSService:
         provider_used: list[str] = []
         failover_occurred = False
 
-        for index, scene in enumerate(storyboard.scenes, start=1):
-            # 优先使用 voiceText（数学符号已口语化），回退到 narration。
+        # 并行合成所有场景语音（从串行改为 gather 并行）
+        async def _synthesize_one_scene(index: int, scene: Any) -> tuple[int, Any, Any, AudioSegment]:
+            """合成单个场景语音并返回结果。"""
             tts_text = scene.voice_text or scene.narration
-            try:
-                result = await self.failover_service.synthesize(
-                    bound_providers,
-                    tts_text,
-                    voice_config=voice_config,
-                    emit_switch=emit_switch,
-                )
-            except ProviderAllFailedError as exc:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                raise VideoPipelineError(
-                    stage=VideoStage.TTS,
-                    error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
-                    message=str(exc),
-                    progress_ratio=index / max(len(storyboard.scenes), 1),
-                ) from exc
-
-            provider_used.append(result.provider)
-            if result.provider != primary_provider_id:
-                failover_occurred = True
+            result = await self.failover_service.synthesize(
+                bound_providers,
+                tts_text,
+                voice_config=voice_config,
+                emit_switch=emit_switch,
+            )
             result_voice_config = provider_voice_configs.get(result.provider, voice_config)
             decoded_audio = decode_audio_payload(getattr(result, "metadata", None))
             if decoded_audio is not None:
@@ -167,16 +156,38 @@ class TTSService:
                     },
                 )
             audio_duration_seconds = probe_media_duration_seconds(audio_path) or float(scene.duration_hint)
-            audio_segments.append(
-                AudioSegment(
-                    scene_id=scene.scene_id,
-                    audio_path=str(audio_path),
-                    duration=round_duration_seconds(audio_duration_seconds),
-                    format=audio_format,
-                )
+            segment = AudioSegment(
+                scene_id=scene.scene_id,
+                audio_path=str(audio_path),
+                duration=round_duration_seconds(audio_duration_seconds),
+                format=audio_format,
             )
+            return index, result, result_voice_config, segment
+
+        scene_count = len(storyboard.scenes)
+        try:
+            gather_results = await asyncio.gather(
+                *(
+                    _synthesize_one_scene(i, scene)
+                    for i, scene in enumerate(storyboard.scenes, start=1)
+                ),
+            )
+        except ProviderAllFailedError as exc:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            raise VideoPipelineError(
+                stage=VideoStage.TTS,
+                error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                message=str(exc),
+            ) from exc
+
+        # 按场景顺序整理结果
+        for index, result, _voice_config, segment in sorted(gather_results, key=lambda r: r[0]):
+            provider_used.append(result.provider)
+            if result.provider != primary_provider_id:
+                failover_occurred = True
+            audio_segments.append(segment)
             if on_scene_completed is not None:
-                await on_scene_completed(index, len(storyboard.scenes), result.provider, failover_occurred)
+                await on_scene_completed(index, scene_count, result.provider, failover_occurred)
 
         tts_result = TTSResult(
             audio_segments=audio_segments,

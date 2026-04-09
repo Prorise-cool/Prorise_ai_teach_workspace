@@ -46,9 +46,16 @@ class FakeFailoverService:
     def __init__(self, *, generate_results=None, synthesize_results=None) -> None:
         self._generate_results = list(generate_results or [])
         self._synthesize_results = list(synthesize_results or [])
+        self.generate_calls: list[dict[str, object]] = []
         self.synthesize_calls: list[dict[str, object]] = []
 
     async def generate(self, providers, prompt: str, emit_switch=None):  # noqa: ANN001
+        self.generate_calls.append(
+            {
+                "provider_ids": [provider.provider_id for provider in providers],
+                "prompt": prompt,
+            }
+        )
         if not self._generate_results:
             raise AssertionError("missing fake generate result")
         return self._generate_results.pop(0)
@@ -111,6 +118,8 @@ def _build_settings(**overrides) -> SimpleNamespace:
         "video_target_duration_seconds": 120,
         "video_min_duration_seconds": 90,
         "video_max_duration_seconds": 180,
+        "video_manim_scene_by_scene_max_scenes": 3,
+        "video_manim_parallel_scene_concurrency": 5,
         "video_output_audio_format": "mp3",
         "video_output_audio_sample_rate": 44100,
         "video_output_audio_bitrate": "192k",
@@ -393,6 +402,78 @@ def test_manim_generation_service_persists_generated_script() -> None:
     assert "self.clear_scene()" in result.script_content
     persisted = runtime.load_value("manim_code")
     assert isinstance(persisted, dict)
+
+
+def test_manim_generation_service_uses_parallel_scene_generation_for_large_storyboards() -> None:
+    from app.core.config import Settings
+
+    runtime = _build_runtime("video_manim_parallel_case")
+    failover = FakeFailoverService(
+        generate_results=[
+            SimpleNamespace(
+                provider="stub-llm",
+                content="```python\ntitle_1 = Text('题目引入', font_size=32)\nself.add_elements(title_1)\n```",
+            ),
+            SimpleNamespace(
+                provider="stub-llm",
+                content="```python\nformula_2 = MathTex('a^2+b^2=c^2')\nself.add_elements(formula_2)\n```",
+            ),
+            SimpleNamespace(
+                provider="stub-llm",
+                content="```python\nsummary_3 = Text('结论成立', font_size=30)\nself.add_elements(summary_3)\n```",
+            )
+        ]
+    )
+    service = ManimGenerationService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=failover,
+        runtime=runtime,
+        settings=Settings(
+            video_manim_scene_by_scene_max_scenes=2,
+            video_manim_parallel_scene_concurrency=2,
+        ),
+    )
+
+    result = asyncio.run(service.execute(storyboard=_build_storyboard()))
+
+    assert result.script_content
+    assert result.provider_used == "scene-parallel"
+    assert len(failover.generate_calls) == 3
+    assert "self.clear_scene()" in result.script_content
+
+
+def test_manim_generation_service_falls_back_to_single_pass_when_parallel_scene_invalid() -> None:
+    from app.core.config import Settings
+
+    runtime = _build_runtime("video_manim_parallel_fallback_case")
+    failover = FakeFailoverService(
+        generate_results=[
+            SimpleNamespace(provider="stub-llm", content="```python\nif True print('broken')\n```"),
+            SimpleNamespace(provider="stub-llm", content="```python\na = Text('scene 2', font_size=30)\nself.add_elements(a)\n```"),
+            SimpleNamespace(provider="stub-llm", content="```python\na = Text('scene 3', font_size=30)\nself.add_elements(a)\n```"),
+            SimpleNamespace(
+                provider="fallback-llm",
+                content=(
+                    "```python\nfrom manim import *\n\n"
+                    "class Demo(Scene):\n"
+                    "    def construct(self):\n"
+                    "        self.wait(1)\n```"
+                ),
+            ),
+        ]
+    )
+    service = ManimGenerationService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=failover,
+        runtime=runtime,
+        settings=Settings(video_manim_scene_by_scene_max_scenes=2),
+    )
+
+    result = asyncio.run(service.execute(storyboard=_build_storyboard()))
+
+    assert result.script_content
+    assert result.provider_used == "fallback-llm"
+    assert len(failover.generate_calls) == 4
 
 
 def test_build_default_manim_script_uses_scene_duration_helpers() -> None:

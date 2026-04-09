@@ -105,9 +105,11 @@ class VideoPipelineService:
             provider_factory=provider_factory,
         )
         self.failover_service = provider_factory.create_failover_service(runtime_store)
+        self._max_emitted_progress = 0
 
     async def run(self, task: BaseTask) -> TaskResult:
         """执行完整的视频生成流水线。"""
+        self._max_emitted_progress = 0
         runtime = VideoRuntimeStateStore(self.runtime_store, task.context.task_id)
         request_auth = self._load_worker_request_auth(task_id=task.context.task_id)
         render_result: ExecutionResult | None = None
@@ -122,6 +124,7 @@ class VideoPipelineService:
                 provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
                 self.failover_service,
                 runtime,
+                settings=self.settings,
             )
             storyboard_service = StoryboardService(
                 provider_runtime.llm_for(VideoStage.STORYBOARD.value),
@@ -150,15 +153,23 @@ class VideoPipelineService:
             source_payload = dict(task.context.metadata.get("sourcePayload", {}))
             user_profile = dict(task.context.metadata.get("userProfile", {}))
 
-            understanding = await self._run_understanding(
+            # Docker 镜像预热与 understanding 并行
+            warmup_task = asyncio.create_task(self._warm_up_sandbox())
+
+            understanding, merged_storyboard = await self._run_understanding(
                 task,
                 understanding_service,
                 source_payload=source_payload,
                 user_profile=user_profile,
             )
-            storyboard = await self._run_storyboard(task, storyboard_service, understanding=understanding)
+            if merged_storyboard is not None:
+                storyboard = merged_storyboard
+                await self._emit_stage(task, VideoStage.STORYBOARD, 1.0, "分镜生成完成（合并模式）", extra={"sceneCount": len(storyboard.scenes)})
+            else:
+                storyboard = await self._run_storyboard(task, storyboard_service, understanding=understanding)
 
             # Manim代码生成 和 TTS 并行 — 两者都只依赖 storyboard
+            await warmup_task  # 确保 Docker 镜像预热完成
             manim_task = asyncio.create_task(
                 self._run_manim_generation(task, manim_service, storyboard=storyboard)
             )
@@ -253,14 +264,19 @@ class VideoPipelineService:
         *,
         source_payload: dict[str, object],
         user_profile: dict[str, object],
-    ) -> UnderstandingResult:
-        """执行题目理解阶段。"""
+    ) -> tuple[UnderstandingResult, Storyboard | None]:
+        """执行题目理解阶段，同时尝试合并生成分镜。"""
         await self._emit_stage(task, VideoStage.UNDERSTANDING, 0.0, "正在理解题目")
-        understanding = await service.execute(
+        result = await service.execute(
             source_payload=source_payload,
             user_profile=user_profile,
             emit_switch=self._build_switch_emitter(task, VideoStage.UNDERSTANDING, 0.5),
+            include_storyboard=True,
         )
+        if isinstance(result, tuple):
+            understanding, storyboard = result
+        else:
+            understanding, storyboard = result, None
         await self._emit_stage(
             task,
             VideoStage.UNDERSTANDING,
@@ -268,7 +284,7 @@ class VideoPipelineService:
             "题目理解完成",
             extra={"understanding": understanding.model_dump(mode="json", by_alias=True)},
         )
-        return understanding
+        return understanding, storyboard
 
     async def _run_storyboard(
         self,
@@ -681,6 +697,8 @@ class VideoPipelineService:
     ) -> TaskResult:
         """处理流水线阶段性失败。"""
         failed_at = format_trace_timestamp()
+        failure_snapshot = build_stage_snapshot(exc.stage, exc.progress_ratio)
+        clamped_progress = max(self._max_emitted_progress, failure_snapshot.progress)
         failure = build_failure(
             task_id=context.task_id,
             stage=exc.stage,
@@ -696,6 +714,8 @@ class VideoPipelineService:
                 "failedStage": exc.stage.value,
             },
         )
+        if clamped_progress != failure_snapshot.progress:
+            stage_context["progress"] = clamped_progress
         detail = VideoResultDetail(
             task_id=context.task_id,
             status="failed",
@@ -726,7 +746,7 @@ class VideoPipelineService:
         return TaskResult.failed(
             message=str(exc),
             error_code=exc.error_code,
-            progress=build_stage_snapshot(exc.stage, exc.progress_ratio).progress,
+            progress=clamped_progress,
             context=stage_context,
         )
 
@@ -766,14 +786,36 @@ class VideoPipelineService:
         extra: dict[str, object] | None = None,
     ) -> None:
         """推送阶段进度 SSE 事件。"""
-        context = build_stage_context(stage, ratio, extra=extra)
+        snapshot = build_stage_snapshot(stage, ratio)
+        if snapshot.progress < self._max_emitted_progress:
+            if stage is VideoStage.MANIM_FIX:
+                snapshot = snapshot.model_copy(update={"progress": self._max_emitted_progress})
+            else:
+                logger.debug(
+                    "Skip regressive stage event task_id=%s stage=%s progress=%s max_progress=%s",
+                    task.context.task_id,
+                    stage.value,
+                    snapshot.progress,
+                    self._max_emitted_progress,
+                )
+                return
+            logger.debug(
+                "Clamp regressive stage event task_id=%s stage=%s progress=%s max_progress=%s",
+                task.context.task_id,
+                stage.value,
+                snapshot.progress,
+                self._max_emitted_progress,
+            )
+        context = snapshot.model_dump(mode="json", by_alias=True)
+        context.update(extra or {})
         await task.emit_runtime_snapshot(
             internal_status=TaskInternalStatus.RUNNING,
-            progress=build_stage_snapshot(stage, ratio).progress,
+            progress=snapshot.progress,
             message=message,
             context=context,
             event="progress",
         )
+        self._max_emitted_progress = snapshot.progress
 
     async def _emit_fix_event(
         self,
@@ -806,6 +848,11 @@ class VideoPipelineService:
     def _collect_unique_providers(providers: Sequence[Any]) -> tuple[str, ...]:
         """收集去重后的 provider ID 列表。"""
         return tuple(unique_preserve_order(provider.provider_id for provider in providers))
+
+    async def _warm_up_sandbox(self) -> None:
+        """预热 Docker 沙箱镜像（如果执行器支持）。"""
+        if hasattr(self.sandbox_executor, "warm_up"):
+            await self.sandbox_executor.warm_up()
 
 
 def get_video_pipeline_service(runtime_store, metadata_service: VideoMetadataPersister) -> VideoPipelineService:

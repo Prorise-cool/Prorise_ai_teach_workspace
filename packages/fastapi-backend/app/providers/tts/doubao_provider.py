@@ -1,6 +1,7 @@
 """豆包 / 火山引擎 TTS Provider 实现。"""
 from __future__ import annotations
 
+import asyncio
 
 import json
 from typing import Any, Mapping
@@ -71,6 +72,21 @@ class DoubaoTTSProvider:
         self._headers = {"Content-Type": "application/json", self._auth_header: self._api_key}
         if isinstance(extra_headers, Mapping):
             self._headers.update({str(key): str(value) for key, value in extra_headers.items()})
+        self._client: httpx.AsyncClient | None = None
+        self._client_lock = asyncio.Lock()
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """复用同一 provider 实例的 HTTP client，避免多段 TTS 重复建连。"""
+        if self._client is not None:
+            return self._client
+
+        async with self._client_lock:
+            if self._client is None:
+                self._client = httpx.AsyncClient(
+                    timeout=self.config.timeout_seconds,
+                    transport=self._transport,
+                )
+        return self._client
 
     async def synthesize(self, text: str, voice_config: Any | None = None) -> ProviderResult:
         """调用豆包 OpenSpeech API 合成语音。"""
@@ -125,11 +141,8 @@ class DoubaoTTSProvider:
             payload["app"]["token"] = app_token
 
         try:
-            async with httpx.AsyncClient(
-                timeout=self.config.timeout_seconds,
-                transport=self._transport,
-            ) as client:
-                response = await client.post(self._endpoint_url, json=payload, headers=self._headers)
+            client = await self._get_client()
+            response = await client.post(self._endpoint_url, json=payload, headers=self._headers)
         except Exception as exc:
             handle_provider_request_error(self.provider_id, exc)
 
