@@ -21,7 +21,7 @@ from app.core.logging import get_logger
 
 logger = get_logger("app.features.video.pipeline.manim")
 from app.features.video.pipeline._helpers import extract_code
-from app.features.video.pipeline.auto_fix import ast_fix_code, stat_check_fix
+from app.features.video.pipeline.auto_fix import ast_fix_code, check_layout, format_layout_issues, stat_check_fix
 from app.features.video.pipeline.code_render.renderer import CodeRenderer
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.manim_runtime_prelude import ensure_manim_runtime_prelude
@@ -37,6 +37,7 @@ from app.features.video.pipeline.prompts.code_gen_prompts import (
     build_code_gen_system_prompt,
     build_scene_code_prompt,
 )
+from app.features.video.pipeline.prompts.layout_fix_prompts import build_layout_fix_prompt
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.features.video.pipeline.script_templates import (
     build_default_fix_script,
@@ -252,6 +253,17 @@ class ManimGenerationService:
         scene_code = textwrap.dedent(scene_code)
         scene_code = ast_fix_code(scene_code)
         scene_code = stat_check_fix(scene_code)
+
+        # 布局静态验证（对标 manim4ai static_check，渲染前拦截越界/重叠）
+        layout_issues = check_layout(scene_code)
+        if layout_issues:
+            issues_text = format_layout_issues(layout_issues)
+            has_errors = any(i.severity == "error" for i in layout_issues)
+            if has_errors:
+                logger.warning("[布局检查] 发现 %d 个问题:\n%s", len(layout_issues), issues_text)
+            else:
+                logger.info("[布局检查] %d 个警告:\n%s", len(layout_issues), issues_text)
+
         scene_code = _compress_scene_waits_to_target(
             scene_code,
             target_duration=scene.duration_hint,
@@ -359,6 +371,12 @@ class ManimGenerationService:
 
         script_content = ast_fix_code(script_content)
         script_content = stat_check_fix(script_content)
+
+        # 布局静态验证
+        layout_issues = check_layout(script_content)
+        if layout_issues:
+            logger.warning("[布局检查-全量] %d 个问题", len(layout_issues))
+
         script_content = ensure_manim_runtime_prelude(script_content)
 
         mappings: list[SceneCodeMapping] = []
