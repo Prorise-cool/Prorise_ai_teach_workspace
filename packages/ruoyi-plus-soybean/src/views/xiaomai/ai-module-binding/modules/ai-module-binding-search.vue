@@ -40,49 +40,14 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="xiaomai-ai-module-binding-search">
         <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" label="模块主键" label-width="auto" path="moduleId" class="pr-24px">
-              <NInputNumber v-model:value="model.moduleId" placeholder="请输入模块主键" class="w-full" />
-            </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="阶段编码" label-width="auto" path="stageCode" class="pr-24px">
-              <NInput v-model:value="model.stageCode" placeholder="请输入阶段编码" />
+              <NInput v-model:value="model.stageCode" placeholder="understanding / storyboard / manim_gen 等" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="能力类型" label-width="auto" path="capability" class="pr-24px">
-              <DictSelect
-                v-model:value="model.capability"
-                placeholder="请选择能力类型"
-                dict-code="xm_ai_capability"
-                clearable
-              />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="角色编码" label-width="auto" path="roleCode" class="pr-24px">
-              <NInput v-model:value="model.roleCode" placeholder="请输入角色编码" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="资源主键" label-width="auto" path="resourceId" class="pr-24px">
-              <NInputNumber v-model:value="model.resourceId" placeholder="请输入资源主键" class="w-full" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="健康来源" label-width="auto" path="healthSource" class="pr-24px">
-              <DictSelect
-                v-model:value="model.healthSource"
-                placeholder="请选择健康来源"
-                dict-code="xm_ai_health_source"
-                clearable
-              />
+              <DictSelect v-model:value="model.capability" placeholder="全部" dict-code="xm_ai_capability" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect
-                v-model:value="model.status"
-                placeholder="请选择状态"
-                dict-code="sys_normal_disable"
-                clearable
-              />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="默认链路" label-width="auto" path="isDefault" class="pr-24px">
-              <DictSelect
-                v-model:value="model.isDefault"
-                placeholder="请选择默认链路"
-                dict-code="sys_yes_no"
-                clearable
-              />
+              <DictSelect v-model:value="model.status" placeholder="全部" dict-code="sys_normal_disable" clearable />
             </NFormItemGi>
             <NFormItemGi :show-feedback="false" span="24" class="pr-24px">
               <NSpace class="w-full" justify="end">

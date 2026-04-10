@@ -40,59 +40,17 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="xiaomai-ai-resource-search">
         <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" label="Provider 主键" label-width="auto" path="providerId" class="pr-24px">
-              <NInputNumber v-model:value="model.providerId" placeholder="请输入 Provider 主键" class="w-full" />
+            <NFormItemGi span="24 s:12 m:6" label="资源名称" label-width="auto" path="resourceName" class="pr-24px">
+              <NInput v-model:value="model.resourceName" placeholder="按名称搜索" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="能力类型" label-width="auto" path="capability" class="pr-24px">
-              <DictSelect
-                v-model:value="model.capability"
-                placeholder="请选择能力类型"
-                dict-code="xm_ai_capability"
-                clearable
-              />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="资源编码" label-width="auto" path="resourceCode" class="pr-24px">
-              <NInput v-model:value="model.resourceCode" placeholder="请输入资源编码" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="资源名称" label-width="auto" path="resourceName" class="pr-24px">
-              <NInput v-model:value="model.resourceName" placeholder="请输入资源名称" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="资源类型" label-width="auto" path="resourceType" class="pr-24px">
-              <DictSelect
-                v-model:value="model.resourceType"
-                placeholder="请选择资源类型"
-                dict-code="xm_ai_resource_type"
-                clearable
-              />
-            </NFormItemGi>
-            <NFormItemGi
-              span="24 s:12 m:6"
-              label="运行时 Provider ID"
-              label-width="auto"
-              path="runtimeProviderId"
-              class="pr-24px"
-            >
-              <NInput v-model:value="model.runtimeProviderId" placeholder="请输入运行时 Provider ID" />
+              <DictSelect v-model:value="model.capability" placeholder="全部" dict-code="xm_ai_capability" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="模型名称" label-width="auto" path="modelName" class="pr-24px">
-              <NInput v-model:value="model.modelName" placeholder="请输入模型名称" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="音色编码" label-width="auto" path="voiceCode" class="pr-24px">
-              <NInput v-model:value="model.voiceCode" placeholder="请输入音色编码" />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="语言编码" label-width="auto" path="languageCode" class="pr-24px">
-              <NInput v-model:value="model.languageCode" placeholder="请输入语言编码" />
+              <NInput v-model:value="model.modelName" placeholder="按模型名称搜索" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
-              <DictSelect
-                v-model:value="model.status"
-                placeholder="请选择状态"
-                dict-code="sys_normal_disable"
-                clearable
-              />
-            </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="排序号" label-width="auto" path="sortOrder" class="pr-24px">
-              <NInputNumber v-model:value="model.sortOrder" placeholder="请输入排序号" class="w-full" />
+              <DictSelect v-model:value="model.status" placeholder="全部" dict-code="sys_normal_disable" clearable />
             </NFormItemGi>
             <NFormItemGi :show-feedback="false" span="24" class="pr-24px">
               <NSpace class="w-full" justify="end">

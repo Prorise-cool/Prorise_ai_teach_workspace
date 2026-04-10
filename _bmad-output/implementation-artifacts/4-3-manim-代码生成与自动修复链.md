@@ -137,24 +137,32 @@ GPT-5 Codex
 
 - `pytest -q packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
 - `pytest -q packages/fastapi-backend/tests/integration/test_video_pipeline_api.py`
+- `./.venv/bin/python -m pytest tests/unit/providers/test_failover.py tests/unit/video/test_video_pipeline_services.py -q`
+- `./.venv/bin/python -m pytest tests/integration/video/test_video_pipeline_api.py::test_video_pipeline_result_and_publish_api_flow -q`
 
 ### Completion Notes List
 
 - 已在视频流水线服务中补齐 Manim 脚本生成、规则修复、LLM 修复与修复次数控制，并把修复日志写入 Redis 运行态。
 - 已打通 `manim_gen -> render -> manim_fix -> render` 的回环执行，以及 `fix_attempt_start / success / failed / exhausted` 事件语义。
 - 已补充针对 Manim 生成、规则修复、LLM 修复的后端单测。
+- 已针对真实链路中的 429 重试风暴补充热修：failover 退避增加 jitter，429 不再污染 provider health，单次 fallback 支持忽略 cached unhealthy，默认并发下调为 `3`。
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/4-3-manim-代码生成与自动修复链.md`
+- `_bmad-output/implementation-artifacts/4-3-manim-429-重试风暴热修复-20260410.md`
 - `packages/fastapi-backend/app/core/config.py`
 - `packages/fastapi-backend/app/features/video/pipeline/models.py`
 - `packages/fastapi-backend/app/features/video/pipeline/services.py`
 - `packages/fastapi-backend/app/features/video/tasks/video_task_actor.py`
 - `packages/fastapi-backend/app/worker.py`
+- `packages/fastapi-backend/app/providers/factory.py`
+- `packages/fastapi-backend/app/providers/failover.py`
 - `packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
+- `packages/fastapi-backend/tests/unit/providers/test_failover.py`
 - `packages/fastapi-backend/tests/integration/test_video_pipeline_api.py`
 
 ## Change Log
 
 - 2026-04-06：完成 Story 4.3 后端 Manim 生成与自动修复链，实现修复日志、修复事件与对应单测，状态更新为 `review`。
+- 2026-04-10：针对并行场景生成触发的 429 重试风暴，新增 jitter 退避、429 健康缓存保护、single-pass fallback 缓存绕过与并发默认值下调，并补充 provider/video 回归测试。

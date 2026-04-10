@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
 import { fetchCreateAiModuleBinding, fetchUpdateAiModuleBinding } from '@/service/api/xiaomai/ai-module-binding';
+import { fetchGetAiModuleList } from '@/service/api/xiaomai/ai-module';
+import { fetchGetAiResourceList } from '@/service/api/xiaomai/ai-resource';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 
@@ -28,6 +30,59 @@ const visible = defineModel<boolean>('visible', {
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { createRequiredRule } = useFormRules();
+
+/** 模块下拉选项 */
+interface ModuleOption {
+  id: number;
+  label: string;
+  moduleCode: string;
+}
+const moduleOptions = ref<ModuleOption[]>([]);
+
+/** 资源下拉选项 */
+interface ResourceOption {
+  id: number;
+  label: string;
+  capability: string;
+  providerId: number;
+  modelName: string;
+}
+const resourceOptions = ref<ResourceOption[]>([]);
+
+/** 根据能力类型过滤的资源选项 */
+const filteredResourceOptions = computed(() => {
+  if (!model.value.capability) return resourceOptions.value;
+  return resourceOptions.value.filter(r => r.capability === model.value.capability);
+});
+
+async function loadModuleOptions() {
+  const { data, error } = await fetchGetAiModuleList({ pageSize: 100 });
+  if (!error && data) {
+    moduleOptions.value = (data.rows || []).map((item: any) => ({
+      id: item.id,
+      label: `${item.moduleName} (${item.moduleCode})`,
+      moduleCode: item.moduleCode
+    }));
+  }
+}
+
+async function loadResourceOptions() {
+  const { data, error } = await fetchGetAiResourceList({ pageSize: 100 });
+  if (!error && data) {
+    resourceOptions.value = (data.rows || []).map((item: any) => ({
+      id: item.id,
+      label: `${item.resourceName} — ${item.modelName || item.voiceCode || ''} (ID:${item.id})`,
+      capability: item.capability,
+      providerId: item.providerId,
+      modelName: item.modelName
+    }));
+  }
+}
+
+onMounted(() => {
+  loadModuleOptions();
+  loadResourceOptions();
+});
 
 const title = computed(() => {
   const titles: Record<NaiveUI.TableOperateType, string> = {
@@ -64,12 +119,11 @@ type RuleKey = Extract<
   keyof Model,
   'moduleId' | 'stageCode' | 'capability' | 'resourceId' | 'healthSource' | 'status' | 'isDefault'
 >;
-
 const rules: Record<RuleKey, App.Global.FormRule> = {
-  moduleId: createRequiredRule('模块主键不能为空'),
+  moduleId: createRequiredRule('请选择模块'),
   stageCode: createRequiredRule('阶段编码不能为空'),
   capability: createRequiredRule('能力类型不能为空'),
-  resourceId: createRequiredRule('资源主键不能为空'),
+  resourceId: createRequiredRule('请选择资源'),
   healthSource: createRequiredRule('健康来源不能为空'),
   status: createRequiredRule('状态不能为空'),
   isDefault: createRequiredRule('默认链路不能为空')
@@ -135,8 +189,13 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" :title="title" display-directive="show" :width="760" class="max-w-90%">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem label="模块主键" path="moduleId">
-          <NInputNumber v-model:value="model.moduleId" placeholder="请输入模块主键" class="w-full" />
+        <NFormItem label="模块" path="moduleId">
+          <NSelect
+            v-model:value="model.moduleId"
+            :options="moduleOptions.map(o => ({ label: o.label, value: o.id }))"
+            placeholder="请选择模块"
+            filterable
+          />
         </NFormItem>
         <NFormItem label="阶段编码" path="stageCode">
           <NInput v-model:value="model.stageCode" placeholder="请输入阶段编码，例如 storyboard / narration / search" />
@@ -147,8 +206,13 @@ watch(visible, () => {
         <NFormItem label="角色编码" path="roleCode">
           <NInput v-model:value="model.roleCode" placeholder="为空表示阶段默认链路" />
         </NFormItem>
-        <NFormItem label="资源主键" path="resourceId">
-          <NInputNumber v-model:value="model.resourceId" placeholder="请输入资源主键" class="w-full" />
+        <NFormItem label="资源" path="resourceId">
+          <NSelect
+            v-model:value="model.resourceId"
+            :options="filteredResourceOptions.map(o => ({ label: o.label, value: o.id }))"
+            placeholder="请选择资源（按能力类型过滤）"
+            filterable
+          />
         </NFormItem>
         <NFormItem label="优先级" path="priority">
           <NInputNumber v-model:value="model.priority" placeholder="请输入优先级，越小越优先" class="w-full" />

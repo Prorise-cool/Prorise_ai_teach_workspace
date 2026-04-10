@@ -178,6 +178,10 @@ class Settings(BaseSettings):
         default=0.25,
         alias="FASTAPI_VIDEO_COMPOSE_MAX_PAD_RATIO",
     )
+    video_compose_max_stretch_ratio: float = Field(
+        default=2.5,
+        alias="FASTAPI_VIDEO_COMPOSE_MAX_STRETCH_RATIO",
+    )
     video_sandbox_cpu_count: float = Field(default=1.0, alias="FASTAPI_VIDEO_SANDBOX_CPU_COUNT")
     video_sandbox_memory_mb: int = Field(default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB")
     video_sandbox_timeout_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS")

@@ -65,85 +65,58 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         render: (_, index) => index + 1
       },
       {
-        key: 'providerId',
-        title: 'Provider 主键',
-        align: 'center',
-        minWidth: 120
-      },
-      {
-        key: 'capability',
-        title: '能力类型',
-        align: 'center',
-        minWidth: 120,
-        render(row) {
-          return <DictTag value={row.capability} dictCode="xm_ai_capability" />;
-        }
-      },
-      {
-        key: 'resourceCode',
-        title: '资源编码',
-        align: 'center',
-        minWidth: 160
-      },
-      {
         key: 'resourceName',
         title: '资源名称',
         align: 'center',
         minWidth: 160
       },
       {
+        key: 'capability',
+        title: '能力类型',
+        align: 'center',
+        minWidth: 100,
+        render(row) {
+          return <DictTag value={row.capability} dictCode="xm_ai_capability" />;
+        }
+      },
+      {
         key: 'resourceType',
         title: '资源类型',
         align: 'center',
-        minWidth: 140,
+        minWidth: 100,
         render(row) {
           return <DictTag value={row.resourceType} dictCode="xm_ai_resource_type" />;
         }
       },
       {
-        key: 'runtimeProviderId',
-        title: '运行时 Provider ID',
-        align: 'center',
-        minWidth: 220
-      },
-      {
         key: 'modelName',
-        title: '模型名称',
+        title: '模型/音色',
         align: 'center',
-        minWidth: 160
+        minWidth: 180,
+        render(row) {
+          return row.modelName || row.voiceCode || '-';
+        }
       },
       {
-        key: 'voiceCode',
-        title: '音色编码',
+        key: 'runtimeProviderId',
+        title: '运行时标识',
         align: 'center',
-        minWidth: 140
-      },
-      {
-        key: 'languageCode',
-        title: '语言编码',
-        align: 'center',
-        minWidth: 120
+        minWidth: 200
       },
       {
         key: 'status',
         title: '状态',
         align: 'center',
-        minWidth: 120,
+        minWidth: 80,
         render(row) {
           return <DictTag value={row.status} dictCode="sys_normal_disable" />;
         }
       },
       {
-        key: 'sortOrder',
-        title: '排序号',
-        align: 'center',
-        minWidth: 120
-      },
-      {
         key: 'remark',
         title: '备注',
         align: 'center',
-        minWidth: 180
+        minWidth: 160
       },
       {
         key: 'operate',

@@ -55,7 +55,7 @@ def test_build_stage_snapshot_exposes_current_stage_label_and_stage_progress() -
     assert snapshot.progress == 72
 
 
-def test_video_pipeline_service_skips_regressive_parallel_progress_events(tmp_path) -> None:
+def test_video_pipeline_service_clamps_regressive_parallel_progress_events_without_hiding_stage(tmp_path) -> None:
     asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
     service = VideoPipelineService(
         runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
@@ -85,8 +85,10 @@ def test_video_pipeline_service_skips_regressive_parallel_progress_events(tmp_pa
     asyncio.run(service._emit_stage(task, VideoStage.TTS, 1.0, "旁白生成完成"))
     asyncio.run(service._emit_stage(task, VideoStage.MANIM_GEN, 1.0, "生成动画脚本完成"))
 
-    assert [snapshot["progress"] for snapshot in task.snapshots] == [58]
+    assert [snapshot["progress"] for snapshot in task.snapshots] == [58, 58]
     assert task.snapshots[0]["context"]["stage"] == VideoStage.TTS.value
+    assert task.snapshots[-1]["context"]["stage"] == VideoStage.MANIM_GEN.value
+    assert task.snapshots[-1]["context"]["stageProgress"] == 100
 
 
 def test_video_pipeline_service_clamps_fix_stage_progress_without_hiding_fix_state(tmp_path) -> None:

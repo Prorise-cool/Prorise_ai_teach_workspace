@@ -49,6 +49,16 @@ class SubtitleEntry:
 
 
 @dataclass(slots=True)
+class DurationAlignmentPlan:
+    """视频与旁白时长对齐策略。"""
+
+    mode: str
+    extend_seconds: float = 0.0
+    stretch_ratio: float = 1.0
+    max_allowed_pad_seconds: float = 0.0
+
+
+@dataclass(slots=True)
 class ComposeService:
     """FFmpeg 视频合成服务，负责音频拼接、视频混流、字幕烧录和封面提取。"""
 
@@ -113,6 +123,7 @@ class ComposeService:
         *,
         subtitle_path: str | None = None,
         extend_seconds: float = 0.0,
+        stretch_ratio: float = 1.0,
     ) -> list[str]:
         """构建视频+音频+字幕混流 FFmpeg 命令。"""
         command = [
@@ -124,6 +135,8 @@ class ComposeService:
             audio_path,
         ]
         filters: list[str] = []
+        if stretch_ratio > 1.01:
+            filters.append(f"setpts={stretch_ratio:.6f}*PTS")
         if extend_seconds > 0.01:
             filters.append(f"tpad=stop_mode=clone:stop_duration={extend_seconds:.3f}")
         if subtitle_path:
@@ -260,6 +273,63 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for scene in storyboard.scenes
         ]
 
+    def resolve_duration_alignment(
+        self,
+        *,
+        source_video_duration: float,
+        merged_audio_duration: float,
+    ) -> DurationAlignmentPlan:
+        """为渲染视频与旁白时长差选择对齐策略。"""
+        safe_video_duration = max(float(source_video_duration), 0.0)
+        safe_audio_duration = max(float(merged_audio_duration), 0.0)
+        extend_seconds = max(safe_audio_duration - safe_video_duration, 0.0)
+        max_allowed_pad_seconds = min(
+            float(self.settings.video_compose_max_pad_seconds),
+            max(safe_audio_duration * float(self.settings.video_compose_max_pad_ratio), 1.0),
+        )
+        if extend_seconds <= max_allowed_pad_seconds + 0.01:
+            return DurationAlignmentPlan(
+                mode="pad" if extend_seconds > 0.01 else "none",
+                extend_seconds=extend_seconds,
+                max_allowed_pad_seconds=max_allowed_pad_seconds,
+            )
+
+        if safe_video_duration <= 0.01:
+            raise VideoPipelineError(
+                stage=VideoStage.COMPOSE,
+                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
+                message=(
+                    "render/audio duration gap too large with invalid render duration: "
+                    f"render={safe_video_duration:.2f}s "
+                    f"audio={safe_audio_duration:.2f}s "
+                    f"pad={extend_seconds:.2f}s "
+                    f"limit={max_allowed_pad_seconds:.2f}s"
+                ),
+            )
+
+        stretch_ratio = safe_audio_duration / safe_video_duration
+        max_stretch_ratio = max(float(self.settings.video_compose_max_stretch_ratio), 1.0)
+        if stretch_ratio <= max_stretch_ratio + 0.01:
+            return DurationAlignmentPlan(
+                mode="stretch",
+                stretch_ratio=stretch_ratio,
+                max_allowed_pad_seconds=max_allowed_pad_seconds,
+            )
+
+        raise VideoPipelineError(
+            stage=VideoStage.COMPOSE,
+            error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
+            message=(
+                "render/audio duration gap too large: "
+                f"render={safe_video_duration:.2f}s "
+                f"audio={safe_audio_duration:.2f}s "
+                f"pad={extend_seconds:.2f}s "
+                f"limit={max_allowed_pad_seconds:.2f}s "
+                f"stretch={stretch_ratio:.2f}x "
+                f"stretch_limit={max_stretch_ratio:.2f}x"
+            ),
+        )
+
     async def _run_ffmpeg(self, command: Sequence[str]) -> None:
         """异步执行 FFmpeg 命令。"""
         try:
@@ -321,29 +391,28 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             merged_audio_duration = probe_media_duration_seconds(mixed_audio_path) or output_duration_seconds
             source_video_duration = probe_media_duration_seconds(source_video_path) or max(render_result.duration_seconds, 0.0)
             output_duration_seconds = max(merged_audio_duration, source_video_duration, 1.0)
-            extend_seconds = max(merged_audio_duration - source_video_duration, 0.0)
-            max_allowed_pad_seconds = min(
-                float(self.settings.video_compose_max_pad_seconds),
-                max(merged_audio_duration * float(self.settings.video_compose_max_pad_ratio), 1.0),
+            alignment = self.resolve_duration_alignment(
+                source_video_duration=source_video_duration,
+                merged_audio_duration=merged_audio_duration,
             )
-            if extend_seconds > max_allowed_pad_seconds + 0.01:
-                raise VideoPipelineError(
-                    stage=VideoStage.COMPOSE,
-                    error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
-                    message=(
-                        "render/audio duration gap too large: "
-                        f"render={source_video_duration:.2f}s "
-                        f"audio={merged_audio_duration:.2f}s "
-                        f"pad={extend_seconds:.2f}s "
-                        f"limit={max_allowed_pad_seconds:.2f}s"
-                    ),
-                )
+            self.runtime.save_value(
+                "compose_alignment",
+                {
+                    "mode": alignment.mode,
+                    "renderDuration": source_video_duration,
+                    "audioDuration": merged_audio_duration,
+                    "extendSeconds": alignment.extend_seconds,
+                    "stretchRatio": alignment.stretch_ratio,
+                    "maxAllowedPadSeconds": alignment.max_allowed_pad_seconds,
+                },
+            )
             compose_command = self.build_compose_command(
                 str(source_video_path),
                 str(mixed_audio_path),
                 str(output_path),
                 subtitle_path=str(subtitle_ass_path),
-                extend_seconds=extend_seconds,
+                extend_seconds=alignment.extend_seconds,
+                stretch_ratio=alignment.stretch_ratio,
             )
             cover_command = self.build_cover_command(str(output_path), str(cover_path))
             await self._run_ffmpeg(compose_command)
