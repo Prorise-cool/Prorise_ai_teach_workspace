@@ -1,7 +1,7 @@
 """Manim 代码生成与修复服务。
 
-采用逐场景增量生成策略：
-1. 对每个分镜场景，携带前文上下文调用 LLM 生成场景代码。
+采用逐场景增量生成策略（Plan D 强化版）：
+1. 对每个分镜场景，携带完整前文代码上下文调用 LLM 生成场景代码。
 2. 每段代码经过 AST 参数注入 + 静态分析检查。
 3. 增量拼接为完整的 Manim 脚本。
 4. 失败时回退到单次全量生成或默认模板。
@@ -9,8 +9,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import ast
+import asyncio
 import re
 import textwrap
 from dataclasses import dataclass
@@ -29,6 +29,7 @@ from app.features.video.pipeline.models import (
     FixResult,
     ManimCodeResult,
     SceneCodeMapping,
+    SolveResult,
     Storyboard,
     VideoStage,
 )
@@ -49,11 +50,7 @@ _RUN_TIME_PATTERN = re.compile(r"run_time\s*=\s*([0-9]+(?:\.[0-9]+)?)")
 
 
 def _estimate_scene_code_duration_seconds(scene_code: str) -> float:
-    """粗估场景代码已显式声明的动画时长。
-
-    用于避免模板再无脑补满整个 ``duration_hint``，导致 LLM 已经写了大量
-    ``self.wait`` / ``run_time`` 时被二次拉长。
-    """
+    """粗估场景代码已显式声明的动画时长。"""
     total_duration = sum(float(match.group(1)) for match in _WAIT_CALL_PATTERN.finditer(scene_code))
     total_duration += sum(float(match.group(1)) for match in _RUN_TIME_PATTERN.finditer(scene_code))
 
@@ -113,11 +110,17 @@ def _is_valid_python_snippet(source: str) -> bool:
     return True
 
 
-def _build_parallel_scene_context() -> str:
-    """为独立场景并行生成提供统一上下文说明。"""
+def _build_solve_context(solve_result: SolveResult | None) -> str:
+    """构建注入代码生成 prompt 的参考答案上下文。"""
+    if solve_result is None:
+        return ""
+    steps_text = "\n".join(
+        f"  {step.title}：{step.explanation}" for step in solve_result.solution_steps[:5]
+    )
     return (
-        "（独立场景生成：不要依赖前文变量、对象或其他场景状态；"
-        "只输出当前场景片段，并使用稳定的 self.add_elements / self.play 调用。）"
+        f"\n## 参考答案（确保代码中的数学内容与此一致）\n"
+        f"答案：{solve_result.reference_answer}\n"
+        f"解题步骤：\n{steps_text}\n"
     )
 
 
@@ -125,8 +128,8 @@ def _build_parallel_scene_context() -> str:
 class ManimGenerationService:
     """Manim 脚本生成服务。
 
-    小分镜保持逐场景增量生成，大分镜优先并行独立场景生成以控制总时延。
-    任一路径失败后，都回退到单次全量生成。
+    统一走逐场景增量生成路径，每个场景传递完整前文代码上下文。
+    失败后回退到单次全量生成。
     """
 
     providers: Sequence[Any]
@@ -138,46 +141,20 @@ class ManimGenerationService:
         self,
         *,
         storyboard: Storyboard,
+        solve_result: SolveResult | None = None,
         emit_switch=None,
     ) -> ManimCodeResult:
-        """执行 Manim 脚本生成，返回 ``ManimCodeResult``。
-
-        小分镜优先逐场景增量生成；大分镜优先并行独立场景生成。
-        """
-        max_scene_by_scene_scenes = max(
-            int(getattr(self.settings, "video_manim_scene_by_scene_max_scenes", 3)),
-            0,
-        )
-        if max_scene_by_scene_scenes == 0 or len(storyboard.scenes) > max_scene_by_scene_scenes:
-            logger.info(
-                "[Manim] scene_count=%d threshold=%d, use parallel-scene generation",
-                len(storyboard.scenes),
-                max_scene_by_scene_scenes,
-            )
-            try:
-                parallel_result = await self._generate_parallel_scenes(
-                    storyboard=storyboard,
-                    emit_switch=emit_switch,
-                )
-                if parallel_result is not None:
-                    return parallel_result
-            except Exception:  # noqa: BLE001
-                logger.warning("并行独立场景生成失败，回退到单次全量生成", exc_info=True)
-            return await self._generate_single_pass(
-                storyboard=storyboard,
-                emit_switch=emit_switch,
-                ignore_cached_unhealthy=True,
-            )
-
+        """执行 Manim 脚本生成，返回 ManimCodeResult。"""
         try:
             result = await self._generate_scene_by_scene(
                 storyboard=storyboard,
+                solve_result=solve_result,
                 emit_switch=emit_switch,
             )
             if result is not None:
                 return result
         except Exception:  # noqa: BLE001
-            logger.warning("逐场景增量生成失败，回退到单次全量生成")
+            logger.warning("逐场景增量生成失败，回退到单次全量生成", exc_info=True)
 
         return await self._generate_single_pass(
             storyboard=storyboard,
@@ -189,24 +166,26 @@ class ManimGenerationService:
         self,
         *,
         storyboard: Storyboard,
+        solve_result: SolveResult | None = None,
         emit_switch=None,
     ) -> ManimCodeResult | None:
         """逐场景增量生成 Manim 代码。
 
         对每个场景：
-        1. 构建带前文代码上下文的 prompt。
+        1. 构建带完整前文代码上下文的 prompt。
         2. LLM 生成当前场景代码。
         3. AST 自动参数注入。
         4. 静态分析检查修复。
         5. 增量拼接到总代码。
-
-        Returns:
-            生成成功时返回 ``ManimCodeResult``；失败返回 ``None``。
         """
         background_color = storyboard.video_config.background_color
+        solve_context = _build_solve_context(solve_result)
         system_prompt = build_code_gen_system_prompt(
             background_color=background_color,
         )
+        if solve_context:
+            system_prompt = f"{system_prompt}\n{solve_context}"
+
         renderer = CodeRenderer()
         prev_code = ""
         scene_codes: list[tuple[Any, str]] = []
@@ -214,24 +193,26 @@ class ManimGenerationService:
         for index, scene in enumerate(storyboard.scenes, start=1):
             image_desc = scene.image_desc or scene.visual_description
 
-            # 构建上下文 prompt 并调用 LLM。
             user_prompt = build_scene_code_prompt(
                 scene_title=scene.title,
                 scene_voice_text=scene.voice_text or scene.narration,
                 scene_image_desc=image_desc,
                 scene_duration_hint=scene.duration_hint,
-                current_code=prev_code[-2000:] if prev_code else "（这是第一个场景）",
+                current_code=prev_code if prev_code else "（这是第一个场景）",
             )
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
 
             try:
-                provider_result = await self.failover_service.generate(
-                    self.providers,
-                    full_prompt,
-                    emit_switch=emit_switch,
+                provider_result = await asyncio.wait_for(
+                    self.failover_service.generate(
+                        self.providers,
+                        full_prompt,
+                        emit_switch=emit_switch,
+                    ),
+                    timeout=60.0,
                 )
-            except ProviderAllFailedError:
-                logger.warning("场景 %s 的 LLM 生成失败", scene.scene_id)
+            except (ProviderAllFailedError, TimeoutError):
+                logger.warning("场景 %s 的 LLM 生成失败或超时", scene.scene_id)
                 return None
 
             logger.debug("[Manim] 场景%d LLM响应 (前400字): %s", index, provider_result.content[:400])
@@ -244,7 +225,7 @@ class ManimGenerationService:
                 return None
 
             scene_codes.append((scene, scene_code))
-            prev_code = scene_code
+            prev_code = f"{prev_code}\n{scene_code}" if prev_code else scene_code
 
         if not scene_codes:
             return None
@@ -253,84 +234,6 @@ class ManimGenerationService:
             storyboard=storyboard,
             scene_codes=scene_codes,
             provider_used="scene-by-scene",
-            renderer=renderer,
-        )
-
-    async def _generate_parallel_scenes(
-        self,
-        *,
-        storyboard: Storyboard,
-        emit_switch=None,
-    ) -> ManimCodeResult | None:
-        """并行生成相互独立的场景代码，再本地装配完整脚本。"""
-        background_color = storyboard.video_config.background_color
-        system_prompt = build_code_gen_system_prompt(
-            background_color=background_color,
-        )
-        renderer = CodeRenderer()
-        concurrency = max(
-            int(getattr(self.settings, "video_manim_parallel_scene_concurrency", 3)),
-            1,
-        )
-        semaphore = asyncio.Semaphore(concurrency)
-        independent_context = _build_parallel_scene_context()
-
-        async def _generate_one(index: int, scene: Any) -> tuple[int, Any, str] | None:
-            image_desc = scene.image_desc or scene.visual_description
-            user_prompt = build_scene_code_prompt(
-                scene_title=scene.title,
-                scene_voice_text=scene.voice_text or scene.narration,
-                scene_image_desc=image_desc,
-                scene_duration_hint=scene.duration_hint,
-                current_code=independent_context,
-            )
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
-
-            async with semaphore:
-                try:
-                    provider_result = await self.failover_service.generate(
-                        self.providers,
-                        full_prompt,
-                        emit_switch=emit_switch,
-                    )
-                except ProviderAllFailedError:
-                    logger.warning("场景 %s 的并行 LLM 生成失败", scene.scene_id)
-                    return None
-
-            logger.debug("[Manim] 并行场景%d LLM响应 (前400字): %s", index, provider_result.content[:400])
-            scene_code = self._normalize_scene_code(
-                scene=scene,
-                raw_content=provider_result.content,
-            )
-            if scene_code is None:
-                logger.warning("场景 %s 的并行代码不可解析", scene.scene_id)
-                return None
-            return index, scene, scene_code
-
-        results = await asyncio.gather(
-            *[
-                _generate_one(index, scene)
-                for index, scene in enumerate(storyboard.scenes, start=1)
-            ],
-            return_exceptions=True,
-        )
-        scene_codes: list[tuple[Any, str]] = []
-        for result in results:
-            if isinstance(result, Exception):
-                logger.warning("并行场景生成出现异常，回退到单次全量生成", exc_info=result)
-                return None
-            if result is None:
-                return None
-            _, scene, scene_code = result
-            scene_codes.append((scene, scene_code))
-
-        if not scene_codes:
-            return None
-
-        return self._build_scene_script_result(
-            storyboard=storyboard,
-            scene_codes=scene_codes,
-            provider_used="scene-parallel",
             renderer=renderer,
         )
 
@@ -454,7 +357,6 @@ class ManimGenerationService:
         if "class " not in script_content:
             script_content = build_default_manim_script(storyboard)
 
-        # 对全量生成也做 AST + 静态分析修复。
         script_content = ast_fix_code(script_content)
         script_content = stat_check_fix(script_content)
         script_content = ensure_manim_runtime_prelude(script_content)
@@ -536,7 +438,6 @@ class LLMBasedFixer:
 
         fixed_script = extract_code(provider_result.content) or build_default_manim_script(storyboard)
 
-        # 对 LLM 修复结果也做 AST + 静态分析修复。
         fixed_script = ast_fix_code(fixed_script)
         fixed_script = stat_check_fix(fixed_script)
         fixed_script = ensure_manim_runtime_prelude(fixed_script)

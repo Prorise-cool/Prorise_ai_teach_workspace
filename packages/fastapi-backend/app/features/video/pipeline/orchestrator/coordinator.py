@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
@@ -12,14 +11,15 @@ from app.features.video.pipeline.artifact_writeback import ArtifactWritebackServ
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.compose import ComposeService
 from app.features.video.pipeline.errors import VideoPipelineError
-from app.features.video.pipeline.manim import LLMBasedFixer, ManimGenerationService, RuleBasedFixer
+from app.features.video.pipeline.manim import ManimGenerationService
 from app.features.video.pipeline.models import (
     ComposeResult,
-    ManimCodeResult,
+    ResourceLimits,
     TTSResult,
     VideoStage,
-    build_stage_snapshot,
 )
+from app.features.video.pipeline.protocols import VideoMetadataPersister
+from app.features.video.pipeline.render_verify import RenderVerifyService
 from app.features.video.pipeline.runtime import (
     VideoRuntimeStateStore,
     build_stage_context,
@@ -29,17 +29,19 @@ from app.features.video.pipeline.sandbox import (
     SandboxExecutor,
     resolve_local_fallback_policy,
 )
+from app.features.video.pipeline.solve import SolveService
 from app.features.video.pipeline.storyboard import StoryboardService
 from app.features.video.pipeline.tts import TTSService
 from app.features.video.pipeline.understanding import UnderstandingService
 from app.features.video.pipeline.upload import UploadService
-from app.features.video.pipeline.protocols import VideoMetadataPersister
-from app.features.video.runtime_auth import delete_video_runtime_auth, load_video_runtime_auth
+from app.features.video.runtime_auth import (
+    delete_video_runtime_auth,
+    load_video_runtime_auth,
+)
 from app.providers.factory import ProviderFactory, get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
 from app.shared.ruoyi_auth import RuoYiRequestAuth
 from app.shared.task_framework.base import BaseTask, TaskResult
-from app.shared.task_framework.status import TaskInternalStatus
 
 from .event_emitter import EventEmitterMixin
 from .failure_handler import FailureHandlerMixin
@@ -82,9 +84,12 @@ class VideoPipelineService(
             ),
             render_quality=settings.video_render_quality,
         )
-        self.provider_runtime_resolver = provider_runtime_resolver or ProviderRuntimeResolver(
-            settings=settings,
-            provider_factory=provider_factory,
+        self.provider_runtime_resolver = (
+            provider_runtime_resolver
+            or ProviderRuntimeResolver(
+                settings=settings,
+                provider_factory=provider_factory,
+            )
         )
         self.failover_service = provider_factory.create_failover_service(runtime_store)
         self._max_emitted_progress = 0
@@ -98,9 +103,15 @@ class VideoPipelineService(
         tts_result: TTSResult | None = None
         compose_result: ComposeResult | None = None
         try:
-            provider_runtime = await self.provider_runtime_resolver.resolve_video_pipeline(
-                access_token=request_auth.access_token if request_auth is not None else None,
-                client_id=request_auth.client_id if request_auth is not None else None,
+            provider_runtime = (
+                await self.provider_runtime_resolver.resolve_video_pipeline(
+                    access_token=request_auth.access_token
+                    if request_auth is not None
+                    else None,
+                    client_id=request_auth.client_id
+                    if request_auth is not None
+                    else None,
+                )
             )
             understanding_service = UnderstandingService(
                 provider_runtime.llm_for(VideoStage.UNDERSTANDING.value),
@@ -114,14 +125,25 @@ class VideoPipelineService(
                 runtime,
                 self.settings,
             )
+            solve_service = SolveService(
+                provider_runtime.llm_for(VideoStage.SOLVE.value),
+                self.failover_service,
+                runtime,
+            )
             manim_service = ManimGenerationService(
                 provider_runtime.llm_for(VideoStage.MANIM_GEN.value),
                 self.failover_service,
                 runtime,
                 self.settings,
             )
-            rule_fixer = RuleBasedFixer()
-            llm_fixer = LLMBasedFixer(provider_runtime.llm_for(VideoStage.MANIM_FIX.value), self.failover_service)
+            render_verify_service = RenderVerifyService(
+                analyze_providers=provider_runtime.llm_for("render_verify"),
+                fix_providers=provider_runtime.llm_for("render_fix"),
+                failover_service=self.failover_service,
+                sandbox_executor=self.sandbox_executor,
+                runtime=runtime,
+                max_verify_attempts=max(self.settings.video_fix_max_attempts, 0),
+            )
             tts_service = TTSService(
                 provider_runtime.tts_for(VideoStage.TTS.value),
                 self.failover_service,
@@ -138,35 +160,56 @@ class VideoPipelineService(
             # Docker 镜像预热与 understanding 并行
             warmup_task = asyncio.create_task(self._warm_up_sandbox())
 
-            understanding, merged_storyboard = await self._run_understanding(
+            understanding = await self._run_understanding(
                 task,
                 understanding_service,
                 source_payload=source_payload,
                 user_profile=user_profile,
             )
-            if merged_storyboard is not None:
-                storyboard = merged_storyboard
-                await self._emit_stage(task, VideoStage.STORYBOARD, 1.0, "分镜生成完成（合并模式）", extra={"sceneCount": len(storyboard.scenes)})
-            else:
-                storyboard = await self._run_storyboard(task, storyboard_service, understanding=understanding)
+
+            # Plan D: 独立解题阶段（understanding 之后、storyboard 之前）
+            solve_result = await self._run_solve(
+                task,
+                solve_service,
+                source_payload=source_payload,
+                understanding=understanding,
+            )
+
+            storyboard = await self._run_storyboard(
+                task,
+                storyboard_service,
+                understanding=understanding,
+                solve_result=solve_result,
+                source_payload=source_payload,
+            )
 
             # Manim代码生成 和 TTS 并行 — 两者都只依赖 storyboard
             await warmup_task  # 确保 Docker 镜像预热完成
             manim_task = asyncio.create_task(
-                self._run_manim_generation(task, manim_service, storyboard=storyboard)
+                self._run_manim_generation(
+                    task,
+                    manim_service,
+                    storyboard=storyboard,
+                    solve_result=solve_result,
+                )
             )
             tts_task = asyncio.create_task(
                 self._run_tts(task, tts_service, storyboard=storyboard)
             )
             manim_code, tts_result = await asyncio.gather(manim_task, tts_task)
 
-            render_result, manim_code = await self._run_render_with_fix_chain(
+            # Plan D: 渲染验证循环（保留 render/manim_fix 事件语义）
+            resource_limits = ResourceLimits(
+                cpu_count=self.settings.video_sandbox_cpu_count,
+                memory_mb=self.settings.video_sandbox_memory_mb,
+                timeout_seconds=self.settings.video_sandbox_timeout_seconds,
+                tmp_size_mb=self.settings.video_sandbox_tmp_size_mb,
+            )
+            render_result, manim_code = await self._run_render_verify(
                 task,
-                runtime,
-                storyboard=storyboard,
+                render_verify_service,
                 manim_code=manim_code,
-                rule_fixer=rule_fixer,
-                llm_fixer=llm_fixer,
+                resource_limits=resource_limits,
             )
             compose_result = await self._run_compose(
                 task,
@@ -175,7 +218,9 @@ class VideoPipelineService(
                 render_result=render_result,
                 tts_result=tts_result,
             )
-            upload_result = await self._run_upload(task, upload_service, compose_result=compose_result)
+            upload_result = await self._run_upload(
+                task, upload_service, compose_result=compose_result
+            )
             video_result = await self._write_completed_result(
                 task.context,
                 runtime,
@@ -209,7 +254,11 @@ class VideoPipelineService(
                 context=final_context,
             )
         except VideoPipelineError as exc:
-            logger.warning("Video pipeline failed task_id=%s stage=%s", task.context.task_id, exc.stage.value)
+            logger.warning(
+                "Video pipeline failed task_id=%s stage=%s",
+                task.context.task_id,
+                exc.stage.value,
+            )
             return await self._handle_pipeline_failure(
                 task.context,
                 runtime,
@@ -219,7 +268,9 @@ class VideoPipelineService(
         finally:
             cleanup_pipeline_temp_dirs(
                 render_result.output_path if render_result is not None else None,
-                *(segment.audio_path for segment in tts_result.audio_segments) if tts_result is not None else (),
+                *(segment.audio_path for segment in tts_result.audio_segments)
+                if tts_result is not None
+                else (),
                 compose_result.video_path if compose_result is not None else None,
                 compose_result.cover_path if compose_result is not None else None,
             )
@@ -241,7 +292,9 @@ class VideoPipelineService(
             await self.sandbox_executor.warm_up()
 
 
-def get_video_pipeline_service(runtime_store, metadata_service: VideoMetadataPersister) -> VideoPipelineService:
+def get_video_pipeline_service(
+    runtime_store, metadata_service: VideoMetadataPersister
+) -> VideoPipelineService:
     """工厂函数：创建 VideoPipelineService 实例。"""
     settings = get_settings()
     return VideoPipelineService(

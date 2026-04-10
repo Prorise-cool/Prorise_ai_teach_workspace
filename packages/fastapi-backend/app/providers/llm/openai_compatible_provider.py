@@ -9,7 +9,7 @@ from typing import Any, Mapping
 import httpx
 
 from app.providers.http_utils import handle_provider_request_error, raise_for_provider_status, require_setting
-from app.providers.protocols import ProviderResult, ProviderRuntimeConfig
+from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
 
 
 def _extract_message_content(message: Any) -> str:
@@ -44,6 +44,10 @@ class OpenAICompatibleLLMProvider:
 
         self._base_url = require_setting(config, "base_url")
         self._api_key = require_setting(config, "api_key")
+        if not self._api_key.isascii():
+            raise ProviderConfigurationError(
+                f"{config.provider_id} api_key 包含非 ASCII 字符，请检查后台 Provider 配置"
+            )
         self._model_name = require_setting(config, "model_name")
         self._request_path = str(config.settings.get("request_path", "/v1/chat/completions"))
         self._temperature = float(config.settings.get("temperature", 0.2))

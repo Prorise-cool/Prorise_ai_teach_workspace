@@ -7,11 +7,13 @@ import type { VideoPipelineStage } from '@/types/video';
 /** failedStage → i18n key 映射。 */
 const STAGE_FAILURE_KEYS: Record<VideoPipelineStage, string> = {
   understanding: 'video.stageFailures.understanding',
+  solve: 'video.stageFailures.solve',
   storyboard: 'video.stageFailures.storyboard',
   manim_gen: 'video.stageFailures.manim_gen',
+  tts: 'video.stageFailures.tts',
   manim_fix: 'video.stageFailures.manim_fix',
   render: 'video.stageFailures.render',
-  tts: 'video.stageFailures.tts',
+  render_verify: 'video.stageFailures.render_verify',
   compose: 'video.stageFailures.compose',
   upload: 'video.stageFailures.upload',
 };

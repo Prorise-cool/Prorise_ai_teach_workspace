@@ -13,6 +13,7 @@ const TASK_ERROR_MESSAGES: Record<string, string> = {
   TASK_UNHANDLED_EXCEPTION: '系统遇到意外错误，请稍后重试或联系客服',
   /* ── 视频流水线阶段 ── */
   VIDEO_UNDERSTANDING_FAILED: '题目理解失败，请检查输入内容后重试',
+  VIDEO_SOLVE_FAILED: '独立解题失败，请稍后重试',
   VIDEO_STORYBOARD_FAILED: '分镜生成失败，请稍后重试',
   VIDEO_MANIM_GEN_FAILED: '动画脚本生成失败，请稍后重试',
   VIDEO_RENDER_FAILED: '动画渲染失败，请稍后重试',

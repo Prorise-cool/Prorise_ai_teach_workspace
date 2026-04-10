@@ -195,11 +195,13 @@ export function isVideoPublicMockScenario(
 /** 视频流水线阶段枚举值。 */
 export const VIDEO_PIPELINE_STAGE_VALUES = [
   'understanding',
+  'solve',
   'storyboard',
   'manim_gen',
+  'tts',
   'manim_fix',
   'render',
-  'tts',
+  'render_verify',
   'compose',
   'upload',
 ] as const;
@@ -222,6 +224,7 @@ export function isVideoPipelineStage(
 /** 视频流水线阶段错误码。 */
 export const VIDEO_PIPELINE_ERROR_CODE_VALUES = [
   'VIDEO_UNDERSTANDING_FAILED',
+  'VIDEO_SOLVE_FAILED',
   'VIDEO_STORYBOARD_FAILED',
   'VIDEO_MANIM_GEN_FAILED',
   'VIDEO_RENDER_FAILED',
