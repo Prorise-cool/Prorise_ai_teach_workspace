@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { jsonClone } from '@sa/utils';
 import { fetchCreateAiResource, fetchUpdateAiResource } from '@/service/api/xiaomai/ai-resource';
+import { fetchGetAiProviderList } from '@/service/api/xiaomai/ai-provider';
 import { useFormRules, useNaiveForm } from '@/hooks/common/form';
 import { $t } from '@/locales';
 
@@ -28,6 +29,31 @@ const visible = defineModel<boolean>('visible', {
 
 const { formRef, validate, restoreValidation } = useNaiveForm();
 const { createRequiredRule } = useFormRules();
+
+/** Provider 下拉选项 */
+interface ProviderOption {
+  id: number;
+  label: string;
+  providerCode: string;
+  vendorCode: string;
+}
+const providerOptions = ref<ProviderOption[]>([]);
+
+async function loadProviderOptions() {
+  const { data, error } = await fetchGetAiProviderList({ pageSize: 100 });
+  if (!error && data) {
+    providerOptions.value = (data.rows || []).map((item: any) => ({
+      id: item.id,
+      label: `${item.providerName} (${item.providerCode})`,
+      providerCode: item.providerCode,
+      vendorCode: item.vendorCode
+    }));
+  }
+}
+
+onMounted(() => {
+  loadProviderOptions();
+});
 
 const title = computed(() => {
   const titles: Record<NaiveUI.TableOperateType, string> = {
@@ -66,7 +92,7 @@ type RuleKey = Extract<
 >;
 
 const rules: Record<RuleKey, App.Global.FormRule> = {
-  providerId: createRequiredRule('Provider 主键不能为空'),
+  providerId: createRequiredRule('请选择供应商'),
   capability: createRequiredRule('能力类型不能为空'),
   resourceCode: createRequiredRule('资源编码不能为空'),
   resourceName: createRequiredRule('资源名称不能为空'),
@@ -134,8 +160,13 @@ watch(visible, () => {
   <NDrawer v-model:show="visible" :title="title" display-directive="show" :width="760" class="max-w-90%">
     <NDrawerContent :title="title" :native-scrollbar="false" closable>
       <NForm ref="formRef" :model="model" :rules="rules">
-        <NFormItem label="Provider 主键" path="providerId">
-          <NInputNumber v-model:value="model.providerId" placeholder="请输入 Provider 主键" class="w-full" />
+        <NFormItem label="供应商" path="providerId">
+          <NSelect
+            v-model:value="model.providerId"
+            :options="providerOptions.map(o => ({ label: o.label, value: o.id }))"
+            placeholder="请选择供应商"
+            filterable
+          />
         </NFormItem>
         <NFormItem label="能力类型" path="capability">
           <DictSelect v-model:value="model.capability" placeholder="请选择能力类型" dict-code="xm_ai_capability" />

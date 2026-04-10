@@ -67,14 +67,14 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         render: (_, index) => index + 1
       },
       {
-        key: 'providerCode',
-        title: 'Provider 编码',
+        key: 'providerName',
+        title: '名称',
         align: 'center',
         minWidth: 160
       },
       {
-        key: 'providerName',
-        title: 'Provider 名称',
+        key: 'providerCode',
+        title: '编码',
         align: 'center',
         minWidth: 160
       },
@@ -88,73 +88,34 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         }
       },
       {
-        key: 'authType',
-        title: '鉴权类型',
-        align: 'center',
-        minWidth: 140,
-        render(row) {
-          return <DictTag value={row.authType} dictCode="xm_ai_auth_type" />;
-        }
-      },
-      {
         key: 'endpointUrl',
         title: '请求地址',
         align: 'center',
-        minWidth: 220
+        minWidth: 240
       },
       {
-        key: 'appId',
-        title: '应用 ID',
+        key: 'authType',
+        title: '鉴权类型',
         align: 'center',
-        minWidth: 140
-      },
-      {
-        key: 'apiKey',
-        title: 'API Key',
-        align: 'center',
-        minWidth: 180,
+        minWidth: 120,
         render(row) {
-          return maskSecret(row.apiKey);
-        }
-      },
-      {
-        key: 'apiSecret',
-        title: 'API Secret',
-        align: 'center',
-        minWidth: 180,
-        render(row) {
-          return maskSecret(row.apiSecret);
-        }
-      },
-      {
-        key: 'accessToken',
-        title: 'Access Token',
-        align: 'center',
-        minWidth: 180,
-        render(row) {
-          return maskSecret(row.accessToken);
+          return <DictTag value={row.authType} dictCode="xm_ai_auth_type" />;
         }
       },
       {
         key: 'status',
         title: '状态',
         align: 'center',
-        minWidth: 120,
+        minWidth: 80,
         render(row) {
           return <DictTag value={row.status} dictCode="sys_normal_disable" />;
         }
       },
       {
-        key: 'sortOrder',
-        title: '排序号',
-        align: 'center',
-        minWidth: 120
-      },
-      {
         key: 'remark',
         title: '备注',
         align: 'center',
-        minWidth: 180
+        minWidth: 160
       },
       {
         key: 'operate',

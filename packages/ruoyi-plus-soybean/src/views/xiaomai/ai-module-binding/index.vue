@@ -66,88 +66,58 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         render: (_, index) => index + 1
       },
       {
-        key: 'moduleId',
-        title: '模块主键',
-        align: 'center',
-        minWidth: 120
-      },
-      {
         key: 'stageCode',
-        title: '阶段编码',
+        title: '阶段',
         align: 'center',
-        minWidth: 160
+        minWidth: 140
       },
       {
         key: 'capability',
         title: '能力类型',
         align: 'center',
-        minWidth: 120,
+        minWidth: 100,
         render(row) {
           return <DictTag value={row.capability} dictCode="xm_ai_capability" />;
         }
       },
       {
-        key: 'roleCode',
-        title: '角色编码',
-        align: 'center',
-        minWidth: 140
-      },
-      {
         key: 'resourceId',
-        title: '资源主键',
+        title: '资源 ID',
         align: 'center',
-        minWidth: 120
+        minWidth: 100
       },
       {
         key: 'priority',
         title: '优先级',
         align: 'center',
-        minWidth: 120
+        minWidth: 80
       },
       {
         key: 'timeoutSeconds',
-        title: '超时秒数',
+        title: '超时(秒)',
         align: 'center',
-        minWidth: 120
+        minWidth: 90
       },
       {
         key: 'retryAttempts',
-        title: '重试次数',
+        title: '重试',
         align: 'center',
-        minWidth: 120
-      },
-      {
-        key: 'healthSource',
-        title: '健康来源',
-        align: 'center',
-        minWidth: 120,
-        render(row) {
-          return <DictTag value={row.healthSource} dictCode="xm_ai_health_source" />;
-        }
+        minWidth: 70
       },
       {
         key: 'status',
         title: '状态',
         align: 'center',
-        minWidth: 120,
+        minWidth: 80,
         render(row) {
           return <DictTag value={row.status} dictCode="sys_normal_disable" />;
-        }
-      },
-      {
-        key: 'isDefault',
-        title: '默认链路',
-        align: 'center',
-        minWidth: 120,
-        render(row) {
-          return <DictTag value={row.isDefault} dictCode="sys_yes_no" />;
         }
       },
       {
         key: 'remark',
         title: '备注',
         align: 'center',
-        minWidth: 180
+        minWidth: 160
       },
       {
         key: 'operate',

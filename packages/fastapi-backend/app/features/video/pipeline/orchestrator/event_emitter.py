@@ -32,17 +32,7 @@ class EventEmitterMixin:
         """推送阶段进度 SSE 事件。"""
         snapshot = build_stage_snapshot(stage, ratio)
         if snapshot.progress < self._max_emitted_progress:
-            if stage is VideoStage.MANIM_FIX:
-                snapshot = snapshot.model_copy(update={"progress": self._max_emitted_progress})
-            else:
-                logger.debug(
-                    "Skip regressive stage event task_id=%s stage=%s progress=%s max_progress=%s",
-                    task.context.task_id,
-                    stage.value,
-                    snapshot.progress,
-                    self._max_emitted_progress,
-                )
-                return
+            snapshot = snapshot.model_copy(update={"progress": self._max_emitted_progress})
             logger.debug(
                 "Clamp regressive stage event task_id=%s stage=%s progress=%s max_progress=%s",
                 task.context.task_id,

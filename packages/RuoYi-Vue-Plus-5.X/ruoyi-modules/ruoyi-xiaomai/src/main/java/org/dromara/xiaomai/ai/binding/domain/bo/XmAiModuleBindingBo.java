@@ -47,7 +47,6 @@ public class XmAiModuleBindingBo extends BaseEntity {
     /**
      * 角色编码，为空表示阶段默认链路
      */
-    @NotBlank(message = "角色编码，为空表示阶段默认链路不能为空", groups = { AddGroup.class, EditGroup.class })
     private String roleCode;
 
     /**

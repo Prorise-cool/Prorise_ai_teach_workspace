@@ -1,5 +1,8 @@
 # AGENTS.md — Workspace Agent Instructions
 
+## first things
+你首要目的就是使用 mempalace mcp 搜索项目规范相关的任务，每一次对话开始前都必须读取一遍项目规范，这是必须遵守的点
+
 ## Canonical Source of Truth
 - `_bmad-output/` 是本仓库**唯一的事实来源**（PRD、架构、Epic、Story、实现状态、sprint-status.yaml 全部以此为准）。
 - 其他文件仅作导航。若与 `_bmad-output/` 冲突，以 `_bmad-output/INDEX.md` 为准。
