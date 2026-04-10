@@ -23,10 +23,6 @@ import {
   type UserProfile
 } from '@/features/profile/types';
 import { useUserProfileStore } from '@/features/profile/stores/user-profile-store';
-import {
-  buildProfileSetupPath,
-  resolveProfileReturnTo
-} from '@/features/profile/shared/profile-routing';
 
 type ProfilePayload = {
   id?: number | null;
@@ -341,29 +337,5 @@ export function resolveProfileApi(
 
 export const profileApi = resolveProfileApi();
 
-/**
- * 解析认证成功后应前往的地址。
- *
- * @param options - 导航解析参数。
- * @param options.userId - 当前用户 ID。
- * @param options.accessToken - 当前访问令牌。
- * @param options.returnTo - 原始业务回跳目标。
- * @returns onboarding 或业务页地址。
- */
-export async function resolvePostAuthDestination({
-  userId,
-  accessToken,
-  returnTo
-}: {
-  userId: string;
-  accessToken?: string;
-  returnTo?: string;
-}) {
-  const profile = await profileApi.getCurrentProfile(userId, accessToken);
-
-  if (profile?.isCompleted) {
-    return resolveProfileReturnTo(returnTo);
-  }
-
-  return buildProfileSetupPath(returnTo);
-}
+// resolvePostAuthDestination has been moved to @/services/post-auth to break the auth↔profile circular dependency.
+// Import it from '@/services/post-auth' instead.
