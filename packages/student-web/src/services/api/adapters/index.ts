@@ -4,7 +4,7 @@
 
 export type {
   AuthAdapter
-} from './auth-adapter';
+} from './auth';
 export {
   AuthAdapterError,
   createMockAuthAdapter,
@@ -14,7 +14,7 @@ export {
   mapRuoyiLoginToken,
   mapRuoyiUserInfo,
   resolveAuthAdapter
-} from './auth-adapter';
+} from './auth';
 export type {
   TaskAdapter
 } from './task-adapter';
