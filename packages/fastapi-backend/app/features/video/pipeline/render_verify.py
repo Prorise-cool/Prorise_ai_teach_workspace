@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Sequence
 
 from app.core.logging import get_logger
@@ -51,6 +52,7 @@ class RenderVerifyService:
     sandbox_executor: SandboxExecutor
     runtime: VideoRuntimeStateStore
     max_verify_attempts: int = 4
+    audio_files: dict[str, Path] = field(default_factory=dict)
 
     async def execute(
         self,
@@ -160,6 +162,7 @@ class RenderVerifyService:
                 task_id=task_id,
                 script=script_content,
                 resource_limits=resource_limits,
+                audio_files=self.audio_files or None,
             )
         except ScriptSecurityViolation as exc:
             return ExecutionResult(

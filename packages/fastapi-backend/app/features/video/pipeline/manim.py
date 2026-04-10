@@ -297,6 +297,7 @@ class ManimGenerationService:
             estimated_scene_duration = _estimate_scene_code_duration_seconds(scene_code)
             transition_buffer = 0.4 if index < total_scenes else 0.0
             scenes_data.append({
+                "scene_id": scene.scene_id,
                 "scene_code": scene_code,
                 "scene_duration_hint": scene.duration_hint,
                 "scene_hold_duration": round(
@@ -316,6 +317,8 @@ class ManimGenerationService:
         result = ManimCodeResult(
             script_content=full_script,
             scene_mapping=mappings,
+            scenes_data=scenes_data,
+            video_config=video_config,
             provider_used=provider_used,
         )
         self.runtime.save_model("manim_code", result)

@@ -15,9 +15,11 @@ from app.features.video.pipeline.constants import (
     DEFAULT_MANIM_SCENE_CLASS,
     MANIM_QUALITY_DEFAULT,
     MANIM_QUALITY_MAP,
+    SANDBOX_AUDIO_DIR,
     SANDBOX_ENV_VARS,
     SANDBOX_INFRASTRUCTURE_ERROR_MARKERS,
     SANDBOX_OUTPUT_DIR,
+    SANDBOX_PRELOADED_TTS_MODULE,
     SANDBOX_RENDERED_FILE,
     SANDBOX_RUNNER_SCRIPT,
     SANDBOX_SCENE_SCRIPT,
@@ -93,6 +95,7 @@ class SandboxExecutor(ABC):
         task_id: str,
         script: str,
         resource_limits: ResourceLimits,
+        audio_files: dict[str, Path] | None = None,
     ) -> ExecutionResult:
         """在沙箱中执行 Manim 脚本。"""
         raise NotImplementedError
@@ -106,6 +109,7 @@ class LocalSandboxExecutor(SandboxExecutor):
         task_id: str,
         script: str,
         resource_limits: ResourceLimits,
+        audio_files: dict[str, Path] | None = None,
     ) -> ExecutionResult:
         """在沙箱中执行 Manim 脚本。"""
         start = time.perf_counter()
@@ -219,6 +223,7 @@ class DockerSandboxExecutor(SandboxExecutor):
         task_id: str,
         script: str,
         resource_limits: ResourceLimits,
+        audio_files: dict[str, Path] | None = None,
     ) -> ExecutionResult:
         """在沙箱中执行 Manim 脚本。"""
         if shutil.which("docker") is None:
@@ -237,6 +242,7 @@ class DockerSandboxExecutor(SandboxExecutor):
         output_dir.mkdir(parents=True, exist_ok=True)
         script_path.write_text(script, encoding="utf-8")
         runner_path.write_text(_build_manim_runner_script(self.render_quality), encoding="utf-8")
+        _prepare_voiceover_workspace(temp_dir, audio_files)
         scene_class_name = _detect_scene_class_name(script) or DEFAULT_MANIM_SCENE_CLASS
         docker_command = [
             "docker",
@@ -372,6 +378,23 @@ def _docker_env_args() -> list[str]:
     for env_var in SANDBOX_ENV_VARS:
         env_args.extend(["--env", env_var])
     return env_args
+
+
+def _prepare_voiceover_workspace(temp_dir: Path, audio_files: dict[str, Path] | None) -> None:
+    """将 PreloadedTTS 模块和音频文件复制到沙箱 workspace。"""
+    # 复制 preloaded_tts.py 到 workspace 根目录
+    preloaded_tts_src = Path(__file__).resolve().parent / "code_render" / SANDBOX_PRELOADED_TTS_MODULE
+    if preloaded_tts_src.exists():
+        shutil.copy2(preloaded_tts_src, temp_dir / SANDBOX_PRELOADED_TTS_MODULE)
+
+    if not audio_files:
+        return
+    audio_dir = temp_dir / SANDBOX_AUDIO_DIR
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    for scene_id, audio_path in audio_files.items():
+        if audio_path.exists():
+            dest = audio_dir / f"{scene_id}{audio_path.suffix}"
+            shutil.copy2(audio_path, dest)
 
 
 def _detect_scene_class_name(script: str) -> str | None:
