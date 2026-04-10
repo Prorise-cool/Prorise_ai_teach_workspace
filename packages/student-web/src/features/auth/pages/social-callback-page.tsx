@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppTranslation } from "@/app/i18n/use-app-translation";
-import { resolvePostAuthDestination } from "@/features/profile/api/profile-api";
+import { resolvePostAuthDestination } from "@/services/post-auth";
 import { getAuthFeedbackMessage } from "@/features/auth/shared/auth-feedback";
 import {
 	parseJsonText,

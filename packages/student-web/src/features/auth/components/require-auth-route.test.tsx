@@ -8,11 +8,11 @@ import { afterEach, vi } from 'vitest';
 import { RequireAuthRoute } from '@/features/auth/components/require-auth-route';
 import { ForbiddenPage } from '@/features/auth/pages/forbidden-page';
 import { LoginPage } from '@/features/auth/pages/login-page';
-import { createEmptyUserProfile } from '@/features/profile/types';
+import { createEmptyUserProfile } from '@/features/profile';
 import { createAuthError, createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService, type AuthService } from '@/services/auth';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
-import { useUserProfileStore } from '@/features/profile/stores/user-profile-store';
+import { useUserProfileStore } from '@/features/profile';
 import { renderWithApp } from '@/test/utils/render-app';
 import { resetAppTestState, seedMockAuthSession } from '@/test/utils/session';
 

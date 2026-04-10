@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 
-import './styles/task-generating-view.scss';
+import './task-generating-view.scss';
 
 export type GeneratingLogItem = {
   /** 日志唯一 ID */

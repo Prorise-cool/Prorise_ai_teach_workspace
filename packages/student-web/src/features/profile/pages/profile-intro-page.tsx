@@ -13,9 +13,9 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AuthScene } from '@/features/auth/components/auth-scene';
-import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state';
-import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
+import { AuthScene } from '@/shared/auth-ui';
+import { useAuthPageUiState } from '@/shared/auth-ui';
+import { useAuthPageCopy } from '@/shared/auth-ui';
 import { useUserProfile } from '@/features/profile/hooks/use-user-profile';
 import {
   createProfileIntroSchema,

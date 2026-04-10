@@ -16,7 +16,7 @@ import { useAuthPageUiState } from '@/features/auth/hooks/use-auth-page-ui-state
 import { useRegisterEnabledQuery } from '@/features/auth/hooks/use-register-enabled-query';
 import { useAuthRedirect } from '@/features/auth/hooks/use-auth-redirect';
 import { useAuthPageCopy } from '@/features/auth/shared/auth-content';
-import { resolvePostAuthDestination } from '@/features/profile/api/profile-api';
+import { resolvePostAuthDestination } from '@/services/post-auth';
 import { authService, type AuthService } from '@/services/auth';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
