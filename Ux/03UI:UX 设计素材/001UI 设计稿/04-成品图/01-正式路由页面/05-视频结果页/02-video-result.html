@@ -18,7 +18,7 @@
 	<!-- 引入 Lucide 图标库 -->
 	<script src="https://unpkg.com/lucide@latest"></script>
 
-	<!-- XiaoMai Design System V4 Tokens -->
+	<!-- XiaoMai Design System V4 Tokens (Strictly Applied) -->
 	<script>
 		tailwind.config = {
 			darkMode: "class",
@@ -36,21 +36,21 @@
 						decorative: '#3b1701',
 						bg: {
 							light: '#f5ede1',
-							dark: '#110e0d',
+							dark: '#1a1614', /* 规范色: 暗色背景 */
 						},
 						surface: {
 							light: '#ffffff',
-							dark: '#1f1a18',
+							dark: '#2a2420', /* 规范色: 暗色表面/卡片 */
 						},
 						text: {
 							primary: '#3b1701',
 							'primary-dark': '#f5ede1',
 							secondary: '#6b4421',
-							'secondary-dark': '#a89f91',
+							'secondary-dark': '#c4b8a8', /* 规范色: 暗色次要文字 */
 						},
 						bordercolor: {
 							light: '#e6dcc8',
-							dark: '#302824',
+							dark: '#3d3630', /* 规范色: 暗色边框 */
 						},
 						agent: {
 							efficient: '#6D5DF4',
@@ -65,10 +65,10 @@
 					fontFamily: { sans: ['Inter', 'Noto Sans SC', 'sans-serif'] },
 					borderRadius: { 'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', 'full': '9999px' },
 					boxShadow: {
-						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
-						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
-						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
-						'dock': '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04)' // 苹果风 Dock 投影
+						'sm': '0 2px 8px #0000001A',
+						'md': '0 4px 16px #0000001F',
+						'lg': '0 8px 24px #00000029',
+						'dock': '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.04)'
 					}
 				}
 			}
@@ -83,7 +83,7 @@
 		}
 
 		html.dark {
-			background-color: #110e0d;
+			background-color: #1a1614;
 			color: #f5ede1;
 		}
 
@@ -91,7 +91,7 @@
 			transition: background-color 0.4s ease, color 0.4s ease;
 		}
 
-		/* ================= 高级背景修饰 (统一为输入页风格：网格 + 顶部渐隐) ================= */
+		/* ================= 高级背景修饰 ================= */
 		.bg-grid-pattern {
 			background-image:
 				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
@@ -131,10 +131,10 @@
 		}
 
 		html.dark .chat-scroll::-webkit-scrollbar-thumb {
-			background: #302824;
+			background: #3d3630;
 		}
 
-		/* 气泡专属倒角与微动效 */
+		/* 气泡专属倒角 */
 		.bubble-user {
 			border-radius: 20px 20px 4px 20px;
 		}
@@ -143,6 +143,56 @@
 			border-radius: 4px 20px 20px 20px;
 		}
 
+		/* ================= 全局 Mac 果冻动画 (Jelly Animation) ================= */
+		.mac-jelly {
+			transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.mac-jelly:hover {
+			transform: scale(1.05);
+		}
+
+		.mac-jelly:active {
+			transform: scale(0.95);
+		}
+
+		/* 侧边栏及抽屉的丝滑展开 */
+		.drawer-slide {
+			transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+				width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+				margin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		/* 进度条节点果冻弹窗 (调整为向下弹出，避免遮挡标题) */
+		.marker-tooltip-container {
+			transform-origin: top center;
+			opacity: 0;
+			visibility: hidden;
+			transform: translate(-50%, -10px) scale(0.8);
+			transition: opacity 0.2s ease-in, transform 0.2s ease-in, visibility 0.2s;
+		}
+
+		.marker-group:hover .marker-tooltip-container {
+			visibility: visible;
+			opacity: 1;
+			transform: translate(-50%, 0) scale(1);
+			transition: opacity 0.3s ease-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.marker-dot {
+			transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.marker-group:hover .marker-dot {
+			transform: scale(1.5);
+			box-shadow: 0 0 0 4px rgba(245, 197, 71, 0.2);
+		}
+
+		html.dark .marker-group:hover .marker-dot {
+			box-shadow: 0 0 0 4px rgba(230, 184, 65, 0.25);
+		}
+
+		/* 聊天消息气泡进入动画 */
 		@keyframes messageSlideIn {
 			from {
 				opacity: 0;
@@ -156,9 +206,10 @@
 		}
 
 		.msg-enter {
-			animation: messageSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+			animation: messageSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 		}
 
+		/* 白板展开动画 */
 		@keyframes whiteboardReveal {
 			from {
 				opacity: 0;
@@ -178,11 +229,11 @@
 		}
 
 		.whiteboard-reveal {
-			animation: whiteboardReveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+			animation: whiteboardReveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 			overflow: hidden;
 		}
 
-		/* AI 打字机 Loading 动画 */
+		/* AI 打字机 Loading */
 		.typing-dot {
 			width: 5px;
 			height: 5px;
@@ -214,10 +265,6 @@
 			}
 		}
 
-		.drawer-slide {
-			transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-		}
-
 		/* 白板内部网格 */
 		.blueprint-grid {
 			background-image:
@@ -231,41 +278,28 @@
 				linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
 				linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 		}
-
-		.btn-hover-scale {
-			transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-		}
-
-		.btn-hover-scale:hover {
-			transform: scale(1.05);
-		}
-
-		.btn-hover-scale:active {
-			transform: scale(0.95);
-		}
 	</style>
 </head>
 
 <body
-	class="h-screen w-screen overflow-hidden flex font-sans selection:bg-brand selection:text-white bg-bg-light dark:bg-bg-dark relative">
+	class="h-screen w-screen overflow-hidden flex font-sans selection:bg-brand selection:text-white bg-bg-light dark:bg-bg-dark relative text-text-primary dark:text-text-primary-dark">
 
 	<!-- ==================== 左侧：无界课件画布 ==================== -->
-	<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden transition-all duration-300">
+	<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden drawer-slide">
 
-		<!-- 全局极简网格与微弱光晕 (与输入页完全对齐) -->
+		<!-- 全局极简网格与微弱光晕 -->
 		<div class="absolute inset-0 z-0 pointer-events-none">
 			<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
-			<!-- 统一为输入页的顶部天际线柔和光晕 -->
 			<div
 				class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/15 dark:bg-brand/5 blur-[100px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500">
 			</div>
 		</div>
 
-		<!-- 极致极简的顶部 Header -->
+		<!-- 极简 Header -->
 		<header class="h-[72px] flex items-center justify-between px-10 shrink-0 z-20 relative">
 			<div class="flex items-center gap-4">
 				<a href="#"
-					class="text-text-primary dark:text-text-primary-dark hover:text-text-secondary dark:hover:text-text-secondary-dark transition-all btn-hover-scale">
+					class="text-text-primary dark:text-text-primary-dark hover:text-text-secondary dark:hover:text-text-secondary-dark mac-jelly inline-block">
 					<i data-lucide="chevron-left" class="w-6 h-6"></i>
 				</a>
 				<h1 class="font-bold text-[20px] text-text-primary dark:text-text-primary-dark tracking-tight truncate">
@@ -274,36 +308,35 @@
 
 			<div class="flex items-center gap-3">
 				<div
-					class="hidden xl:flex items-center gap-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/40 dark:bg-[#1a1514]/70 px-2 py-1.5 shadow-sm">
+					class="hidden xl:flex items-center gap-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/40 dark:bg-secondary-dark/60 px-2 py-1.5 shadow-sm">
 					<span
 						class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-light dark:bg-surface-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark">
 						<i data-lucide="shield" class="w-3.5 h-3.5"></i>
 						当前私有
 					</span>
 					<button
-						class="px-3 py-1.5 rounded-full bg-text-primary dark:bg-text-primary-dark text-[12px] font-bold text-bg-light dark:text-bg-dark hover:opacity-90 transition-opacity">
+						class="px-3 py-1.5 rounded-full bg-text-primary dark:bg-text-primary-dark text-[12px] font-bold text-surface-light dark:text-bg-dark hover:opacity-90 mac-jelly">
 						公开发布
 					</button>
 					<button
-						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors">
+						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-bordercolor-dark mac-jelly">
 						复用题目
 					</button>
 				</div>
-				<!-- 参考图中的右上角设置 Icon -->
 				<button
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark transition-colors btn-hover-scale"
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
 					title="设置">
 					<i data-lucide="settings" class="w-5 h-5"></i>
 				</button>
 				<button id="themeToggle"
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark transition-colors btn-hover-scale"
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
 					title="切换亮暗色">
 					<i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
 					<i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
 				</button>
 				<!-- 侧边栏收展开关 -->
 				<button onclick="toggleSidebar()"
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark transition-colors btn-hover-scale"
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
 					title="展开/收起助手">
 					<i data-lucide="panel-right-close" class="w-5 h-5 sidebar-icon-close"></i>
 					<i data-lucide="panel-right-open" class="w-5 h-5 sidebar-icon-open hidden"></i>
@@ -311,44 +344,139 @@
 			</div>
 		</header>
 
-		<!-- 正常的连续式进度条 -->
-		<div class="w-full px-10 z-20 relative -mt-1 mb-2">
+		<!-- ==================== 进度条区域 (包含向下展示的果冻弹窗) ==================== -->
+		<div class="w-full px-10 z-40 relative -mt-1 mb-2">
 			<div
-				class="h-[4px] w-full bg-bordercolor-light dark:bg-bordercolor-dark rounded-full overflow-hidden relative cursor-pointer group">
+				class="h-[4px] w-full bg-bordercolor-light dark:bg-bordercolor-dark rounded-full relative cursor-pointer group/bar">
+
+				<!-- 已播放进度条 -->
 				<div
 					class="absolute inset-y-0 left-0 bg-brand w-[45%] rounded-full relative transition-all duration-200">
 					<div
-						class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-surface-light dark:bg-surface-dark rounded-full shadow-sm border-2 border-brand opacity-0 group-hover:opacity-100 transition-opacity">
+						class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-surface-light dark:bg-surface-dark rounded-full shadow-sm border-2 border-brand opacity-0 group-hover/bar:opacity-100 transition-opacity z-30">
 					</div>
 				</div>
+
+				<!-- 节点 1：前置概念 -->
+				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 15%;">
+					<div
+						class="w-2.5 h-2.5 bg-surface-light dark:bg-surface-dark border-2 border-brand rounded-full marker-dot">
+					</div>
+					<!-- 向下的果冻弹窗 (更优雅的毛玻璃气泡) -->
+					<div class="marker-tooltip-container absolute top-full left-1/2 pt-4 w-64 z-50 pointer-events-none">
+						<div
+							class="bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-2xl border border-white/60 dark:border-white/5 rounded-2xl p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] relative">
+							<!-- 优雅圆润小箭头 -->
+							<div
+								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
+							</div>
+
+							<div class="flex items-center gap-2 mb-2 relative z-10">
+								<div
+									class="w-6 h-6 rounded-full bg-brand/15 dark:bg-brand/10 flex items-center justify-center shrink-0">
+									<i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i>
+								</div>
+								<span
+									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">极限概念引入</span>
+							</div>
+							<p
+								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
+								<span
+									class="font-semibold text-text-primary dark:text-text-primary-dark">AI总结：</span>从计算曲线面积的困境出发，引入无限分割逼近的思想。
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- 节点 2：核心定义 -->
+				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 45%;">
+					<div
+						class="w-2.5 h-2.5 bg-brand border-2 border-surface-light dark:border-surface-dark rounded-full marker-dot shadow-[0_0_0_1px_#f5c547]">
+					</div>
+					<div class="marker-tooltip-container absolute top-full left-1/2 pt-4 w-64 z-50 pointer-events-none">
+						<div
+							class="bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-2xl border border-white/60 dark:border-white/5 rounded-2xl p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] relative">
+							<div
+								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
+							</div>
+
+							<div class="flex items-center gap-2 mb-2 relative z-10">
+								<div
+									class="w-6 h-6 rounded-full bg-brand/15 dark:bg-brand/10 flex items-center justify-center shrink-0">
+									<i data-lucide="target" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i>
+								</div>
+								<span
+									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">黎曼和定义</span>
+							</div>
+							<p
+								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
+								<span
+									class="font-semibold text-text-primary dark:text-text-primary-dark">AI总结：</span>详细推导定积分的数学表达式，将面积累加转化为积分符号。
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- 节点 3：延伸考点 -->
+				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 82%;">
+					<div
+						class="w-2.5 h-2.5 bg-surface-light dark:bg-surface-dark border-2 border-bordercolor-light dark:border-bordercolor-dark rounded-full marker-dot">
+					</div>
+					<div class="marker-tooltip-container absolute top-full left-1/2 pt-4 w-64 z-50 pointer-events-none">
+						<div
+							class="bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-2xl border border-white/60 dark:border-white/5 rounded-2xl p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] relative">
+							<div
+								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
+							</div>
+
+							<div class="flex items-center gap-2 mb-2 relative z-10">
+								<div
+									class="w-6 h-6 rounded-full bg-secondary/80 dark:bg-secondary-dark/80 border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0">
+									<i data-lucide="book-open"
+										class="w-3.5 h-3.5 text-text-secondary dark:text-text-secondary-dark"></i>
+								</div>
+								<span
+									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">微积分基本定理</span>
+							</div>
+							<p
+								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
+								<span
+									class="font-semibold text-text-primary dark:text-text-primary-dark">AI总结：</span>揭示微分与积分的互逆关系，牛顿-莱布尼茨公式预告。
+							</p>
+						</div>
+					</div>
+				</div>
+
 			</div>
 		</div>
 
+		<!-- 结果公开卡片 -->
 		<div class="w-full px-10 mb-3 z-20 relative">
 			<div
 				class="rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light/70 dark:bg-surface-dark/70 backdrop-blur-xl px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 shadow-sm">
 				<div class="flex items-start gap-3">
 					<div
-						class="w-9 h-9 rounded-full bg-brand/10 dark:bg-brand/5 border border-brand/20 dark:border-brand/10 flex items-center justify-center shrink-0">
+						class="w-9 h-9 rounded-full bg-brand/10 dark:bg-brand/10 border border-brand/20 dark:border-brand/20 flex items-center justify-center shrink-0">
 						<i data-lucide="share-2" class="w-4.5 h-4.5 text-brand-dark dark:text-brand"></i>
 					</div>
 					<div>
 						<div class="flex flex-wrap items-center gap-2">
-							<p class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">结果公开与复用</p>
+							<p class="text-[13px] font-bold">结果公开与复用</p>
 							<span
-								class="px-2 py-0.5 rounded-full bg-secondary dark:bg-[#2c2522] text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark">公开讲解</span>
+								class="px-2 py-0.5 rounded-full bg-secondary dark:bg-secondary-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark">公开讲解</span>
 						</div>
 						<p class="text-[12px] leading-relaxed text-text-secondary dark:text-text-secondary-dark mt-1">
-							公开视频默认不自动上架。显式发布后会同步到输入页发现区；取消公开时，对应卡片也会从发现区撤下。</p>
+							公开视频默认不自动上架。显式发布后会同步到输入页发现区；取消公开时，对应卡片也会从发现区撤下。
+						</p>
 					</div>
 				</div>
 				<div class="flex flex-wrap items-center gap-2 lg:justify-end">
 					<button
-						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors">
+						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-secondary-dark mac-jelly">
 						复制公开链接
 					</button>
 					<button
-						class="px-3 py-1.5 rounded-full border border-error/20 dark:border-error-dark/30 bg-error/5 dark:bg-error-dark/10 text-[12px] font-bold text-error dark:text-error-dark hover:bg-error hover:text-white dark:hover:bg-error-dark dark:hover:text-white transition-colors">
+						class="px-3 py-1.5 rounded-full border border-error/20 dark:border-error-dark/30 bg-error/5 dark:bg-error-dark/10 text-[12px] font-bold text-error dark:text-error-dark hover:bg-error hover:text-white dark:hover:bg-error-dark dark:hover:text-white mac-jelly">
 						取消公开
 					</button>
 				</div>
@@ -358,41 +486,37 @@
 		<!-- 画布核心内容 -->
 		<div class="flex-1 relative flex flex-col items-center justify-center p-6 z-10 w-full h-full">
 
-			<!-- 左上角节点 Pill -->
 			<div class="absolute top-6 left-12 flex items-center">
 				<div
-					class="px-6 py-3 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/80 dark:bg-secondary-dark/70 text-[15px] font-medium text-text-primary dark:text-text-primary-dark shadow-sm">
+					class="px-6 py-3 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/80 dark:bg-secondary-dark/80 text-[15px] font-medium shadow-sm backdrop-blur-sm">
 					积分的核心概念：累加和极限
 				</div>
 			</div>
 
-			<!-- 中心板书区域 (增加略微上移和底部内边距，避免与底部字幕冲突) -->
+			<!-- 中心板书区域 -->
 			<div class="max-w-[600px] w-full transform -translate-y-12 flex flex-col items-center pb-12">
-				<h2 class="text-[24px] font-medium mb-6 text-text-primary dark:text-text-primary-dark tracking-wide">
-					理解积分：累积与面积</h2>
+				<h2 class="text-[24px] font-medium mb-6 tracking-wide">理解积分：累积与面积</h2>
 
-				<!-- 核心思想高亮框 -->
 				<div
-					class="w-full max-w-sm bg-secondary/70 dark:bg-secondary-dark/70 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 mb-8 text-center flex flex-col items-center justify-center shadow-sm">
+					class="w-full max-w-sm bg-secondary/70 dark:bg-secondary-dark/70 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 mb-8 text-center flex flex-col items-center justify-center shadow-sm backdrop-blur-sm mac-jelly">
 					<div class="flex items-center gap-1.5 text-[14px] text-brand dark:text-brand mb-1.5">
 						<i data-lucide="lightbulb" class="w-4 h-4"></i> 核心思想
 					</div>
 					<div class="text-[13px] text-text-secondary dark:text-text-secondary-dark">积分是“求和”过程的数学形式</div>
 				</div>
 
-				<!-- 列表项 -->
 				<div class="w-full max-w-sm text-left">
 					<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark mb-3">积分的作用：</p>
-					<ul class="space-y-3 text-[13px] text-text-primary dark:text-text-primary-dark">
-						<li class="flex items-start gap-2.5">
+					<ul class="space-y-3 text-[13px]">
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
 							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
 							<span>计算曲线下方区域的面积</span>
 						</li>
-						<li class="flex items-start gap-2.5">
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
 							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
 							<span>累加一个函数在区间内的总量</span>
 						</li>
-						<li class="flex items-start gap-2.5">
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
 							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
 							<span>微分的反向运算（逆导数）</span>
 						</li>
@@ -400,38 +524,32 @@
 				</div>
 			</div>
 
-			<!-- 底部字幕 (优化：深色、贴底、不遮挡、不抢戏) -->
 			<div
-				class="absolute bottom-[110px] left-1/2 -translate-x-1/2 bg-text-primary/85 dark:bg-surface-dark/95 backdrop-blur-md text-surface-light dark:text-text-primary-dark px-6 py-2.5 rounded-lg text-[15px] tracking-wide font-medium max-w-[90%] md:max-w-3xl text-center shadow-md z-20 pointer-events-none">
+				class="absolute bottom-[110px] left-1/2 -translate-x-1/2 bg-text-primary/85 dark:bg-surface-dark/95 backdrop-blur-md text-surface-light dark:text-text-primary-dark px-6 py-2.5 rounded-lg text-[15px] tracking-wide font-medium max-w-[90%] md:max-w-3xl text-center shadow-md z-20 pointer-events-none border border-transparent dark:border-bordercolor-dark">
 				积分可以看作是无限小部分的累加，解决我们无法用简单几何公式计算的问题。
 			</div>
 		</div>
 
-		<!-- ==================== macOS Dock (灵动岛业务控制台) ==================== -->
+		<!-- macOS Dock -->
 		<div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
-			<!-- 毛玻璃岛屿容器 -->
 			<div
-				class="bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-2xl border border-white/40 dark:border-white/5 rounded-full shadow-dock p-2 flex items-center gap-1 relative overflow-visible transition-all">
-
-				<!-- 主播放键 -->
+				class="bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-2xl border border-white/40 dark:border-bordercolor-dark rounded-full shadow-dock p-2 flex items-center gap-1 relative overflow-visible transition-all">
 				<button
-					class="w-12 h-12 bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm group">
+					class="w-12 h-12 bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-bg-dark rounded-full flex items-center justify-center shadow-sm group mac-jelly">
 					<i data-lucide="pause" class="w-5 h-5 fill-current group-hover:text-brand transition-colors"></i>
 				</button>
-
-				<!-- 业务按钮组 -->
 				<div
-					class="flex items-center gap-1 px-3 border-l border-bordercolor-light/60 dark:border-bordercolor-dark/60 ml-2">
+					class="flex items-center gap-1 px-3 border-l border-bordercolor-light/60 dark:border-bordercolor-dark ml-2">
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-[#2c2522] hover:text-text-primary dark:hover:text-text-primary-dark transition-colors font-bold text-[14px]">
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark font-bold text-[14px] mac-jelly">
 						1x
 					</button>
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-[#2c2522] hover:text-text-primary dark:hover:text-text-primary-dark transition-colors relative group">
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark relative group mac-jelly">
 						<i data-lucide="volume-2" class="w-4.5 h-4.5"></i>
 					</button>
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-[#2c2522] hover:text-text-primary dark:hover:text-text-primary-dark transition-colors">
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly">
 						<i data-lucide="maximize" class="w-4.5 h-4.5"></i>
 					</button>
 				</div>
@@ -441,21 +559,19 @@
 
 	<!-- ==================== 右侧：Companion 智能侧栏 ==================== -->
 	<aside id="companion-sidebar"
-		class="w-[380px] md:w-[420px] shrink-0 border-l border-bordercolor-light dark:border-bordercolor-dark bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-3xl transition-[width,margin] duration-300 overflow-hidden flex flex-col relative h-full z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] dark:shadow-none">
+		class="w-[380px] md:w-[420px] shrink-0 border-l border-bordercolor-light dark:border-bordercolor-dark bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-3xl drawer-slide overflow-hidden flex flex-col relative h-full z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] dark:shadow-none">
 
 		<div class="w-[380px] md:w-[420px] h-full flex flex-col shrink-0 relative">
 
-			<!-- Header -->
 			<div
 				class="px-5 py-4 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 flex justify-between items-center bg-transparent shrink-0">
 				<div class="flex items-center gap-2.5">
-					<div class="w-8 h-8 rounded-full bg-secondary dark:bg-[#2c2522] flex items-center justify-center">
+					<div
+						class="w-8 h-8 rounded-full bg-secondary dark:bg-secondary-dark flex items-center justify-center">
 						<i data-lucide="bot" class="w-4 h-4 text-text-primary dark:text-text-primary-dark"></i>
 					</div>
 					<div class="flex flex-col">
-						<span
-							class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark leading-tight">Companion
-							会话</span>
+						<span class="font-extrabold text-[15px] leading-tight">Companion 会话</span>
 						<span
 							class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">随课智能答疑</span>
 					</div>
@@ -463,34 +579,32 @@
 
 				<div class="flex items-center space-x-1">
 					<button onclick="toggleEvidenceDrawer()"
-						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#2c2522] hover:text-text-primary transition-colors"
+						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-secondary-dark hover:text-text-primary mac-jelly"
 						title="查看依据">
 						<i data-lucide="paperclip" class="w-4 h-4"></i>
 					</button>
 					<button onclick="toggleHistory()"
-						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#2c2522] hover:text-text-primary transition-colors"
+						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-secondary-dark hover:text-text-primary mac-jelly"
 						title="历史记录">
 						<i data-lucide="clock" class="w-4 h-4"></i>
 					</button>
 				</div>
 			</div>
 
-			<!-- 权限&上下文联动锚点 -->
 			<div
-				class="bg-secondary/40 dark:bg-[#2c2522]/40 px-4 py-2 text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 shrink-0">
+				class="bg-secondary/40 dark:bg-secondary-dark/40 px-4 py-2 text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 shrink-0">
 				<i data-lucide="link" class="w-3.5 h-3.5 shrink-0"></i>
 				<span class="truncate">已关联画面：T=02:15 / Scene-02 / 积分概念</span>
-				<button class="ml-auto opacity-70 hover:opacity-100 hover:text-text-primary transition-colors"><i
+				<button class="ml-auto opacity-70 hover:opacity-100 hover:text-text-primary mac-jelly"><i
 						data-lucide="x" class="w-3 h-3"></i></button>
 			</div>
 
-			<!-- 对话气泡区 -->
-			<div class="flex-1 overflow-y-auto chat-scroll p-5 space-y-6 bg-bg-light/30 dark:bg-bg-dark/30"
+			<div class="flex-1 overflow-y-auto chat-scroll p-5 space-y-6 bg-bg-light/50 dark:bg-bg-dark/50"
 				id="chat-container">
 
 				<div class="flex flex-col items-end msg-enter">
 					<div
-						class="bg-secondary dark:bg-[#2c2522] text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
+						class="bg-secondary dark:bg-secondary-dark text-[14px] px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
 						这块没听懂，积分为什么能等于面积？
 					</div>
 				</div>
@@ -505,14 +619,14 @@
 					</div>
 
 					<div
-						class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 max-w-[90%] leading-relaxed bubble-ai shadow-md">
+						class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] px-4 py-3.5 max-w-[90%] leading-relaxed bubble-ai shadow-md">
 						好问题！这正是微积分的魅力。
 						<br><br>
 						你可以把不规则的面积想象成无数个<strong>“极细的矩形”</strong>拼成的：<br>
 						1. 每个矩形的宽度是无限小的 <code
-							class="bg-secondary dark:bg-[#2c2522] px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">dx</code>。<br>
+							class="bg-secondary dark:bg-secondary-dark px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">dx</code>。<br>
 						2. 每个矩形的高度是函数在该点的值 <code
-							class="bg-secondary dark:bg-[#2c2522] px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">f(x)</code>。<br>
+							class="bg-secondary dark:bg-secondary-dark px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">f(x)</code>。<br>
 						<br>
 						当把所有矩形的面积加起来，取极限，就变成了这条曲线下的精确面积。
 					</div>
@@ -521,100 +635,102 @@
 				<div id="chat-bottom" class="h-1"></div>
 			</div>
 
-			<!-- 底部：问答输入区 -->
+			<!-- 底部输入区 -->
 			<div
 				class="p-4 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 relative z-20 shrink-0">
 
 				<div class="flex space-x-2 mb-3 overflow-x-auto no-scrollbar pb-1">
 					<button
-						class="text-[11px] font-bold bg-secondary/80 dark:bg-[#2c2522]/80 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark transition-colors flex items-center gap-1"><i
+						class="text-[11px] font-bold bg-secondary/80 dark:bg-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark flex items-center gap-1 mac-jelly"><i
 							data-lucide="help-circle" class="w-3 h-3"></i> 没听懂</button>
 					<button
-						class="text-[11px] font-bold bg-secondary/80 dark:bg-[#2c2522]/80 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark transition-colors flex items-center gap-1"><i
+						class="text-[11px] font-bold bg-secondary/80 dark:bg-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark flex items-center gap-1 mac-jelly"><i
 							data-lucide="alert-circle" class="w-3 h-3"></i> 举个例子</button>
 					<button
-						class="text-[11px] font-bold bg-secondary/80 dark:bg-[#2c2522]/80 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark transition-colors flex items-center gap-1"><i
+						class="text-[11px] font-bold bg-secondary/80 dark:bg-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark flex items-center gap-1 mac-jelly"><i
 							data-lucide="rocket" class="w-3 h-3"></i> 考点延伸</button>
 				</div>
 
 				<div
-					class="bg-secondary/40 dark:bg-[#1a1514] border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
+					class="bg-secondary/40 dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
 					<textarea id="chat-input"
-						class="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed"
+						class="w-full resize-none bg-transparent outline-none p-3 text-[14px] placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed"
 						rows="2" placeholder="问问AI，或要求在白板上演示..."></textarea>
 					<div class="flex justify-between items-center px-3 pb-2 pt-1">
 						<div class="flex items-center space-x-3">
 							<button
-								class="text-[11px] font-medium text-text-secondary hover:text-text-primary transition-colors">清空</button>
+								class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark hover:text-text-primary mac-jelly">清空</button>
 							<div class="w-1 h-1 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark"></div>
-							<span class="text-[11px] font-medium text-text-secondary/50 font-mono">0 / 300</span>
+							<span
+								class="text-[11px] font-medium text-text-secondary/50 dark:text-text-secondary-dark/50 font-mono">0
+								/ 300</span>
 						</div>
 						<button id="send-btn"
-							class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center hover:bg-brand active:scale-95 transition-all shadow-md btn-hover-scale">
+							class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-bg-dark flex items-center justify-center hover:bg-brand shadow-md mac-jelly">
 							<i data-lucide="arrow-up" class="w-4 h-4"></i>
 						</button>
 					</div>
 				</div>
 			</div>
 
-			<!-- 侧滑抽屉 1：历史记录 -->
+			<!-- 侧滑抽屉 1: 历史记录 -->
 			<div id="history-panel"
 				class="absolute inset-0 bg-surface-light/98 dark:bg-surface-dark/98 backdrop-blur-2xl transform translate-x-full drawer-slide z-30 flex flex-col">
 				<div
 					class="px-5 py-4 border-b border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-center">
-					<span class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark">历史问答记录</span>
+					<span class="font-extrabold text-[15px]">历史问答记录</span>
 					<button onclick="toggleHistory()"
-						class="p-1 rounded-md hover:bg-bordercolor-light/50 text-text-secondary"><i data-lucide="x"
-							class="w-5 h-5"></i></button>
+						class="p-1 rounded-md hover:bg-secondary dark:hover:bg-secondary-dark text-text-secondary mac-jelly"><i
+							data-lucide="x" class="w-5 h-5"></i></button>
 				</div>
 				<div class="flex-1 overflow-y-auto chat-scroll p-4 space-y-3">
 					<button
-						class="w-full text-left p-4 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 hover:border-brand shadow-sm transition-all group">
-						<div class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark truncate mb-2">
-							积分为什么能等于面积？</div>
-						<div class="text-[11px] font-medium text-text-secondary flex justify-between items-center">
+						class="w-full text-left p-4 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-secondary-dark/30 hover:border-brand shadow-sm mac-jelly group">
+						<div class="text-[14px] font-bold truncate mb-2">积分为什么能等于面积？</div>
+						<div
+							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark flex justify-between items-center">
 							<span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 今天
 								10:30</span>
-							<span
-								class="opacity-0 group-hover:opacity-100 text-text-primary font-bold transition-opacity">回看
-								↗</span>
+							<span class="opacity-0 group-hover:opacity-100 font-bold transition-opacity">回看 ↗</span>
 						</div>
 					</button>
 				</div>
 			</div>
 
-			<!-- 侧滑抽屉 2：来源依据 -->
+			<!-- 侧滑抽屉 2: 依据与来源 -->
 			<div id="evidence-drawer"
 				class="absolute inset-0 bg-surface-light/98 dark:bg-surface-dark/98 backdrop-blur-2xl transform translate-x-full drawer-slide z-40 flex flex-col">
 				<div
 					class="px-5 py-4 border-b border-bordercolor-light dark:border-bordercolor-dark flex justify-between items-start">
 					<div>
-						<div class="font-extrabold text-[15px] text-text-primary dark:text-text-primary-dark">依据与来源
+						<div class="font-extrabold text-[15px]">依据与来源</div>
+						<div
+							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mt-1 flex items-center gap-1">
+							<i data-lucide="link" class="w-3 h-3"></i> 锚点：T=02:15
 						</div>
-						<div class="text-[11px] font-medium text-text-secondary mt-1 flex items-center gap-1"><i
-								data-lucide="link" class="w-3 h-3"></i> 锚点：T=02:15</div>
 					</div>
 					<button onclick="toggleEvidenceDrawer()"
-						class="p-1 rounded-md hover:bg-bordercolor-light/50 text-text-secondary"><i data-lucide="x"
-							class="w-5 h-5"></i></button>
+						class="p-1 rounded-md hover:bg-secondary dark:hover:bg-secondary-dark text-text-secondary mac-jelly"><i
+							data-lucide="x" class="w-5 h-5"></i></button>
 				</div>
 				<div class="flex-1 overflow-y-auto chat-scroll p-4 space-y-4">
 					<div
-						class="rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#2c2522]/30 p-4 shadow-sm">
+						class="rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-secondary-dark/30 p-4 shadow-sm">
 						<div class="flex items-center gap-2 mb-2">
 							<div
-								class="w-6 h-6 rounded flex items-center justify-center bg-surface-light dark:bg-surface-dark text-text-secondary">
+								class="w-6 h-6 rounded flex items-center justify-center bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary">
 								<i data-lucide="book" class="w-3.5 h-3.5"></i>
 							</div>
-							<div class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">教材《高数上》第五章
-							</div>
+							<div class="text-[13px] font-bold">教材《高数上》第五章</div>
 						</div>
 						<div
-							class="text-[11px] font-medium text-text-secondary mb-2 px-2 py-1 bg-surface-light border border-bordercolor-light rounded inline-block">
-							命中：定积分的概念</div>
+							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mb-2 px-2 py-1 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded inline-block">
+							命中：定积分的概念
+						</div>
 						<p
-							class="text-[13px] text-text-primary/80 leading-relaxed border-l-2 border-bordercolor-light pl-2 ml-1">
-							曲边梯形的面积，可以通过无限分割、求和、取极限的方法求得。</p>
+							class="text-[13px] opacity-80 leading-relaxed border-l-2 border-bordercolor-light dark:border-bordercolor-dark pl-2 ml-1">
+							曲边梯形的面积，可以通过无限分割、求和、取极限的方法求得。
+						</p>
 					</div>
 				</div>
 			</div>
@@ -625,7 +741,7 @@
 	<script>
 		lucide.createIcons();
 
-		// 亮暗色切换逻辑
+		// 亮暗色切换
 		const themeToggle = document.getElementById('themeToggle');
 		const html = document.documentElement;
 		function applyTheme(theme) {
@@ -639,7 +755,7 @@
 			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
 		});
 
-		// 侧边栏丝滑收展
+		// 侧边栏及抽屉控制
 		function toggleSidebar() {
 			const sidebar = document.getElementById('companion-sidebar');
 			const iconClose = document.querySelector('.sidebar-icon-close');
@@ -658,7 +774,6 @@
 			}
 		}
 
-		// 抽屉切换
 		function toggleHistory() {
 			document.getElementById('history-panel').classList.toggle('translate-x-full');
 			document.getElementById('evidence-drawer').classList.add('translate-x-full');
@@ -674,7 +789,7 @@
 		}
 		window.onload = scrollToBottom;
 
-		// ==================== 智能伪聊天逻辑 (含动态白板) ====================
+		// 聊天互动逻辑
 		const chatInput = document.getElementById('chat-input');
 		const sendBtn = document.getElementById('send-btn');
 		const chatBottom = document.getElementById('chat-bottom');
@@ -683,10 +798,9 @@
 			const text = chatInput.value.trim();
 			if (!text) return;
 
-			// 1. 插入用户消息
 			const userMsgHTML = `
                 <div class="flex flex-col items-end msg-enter mt-4">
-                    <div class="bg-secondary dark:bg-[#2c2522] text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
+                    <div class="bg-secondary dark:bg-secondary-dark text-[14px] px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
                         ${text.replace(/\n/g, '<br>')}
                     </div>
                 </div>
@@ -695,7 +809,6 @@
 			chatInput.value = '';
 			scrollToBottom();
 
-			// 2. 插入 AI 打字状态
 			const typingId = 'typing-' + Date.now();
 			const typingHTML = `
                 <div id="${typingId}" class="flex flex-col items-start w-full msg-enter mt-4">
@@ -711,7 +824,6 @@
 			chatBottom.insertAdjacentHTML('beforebegin', typingHTML);
 			scrollToBottom();
 
-			// 3. 延迟 1.5 秒后替换为 AI 真实回答 + 白板动画
 			setTimeout(() => {
 				const typingNode = document.getElementById(typingId);
 				if (typingNode) typingNode.remove();
@@ -723,12 +835,11 @@
                             <span class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
                         </div>
                         
-                        <div class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 max-w-[90%] w-full leading-relaxed bubble-ai shadow-md">
+                        <div class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] px-4 py-3.5 max-w-[90%] w-full leading-relaxed bubble-ai shadow-md">
                             收到你的提问。为了让你更直观地理解，我在白板上为你生成了一段在线推导图谱，请看：
                             
-                            <!-- 动态展开的在线演示白板 -->
-                            <div class="whiteboard-reveal border border-bordercolor-light dark:border-bordercolor-dark rounded-xl bg-surface-light dark:bg-surface-dark shadow-inner mt-4">
-                                <div class="px-3 py-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/50 dark:bg-[#2c2522]/50 flex items-center justify-between">
+                            <div class="whiteboard-reveal border border-bordercolor-light dark:border-bordercolor-dark rounded-xl bg-surface-light dark:bg-bg-dark shadow-inner mt-4">
+                                <div class="px-3 py-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/50 dark:bg-secondary-dark/50 flex items-center justify-between">
                                     <div class="flex items-center gap-1.5">
                                         <i data-lucide="monitor-play" class="w-3.5 h-3.5 text-agent-serious"></i>
                                         <span class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">Live Whiteboard</span>
@@ -744,7 +855,7 @@
                                 <div class="p-5 blueprint-grid min-h-[140px] flex flex-col items-center justify-center relative">
                                     <div class="bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur border border-brand/30 px-4 py-2 rounded-lg shadow-sm text-center animate-pulse">
                                         <i data-lucide="pen-tool" class="w-5 h-5 text-brand mx-auto mb-1"></i>
-                                        <span class="text-[12px] font-bold text-text-primary dark:text-text-primary-dark font-mono">正在绘制动态解析图...</span>
+                                        <span class="text-[12px] font-bold font-mono">正在绘制动态解析图...</span>
                                     </div>
                                 </div>
                             </div>
@@ -768,7 +879,6 @@
 		});
 
 	</script>
-	<script src="../../_shared/page-hub.js" defer data-page-hub></script>
 </body>
 
 </html>
