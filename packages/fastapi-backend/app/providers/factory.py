@@ -126,6 +126,7 @@ class ProviderFactory:
         *,
         runtime_store: RuntimeStore | None = None,
         emit_switch: Callable[[ProviderSwitch], Any] | None = None,
+        ignore_cached_unhealthy: bool = False,
     ) -> ProviderResult:
         """带 Failover 的 LLM 文本生成。"""
         chain = tuple(self.build_chain(ProviderCapability.LLM, providers))
@@ -133,6 +134,7 @@ class ProviderFactory:
             chain,
             prompt,
             emit_switch=emit_switch,
+            ignore_cached_unhealthy=ignore_cached_unhealthy,
         )
 
     async def synthesize_with_failover(
@@ -143,6 +145,7 @@ class ProviderFactory:
         voice_config: Any | None = None,
         runtime_store: RuntimeStore | None = None,
         emit_switch: Callable[[ProviderSwitch], Any] | None = None,
+        ignore_cached_unhealthy: bool = False,
     ) -> ProviderResult:
         """带 Failover 的 TTS 语音合成。"""
         chain = tuple(self.build_chain(ProviderCapability.TTS, providers))
@@ -151,6 +154,7 @@ class ProviderFactory:
             text,
             voice_config=voice_config,
             emit_switch=emit_switch,
+            ignore_cached_unhealthy=ignore_cached_unhealthy,
         )
 
     def _coerce_runtime_config(

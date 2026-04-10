@@ -158,8 +158,10 @@
 
 ### Story 4.3: Manim 代码生成与自动修复链
 - [文档](./4-3-manim-代码生成与自动修复链.md)
+- [429 热修记录](./4-3-manim-429-重试风暴热修复-20260410.md)
 - **状态**: ready-for-dev
 - **说明**: 实现 manim_gen service 与 FixChain（RuleBasedFixer → LLMBasedFixer），最大修复 2 次
+- **热修摘要**: 2026-04-10 已修复并行场景生成触发的 429 重试风暴，补齐 jitter、429 健康缓存策略、fallback 缓存绕过、默认并发下调，并补做 DeepSeek 实机并发 smoke test
 
 ### Story 4.4: Manim 沙箱执行与资源限制
 - [文档](./4-4-manim-沙箱执行与资源限制.md)

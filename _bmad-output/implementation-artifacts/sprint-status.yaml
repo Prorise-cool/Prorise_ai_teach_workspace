@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-10 01:11:40 +0800
+# last_updated: 2026-04-10 12:24:33 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-10 01:11:40 +0800
+last_updated: 2026-04-10 12:24:33 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -95,6 +95,13 @@ development_status:
   # 2026-04-10 实机补充验证：
   # - OpenAICompatibleLLMProvider 与 DoubaoTTSProvider 已复用 AsyncClient，减少并行场景与多段 TTS 的重复建连。
   # - 成功样本 vtask_20260409165517_509ac64e 用时 181.26s，progress 全程单调；当前仍略高于 180s，残余瓶颈在上游 LLM 延迟与场景数量波动。
+  # 2026-04-10 429 热修：
+  # - Failover 重试退避新增 jitter，避免并行场景生成在 429 后形成同步重试风暴。
+  # - 429 / rate limit 不再把 provider health 写成 unhealthy；单次全量 fallback 支持忽略当前请求内的 cached unhealthy。
+  # - FASTAPI_VIDEO_MANIM_PARALLEL_SCENE_CONCURRENCY 默认值已从 5 下调到 3。
+  # - 已基于 RuoYi 实时绑定解析出 manim_gen -> deepseek-v3，并完成 3 个并发真实请求的 smoke test，结果 3/3 成功且 provider health=healthy。
+  # - 新 token 下实机创建 vtask_20260410042104_7cb31937 已完整出片，createdAt=04:21:04Z、completedAt=04:22:45Z，总耗时约 101s。
+  # - 结果视频经 ffprobe 校验为 1280x720 / 30fps / H.264 + AAC，当前 video_render_quality 仍为 m，未通过降质量换时延。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

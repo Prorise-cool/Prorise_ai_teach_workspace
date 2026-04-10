@@ -3,6 +3,7 @@ from __future__ import annotations
 
 
 import asyncio
+import random
 from dataclasses import dataclass, field
 from inspect import isawaitable
 from types import MappingProxyType
@@ -41,6 +42,13 @@ GATEWAY_TRANSIENT_MARKERS = (
     "invalid_grant",
     "bad_response_status_code",
 )
+RATE_LIMIT_ERROR_MARKERS = (
+    "429",
+    "rate limit",
+    "too many requests",
+)
+MAX_RETRY_BACKOFF_SECONDS = 8
+MAX_RETRY_JITTER_SECONDS = 1.0
 
 
 @dataclass(slots=True, frozen=True)
@@ -140,12 +148,14 @@ class ProviderFailoverService:
         prompt: str,
         *,
         emit_switch: SwitchObserver | None = None,
+        ignore_cached_unhealthy: bool = False,
     ) -> ProviderResult:
         """带 Failover 的 LLM 文本生成调用。"""
         return await self._run(
             providers,
             lambda provider: provider.generate(prompt),
             emit_switch=emit_switch,
+            ignore_cached_unhealthy=ignore_cached_unhealthy,
         )
 
     async def synthesize(
@@ -155,12 +165,14 @@ class ProviderFailoverService:
         *,
         voice_config: Any | None = None,
         emit_switch: SwitchObserver | None = None,
+        ignore_cached_unhealthy: bool = False,
     ) -> ProviderResult:
         """带 Failover 的 TTS 语音合成调用。"""
         return await self._run(
             providers,
             lambda provider: provider.synthesize(text, voice_config=voice_config),
             emit_switch=emit_switch,
+            ignore_cached_unhealthy=ignore_cached_unhealthy,
         )
 
     async def _run(
@@ -169,6 +181,7 @@ class ProviderFailoverService:
         operation: ProviderCall[ProviderT],
         *,
         emit_switch: SwitchObserver | None,
+        ignore_cached_unhealthy: bool,
     ) -> ProviderResult:
         provider_chain = tuple(providers)
         if not provider_chain:
@@ -177,7 +190,11 @@ class ProviderFailoverService:
         failures: list[ProviderAttemptFailure] = []
         for index, provider in enumerate(provider_chain):
             cached = self._health_store.get(provider.provider_id)
-            if cached is not None and not cached.is_healthy:
+            if (
+                not ignore_cached_unhealthy
+                and cached is not None
+                and not cached.is_healthy
+            ):
                 error_code = coerce_task_error_code(
                     cached.error_code,
                     fallback=TaskErrorCode.PROVIDER_UNAVAILABLE
@@ -227,7 +244,7 @@ class ProviderFailoverService:
                         )
                     )
                     if classification.retryable and attempt_index < attempts - 1:
-                        backoff = min(2 ** attempt_index, 8)
+                        backoff = _compute_retry_backoff(attempt_index)
                         await asyncio.sleep(backoff)
                         continue
                     if classification.retryable and index < len(provider_chain) - 1:
@@ -270,6 +287,13 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
     """将异常分类为标准化的 Provider 错误类型。"""
     message = str(exc).strip() or exc.__class__.__name__
     lowered = message.lower()
+    if isinstance(exc, ProviderAllFailedError):
+        return ProviderErrorClassification(
+            error_code=TaskErrorCode.PROVIDER_ALL_FAILED,
+            reason=message,
+            retryable=False,
+            mark_unhealthy=False,
+        )
     if isinstance(exc, TimeoutError):
         return ProviderErrorClassification(
             error_code=TaskErrorCode.PROVIDER_TIMEOUT,
@@ -277,14 +301,14 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
             retryable=True,
             mark_unhealthy=True,
         )
-    if isinstance(exc, ConnectionError):
+    if any(marker in lowered for marker in RATE_LIMIT_ERROR_MARKERS):
         return ProviderErrorClassification(
             error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
             reason=message,
             retryable=True,
-            mark_unhealthy=True,
+            mark_unhealthy=False,
         )
-    if "rate limit" in lowered or "429" in lowered:
+    if isinstance(exc, ConnectionError):
         return ProviderErrorClassification(
             error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
             reason=message,
@@ -297,13 +321,6 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
             reason=message,
             retryable=True,
             mark_unhealthy=True,
-        )
-    if isinstance(exc, ProviderAllFailedError):
-        return ProviderErrorClassification(
-            error_code=TaskErrorCode.PROVIDER_ALL_FAILED,
-            reason=message,
-            retryable=False,
-            mark_unhealthy=False,
         )
     if isinstance(
         exc,
@@ -336,3 +353,9 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
         retryable=False,
         mark_unhealthy=False,
     )
+
+
+def _compute_retry_backoff(attempt_index: int) -> float:
+    """计算带抖动的退避时间，避免同步重试放大上游限流。"""
+    base_backoff = min(2 ** attempt_index, MAX_RETRY_BACKOFF_SECONDS)
+    return base_backoff + random.uniform(0.0, MAX_RETRY_JITTER_SECONDS)

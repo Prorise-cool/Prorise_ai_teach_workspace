@@ -184,6 +184,34 @@ def test_failover_respects_configured_retry_attempts_before_switching() -> None:
     assert len(switches) == 1
 
 
+def test_failover_adds_jitter_to_retry_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    factory = _build_factory()
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    sleep_calls: list[float] = []
+    CountingTimeoutLLMProvider.calls = 0
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+
+    monkeypatch.setattr("app.providers.failover.asyncio.sleep", fake_sleep)
+    monkeypatch.setattr("app.providers.failover.random.uniform", lambda start, end: 0.25)
+
+    result = asyncio.run(
+        factory.generate_with_failover(
+            [
+                {"provider": "counting-timeout-chat", "priority": 1, "retry_attempts": 2},
+                {"provider": "backup-chat", "priority": 2},
+            ],
+            "lesson",
+            runtime_store=runtime_store,
+        )
+    )
+
+    assert result.provider == "backup-chat"
+    assert CountingTimeoutLLMProvider.calls == 3
+    assert sleep_calls == [1.25, 2.25]
+
+
 def test_failover_skips_cached_unhealthy_provider_until_ttl_expires() -> None:
     factory = _build_factory()
     clock = TimeController()
@@ -290,6 +318,14 @@ def test_classify_provider_error_marks_authentication_failures_as_non_retryable(
     assert classification.mark_unhealthy is False
 
 
+def test_classify_provider_error_treats_rate_limit_as_retryable_without_unhealthy_mark() -> None:
+    classification = classify_provider_error(ConnectionError("primary-chat upstream status=429: rate limit"))
+
+    assert classification.error_code.value == "TASK_PROVIDER_UNAVAILABLE"
+    assert classification.retryable is True
+    assert classification.mark_unhealthy is False
+
+
 def test_classify_provider_error_coerces_unknown_provider_error_code() -> None:
     classification = classify_provider_error(
         ExternalCodeProviderError("upstream bad gateway", error_code="OPENAI_BAD_GATEWAY")
@@ -322,6 +358,66 @@ def test_health_store_and_failover_tolerate_unknown_error_code() -> None:
 
     assert snapshot.error_code == "TASK_PROVIDER_UNAVAILABLE"
     assert result.provider == "backup-chat"
+
+
+def test_failover_does_not_cache_rate_limit_as_unhealthy() -> None:
+    class CountingRateLimitProvider:
+        calls = 0
+
+        def __init__(self, config: ProviderRuntimeConfig) -> None:
+            self.config = config
+            self.provider_id = config.provider_id
+
+        async def generate(self, prompt: str) -> ProviderResult:
+            CountingRateLimitProvider.calls += 1
+            raise ConnectionError(f"{self.provider_id} upstream status=429: rate limit for {prompt}")
+
+    registry = ProviderRegistry()
+    registry.register(
+        ProviderCapability.LLM,
+        "counting-rate-limit-chat",
+        CountingRateLimitProvider,
+        default_priority=1,
+    )
+    factory = ProviderFactory(registry)
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    CountingRateLimitProvider.calls = 0
+
+    for _ in range(2):
+        with pytest.raises(ProviderAllFailedError):
+            asyncio.run(
+                factory.generate_with_failover(
+                    [{"provider": "counting-rate-limit-chat", "priority": 1}],
+                    "lesson",
+                    runtime_store=runtime_store,
+                )
+            )
+
+    assert CountingRateLimitProvider.calls == 2
+    assert runtime_store.get_provider_health("counting-rate-limit-chat") is None
+
+
+def test_failover_can_ignore_cached_unhealthy_provider_for_immediate_fallback() -> None:
+    factory = _build_factory()
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    failover_service = factory.create_failover_service(runtime_store)
+    failover_service._health_store.mark_failure(
+        "primary-chat",
+        reason="cached-unhealthy",
+        error_code="TASK_PROVIDER_UNAVAILABLE",
+        source="test",
+    )
+
+    result = asyncio.run(
+        factory.generate_with_failover(
+            [{"provider": "primary-chat", "priority": 1}],
+            "lesson",
+            runtime_store=runtime_store,
+            ignore_cached_unhealthy=True,
+        )
+    )
+
+    assert result.provider == "primary-chat"
 
 
 def test_failover_does_not_reprobe_last_cached_unhealthy_provider_until_ttl_expires() -> None:

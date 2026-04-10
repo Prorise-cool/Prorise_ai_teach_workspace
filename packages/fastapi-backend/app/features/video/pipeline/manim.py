@@ -166,6 +166,7 @@ class ManimGenerationService:
             return await self._generate_single_pass(
                 storyboard=storyboard,
                 emit_switch=emit_switch,
+                ignore_cached_unhealthy=True,
             )
 
         try:
@@ -181,6 +182,7 @@ class ManimGenerationService:
         return await self._generate_single_pass(
             storyboard=storyboard,
             emit_switch=emit_switch,
+            ignore_cached_unhealthy=True,
         )
 
     async def _generate_scene_by_scene(
@@ -427,6 +429,7 @@ class ManimGenerationService:
         *,
         storyboard: Storyboard,
         emit_switch=None,
+        ignore_cached_unhealthy: bool = False,
     ) -> ManimCodeResult:
         """单次全量生成 Manim 脚本。"""
         prompt = (
@@ -438,6 +441,7 @@ class ManimGenerationService:
                 self.providers,
                 prompt,
                 emit_switch=emit_switch,
+                ignore_cached_unhealthy=ignore_cached_unhealthy,
             )
         except ProviderAllFailedError as exc:
             raise VideoPipelineError(
