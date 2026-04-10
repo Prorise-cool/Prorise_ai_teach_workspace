@@ -210,6 +210,8 @@ class ManimCodeResult(VideoCamelModel):
     """Manim 脚本生成结果。"""
     script_content: str
     scene_mapping: list[SceneCodeMapping]
+    scenes_data: list[dict[str, Any]] = Field(default_factory=list)
+    video_config: dict[str, Any] = Field(default_factory=dict)
     provider_used: str
     generated_at: str = Field(default_factory=format_trace_timestamp)
 

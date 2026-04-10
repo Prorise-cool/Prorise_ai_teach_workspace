@@ -41,18 +41,25 @@ class CodeRenderer:
         self,
         scenes: list[dict],
         video_config: dict,
+        audio_mapping: dict[str, str] | None = None,
     ) -> str:
         """渲染包含所有场景的完整 Manim 脚本。
 
         Args:
             scenes: 场景列表，每个场景需包含 ``scene_code`` 字段，
-                可保留 ``voiceText`` 和 ``voiceRole`` 等上游字段，但模板不会消费它们。
+                可保留 ``voiceText`` 和 ``voiceRole`` 等上游字段。
             video_config: 视频配置字典，需包含
                 ``background_color``、``aspect_ratio`` 字段。
+            audio_mapping: scene_id → 沙箱内音频文件路径映射。
+                为 None 时所有场景按无音频模式渲染（向后兼容）。
 
         Returns:
             渲染后的完整 Manim Python 脚本字符串。
         """
+        if audio_mapping:
+            for scene in scenes:
+                scene_id = scene.get("scene_id") or scene.get("sceneId", "")
+                scene["audio_path"] = audio_mapping.get(scene_id, "")
         return self._base_template.render(
             scenes=scenes,
             background_color=video_config.get("background_color", '"#1a1a2e"'),

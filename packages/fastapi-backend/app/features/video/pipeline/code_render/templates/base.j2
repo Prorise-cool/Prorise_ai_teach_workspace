@@ -1,4 +1,6 @@
 from manim import *
+from manim_voiceover import VoiceoverScene
+from preloaded_tts import PreloadedTTS
 import numpy as np
 import math
 
@@ -147,11 +149,19 @@ class FlexibleElementsScene(MovingCameraScene):
         self.current_scale = 1.0
 
 
-class MyScene(FlexibleElementsScene):
+class MyScene(VoiceoverScene, FlexibleElementsScene):
     def construct(self):
 {% for scene in scenes %}
-{{- scene.scene_code | indent(8, true, true) }}
+{% if scene.audio_path %}
+        tts = PreloadedTTS(audio_path="{{ scene.audio_path }}")
+        self.set_speech_service(tts)
+        with self.voiceover(text='''{{ scene.voiceText }}''', max_subcaption_len=1024):
+{{ scene.scene_code | indent(12, true, true) }}
+            self.wait(0.1)
+{% else %}
+{{ scene.scene_code | indent(8, true, true) }}
         self.hold_scene({{ scene.scene_hold_duration | default(0) }})
+{% endif %}
 {% if not loop.last %}
         self.clear_scene()
 {% endif %}
