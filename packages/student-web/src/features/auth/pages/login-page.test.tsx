@@ -13,7 +13,7 @@ import { LoginPage } from '@/features/auth/pages/login-page';
 import { SocialCallbackPage } from '@/features/auth/pages/social-callback-page';
 import {
   createEmptyUserProfile
-} from '@/features/profile/types';
+} from '@/features/profile';
 import { createMockAuthAdapter, createAuthError } from '@/services/api/adapters';
 import {
   AUTH_RETURN_TO_KEY,
@@ -27,7 +27,7 @@ import {
 } from '@/stores/auth-session-store';
 import {
   useUserProfileStore
-} from '@/features/profile/stores/user-profile-store';
+} from '@/features/profile';
 import { renderWithApp } from '@/test/utils/render-app';
 import { resetAppTestState } from '@/test/utils/session';
 import { AUTH_DEFAULT_USER_TYPE } from '@/types/auth';

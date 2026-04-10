@@ -12,11 +12,11 @@ import { isAuthError } from '@/services/api/adapters';
 import { AUTH_RETURN_TO_KEY, normalizeReturnTo } from '@/services/auth';
 import { authService, type AuthService } from '@/services/auth';
 import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
-import { profileApi } from '@/features/profile/api/profile-api';
 import {
   buildProfileSetupPath,
+  checkProfileCompleted,
   isProfileOnboardingPath
-} from '@/features/profile/shared/profile-routing';
+} from '@/services/post-auth';
 import { getAuthFeedbackMessage } from '@/features/auth/shared/auth-feedback';
 import { FeedbackStateCard, useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
@@ -104,9 +104,7 @@ export function RequireAuthRoute({
       !isOnboardingPath,
     retry: false,
     queryFn: async () => {
-      const profile = await profileApi.getCurrentProfile(sessionUserId, accessToken);
-
-      return profile?.isCompleted ?? false;
+      return checkProfileCompleted(sessionUserId, accessToken);
     }
   });
   const validationErrorMessage = validationQuery.isError

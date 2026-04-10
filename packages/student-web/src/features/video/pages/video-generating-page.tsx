@@ -11,7 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
-import '@/components/generating/styles/task-generating-view.scss';
+import '@/features/video/components/task-generating-view.scss';
 
 import { FixAttemptIndicator } from '../components/fix-attempt-indicator';
 import { GeneratingFailureCard } from '../components/generating-failure-card';

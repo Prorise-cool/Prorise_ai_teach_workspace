@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
-import { AUTH_THEME_STORAGE_KEY } from '@/features/auth/shared/auth-content';
+import { THEME_STORAGE_KEY } from '@/shared/constants';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -30,7 +30,7 @@ function readThemeMode(): ThemeMode {
     return 'light';
   }
 
-  const storedTheme = window.localStorage.getItem(AUTH_THEME_STORAGE_KEY);
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
 
   if (isThemeMode(storedTheme)) {
     return storedTheme;
@@ -47,7 +47,7 @@ function readThemeMode(): ThemeMode {
 function persistThemeMode(themeMode: ThemeMode) {
   document.documentElement.dataset.theme = themeMode;
   document.documentElement.style.colorScheme = themeMode;
-  window.localStorage.setItem(AUTH_THEME_STORAGE_KEY, themeMode);
+  window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
   window.dispatchEvent(
     new CustomEvent<ThemeMode>(THEME_MODE_SYNC_EVENT, {
       detail: themeMode
