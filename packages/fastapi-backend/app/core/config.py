@@ -137,7 +137,7 @@ class Settings(BaseSettings):
         alias="FASTAPI_VIDEO_MANIM_SCENE_BY_SCENE_MAX_SCENES",
     )
     video_manim_parallel_scene_concurrency: int = Field(
-        default=5,
+        default=3,
         alias="FASTAPI_VIDEO_MANIM_PARALLEL_SCENE_CONCURRENCY",
     )
     video_fix_max_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS")

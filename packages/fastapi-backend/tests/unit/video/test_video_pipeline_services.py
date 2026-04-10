@@ -49,11 +49,18 @@ class FakeFailoverService:
         self.generate_calls: list[dict[str, object]] = []
         self.synthesize_calls: list[dict[str, object]] = []
 
-    async def generate(self, providers, prompt: str, emit_switch=None):  # noqa: ANN001
+    async def generate(  # noqa: ANN001
+        self,
+        providers,
+        prompt: str,
+        emit_switch=None,
+        ignore_cached_unhealthy: bool = False,
+    ):
         self.generate_calls.append(
             {
                 "provider_ids": [provider.provider_id for provider in providers],
                 "prompt": prompt,
+                "ignore_cached_unhealthy": ignore_cached_unhealthy,
             }
         )
         if not self._generate_results:
@@ -119,7 +126,7 @@ def _build_settings(**overrides) -> SimpleNamespace:
         "video_min_duration_seconds": 90,
         "video_max_duration_seconds": 180,
         "video_manim_scene_by_scene_max_scenes": 3,
-        "video_manim_parallel_scene_concurrency": 5,
+        "video_manim_parallel_scene_concurrency": 3,
         "video_output_audio_format": "mp3",
         "video_output_audio_sample_rate": 44100,
         "video_output_audio_bitrate": "192k",
@@ -475,6 +482,7 @@ def test_manim_generation_service_falls_back_to_single_pass_when_parallel_scene_
     assert result.provider_used == "fallback-llm"
     assert len(failover.generate_calls) == 4
 
+    assert failover.generate_calls[-1]["ignore_cached_unhealthy"] is True
 
 def test_build_default_manim_script_uses_scene_duration_helpers() -> None:
     script = build_default_manim_script(_build_storyboard())
