@@ -699,86 +699,26 @@ def test_tts_service_filters_provider_chain_by_requested_voice_preference() -> N
 def test_compose_service_builds_expected_ffmpeg_commands() -> None:
     service = ComposeService(settings=_build_settings(), runtime=_build_runtime("video_compose_case"))
 
-    concat_command = service.build_audio_concat_command(["scene-1.mp3", "scene-2.mp3"], "narration.m4a")
-    compose_command = service.build_compose_command(
+    subtitle_command = service.build_subtitle_command(
         "video.mp4",
-        "narration.m4a",
         "output.mp4",
         subtitle_path="subtitles.ass",
-        extend_seconds=2.5,
-    )
-    stretch_command = service.build_compose_command(
-        "video.mp4",
-        "narration.m4a",
-        "output.mp4",
-        subtitle_path="subtitles.ass",
-        stretch_ratio=2.2,
     )
     cover_command = service.build_cover_command("output.mp4", "cover.jpg")
 
-    assert concat_command == [
-        "ffmpeg",
-        "-y",
-        "-i",
-        "scene-1.mp3",
-        "-i",
-        "scene-2.mp3",
-        "-filter_complex",
-        "[0:a]aresample=44100,aformat=sample_rates=44100:channel_layouts=mono,asetpts=N/SR/TB[a0];"
-        "[1:a]aresample=44100,aformat=sample_rates=44100:channel_layouts=mono,asetpts=N/SR/TB[a1];"
-        "[a0][a1]concat=n=2:v=0:a=1[aout]",
-        "-map",
-        "[aout]",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "narration.m4a",
-    ]
-    assert compose_command == [
+    assert subtitle_command == [
         "ffmpeg",
         "-y",
         "-i",
         "video.mp4",
-        "-i",
-        "narration.m4a",
         "-vf",
-        "tpad=stop_mode=clone:stop_duration=2.500,ass=subtitles.ass",
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
+        "ass=subtitles.ass",
         "-c:v",
         "libx264",
         "-pix_fmt",
         "yuv420p",
         "-c:a",
-        "aac",
-        "-shortest",
-        "-movflags",
-        "+faststart",
-        "output.mp4",
-    ]
-    assert stretch_command == [
-        "ffmpeg",
-        "-y",
-        "-i",
-        "video.mp4",
-        "-i",
-        "narration.m4a",
-        "-vf",
-        "setpts=2.200000*PTS,ass=subtitles.ass",
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-shortest",
+        "copy",
         "-movflags",
         "+faststart",
         "output.mp4",
@@ -817,38 +757,6 @@ def test_compose_service_builds_subtitle_entries_and_writes_srt(tmp_path) -> Non
     assert entries[2].start_seconds == pytest.approx(9.2)
     assert entries[2].end_seconds == pytest.approx(12.3)
     assert "00:00:00,000 --> 00:00:04,200" in srt_path.read_text(encoding="utf-8")
-
-
-def test_compose_service_uses_stretch_alignment_for_large_render_audio_gap() -> None:
-    service = ComposeService(
-        settings=_build_settings(video_compose_max_pad_seconds=12.0, video_compose_max_pad_ratio=0.25),
-        runtime=_build_runtime("video_compose_alignment_case"),
-    )
-
-    alignment = service.resolve_duration_alignment(
-        source_video_duration=51.8,
-        merged_audio_duration=114.17,
-    )
-
-    assert alignment.mode == "stretch"
-    assert alignment.extend_seconds == pytest.approx(0.0)
-    assert alignment.stretch_ratio == pytest.approx(114.17 / 51.8)
-    assert alignment.max_allowed_pad_seconds == pytest.approx(12.0)
-
-
-def test_compose_service_rejects_gap_when_stretch_ratio_exceeds_limit() -> None:
-    service = ComposeService(
-        settings=_build_settings(video_compose_max_stretch_ratio=1.5),
-        runtime=_build_runtime("video_compose_alignment_limit_case"),
-    )
-
-    with pytest.raises(Exception) as exc_info:
-        service.resolve_duration_alignment(
-            source_video_duration=51.8,
-            merged_audio_duration=114.17,
-        )
-
-    assert "stretch_limit=1.50x" in str(exc_info.value)
 
 
 def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
