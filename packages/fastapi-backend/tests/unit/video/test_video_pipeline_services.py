@@ -412,7 +412,7 @@ def test_manim_generation_service_persists_generated_script() -> None:
     assert isinstance(persisted, dict)
 
 
-def test_manim_generation_service_uses_parallel_scene_generation_for_large_storyboards() -> None:
+def test_manim_generation_service_uses_scene_by_scene_generation_for_large_storyboards() -> None:
     from app.core.config import Settings
 
     runtime = _build_runtime("video_manim_parallel_case")
@@ -445,20 +445,20 @@ def test_manim_generation_service_uses_parallel_scene_generation_for_large_story
     result = asyncio.run(service.execute(storyboard=_build_storyboard()))
 
     assert result.script_content
-    assert result.provider_used == "scene-parallel"
+    assert result.provider_used == "scene-by-scene"
     assert len(failover.generate_calls) == 3
     assert "self.clear_scene()" in result.script_content
 
 
-def test_manim_generation_service_falls_back_to_single_pass_when_parallel_scene_invalid() -> None:
+def test_manim_generation_service_falls_back_to_single_pass_when_scene_by_scene_invalid() -> None:
     from app.core.config import Settings
 
-    runtime = _build_runtime("video_manim_parallel_fallback_case")
+    runtime = _build_runtime("video_manim_scene_fallback_case")
     failover = FakeFailoverService(
         generate_results=[
+            # Scene 1: broken Python → scene-by-scene returns None
             SimpleNamespace(provider="stub-llm", content="```python\nif True print('broken')\n```"),
-            SimpleNamespace(provider="stub-llm", content="```python\na = Text('scene 2', font_size=30)\nself.add_elements(a)\n```"),
-            SimpleNamespace(provider="stub-llm", content="```python\na = Text('scene 3', font_size=30)\nself.add_elements(a)\n```"),
+            # Single-pass fallback
             SimpleNamespace(
                 provider="fallback-llm",
                 content=(
@@ -474,14 +474,14 @@ def test_manim_generation_service_falls_back_to_single_pass_when_parallel_scene_
         providers=[SimpleNamespace(provider_id="stub-llm")],
         failover_service=failover,
         runtime=runtime,
-        settings=Settings(video_manim_scene_by_scene_max_scenes=2),
+        settings=Settings(),
     )
 
     result = asyncio.run(service.execute(storyboard=_build_storyboard()))
 
     assert result.script_content
     assert result.provider_used == "fallback-llm"
-    assert len(failover.generate_calls) == 4
+    assert len(failover.generate_calls) == 2
     assert failover.generate_calls[-1]["ignore_cached_unhealthy"] is True
 
 

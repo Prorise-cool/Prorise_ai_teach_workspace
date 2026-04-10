@@ -3,7 +3,15 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-from app.features.video.pipeline.models import ResourceLimits, VIDEO_STAGE_PROFILES, VideoStage, build_stage_snapshot
+from app.features.video.pipeline.models import (
+    ExecutionResult,
+    ManimCodeResult,
+    ResourceLimits,
+    UnderstandingResult,
+    VIDEO_STAGE_PROFILES,
+    VideoStage,
+    build_stage_snapshot,
+)
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.orchestrator import VideoPipelineService
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
@@ -26,11 +34,13 @@ from app.shared.cos_client import CosClient
 def test_video_stage_profiles_are_contiguous_and_cover_full_progress_range() -> None:
     assert [profile.stage for profile in VIDEO_STAGE_PROFILES] == [
         VideoStage.UNDERSTANDING,
+        VideoStage.SOLVE,
         VideoStage.STORYBOARD,
         VideoStage.MANIM_GEN,
         VideoStage.TTS,
         VideoStage.MANIM_FIX,
         VideoStage.RENDER,
+        VideoStage.RENDER_VERIFY,
         VideoStage.COMPOSE,
         VideoStage.UPLOAD,
     ]
@@ -52,7 +62,7 @@ def test_build_stage_snapshot_exposes_current_stage_label_and_stage_progress() -
     assert snapshot.current_stage == VideoStage.RENDER
     assert snapshot.stage_label == "渲染动画"
     assert snapshot.stage_progress == 50
-    assert snapshot.progress == 72
+    assert snapshot.progress == 66
 
 
 def test_video_pipeline_service_clamps_regressive_parallel_progress_events_without_hiding_stage(tmp_path) -> None:
@@ -85,7 +95,7 @@ def test_video_pipeline_service_clamps_regressive_parallel_progress_events_witho
     asyncio.run(service._emit_stage(task, VideoStage.TTS, 1.0, "旁白生成完成"))
     asyncio.run(service._emit_stage(task, VideoStage.MANIM_GEN, 1.0, "生成动画脚本完成"))
 
-    assert [snapshot["progress"] for snapshot in task.snapshots] == [58, 58]
+    assert [snapshot["progress"] for snapshot in task.snapshots] == [55, 55]
     assert task.snapshots[0]["context"]["stage"] == VideoStage.TTS.value
     assert task.snapshots[-1]["context"]["stage"] == VideoStage.MANIM_GEN.value
     assert task.snapshots[-1]["context"]["stageProgress"] == 100
@@ -129,7 +139,7 @@ def test_video_pipeline_service_clamps_fix_stage_progress_without_hiding_fix_sta
         )
     )
 
-    assert [snapshot["progress"] for snapshot in task.snapshots] == [66, 66]
+    assert [snapshot["progress"] for snapshot in task.snapshots] == [61, 61]
     assert task.snapshots[-1]["context"]["stage"] == VideoStage.MANIM_FIX.value
     assert task.snapshots[-1]["context"]["stageProgress"] == 40
 
@@ -172,6 +182,143 @@ def test_video_pipeline_service_clamps_failed_terminal_progress_without_hiding_f
     assert result.context["stage"] == VideoStage.MANIM_GEN.value
     assert result.context["failedStage"] == VideoStage.MANIM_GEN.value
     assert result.context["progress"] == 58
+
+
+def test_video_pipeline_service_runs_understanding_without_merged_storyboard_shortcut(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="test",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
+            video_fix_max_attempts=2,
+        ),
+        asset_store=asset_store,
+    )
+
+    class _RecordingTask:
+        def __init__(self) -> None:
+            self.context = SimpleNamespace(task_id="video_understanding_runner_case")
+            self.snapshots: list[dict[str, object]] = []
+
+        def create_provider_switch_emitter(self, **kwargs):  # noqa: ANN003
+            return None
+
+        async def emit_runtime_snapshot(self, **payload) -> None:  # noqa: ANN003
+            self.snapshots.append(payload)
+
+    understanding = UnderstandingResult.model_validate(
+        {
+            "topicSummary": "一元二次方程",
+            "knowledgePoints": ["判别式"],
+            "solutionSteps": [{"stepId": "step_1", "title": "列式", "explanation": "先整理方程。"}],
+            "difficulty": "medium",
+            "subject": "math",
+            "providerUsed": "stub-llm",
+        }
+    )
+    captured: dict[str, object] = {}
+
+    class _UnderstandingService:
+        async def execute(self, **kwargs):  # noqa: ANN003
+            captured.update(kwargs)
+            return understanding
+
+    task = _RecordingTask()
+    result = asyncio.run(
+        service._run_understanding(
+            task,
+            _UnderstandingService(),
+            source_payload={"text": "解一元二次方程"},
+            user_profile={"grade": "junior"},
+        )
+    )
+
+    assert result == understanding
+    assert "include_storyboard" not in captured
+    assert [snapshot["context"]["stage"] for snapshot in task.snapshots] == [
+        VideoStage.UNDERSTANDING.value,
+        VideoStage.UNDERSTANDING.value,
+    ]
+
+
+def test_video_pipeline_service_render_verify_preserves_render_and_fix_stage_events(tmp_path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    service = VideoPipelineService(
+        runtime_store=RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory"),
+        metadata_service=VideoService(asset_store=asset_store),
+        provider_factory=ProviderFactory(build_default_registry()),
+        settings=SimpleNamespace(
+            environment="test",
+            provider_runtime_source="settings",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+            video_sandbox_allow_local_fallback=True,
+            video_render_quality="l",
+            video_fix_max_attempts=2,
+        ),
+        asset_store=asset_store,
+    )
+
+    class _RecordingTask:
+        def __init__(self) -> None:
+            self.context = SimpleNamespace(task_id="video_render_verify_runner_case")
+            self.snapshots: list[dict[str, object]] = []
+
+        async def emit_runtime_snapshot(self, **payload) -> None:  # noqa: ANN003
+            self.snapshots.append(payload)
+
+    manim_code = ManimCodeResult(
+        script_content="from manim import *\n\nclass Demo(Scene):\n    def construct(self):\n        self.wait(1)\n",
+        scene_mapping=[],
+        provider_used="stub-llm",
+    )
+
+    class _RenderVerifyService:
+        async def execute(self, **kwargs):  # noqa: ANN003
+            emit_event = kwargs["emit_event"]
+            await emit_event("render_start", attempt_no=1, message="正在渲染动画")
+            await emit_event("fix_start", attempt_no=1, message="开始第 1 次自动修复")
+            await emit_event("fix_applied", attempt_no=1, message="第 1 次修复完成，重新进入渲染")
+            await emit_event("render_start", attempt_no=2, message="正在重新渲染动画（第 2 次）")
+            await emit_event("render_success", attempt_no=2, message="动画渲染完成")
+            return (
+                ExecutionResult(success=True, output_path="/tmp/rendered.mp4", duration_seconds=1.0),
+                manim_code,
+            )
+
+    task = _RecordingTask()
+    result, final_code = asyncio.run(
+        service._run_render_verify(
+            task,
+            _RenderVerifyService(),
+            manim_code=manim_code,
+            resource_limits=ResourceLimits(),
+        )
+    )
+
+    assert result.success is True
+    assert final_code == manim_code
+    stages = [snapshot["context"]["stage"] for snapshot in task.snapshots]
+    assert stages == [
+        VideoStage.RENDER.value,
+        VideoStage.MANIM_FIX.value,
+        VideoStage.MANIM_FIX.value,
+        VideoStage.RENDER.value,
+        VideoStage.RENDER.value,
+        VideoStage.RENDER_VERIFY.value,
+        VideoStage.RENDER_VERIFY.value,
+    ]
+    assert task.snapshots[1]["context"]["attemptNo"] == 1
+    assert task.snapshots[1]["context"]["fixEvent"] == "fix_attempt_start"
+    assert task.snapshots[2]["context"]["fixEvent"] == "fix_attempt_success"
+    assert task.snapshots[-1]["progress"] == 80
 
 
 def test_script_scanner_blocks_forbidden_imports() -> None:

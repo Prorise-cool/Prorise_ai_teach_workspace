@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-10 12:24:33 +0800
+# last_updated: 2026-04-10 15:34:29 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-10 12:24:33 +0800
+last_updated: 2026-04-10 15:34:29 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -102,6 +102,11 @@ development_status:
   # - 已基于 RuoYi 实时绑定解析出 manim_gen -> deepseek-v3，并完成 3 个并发真实请求的 smoke test，结果 3/3 成功且 provider health=healthy。
   # - 新 token 下实机创建 vtask_20260410042104_7cb31937 已完整出片，createdAt=04:21:04Z、completedAt=04:22:45Z，总耗时约 101s。
   # - 结果视频经 ffprobe 校验为 1280x720 / 30fps / H.264 + AAC，当前 video_render_quality 仍为 m，未通过降质量换时延。
+  # 2026-04-10 Plan D 编排与契约收口：
+  # - orchestrator 已取消 merged storyboard 默认捷径，固定执行 understanding -> solve -> storyboard。
+  # - render_verify 保留新修复循环，同时恢复 render / manim_fix SSE 语义，并在成功后补发 render_verify 阶段。
+  # - student-web 已补齐 solve / render_verify 文案与 VIDEO_SOLVE_FAILED 错误映射。
+  # - 20260410_plan_d_stage_bindings.sql 已改为按 module/provider/resource code 动态解析主键，避免依赖固定种子 ID。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

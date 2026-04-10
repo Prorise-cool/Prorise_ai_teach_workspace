@@ -1,5 +1,5 @@
 /**
- * 文件说明：视频流水线 8 阶段映射配置（对齐 Story 4.1 pipeline-stages 契约）。
+ * 文件说明：视频流水线 10 阶段映射配置（对齐 Plan D pipeline-stages 契约）。
  * 定义 stage 枚举到 displayLabel、progress 区间与预估时长的对应关系。
  */
 import type { VideoPipelineStage } from '@/types/video';
@@ -23,28 +23,32 @@ export interface VideoStageConfig {
 }
 
 /**
- * 视频流水线 8 阶段配置（Story 4.1 冻结）。
+ * 视频流水线 10 阶段配置（Plan D 契约）。
  * label 值为 i18n key，消费端通过 t(stage.label) 获取翻译文案。
  *
  * 区间定义（连续无间隙，总覆盖 0–100）：
- * - understanding:  0–12
- * - storyboard:    13–25
- * - manim_gen:     26–42
- * - tts:           43–58
- * - manim_fix:     59–65 (conditional)
- * - render:        66–78
- * - compose:       79–94
- * - upload:        95–100
+ * - understanding:   0–8
+ * - solve:           9–18
+ * - storyboard:     19–28
+ * - manim_gen:      29–42
+ * - tts:            43–55
+ * - manim_fix:      56–60 (conditional)
+ * - render:         61–70
+ * - render_verify:  71–80 (conditional)
+ * - compose:        81–93
+ * - upload:         94–100
  */
 export const VIDEO_STAGES: readonly VideoStageConfig[] = [
-  { key: 'understanding', label: 'video.stages.understanding', progressStart: 0, progressEnd: 12, estimatedDuration: '3-8s', conditional: false, tag: 'Understanding' },
-  { key: 'storyboard', label: 'video.stages.storyboard', progressStart: 13, progressEnd: 25, estimatedDuration: '5-10s', conditional: false, tag: 'Storyboard' },
-  { key: 'manim_gen', label: 'video.stages.manim_gen', progressStart: 26, progressEnd: 42, estimatedDuration: '8-20s', conditional: false, tag: 'Manim Gen' },
-  { key: 'tts', label: 'video.stages.tts', progressStart: 43, progressEnd: 58, estimatedDuration: '8-20s', conditional: false, tag: 'TTS' },
-  { key: 'manim_fix', label: 'video.stages.manim_fix', progressStart: 59, progressEnd: 65, estimatedDuration: '5-15s', conditional: true, tag: 'Auto-Fix' },
-  { key: 'render', label: 'video.stages.render', progressStart: 66, progressEnd: 78, estimatedDuration: '15-40s', conditional: false, tag: 'Render' },
-  { key: 'compose', label: 'video.stages.compose', progressStart: 79, progressEnd: 94, estimatedDuration: '5-12s', conditional: false, tag: 'Compose' },
-  { key: 'upload', label: 'video.stages.upload', progressStart: 95, progressEnd: 100, estimatedDuration: '3-10s', conditional: false, tag: 'Upload' },
+  { key: 'understanding', label: 'video.stages.understanding', progressStart: 0, progressEnd: 8, estimatedDuration: '3-8s', conditional: false, tag: 'Understanding' },
+  { key: 'solve', label: 'video.stages.solve', progressStart: 9, progressEnd: 18, estimatedDuration: '5-15s', conditional: false, tag: 'Solve' },
+  { key: 'storyboard', label: 'video.stages.storyboard', progressStart: 19, progressEnd: 28, estimatedDuration: '8-20s', conditional: false, tag: 'Storyboard' },
+  { key: 'manim_gen', label: 'video.stages.manim_gen', progressStart: 29, progressEnd: 42, estimatedDuration: '8-20s', conditional: false, tag: 'Manim Gen' },
+  { key: 'tts', label: 'video.stages.tts', progressStart: 43, progressEnd: 55, estimatedDuration: '8-20s', conditional: false, tag: 'TTS' },
+  { key: 'manim_fix', label: 'video.stages.manim_fix', progressStart: 56, progressEnd: 60, estimatedDuration: '5-15s', conditional: true, tag: 'Auto-Fix' },
+  { key: 'render', label: 'video.stages.render', progressStart: 61, progressEnd: 70, estimatedDuration: '15-40s', conditional: false, tag: 'Render' },
+  { key: 'render_verify', label: 'video.stages.render_verify', progressStart: 71, progressEnd: 80, estimatedDuration: '10-60s', conditional: true, tag: 'Verify' },
+  { key: 'compose', label: 'video.stages.compose', progressStart: 81, progressEnd: 93, estimatedDuration: '5-12s', conditional: false, tag: 'Compose' },
+  { key: 'upload', label: 'video.stages.upload', progressStart: 94, progressEnd: 100, estimatedDuration: '3-10s', conditional: false, tag: 'Upload' },
 ] as const;
 
 /** stage 枚举到配置的查找表。 */

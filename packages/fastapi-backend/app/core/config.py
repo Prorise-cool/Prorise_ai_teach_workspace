@@ -109,6 +109,7 @@ class Settings(BaseSettings):
     dramatiq_queue_name: str = Field(default="task-runtime", alias="FASTAPI_DRAMATIQ_QUEUE_NAME")
     dramatiq_worker_threads: int = Field(default=2, alias="FASTAPI_DRAMATIQ_WORKER_THREADS")
     dramatiq_worker_processes: int = Field(default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES")
+    dramatiq_task_time_limit_ms: int = Field(default=900_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS")
     ruoyi_base_url: str = Field(default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL")
     ruoyi_timeout_seconds: float = Field(default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS")
     ruoyi_retry_attempts: int = Field(default=2, alias="FASTAPI_RUOYI_RETRY_ATTEMPTS")

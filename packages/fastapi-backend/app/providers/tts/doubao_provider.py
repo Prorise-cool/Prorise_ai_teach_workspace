@@ -60,6 +60,10 @@ class DoubaoTTSProvider:
 
         self._endpoint_url = require_setting(config, "base_url")
         self._api_key = require_setting(config, "api_key")
+        if not self._api_key.isascii():
+            raise ProviderConfigurationError(
+                f"{config.provider_id} api_key 包含非 ASCII 字符，请检查后台 Provider 配置"
+            )
         self._cluster = self._read_setting("cluster", default="volcano_tts")
         self._default_voice_code = self._read_setting("voice_code", "voiceCode")
         self._default_encoding = self._read_setting("encoding", default="mp3")

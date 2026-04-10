@@ -29,8 +29,11 @@ def _enum_value(val: Any) -> str:
 
 _VIDEO_LLM_STAGES = (
     "understanding",
+    "solve",
     "storyboard",
     "manim_gen",
+    "render_verify",
+    "render_fix",
     "manim_fix",
 )
 _TTS_STAGE = "tts"

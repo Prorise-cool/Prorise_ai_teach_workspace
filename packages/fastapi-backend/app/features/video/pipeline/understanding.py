@@ -3,8 +3,8 @@
 接收原始题目输入与用户画像，通过 LLM 生成结构化的 ``UnderstandingResult``，
 包含题目摘要、知识点、解题步骤、难度和学科信息。
 
-支持可选的 ``include_storyboard`` 模式，一次 LLM 调用同时输出
-理解结果与分镜场景，减少一轮 LLM 往返。
+当前主编排默认只执行 understanding 阶段。
+``include_storyboard`` 仅保留为兼容入口，不再作为默认链路。
 """
 
 from __future__ import annotations
@@ -32,9 +32,7 @@ from app.features.video.pipeline.models import (
     SolutionStep,
     Storyboard,
     UnderstandingResult,
-    VideoConfig,
     VideoStage,
-    normalize_storyboard_duration,
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
 from app.providers.failover import ProviderAllFailedError, ProviderFailoverService
@@ -98,7 +96,9 @@ def _build_default_understanding(
     user_profile: dict[str, object],
 ) -> UnderstandingResult:
     """当 LLM 返回无法解析时，构建一个基于启发式规则的默认理解结果。"""
-    summary = first_non_empty(split_sentences(source_text), fallback=source_text[:120] or "题目解析")
+    summary = first_non_empty(
+        split_sentences(source_text), fallback=source_text[:120] or "题目解析"
+    )
     subject = str(user_profile.get("subject") or infer_subject(source_text))
     difficulty = str(user_profile.get("difficulty") or infer_difficulty(source_text))
     sentences = split_sentences(source_text)
@@ -181,8 +181,8 @@ def _normalize_solution_step(
 class UnderstandingService:
     """题目理解服务，调用 LLM 将原始题目转换为结构化理解结果。
 
-    支持可选的 ``include_storyboard`` 模式，一次 LLM 调用同时输出
-    理解结果与分镜场景，减少一轮 LLM 往返。
+    默认仅负责 understanding 阶段。
+    ``include_storyboard`` 仅保留为兼容入口，当前主编排不会启用合并模式。
     """
 
     providers: Sequence[Any]
@@ -200,8 +200,8 @@ class UnderstandingService:
     ) -> UnderstandingResult | tuple[UnderstandingResult, Storyboard | None]:
         """执行题目理解。
 
-        当 ``include_storyboard=True`` 时，使用合并 prompt 一次 LLM 调用
-        同时输出理解和分镜，返回 ``(UnderstandingResult, Storyboard | None)`` 元组。
+        当 ``include_storyboard=True`` 时，会回退到兼容性的合并 prompt，
+        返回 ``(UnderstandingResult, Storyboard | None)`` 元组。
         """
         source_text = extract_source_text(source_payload)
 
@@ -234,7 +234,9 @@ class UnderstandingService:
 
         logger.debug("[理解] LLM响应 (前500字): %s", provider_result.content[:500])
         parsed = extract_json_object(provider_result.content)
-        understanding = self._parse_understanding(parsed, source_text, user_profile, provider_result.provider)
+        understanding = self._parse_understanding(
+            parsed, source_text, user_profile, provider_result.provider
+        )
         if understanding is None:
             understanding = _build_default_understanding(
                 source_text=source_text,
@@ -243,7 +245,12 @@ class UnderstandingService:
             )
 
         self.runtime.save_model("understanding", understanding)
-        logger.info("[理解完成] topic=%s steps=%d provider=%s", understanding.topic_summary[:40], len(understanding.solution_steps), understanding.provider_used)
+        logger.info(
+            "[理解完成] topic=%s steps=%d provider=%s",
+            understanding.topic_summary[:40],
+            len(understanding.solution_steps),
+            understanding.provider_used,
+        )
         return understanding
 
     async def _execute_merged(
@@ -252,10 +259,9 @@ class UnderstandingService:
         source_text: str,
         user_profile: dict[str, object],
         emit_switch=None,
-    ) -> tuple[UnderstandingResult, Storyboard]:
-        """使用合并 prompt 一次调用同时输出理解和分镜。"""
+    ) -> tuple[UnderstandingResult, Storyboard | None]:
+        """使用兼容性的合并 prompt 一次调用同时输出理解和分镜。"""
         from app.features.video.pipeline.storyboard import (
-            _build_default_storyboard,
             _coerce_duration_value,
             _finalize_storyboard,
             _normalize_scene_payload,
@@ -294,7 +300,13 @@ class UnderstandingService:
 
         # 解析 understanding 部分
         understanding_data = parsed.get("understanding")
-        understanding = self._parse_understanding(understanding_data, source_text, user_profile, provider_result.provider) if isinstance(understanding_data, dict) else None
+        understanding = (
+            self._parse_understanding(
+                understanding_data, source_text, user_profile, provider_result.provider
+            )
+            if isinstance(understanding_data, dict)
+            else None
+        )
         if understanding is None:
             understanding = _build_default_understanding(
                 source_text=source_text,
@@ -306,7 +318,9 @@ class UnderstandingService:
         # 解析 storyboard 部分
         storyboard_data = parsed.get("storyboard")
         storyboard = None
-        if isinstance(storyboard_data, dict) and isinstance(storyboard_data.get("scenes"), list):
+        if isinstance(storyboard_data, dict) and isinstance(
+            storyboard_data.get("scenes"), list
+        ):
             try:
                 scenes = [
                     Scene.model_validate(_normalize_scene_payload(scene, index))
@@ -319,10 +333,12 @@ class UnderstandingService:
                         provider_used=provider_result.provider,
                         settings=self.settings,
                         requested_total_duration=_coerce_duration_value(
-                            storyboard_data.get("totalDuration") or storyboard_data.get("total_duration")
+                            storyboard_data.get("totalDuration")
+                            or storyboard_data.get("total_duration")
                         ),
                         requested_target_duration=_coerce_duration_value(
-                            storyboard_data.get("targetDuration") or storyboard_data.get("target_duration")
+                            storyboard_data.get("targetDuration")
+                            or storyboard_data.get("target_duration")
                         ),
                     )
             except Exception:  # noqa: BLE001
@@ -330,7 +346,11 @@ class UnderstandingService:
 
         if storyboard is not None:
             self.runtime.save_model("storyboard", storyboard)
-            logger.info("[理解+分镜完成] scenes=%d provider=%s", len(storyboard.scenes), provider_result.provider)
+            logger.info(
+                "[理解+分镜完成] scenes=%d provider=%s",
+                len(storyboard.scenes),
+                provider_result.provider,
+            )
         else:
             logger.warning("合并模式分镜解析失败，将回退独立路径")
 
@@ -363,8 +383,13 @@ class UnderstandingService:
             {
                 "topicSummary": parsed.get("topicSummary") or source_text[:120],
                 "knowledgePoints": parsed.get("knowledgePoints") or ["核心知识点提炼"],
-                "solutionSteps": solution_steps or [
-                    {"stepId": "step_1", "title": "步骤 1", "explanation": source_text[:80]}
+                "solutionSteps": solution_steps
+                or [
+                    {
+                        "stepId": "step_1",
+                        "title": "步骤 1",
+                        "explanation": source_text[:80],
+                    }
                 ],
                 "difficulty": parsed.get("difficulty") or infer_difficulty(source_text),
                 "subject": parsed.get("subject") or infer_subject(source_text),

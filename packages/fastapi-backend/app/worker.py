@@ -58,6 +58,7 @@ def _ensure_initialized() -> None:
             queue_name=settings.dramatiq_queue_name,
             actor_name="execute_task",
             max_retries=0,
+            time_limit=settings.dramatiq_task_time_limit_ms,
         )(consume_task_message)
 
         _initialized = True

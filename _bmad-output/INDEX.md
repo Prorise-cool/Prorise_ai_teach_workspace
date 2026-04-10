@@ -15,6 +15,7 @@
 ### implementation-artifacts/
 
 - [index.md](./implementation-artifacts/index.md) - 实施产物总索引与 Story 执行文档入口
+- [4-2-4-3-plan-d-编排与契约收口-20260410.md](./implementation-artifacts/4-2-4-3-plan-d-编排与契约收口-20260410.md) - Plan D 剩余编排绕路、前端契约和 SQL 迁移的 2026-04-10 收口记录
 - [4-3-manim-429-重试风暴热修复-20260410.md](./implementation-artifacts/4-3-manim-429-重试风暴热修复-20260410.md) - 视频管道 429 重试风暴、健康缓存与 fallback 热修记录，补充 DeepSeek 并发 smoke test 与 auth proxy 阻塞说明
 - [4-7-视频等待页SSE实时状态故障调查-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态故障调查-20260409.md) - 视频等待页实时状态丢失问题调查结论
 - [4-7-视频等待页SSE实时状态修复-20260409.md](./implementation-artifacts/4-7-视频等待页SSE实时状态修复-20260409.md) - 视频等待页 SSE 流式消费修复与验证记录

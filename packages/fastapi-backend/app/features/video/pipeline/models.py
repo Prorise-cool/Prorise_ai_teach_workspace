@@ -15,10 +15,12 @@ from app.features.video.modeling import VideoCamelModel
 class VideoStage(StrEnum):
     """视频流水线阶段枚举。"""
     UNDERSTANDING = "understanding"
+    SOLVE = "solve"
     STORYBOARD = "storyboard"
     MANIM_GEN = "manim_gen"
     MANIM_FIX = "manim_fix"
     RENDER = "render"
+    RENDER_VERIFY = "render_verify"
     TTS = "tts"
     COMPOSE = "compose"
     UPLOAD = "upload"
@@ -39,20 +41,27 @@ VIDEO_STAGE_PROFILES: tuple[VideoStageProfile, ...] = (
         stage=VideoStage.UNDERSTANDING,
         display_label="理解题目",
         progress_start=0,
-        progress_end=12,
+        progress_end=8,
         estimated_duration_seconds=(3, 8),
+    ),
+    VideoStageProfile(
+        stage=VideoStage.SOLVE,
+        display_label="独立解题",
+        progress_start=9,
+        progress_end=18,
+        estimated_duration_seconds=(5, 15),
     ),
     VideoStageProfile(
         stage=VideoStage.STORYBOARD,
         display_label="生成分镜",
-        progress_start=13,
-        progress_end=25,
-        estimated_duration_seconds=(5, 10),
+        progress_start=19,
+        progress_end=28,
+        estimated_duration_seconds=(8, 20),
     ),
     VideoStageProfile(
         stage=VideoStage.MANIM_GEN,
         display_label="生成动画脚本",
-        progress_start=26,
+        progress_start=29,
         progress_end=42,
         estimated_duration_seconds=(8, 20),
     ),
@@ -60,35 +69,43 @@ VIDEO_STAGE_PROFILES: tuple[VideoStageProfile, ...] = (
         stage=VideoStage.TTS,
         display_label="生成旁白",
         progress_start=43,
-        progress_end=58,
+        progress_end=55,
         estimated_duration_seconds=(8, 20),
     ),
     VideoStageProfile(
         stage=VideoStage.MANIM_FIX,
         display_label="修复动画脚本",
-        progress_start=59,
-        progress_end=65,
+        progress_start=56,
+        progress_end=60,
         estimated_duration_seconds=(5, 15),
         conditional=True,
     ),
     VideoStageProfile(
         stage=VideoStage.RENDER,
         display_label="渲染动画",
-        progress_start=66,
-        progress_end=78,
+        progress_start=61,
+        progress_end=70,
         estimated_duration_seconds=(15, 40),
+    ),
+    VideoStageProfile(
+        stage=VideoStage.RENDER_VERIFY,
+        display_label="验证渲染结果",
+        progress_start=71,
+        progress_end=80,
+        estimated_duration_seconds=(10, 60),
+        conditional=True,
     ),
     VideoStageProfile(
         stage=VideoStage.COMPOSE,
         display_label="合成视频",
-        progress_start=79,
-        progress_end=94,
+        progress_start=81,
+        progress_end=93,
         estimated_duration_seconds=(5, 12),
     ),
     VideoStageProfile(
         stage=VideoStage.UPLOAD,
         display_label="上传结果",
-        progress_start=95,
+        progress_start=94,
         progress_end=100,
         estimated_duration_seconds=(3, 10),
     ),
@@ -129,6 +146,16 @@ class UnderstandingResult(VideoCamelModel):
     solution_steps: list[SolutionStep]
     difficulty: str
     subject: str
+    provider_used: str
+    generated_at: str = Field(default_factory=format_trace_timestamp)
+
+
+class SolveResult(VideoCamelModel):
+    """独立解题阶段输出（参考答案 + 详细步骤）。"""
+    reference_answer: str
+    solution_steps: list[SolutionStep]
+    reasoning_trace: str = ""
+    is_fallback: bool = False
     provider_used: str
     generated_at: str = Field(default_factory=format_trace_timestamp)
 
