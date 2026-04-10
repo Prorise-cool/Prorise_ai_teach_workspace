@@ -35,6 +35,14 @@ CODE_GEN_SYSTEM_PROMPT_TEMPLATE = """你是 Manim 代码撰写专家，使用的
    - 优先把同一节奏出现的元素作为一个小组，再分步调用 self.add_elements()
    - 元素组 VGroup/Group 内元素要做好布局控制，避免重叠
    - 坐标系上面的内容与坐标系必须放到一个 VGroup/Group
+
+3. **布局安全约束（自动检测，违反会被拒绝）**：
+   - 所有元素坐标必须在安全区内：X ∈ [-6.5, 6.5]，Y ∈ [-3.5, 3.5]
+   - move_to/shift/next_to/to_edge 的目标位置不得超出安全区
+   - 不同元素之间保持足够间距，避免重叠（间距 > 0.3）
+   - 长距离位移优先用 shift()，避免绝对坐标超界
+   - 每场景 Mobject 实例不超过 20 个，复杂内容分步展示
+   - 使用 arrange() 或 next_to() 自动排列，减少手动坐标
 """
 
 SCENE_CODE_PROMPT_TEMPLATE = """## 前文代码上下文
