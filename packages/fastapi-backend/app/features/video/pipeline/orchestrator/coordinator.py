@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
@@ -198,6 +199,24 @@ class VideoPipelineService(
             )
             manim_code, tts_result = await asyncio.gather(manim_task, tts_task)
 
+            # VoiceoverScene: 将 TTS 音频路径注入脚本，重新渲染完整模板
+            if tts_result.audio_segments and manim_code.scenes_data:
+                from app.features.video.pipeline.code_render.renderer import CodeRenderer
+                from app.features.video.pipeline.manim_runtime_prelude import ensure_manim_runtime_prelude
+
+                audio_mapping = {
+                    seg.scene_id: f"/workspace/audio/{seg.scene_id}.{Path(seg.audio_path).suffix.lstrip('.')}"
+                    for seg in tts_result.audio_segments
+                }
+                renderer = CodeRenderer()
+                updated_script = renderer.render_full_script(
+                    scenes=manim_code.scenes_data,
+                    video_config=manim_code.video_config,
+                    audio_mapping=audio_mapping,
+                )
+                updated_script = ensure_manim_runtime_prelude(updated_script)
+                manim_code = manim_code.model_copy(update={"script_content": updated_script})
+
             # Plan D: 渲染验证循环（保留 render/manim_fix 事件语义）
             resource_limits = ResourceLimits(
                 cpu_count=self.settings.video_sandbox_cpu_count,
@@ -210,6 +229,7 @@ class VideoPipelineService(
                 render_verify_service,
                 manim_code=manim_code,
                 resource_limits=resource_limits,
+                tts_result=tts_result,
             )
             compose_result = await self._run_compose(
                 task,

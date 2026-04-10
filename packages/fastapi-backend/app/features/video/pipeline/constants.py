@@ -21,6 +21,8 @@ SANDBOX_SCENE_SCRIPT = "scene.py"
 SANDBOX_RUNNER_SCRIPT = "run_manim.py"
 SANDBOX_OUTPUT_DIR = "output"
 SANDBOX_RENDERED_FILE = "rendered.mp4"
+SANDBOX_AUDIO_DIR = "audio"
+SANDBOX_PRELOADED_TTS_MODULE = "preloaded_tts.py"
 
 SANDBOX_ENV_VARS = (
     "HOME=/tmp",

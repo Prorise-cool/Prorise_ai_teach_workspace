@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Mapping
 
 from app.core.logging import get_logger
@@ -221,8 +222,15 @@ class StageRunnersMixin:
         *,
         manim_code: ManimCodeResult,
         resource_limits: ResourceLimits,
+        tts_result: TTSResult | None = None,
     ) -> tuple[ExecutionResult, ManimCodeResult]:
         """执行逐场景渲染验证循环。"""
+        # 将 TTS 音频文件映射注入 render_verify 服务
+        if tts_result is not None:
+            service.audio_files = {
+                seg.scene_id: Path(seg.audio_path)
+                for seg in tts_result.audio_segments
+            }
         async def on_event(event_name: str, *, attempt_no: int, message: str) -> None:
             if event_name == "render_start":
                 await self._emit_stage(task, VideoStage.RENDER, 0.0, message)

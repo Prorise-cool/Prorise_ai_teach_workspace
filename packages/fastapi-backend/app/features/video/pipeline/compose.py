@@ -1,7 +1,7 @@
 """FFmpeg 视频合成服务。
 
-负责将渲染视频、旁白音频和字幕合成为最终视频，
-并提取封面帧。包含字幕拆分、SRT/ASS 生成等辅助能力。
+负责为渲染视频叠加字幕并提取封面帧。
+VoiceoverScene 渲染输出的视频已包含音轨，此服务不再处理音频合并与时长对齐。
 """
 
 from __future__ import annotations
@@ -49,119 +49,40 @@ class SubtitleEntry:
 
 
 @dataclass(slots=True)
-class DurationAlignmentPlan:
-    """视频与旁白时长对齐策略。"""
-
-    mode: str
-    extend_seconds: float = 0.0
-    stretch_ratio: float = 1.0
-    max_allowed_pad_seconds: float = 0.0
-
-
-@dataclass(slots=True)
 class ComposeService:
-    """FFmpeg 视频合成服务，负责音频拼接、视频混流、字幕烧录和封面提取。"""
+    """FFmpeg 视频合成服务，负责字幕烧录和封面提取。
+
+    VoiceoverScene 渲染输出已包含音轨，此服务仅叠加字幕并提取封面。
+    """
 
     settings: Settings
     runtime: VideoRuntimeStateStore
 
-    def build_audio_concat_command(self, audio_paths: Sequence[str], output_path: str) -> list[str]:
-        """构建音频拼接 FFmpeg 命令。"""
-        if len(audio_paths) == 1:
-            return [
-                "ffmpeg",
-                "-y",
-                "-i",
-                audio_paths[0],
-                "-vn",
-                "-ar",
-                str(self.settings.video_output_audio_sample_rate),
-                "-ac",
-                "1",
-                "-c:a",
-                "aac",
-                "-b:a",
-                self.settings.video_output_audio_bitrate,
-                output_path,
-            ]
-
-        input_args: list[str] = []
-        filter_parts: list[str] = []
-        concat_inputs: list[str] = []
-        for index, audio_path in enumerate(audio_paths):
-            input_args.extend(["-i", audio_path])
-            filter_parts.append(
-                (
-                    f"[{index}:a]aresample={self.settings.video_output_audio_sample_rate},"
-                    f"aformat=sample_rates={self.settings.video_output_audio_sample_rate}:channel_layouts=mono,"
-                    f"asetpts=N/SR/TB[a{index}]"
-                )
-            )
-            concat_inputs.append(f"[a{index}]")
-
-        filter_parts.append(f"{''.join(concat_inputs)}concat=n={len(audio_paths)}:v=0:a=1[aout]")
-        return [
-            "ffmpeg",
-            "-y",
-            *input_args,
-            "-filter_complex",
-            ";".join(filter_parts),
-            "-map",
-            "[aout]",
-            "-c:a",
-            "aac",
-            "-b:a",
-            self.settings.video_output_audio_bitrate,
-            output_path,
-        ]
-
-    def build_compose_command(
+    def build_subtitle_command(
         self,
         video_path: str,
-        audio_path: str,
         output_path: str,
         *,
-        subtitle_path: str | None = None,
-        extend_seconds: float = 0.0,
-        stretch_ratio: float = 1.0,
+        subtitle_path: str,
     ) -> list[str]:
-        """构建视频+音频+字幕混流 FFmpeg 命令。"""
-        command = [
+        """构建字幕叠加 FFmpeg 命令（保留原始音轨）。"""
+        return [
             "ffmpeg",
             "-y",
             "-i",
             video_path,
-            "-i",
-            audio_path,
+            "-vf",
+            f"ass={escape_ffmpeg_filter_path(subtitle_path)}",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
+            output_path,
         ]
-        filters: list[str] = []
-        if stretch_ratio > 1.01:
-            filters.append(f"setpts={stretch_ratio:.6f}*PTS")
-        if extend_seconds > 0.01:
-            filters.append(f"tpad=stop_mode=clone:stop_duration={extend_seconds:.3f}")
-        if subtitle_path:
-            filters.append(f"ass={escape_ffmpeg_filter_path(subtitle_path)}")
-        if filters:
-            command.extend(["-vf", ",".join(filters)])
-        command.extend(
-            [
-                "-map",
-                "0:v:0",
-                "-map",
-                "1:a:0",
-                "-c:v",
-                "libx264",
-                "-pix_fmt",
-                "yuv420p",
-                "-c:a",
-                "aac",
-                "-shortest",
-                "-movflags",
-                "+faststart",
-                output_path,
-            ]
-        )
-        return command
 
     def build_cover_command(self, video_path: str, cover_path: str) -> list[str]:
         """构建封面提取 FFmpeg 命令。"""
@@ -273,63 +194,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for scene in storyboard.scenes
         ]
 
-    def resolve_duration_alignment(
-        self,
-        *,
-        source_video_duration: float,
-        merged_audio_duration: float,
-    ) -> DurationAlignmentPlan:
-        """为渲染视频与旁白时长差选择对齐策略。"""
-        safe_video_duration = max(float(source_video_duration), 0.0)
-        safe_audio_duration = max(float(merged_audio_duration), 0.0)
-        extend_seconds = max(safe_audio_duration - safe_video_duration, 0.0)
-        max_allowed_pad_seconds = min(
-            float(self.settings.video_compose_max_pad_seconds),
-            max(safe_audio_duration * float(self.settings.video_compose_max_pad_ratio), 1.0),
-        )
-        if extend_seconds <= max_allowed_pad_seconds + 0.01:
-            return DurationAlignmentPlan(
-                mode="pad" if extend_seconds > 0.01 else "none",
-                extend_seconds=extend_seconds,
-                max_allowed_pad_seconds=max_allowed_pad_seconds,
-            )
-
-        if safe_video_duration <= 0.01:
-            raise VideoPipelineError(
-                stage=VideoStage.COMPOSE,
-                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
-                message=(
-                    "render/audio duration gap too large with invalid render duration: "
-                    f"render={safe_video_duration:.2f}s "
-                    f"audio={safe_audio_duration:.2f}s "
-                    f"pad={extend_seconds:.2f}s "
-                    f"limit={max_allowed_pad_seconds:.2f}s"
-                ),
-            )
-
-        stretch_ratio = safe_audio_duration / safe_video_duration
-        max_stretch_ratio = max(float(self.settings.video_compose_max_stretch_ratio), 1.0)
-        if stretch_ratio <= max_stretch_ratio + 0.01:
-            return DurationAlignmentPlan(
-                mode="stretch",
-                stretch_ratio=stretch_ratio,
-                max_allowed_pad_seconds=max_allowed_pad_seconds,
-            )
-
-        raise VideoPipelineError(
-            stage=VideoStage.COMPOSE,
-            error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
-            message=(
-                "render/audio duration gap too large: "
-                f"render={safe_video_duration:.2f}s "
-                f"audio={safe_audio_duration:.2f}s "
-                f"pad={extend_seconds:.2f}s "
-                f"limit={max_allowed_pad_seconds:.2f}s "
-                f"stretch={stretch_ratio:.2f}x "
-                f"stretch_limit={max_stretch_ratio:.2f}x"
-            ),
-        )
-
     async def _run_ffmpeg(self, command: Sequence[str]) -> None:
         """异步执行 FFmpeg 命令。"""
         try:
@@ -356,66 +220,39 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         render_result: ExecutionResult,
         tts_result: TTSResult,
     ) -> ComposeResult:
-        """执行视频合成流程，返回 ``ComposeResult``。"""
+        """执行视频合成流程：字幕叠加 + 封面提取。
+
+        VoiceoverScene 渲染输出已包含音轨，此处仅叠加字幕并提取封面。
+        tts_result 仅用于计算字幕时间轴，不再用于音频拼接。
+        """
         if render_result.output_path is None:
             raise VideoPipelineError(
                 stage=VideoStage.COMPOSE,
                 error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
                 message="render output is missing",
             )
-        if not tts_result.audio_segments:
-            raise VideoPipelineError(
-                stage=VideoStage.COMPOSE,
-                error_code=VideoTaskErrorCode.VIDEO_COMPOSE_FAILED,
-                message="tts output is missing",
-            )
 
         temp_dir = Path(tempfile.mkdtemp(prefix=f"video_compose_{task_id}_"))
         output_path = temp_dir / "output.mp4"
         cover_path = temp_dir / "cover.jpg"
-        mixed_audio_path = temp_dir / "narration.m4a"
         subtitle_srt_path = temp_dir / "subtitles.srt"
         subtitle_ass_path = temp_dir / "subtitles.ass"
         source_video_path = Path(render_result.output_path)
-        audio_paths = [segment.audio_path for segment in tts_result.audio_segments]
+
         scene_durations = self.resolve_scene_durations(storyboard=storyboard, tts_result=tts_result)
         subtitle_entries = self.build_subtitle_entries(storyboard=storyboard, scene_durations=scene_durations)
         self.write_srt(subtitle_entries, subtitle_srt_path)
         self.write_ass_from_srt(srt_path=subtitle_srt_path, ass_path=subtitle_ass_path)
 
-        output_duration_seconds = max(sum(scene_durations), float(tts_result.total_duration), 1.0)
+        output_duration_seconds = probe_media_duration_seconds(source_video_path) or max(sum(scene_durations), 1.0)
         if shutil.which("ffmpeg") and not is_fake_render_video(source_video_path):
-            concat_command = self.build_audio_concat_command(audio_paths, str(mixed_audio_path))
-            await self._run_ffmpeg(concat_command)
-
-            merged_audio_duration = probe_media_duration_seconds(mixed_audio_path) or output_duration_seconds
-            source_video_duration = probe_media_duration_seconds(source_video_path) or max(render_result.duration_seconds, 0.0)
-            output_duration_seconds = max(merged_audio_duration, source_video_duration, 1.0)
-            alignment = self.resolve_duration_alignment(
-                source_video_duration=source_video_duration,
-                merged_audio_duration=merged_audio_duration,
-            )
-            self.runtime.save_value(
-                "compose_alignment",
-                {
-                    "mode": alignment.mode,
-                    "renderDuration": source_video_duration,
-                    "audioDuration": merged_audio_duration,
-                    "extendSeconds": alignment.extend_seconds,
-                    "stretchRatio": alignment.stretch_ratio,
-                    "maxAllowedPadSeconds": alignment.max_allowed_pad_seconds,
-                },
-            )
-            compose_command = self.build_compose_command(
+            subtitle_command = self.build_subtitle_command(
                 str(source_video_path),
-                str(mixed_audio_path),
                 str(output_path),
                 subtitle_path=str(subtitle_ass_path),
-                extend_seconds=alignment.extend_seconds,
-                stretch_ratio=alignment.stretch_ratio,
             )
             cover_command = self.build_cover_command(str(output_path), str(cover_path))
-            await self._run_ffmpeg(compose_command)
+            await self._run_ffmpeg(subtitle_command)
             output_duration_seconds = probe_media_duration_seconds(output_path) or output_duration_seconds
             await self._run_ffmpeg(cover_command)
         else:
