@@ -11,7 +11,7 @@
             b.stage_code AS stageCode,
             b.capability AS capability,
             b.role_code AS roleCode,
-            r.runtime_provider_id AS providerId,
+            CAST(p.id AS CHAR) AS providerId,
             b.priority AS priority,
             b.timeout_seconds AS timeoutSeconds,
             b.retry_attempts AS retryAttempts,
