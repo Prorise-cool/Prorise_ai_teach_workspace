@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 import asyncio
 
-from app.features.video.long_term_records import VideoPublicationPage, VideoPublicationSnapshot
-from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.long_term.records import VideoPublicationPage, VideoPublicationSnapshot
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.models import ArtifactPayload, ArtifactType, PublishState, VideoArtifactGraph, VideoResult, VideoResultDetail
 from app.features.video.service import VideoService
 from app.shared.cos_client import CosClient

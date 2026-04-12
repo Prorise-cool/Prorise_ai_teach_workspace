@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.features.video.pipeline.services import get_video_pipeline_service
+from app.features.video.pipeline.orchestration.orchestrator import get_video_pipeline_service
 from app.features.video.service import VideoService
 from app.infra.redis_client import create_runtime_store
 from app.shared.task_framework.base import BaseTask, TaskResult

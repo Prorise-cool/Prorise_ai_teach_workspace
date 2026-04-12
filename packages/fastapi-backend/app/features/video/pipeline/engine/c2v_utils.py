@@ -1,11 +1,15 @@
-import os
-import subprocess
-from typing import List
-from manim import *
+import logging
 import multiprocessing
+import os
 import re
-import psutil
+import subprocess
 from pathlib import Path
+from typing import List
+
+import psutil
+from manim import *
+
+logger = logging.getLogger(__name__)
 
 
 def extract_json_from_markdown(text):
@@ -66,7 +70,7 @@ def get_optimal_workers():
     if optimal > 16:
         optimal = 16
 
-    print(f"⚙️ Detected {cpu_count} cores, using {optimal} parallel processes")
+    logger.info("Detected %d cores, using %d parallel processes", cpu_count, optimal)
     return optimal
 
 
@@ -76,12 +80,14 @@ def monitor_system_resources():
         cpu_percent = psutil.cpu_percent(interval=0.1)
         memory = psutil.virtual_memory()
 
-        print(f"📊 Resource usage: CPU {cpu_percent:.1f}% | Memory {memory.percent:.1f}%")
+        logger.info(
+            "Resource usage: CPU %.1f%% | Memory %.1f%%", cpu_percent, memory.percent
+        )
 
         if cpu_percent > 95:
-            print("⚠️ CPU usage is high")
+            logger.warning("CPU usage is high")
         if memory.percent > 90:
-            print("⚠️ Memory usage is high")
+            logger.warning("Memory usage is high")
 
         return True
     except Exception:
@@ -132,7 +138,7 @@ def replace_base_class(code: str, new_class_def: str) -> str:
 def save_code_to_file(code: str, filename: str = "scene.py"):
     with open(filename, "w", encoding="utf-8") as f:
         f.write(code)
-    print(f"Saved code to {filename}")
+    logger.info("Saved code to %s", filename)
 
 
 # Run the manim code to generate a video
@@ -153,10 +159,10 @@ def run_manim_script(filename: str, scene_name: str, output_dir: str = "videos")
 
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode != 0:
-        print("Manim error:", result.stderr.decode())
+        logger.error("Manim error: %s", result.stderr.decode())
         raise RuntimeError(f"Failed to render scene {scene_name}.")
 
-    print(f"Video saved to {output_path}")
+    logger.info("Video saved to %s", output_path)
     return output_path
 
 
@@ -167,10 +173,22 @@ def stitch_videos(video_files: List[str], output_path: str = "final_output.mp4")
         for vf in video_files:
             f.write(f"file '{os.path.abspath(vf)}'\n")
 
-    cmd = ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file, "-c", "copy", output_path]
-    print("Stitching videos:", cmd)
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        list_file,
+        "-c",
+        "copy",
+        output_path,
+    ]
+    logger.info("Stitching videos: %s", cmd)
     subprocess.run(cmd, check=True)
-    print(f"Final stitched video saved to {output_path}")
+    logger.info("Final stitched video saved to %s", output_path)
 
 
 def topic_to_safe_name(knowledge_point):
@@ -193,7 +211,6 @@ def get_output_dir(idx, knowledge_point, base_dir, get_safe_name=False):
 
 
 def eva_video_list(knowledge_points, base_dir):
-
     video_list = []
     for idx, kp in enumerate(knowledge_points):
         folder, safe_name = get_output_dir(idx, kp, base_dir, get_safe_name=True)
@@ -203,7 +220,3 @@ def eva_video_list(knowledge_points, base_dir):
         mp4_path = folder / mp4_name
         video_list.append({"path": str(mp4_path), "knowledge_point": kp})
     return video_list
-
-
-if __name__ == "__main__":
-    print(get_optimal_workers())

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.features.video.modeling import VideoCamelModel
-from app.features.video.voice_models import VideoVoicePreference
+from app.features.video.models.base import VideoCamelModel
+from app.features.video.models.voice import VideoVoicePreference
 
 
 class CreateVideoTaskRequest(VideoCamelModel):

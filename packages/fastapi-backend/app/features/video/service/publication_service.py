@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.core.security import AccessContext
-from app.features.video.long_term_records import VideoPublicationSyncRequest
+from app.features.video.long_term.records import VideoPublicationSyncRequest
 from app.features.video.pipeline.models import (
     PublishOperationResult,
     PublishState,
     PublishedVideoCard,
     PublishedVideoCardPage,
 )
-from app.features.video.pipeline.runtime import build_video_runtime_key
+from app.features.video.pipeline.orchestration.runtime import build_video_runtime_key
 from app.features.video.service._helpers import (
     build_published_card,
     invalidate_published_cache,

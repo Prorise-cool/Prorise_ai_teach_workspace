@@ -11,14 +11,14 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.core.config import Settings
-from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
     UploadResult,
     VideoStage,
 )
-from app.features.video.pipeline.runtime import VideoRuntimeStateStore
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
+from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
 
 
 def _utc_now() -> datetime:
@@ -37,7 +37,9 @@ class UploadService:
     settings: Settings
     runtime: VideoRuntimeStateStore
 
-    async def execute(self, *, task_id: str, compose_result: ComposeResult, on_retry=None) -> UploadResult:
+    async def execute(
+        self, *, task_id: str, compose_result: ComposeResult, on_retry=None
+    ) -> UploadResult:
         """执行上传，返回 ``UploadResult``。
 
         Args:
@@ -49,8 +51,12 @@ class UploadService:
         last_error: Exception | None = None
         for attempt in range(1, attempts + 1):
             try:
-                video_asset = self.asset_store.copy_file(compose_result.video_path, f"video/{task_id}/output.mp4")
-                cover_asset = self.asset_store.copy_file(compose_result.cover_path, f"video/{task_id}/cover.jpg")
+                video_asset = self.asset_store.copy_file(
+                    compose_result.video_path, f"video/{task_id}/output.mp4"
+                )
+                cover_asset = self.asset_store.copy_file(
+                    compose_result.cover_path, f"video/{task_id}/cover.jpg"
+                )
                 upload_result = UploadResult(
                     video_url=video_asset.public_url,
                     cover_url=cover_asset.public_url,

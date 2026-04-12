@@ -7,14 +7,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from app.features.video.long_term_records import VideoPublicationSnapshot
+from app.features.video.long_term.records import VideoPublicationSnapshot
 from app.features.video.pipeline.models import (
     PublishState,
     PublishedVideoCard,
     PublishedVideoCardPage,
     VideoResultDetail,
 )
-from app.features.video.pipeline.runtime import build_video_runtime_key
+from app.features.video.pipeline.orchestration.runtime import build_video_runtime_key
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_metadata import TaskMetadataSnapshot
 
