@@ -9,6 +9,7 @@ from app.providers.demo_provider import DemoTTSProvider
 from app.providers.protocols import ProviderCapability, ProviderRuntimeConfig, TTSProvider
 from app.providers.registry import ProviderRegistry
 from app.providers.tts.doubao_provider import DoubaoTTSProvider
+from app.providers.tts.openai_provider import OpenAITTSProvider
 from app.providers.tts.stub_provider import StubTTSProvider
 
 if TYPE_CHECKING:
@@ -37,6 +38,13 @@ def register_tts_providers(registry: ProviderRegistry) -> None:
         DoubaoTTSProvider,
         default_priority=20,
         description="豆包 / 火山引擎 TTS provider"
+    )
+    registry.register(
+        ProviderCapability.TTS,
+        "openai-tts",
+        OpenAITTSProvider,
+        default_priority=30,
+        description="OpenAI compatible TTS provider (Edge TTS etc.)"
     )
 
 

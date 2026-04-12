@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from app.core.config import Settings
-from app.features.video.pipeline._helpers import serialize_datetime, utc_now
 from app.features.video.pipeline.assets import LocalAssetStore
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
@@ -19,6 +19,14 @@ from app.features.video.pipeline.models import (
     VideoStage,
 )
 from app.features.video.pipeline.runtime import VideoRuntimeStateStore
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _serialize_datetime(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass(slots=True)
@@ -46,7 +54,7 @@ class UploadService:
                 upload_result = UploadResult(
                     video_url=video_asset.public_url,
                     cover_url=cover_asset.public_url,
-                    expires_at=serialize_datetime(utc_now()),
+                    expires_at=_serialize_datetime(_utc_now()),
                 )
                 self.runtime.save_model("upload_result", upload_result)
                 return upload_result

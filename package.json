@@ -31,7 +31,7 @@
     "build:soybean-admin": "pnpm --filter ruoyi-vue-plus build",
     "lint:soybean-admin": "pnpm --filter ruoyi-vue-plus lint",
     "typecheck:soybean-admin": "pnpm --filter ruoyi-vue-plus typecheck",
-    "dev:all": "concurrently -n student,fastapi,worker,soybean -c blue,green,yellow,magenta \"pnpm dev:student-web\" \"pnpm dev:fastapi-backend\" \"pnpm dev:fastapi-worker\" \"pnpm dev:soybean-admin\""
+    "dev:all": "concurrently -n student,fastapi,worker,admin -c blue,green,yellow,magenta \"pnpm dev:student-web\" \"pnpm dev:fastapi-backend\" \"pnpm dev:fastapi-worker\" \"pnpm dev:admin-web\""
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
