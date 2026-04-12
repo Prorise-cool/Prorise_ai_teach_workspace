@@ -16,10 +16,10 @@ from app.core.security import (
     has_permission,
 )
 from app.features.video.routes import get_video_service, get_video_voice_catalog_service
-from app.features.video.create_task_models import CreateVideoTaskRequest
+from app.features.video.models.create_task import CreateVideoTaskRequest
 from app.features.video.service import VideoService
-from app.features.video.voice_models import VideoVoiceListPayload, VideoVoiceOption
-from app.features.video.services.create_task import (
+from app.features.video.models.voice import VideoVoiceListPayload, VideoVoiceOption
+from app.features.video.service.create_task import (
     VIDEO_TASK_CREATE_PERMISSION,
     build_idempotency_key,
     create_video_task,
@@ -88,7 +88,7 @@ def video_client(
         fake_load_ruoyi_access_profile,
     )
     monkeypatch.setattr(
-        "app.features.video.services.create_task.persist_video_task_metadata",
+        "app.features.video.service.create_task.persist_video_task_metadata",
         AsyncMock(return_value=None),
     )
 
@@ -139,7 +139,7 @@ def test_create_video_task_marks_failed_and_clears_idempotency_when_dispatch_fai
     metadata_service = MagicMock(spec=VideoService)
 
     with patch(
-        "app.features.video.services.create_task.persist_video_task_metadata",
+        "app.features.video.service.create_task.persist_video_task_metadata",
         new=AsyncMock(return_value=None),
     ):
         with pytest.raises(AppError) as exc_info:

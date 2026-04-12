@@ -8,6 +8,7 @@ package 内 dotenv 文件，并显式区分本地、预发、生产与测试运�
     from app.core.config import get_settings
     settings = get_settings()  # 单例，首次调用后缓存
 """
+
 from __future__ import annotations
 
 import os
@@ -42,7 +43,9 @@ class ProviderRuntimeSource(str, Enum):
     RUOYI = "ruoyi"
 
 
-def _normalize_runtime_environment(raw_value: str | RuntimeEnvironment | None) -> RuntimeEnvironment:
+def _normalize_runtime_environment(
+    raw_value: str | RuntimeEnvironment | None,
+) -> RuntimeEnvironment:
     """归一化 ``FASTAPI_ENV``，只接受正式环境枚举值。"""
 
     if isinstance(raw_value, RuntimeEnvironment):
@@ -93,100 +96,101 @@ class Settings(BaseSettings):
     """FastAPI 骨架配置模型。"""
 
     app_name: str = Field(
-        default="Prorise AI Teach FastAPI Backend",
-        alias="FASTAPI_APP_NAME"
+        default="Prorise AI Teach FastAPI Backend", alias="FASTAPI_APP_NAME"
     )
     environment: RuntimeEnvironment = Field(
         default=RuntimeEnvironment.DEVELOPMENT,
         alias="FASTAPI_ENV",
     )
+    log_level: str = Field(default="INFO", alias="FASTAPI_LOG_LEVEL")
     host: str = Field(default="0.0.0.0", alias="FASTAPI_HOST")
     port: int = Field(default=8090, alias="FASTAPI_PORT")
     reload: bool = Field(default=True, alias="FASTAPI_RELOAD")
     api_v1_prefix: str = Field(default="/api/v1", alias="FASTAPI_API_V1_PREFIX")
-    redis_url: str = Field(default="redis://localhost:6379/0", alias="FASTAPI_REDIS_URL")
-    dramatiq_broker_backend: str = Field(default="redis", alias="FASTAPI_DRAMATIQ_BROKER_BACKEND")
-    dramatiq_queue_name: str = Field(default="task-runtime", alias="FASTAPI_DRAMATIQ_QUEUE_NAME")
-    dramatiq_worker_threads: int = Field(default=2, alias="FASTAPI_DRAMATIQ_WORKER_THREADS")
-    dramatiq_worker_processes: int = Field(default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES")
-    dramatiq_task_time_limit_ms: int = Field(default=900_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS")
-    ruoyi_base_url: str = Field(default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL")
-    ruoyi_timeout_seconds: float = Field(default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0", alias="FASTAPI_REDIS_URL"
+    )
+    dramatiq_broker_backend: str = Field(
+        default="redis", alias="FASTAPI_DRAMATIQ_BROKER_BACKEND"
+    )
+    dramatiq_queue_name: str = Field(
+        default="task-runtime", alias="FASTAPI_DRAMATIQ_QUEUE_NAME"
+    )
+    dramatiq_worker_threads: int = Field(
+        default=2, alias="FASTAPI_DRAMATIQ_WORKER_THREADS"
+    )
+    dramatiq_worker_processes: int = Field(
+        default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES"
+    )
+    dramatiq_task_time_limit_ms: int = Field(
+        default=900_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
+    )
+    ruoyi_base_url: str = Field(
+        default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL"
+    )
+    ruoyi_timeout_seconds: float = Field(
+        default=10.0, alias="FASTAPI_RUOYI_TIMEOUT_SECONDS"
+    )
     ruoyi_retry_attempts: int = Field(default=2, alias="FASTAPI_RUOYI_RETRY_ATTEMPTS")
-    ruoyi_retry_delay_seconds: float = Field(default=0.1, alias="FASTAPI_RUOYI_RETRY_DELAY_SECONDS")
-    ruoyi_encrypt_enabled: bool = Field(default=True, alias="FASTAPI_RUOYI_ENCRYPT_ENABLED")
-    ruoyi_encrypt_header_flag: str = Field(default="encrypt-key", alias="FASTAPI_RUOYI_ENCRYPT_HEADER_FLAG")
-    ruoyi_encrypt_public_key: str = Field(default="", alias="FASTAPI_RUOYI_ENCRYPT_PUBLIC_KEY")
-    ruoyi_encrypt_private_key: str = Field(default="", alias="FASTAPI_RUOYI_ENCRYPT_PRIVATE_KEY")
+    ruoyi_retry_delay_seconds: float = Field(
+        default=0.1, alias="FASTAPI_RUOYI_RETRY_DELAY_SECONDS"
+    )
+    ruoyi_encrypt_enabled: bool = Field(
+        default=True, alias="FASTAPI_RUOYI_ENCRYPT_ENABLED"
+    )
+    ruoyi_encrypt_header_flag: str = Field(
+        default="encrypt-key", alias="FASTAPI_RUOYI_ENCRYPT_HEADER_FLAG"
+    )
+    ruoyi_encrypt_public_key: str = Field(
+        default="", alias="FASTAPI_RUOYI_ENCRYPT_PUBLIC_KEY"
+    )
+    ruoyi_encrypt_private_key: str = Field(
+        default="", alias="FASTAPI_RUOYI_ENCRYPT_PRIVATE_KEY"
+    )
     provider_runtime_source: ProviderRuntimeSource = Field(
         default=ProviderRuntimeSource.SETTINGS,
         alias="FASTAPI_PROVIDER_RUNTIME_SOURCE",
     )
-    cos_base_url: str = Field(default="https://cos.example.local", alias="FASTAPI_COS_BASE_URL")
-    default_llm_provider: str = Field(default="stub-llm", alias="FASTAPI_DEFAULT_LLM_PROVIDER")
-    default_tts_provider: str = Field(default="stub-tts", alias="FASTAPI_DEFAULT_TTS_PROVIDER")
+    cos_base_url: str = Field(
+        default="https://cos.example.local", alias="FASTAPI_COS_BASE_URL"
+    )
+    iconfinder_api_base_url: str = Field(
+        default="https://api.iconfinder.com/v4",
+        alias="FASTAPI_ICONFINDER_API_BASE_URL",
+    )
+    iconify_api_base_url: str = Field(
+        default="https://api.iconify.design",
+        alias="FASTAPI_ICONIFY_API_BASE_URL",
+    )
+    default_llm_provider: str = Field(
+        default="stub-llm", alias="FASTAPI_DEFAULT_LLM_PROVIDER"
+    )
+    default_tts_provider: str = Field(
+        default="stub-tts", alias="FASTAPI_DEFAULT_TTS_PROVIDER"
+    )
     video_asset_root: str = Field(
         default=str(PROJECT_ROOT / ".runtime" / "video-assets"),
         alias="FASTAPI_VIDEO_ASSET_ROOT",
     )
-    video_target_duration_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_TARGET_DURATION_SECONDS")
-    video_min_duration_seconds: int = Field(default=90, alias="FASTAPI_VIDEO_MIN_DURATION_SECONDS")
-    video_max_duration_seconds: int = Field(default=180, alias="FASTAPI_VIDEO_MAX_DURATION_SECONDS")
     video_render_quality: str = Field(default="m", alias="FASTAPI_VIDEO_RENDER_QUALITY")
-    video_manim_scene_by_scene_max_scenes: int = Field(
-        default=3,
-        alias="FASTAPI_VIDEO_MANIM_SCENE_BY_SCENE_MAX_SCENES",
+    video_fix_max_attempts: int = Field(
+        default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS"
     )
-    video_manim_parallel_scene_concurrency: int = Field(
-        default=3,
-        alias="FASTAPI_VIDEO_MANIM_PARALLEL_SCENE_CONCURRENCY",
+    video_upload_retry_attempts: int = Field(
+        default=2, alias="FASTAPI_VIDEO_UPLOAD_RETRY_ATTEMPTS"
     )
-    video_fix_max_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS")
-    video_fix_render_max_retries: int = Field(default=6, alias="FASTAPI_VIDEO_FIX_RENDER_MAX_RETRIES")
-    video_storyboard_max_rounds: int = Field(default=20, alias="FASTAPI_VIDEO_STORYBOARD_MAX_ROUNDS")
-    video_debug_log: bool = Field(default=False, alias="FASTAPI_VIDEO_DEBUG_LOG")
-    video_ffmpeg_timeout_seconds: int = Field(default=60, alias="FASTAPI_VIDEO_FFMPEG_TIMEOUT_SECONDS")
-    video_upload_retry_attempts: int = Field(default=2, alias="FASTAPI_VIDEO_UPLOAD_RETRY_ATTEMPTS")
-    video_publish_cache_ttl_seconds: int = Field(default=600, alias="FASTAPI_VIDEO_PUBLISH_CACHE_TTL_SECONDS")
-    video_output_audio_format: str = Field(default="mp3", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_FORMAT")
-    video_output_audio_sample_rate: int = Field(default=44100, alias="FASTAPI_VIDEO_OUTPUT_AUDIO_SAMPLE_RATE")
-    video_output_audio_bitrate: str = Field(default="192k", alias="FASTAPI_VIDEO_OUTPUT_AUDIO_BITRATE")
-    video_narration_chars_per_second: float = Field(
-        default=4.8,
-        alias="FASTAPI_VIDEO_NARRATION_CHARS_PER_SECOND",
+    video_sandbox_cpu_count: float = Field(
+        default=1.0, alias="FASTAPI_VIDEO_SANDBOX_CPU_COUNT"
     )
-    video_narration_sentence_pause_seconds: float = Field(
-        default=0.35,
-        alias="FASTAPI_VIDEO_NARRATION_SENTENCE_PAUSE_SECONDS",
+    video_sandbox_memory_mb: int = Field(
+        default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB"
     )
-    video_scene_min_duration_seconds: int = Field(
-        default=4,
-        alias="FASTAPI_VIDEO_SCENE_MIN_DURATION_SECONDS",
+    video_sandbox_timeout_seconds: int = Field(
+        default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS"
     )
-    video_scene_max_duration_seconds: int = Field(
-        default=28,
-        alias="FASTAPI_VIDEO_SCENE_MAX_DURATION_SECONDS",
+    video_sandbox_tmp_size_mb: int = Field(
+        default=1024, alias="FASTAPI_VIDEO_SANDBOX_TMP_SIZE_MB"
     )
-    video_scene_ambient_motion_chunk_seconds: float = Field(
-        default=4.0,
-        alias="FASTAPI_VIDEO_SCENE_AMBIENT_MOTION_CHUNK_SECONDS",
-    )
-    video_compose_max_pad_seconds: float = Field(
-        default=12.0,
-        alias="FASTAPI_VIDEO_COMPOSE_MAX_PAD_SECONDS",
-    )
-    video_compose_max_pad_ratio: float = Field(
-        default=0.25,
-        alias="FASTAPI_VIDEO_COMPOSE_MAX_PAD_RATIO",
-    )
-    video_compose_max_stretch_ratio: float = Field(
-        default=2.5,
-        alias="FASTAPI_VIDEO_COMPOSE_MAX_STRETCH_RATIO",
-    )
-    video_sandbox_cpu_count: float = Field(default=1.0, alias="FASTAPI_VIDEO_SANDBOX_CPU_COUNT")
-    video_sandbox_memory_mb: int = Field(default=2048, alias="FASTAPI_VIDEO_SANDBOX_MEMORY_MB")
-    video_sandbox_timeout_seconds: int = Field(default=120, alias="FASTAPI_VIDEO_SANDBOX_TIMEOUT_SECONDS")
-    video_sandbox_tmp_size_mb: int = Field(default=1024, alias="FASTAPI_VIDEO_SANDBOX_TMP_SIZE_MB")
     video_sandbox_allow_local_fallback: bool = Field(
         default=False,
         alias="FASTAPI_VIDEO_SANDBOX_ALLOW_LOCAL_FALLBACK",
@@ -213,7 +217,9 @@ class Settings(BaseSettings):
         explicit_env_file = getattr(dotenv_settings, "env_file", None)
         layered_dotenv_settings = DotEnvSettingsSource(
             settings_cls,
-            env_file=_build_env_file_candidates() if explicit_env_file is None else explicit_env_file,
+            env_file=_build_env_file_candidates()
+            if explicit_env_file is None
+            else explicit_env_file,
             env_file_encoding="utf-8",
         )
         return (

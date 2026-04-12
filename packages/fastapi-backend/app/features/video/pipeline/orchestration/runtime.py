@@ -6,7 +6,12 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from app.features.video.pipeline.models import VideoFailure, VideoResultDetail, VideoStage, build_stage_snapshot
+from app.features.video.pipeline.models import (
+    VideoFailure,
+    VideoResultDetail,
+    VideoStage,
+    build_stage_snapshot,
+)
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.key_builder import TASK_RUNTIME_TTL_SECONDS
 from app.shared.task_framework.status import TaskErrorCode, is_retryable_error
@@ -45,6 +50,7 @@ def build_stage_context(
 
 class VideoRuntimeStateStore:
     """视频任务运行态键值存储封装。"""
+
     def __init__(self, runtime_store: RuntimeStore, task_id: str) -> None:
         """初始化运行态存储。"""
         self.runtime_store = runtime_store
@@ -60,11 +66,15 @@ class VideoRuntimeStateStore:
 
     def load_value(self, suffix: str) -> object | None:
         """从运行态加载值。"""
-        return self.runtime_store.get_runtime_value(build_video_runtime_key(self.task_id, suffix))
+        return self.runtime_store.get_runtime_value(
+            build_video_runtime_key(self.task_id, suffix)
+        )
 
     def delete_value(self, suffix: str) -> None:
         """从运行态删除值。"""
-        self.runtime_store.delete_runtime_value(build_video_runtime_key(self.task_id, suffix))
+        self.runtime_store.delete_runtime_value(
+            build_video_runtime_key(self.task_id, suffix)
+        )
 
     def save_model(self, suffix: str, model: BaseModel) -> None:
         """将 Pydantic 模型序列化后保存到运行态。"""

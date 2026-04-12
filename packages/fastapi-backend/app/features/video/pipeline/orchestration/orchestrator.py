@@ -9,6 +9,7 @@
 6. 上传最终视频
 7. 全程发射 SSE 进度事件
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,36 +22,37 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings, get_settings
-from app.features.video.pipeline.agent import RunConfig, TeachingVideoAgent
-from app.features.video.pipeline.assets import LocalAssetStore
-from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
-from app.features.video.pipeline.gpt_request import (
+from app.features.video.pipeline.engine.agent import RunConfig, TeachingVideoAgent
+from app.features.video.pipeline.engine.gpt_request import (
     LLMBridge,
-    ProviderEndpoint,
     configure_bridge,
     endpoint_from_provider,
 )
+from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
-    UploadResult,
     VideoResult,
     VideoStage,
+    get_stage_profile,
     resolve_stage_progress,
 )
-from app.features.video.pipeline.protocols import VideoMetadataPersister
-from app.features.video.pipeline.runtime import (
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
+from app.features.video.pipeline.orchestration.runtime import (
     VideoRuntimeStateStore,
-    build_failure,
     merge_result_detail,
 )
-from app.features.video.pipeline.upload import UploadService
+from app.features.video.pipeline.orchestration.upload import UploadService
+from app.features.video.pipeline.protocols import VideoMetadataPersister
 from app.infra.redis_client import RuntimeStore
 from app.providers.failover import ProviderFailoverService
 from app.providers.health import ProviderHealthStore
 from app.providers.protocols import ProviderResult
-from app.providers.runtime_config_service import ProviderRuntimeResolver, VideoProviderRuntimeAssembly
+from app.providers.runtime_config_service import (
+    ProviderRuntimeResolver,
+    VideoProviderRuntimeAssembly,
+)
 from app.shared.task_framework.base import BaseTask, TaskResult
-from app.shared.task_framework.status import TaskErrorCode
+from app.shared.task_framework.status import TaskInternalStatus
 
 logger = logging.getLogger(__name__)
 
@@ -80,15 +82,17 @@ def _utc_iso() -> str:
 # TTS runner (bridges our async TTS providers into the pipeline)
 # ---------------------------------------------------------------------------
 
+
 async def _run_tts_for_sections(
     sections: list[dict[str, Any]],
     tts_providers: tuple,
     health_store: ProviderHealthStore,
     output_dir: Path,
 ) -> dict[str, Path]:
-    """为每个 section 的 lecture_lines 生成 TTS 音频并返回 {section_id: audio_path}。"""
+    """为每个 section 的 lecture_lines 生成 TTS 音频，带退避重试。"""
     failover = ProviderFailoverService(health_store)
     results: dict[str, Path] = {}
+    failed_sections: list[dict[str, Any]] = []
 
     for section in sections:
         section_id = section.get("id", "unknown")
@@ -97,19 +101,63 @@ async def _run_tts_for_sections(
             continue
 
         full_text = "。".join(lines)
-        try:
-            provider_result: ProviderResult = await failover.synthesize(
-                tts_providers, full_text,
-            )
-            audio_b64 = provider_result.metadata.get("audioBase64", "")
-            audio_fmt = provider_result.metadata.get("audioFormat", "mp3")
-            if audio_b64:
-                audio_path = output_dir / f"{section_id}.{audio_fmt}"
-                audio_path.write_bytes(base64.b64decode(audio_b64))
-                results[section_id] = audio_path
-                logger.info("TTS done for %s (%.1fKB)", section_id, audio_path.stat().st_size / 1024)
-        except Exception:
-            logger.warning("TTS failed for section %s, video will be silent", section_id, exc_info=True)
+        success = False
+        for attempt in range(1, 4):  # 每个 section 最多重试3次
+            try:
+                provider_result: ProviderResult = await failover.synthesize(
+                    tts_providers,
+                    full_text,
+                )
+                audio_b64 = provider_result.metadata.get("audioBase64", "")
+                audio_fmt = provider_result.metadata.get("audioFormat", "mp3")
+                if audio_b64:
+                    audio_path = output_dir / f"{section_id}.{audio_fmt}"
+                    audio_path.write_bytes(base64.b64decode(audio_b64))
+                    results[section_id] = audio_path
+                    logger.info(
+                        "TTS done for %s (%.1fKB)",
+                        section_id,
+                        audio_path.stat().st_size / 1024,
+                    )
+                    success = True
+                    break
+            except Exception:
+                if attempt < 3:
+                    delay = attempt * 5  # 5s, 10s
+                    logger.warning(
+                        "TTS attempt %d/3 failed for %s, retrying in %ds...",
+                        attempt, section_id, delay, exc_info=True,
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error("TTS failed for %s after 3 attempts", section_id, exc_info=True)
+        if not success:
+            failed_sections.append(section)
+
+    # 全部失败时，等待后整批重试一次
+    if not results and failed_sections:
+        logger.warning(
+            "All %d sections TTS failed, waiting 15s before batch retry...",
+            len(failed_sections),
+        )
+        await asyncio.sleep(15)
+        for section in failed_sections:
+            section_id = section.get("id", "unknown")
+            lines = section.get("lecture_lines", [])
+            if not lines:
+                continue
+            full_text = "。".join(lines)
+            try:
+                provider_result = await failover.synthesize(tts_providers, full_text)
+                audio_b64 = provider_result.metadata.get("audioBase64", "")
+                audio_fmt = provider_result.metadata.get("audioFormat", "mp3")
+                if audio_b64:
+                    audio_path = output_dir / f"{section_id}.{audio_fmt}"
+                    audio_path.write_bytes(base64.b64decode(audio_b64))
+                    results[section_id] = audio_path
+                    logger.info("TTS batch retry succeeded for %s", section_id)
+            except Exception:
+                logger.error("TTS batch retry failed for %s", section_id)
 
     return results
 
@@ -117,6 +165,7 @@ async def _run_tts_for_sections(
 # ---------------------------------------------------------------------------
 # FFmpeg compose: merge silent video + TTS audio per section, then concat all
 # ---------------------------------------------------------------------------
+
 
 def _compose_section_with_audio(
     video_path: Path,
@@ -129,17 +178,24 @@ def _compose_section_with_audio(
         return output_path
 
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-i", str(audio_path),
-        "-c:v", "copy",
-        "-c:a", "aac",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
         "-shortest",
         str(output_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
-        logger.warning("FFmpeg audio merge failed for %s: %s", video_path.name, result.stderr[:200])
+        logger.warning(
+            "FFmpeg audio merge failed for %s: %s", video_path.name, result.stderr[:200]
+        )
         shutil.copy2(video_path, output_path)
     return output_path
 
@@ -150,11 +206,16 @@ def _concat_videos(video_paths: list[Path], output_path: Path) -> Path:
     list_file.write_text("\n".join(f"file '{p}'" for p in video_paths))
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", str(list_file),
-        "-c", "copy",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(list_file),
+        "-c",
+        "copy",
         str(output_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -166,10 +227,14 @@ def _concat_videos(video_paths: list[Path], output_path: Path) -> Path:
 def _extract_cover(video_path: Path, cover_path: Path) -> Path:
     """从视频第 1 秒提取封面。"""
     cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-ss", "1",
-        "-vframes", "1",
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-ss",
+        "1",
+        "-vframes",
+        "1",
         str(cover_path),
     ]
     subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -183,9 +248,12 @@ def _probe_duration(video_path: Path) -> int:
     """用 ffprobe 获取视频时长（秒）。"""
     cmd = [
         "ffprobe",
-        "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
         str(video_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
@@ -198,6 +266,7 @@ def _probe_duration(video_path: Path) -> int:
 # ---------------------------------------------------------------------------
 # Main orchestrator
 # ---------------------------------------------------------------------------
+
 
 class VideoPipelineService:
     """视频生成编排器。
@@ -236,11 +305,11 @@ class VideoPipelineService:
                 message="输入内容为空",
             )
 
-        # 工作目录：固定在 .runtime/video-assets/video/CASES，Code2Video 需要 "CASES" 在路径中
+        # 工作目录：每个任务独立隔离，避免缓存污染
         video_root = Path(self._settings.video_asset_root) / "video"
-        work_dir = video_root / "CASES"
+        work_dir = video_root / "CASES" / task_id
         work_dir.mkdir(parents=True, exist_ok=True)
-        # 确保 Code2Video 的辅助目录存在
+        # 确保 Code2Video 的共享辅助目录存在
         (video_root / "assets" / "icon").mkdir(parents=True, exist_ok=True)
         (video_root / "assets" / "reference").mkdir(parents=True, exist_ok=True)
         (video_root / "json_files").mkdir(parents=True, exist_ok=True)
@@ -251,7 +320,9 @@ class VideoPipelineService:
 
         try:
             # --- 1. 解析 Provider 链 ---
-            await self._emit(task, VideoStage.UNDERSTANDING, 0.0, "正在初始化 Provider...")
+            await self._emit(
+                task, VideoStage.UNDERSTANDING, 0.0, "正在初始化 Provider..."
+            )
             assembly = await self._resolve_providers(task)
 
             # --- 2. 构建 LLM Bridge ---
@@ -264,7 +335,11 @@ class VideoPipelineService:
             agent, final_video = await asyncio.get_event_loop().run_in_executor(
                 None,
                 self._run_c2v_agent,
-                knowledge_point, work_dir, bridge, task, assembly,
+                knowledge_point,
+                work_dir,
+                bridge,
+                task,
+                assembly,
             )
 
             if final_video is None:
@@ -279,13 +354,33 @@ class VideoPipelineService:
             # --- 4. TTS ---
             await self._emit(task, VideoStage.TTS, 0.0, "生成旁白...")
             tts_audio_map = await self._run_tts(
-                agent, assembly, work_dir,
+                agent,
+                assembly,
+                work_dir,
             )
+
+            # --- 4.5 质量门禁：TTS ---
+            expected_sections = len(getattr(agent, "sections", []) or [])
+            tts_success = len(tts_audio_map)
+            if expected_sections > 0 and tts_success == 0:
+                raise VideoPipelineError(
+                    stage=VideoStage.TTS,
+                    error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                    message=f"TTS 全部失败（0/{expected_sections} sections），已重试",
+                )
+            if expected_sections > 0 and tts_success < expected_sections:
+                logger.warning(
+                    "TTS partial: %d/%d sections have audio, proceeding with available",
+                    tts_success, expected_sections,
+                )
 
             # --- 5. 合成（音频 + 视频） ---
             await self._emit(task, VideoStage.COMPOSE, 0.0, "合成最终视频...")
             composed_video, cover_path = self._compose_final(
-                agent, final_video_path, tts_audio_map, work_dir,
+                agent,
+                final_video_path,
+                tts_audio_map,
+                work_dir,
             )
 
             duration = _probe_duration(composed_video)
@@ -305,7 +400,9 @@ class VideoPipelineService:
                 settings=self._settings,
                 runtime=runtime,
             )
-            upload_result = await upload_svc.execute(task_id=task_id, compose_result=compose_result)
+            upload_result = await upload_svc.execute(
+                task_id=task_id, compose_result=compose_result
+            )
 
             # --- 7. 构建结果 ---
             knowledge_points = []
@@ -353,7 +450,7 @@ class VideoPipelineService:
                 message=str(exc),
             ) from exc
         finally:
-            pass  # work_dir 是固定路径，不清理
+            pass  # work_dir 保留用于调试；生产环境可按需清理 CASES/{task_id}/
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -405,8 +502,7 @@ class VideoPipelineService:
         sections = []
         if hasattr(agent, "sections") and agent.sections:
             sections = [
-                {"id": s.id, "lecture_lines": s.lecture_lines}
-                for s in agent.sections
+                {"id": s.id, "lecture_lines": s.lecture_lines} for s in agent.sections
             ]
 
         if not sections:
@@ -417,7 +513,10 @@ class VideoPipelineService:
         audio_dir.mkdir(exist_ok=True)
 
         return await _run_tts_for_sections(
-            sections, tts_providers, health_store, audio_dir,
+            sections,
+            tts_providers,
+            health_store,
+            audio_dir,
         )
 
     def _compose_final(
@@ -472,7 +571,8 @@ class VideoPipelineService:
 
         logger.info(
             "Building LLM bridge  source=%s  summary=%s",
-            assembly.source, assembly.provider_summary(),
+            assembly.source,
+            assembly.provider_summary(),
         )
 
         # 为每个 stage 注册 endpoint
@@ -490,11 +590,20 @@ class VideoPipelineService:
                 try:
                     ep = endpoint_from_provider(providers[0])
                     bridge.register_stage(c2v_stage, ep)
-                    logger.info("Bridge stage %s -> %s  base_url=%s  model=%s",
-                                c2v_stage, providers[0].provider_id, ep.base_url[:50], ep.model_name)
+                    logger.info(
+                        "Bridge stage %s -> %s  base_url=%s  model=%s",
+                        c2v_stage,
+                        providers[0].provider_id,
+                        ep.base_url[:50],
+                        ep.model_name,
+                    )
                 except Exception as exc:
-                    logger.warning("Failed to extract endpoint for stage %s provider %s: %s",
-                                   c2v_stage, providers[0].provider_id, exc)
+                    logger.warning(
+                        "Failed to extract endpoint for stage %s provider %s: %s",
+                        c2v_stage,
+                        providers[0].provider_id,
+                        exc,
+                    )
 
         # 设置默认 endpoint
         if assembly.default_llm:
@@ -517,7 +626,9 @@ class VideoPipelineService:
         )
 
         # 从 Redis 读取任务创建时保存的 auth 凭据
-        auth = load_video_runtime_auth(self._runtime_store, task_id=task.context.task_id)
+        auth = load_video_runtime_auth(
+            self._runtime_store, task_id=task.context.task_id
+        )
         access_token = auth.access_token if auth else None
         client_id = auth.client_id if auth else None
 
@@ -536,14 +647,24 @@ class VideoPipelineService:
         """发射 SSE 进度事件。"""
         try:
             abs_progress, stage_progress = resolve_stage_progress(stage, ratio)
-            await task.emit_runtime_snapshot({
-                "stage": stage.value,
-                "progress": abs_progress,
-                "stageProgress": stage_progress,
-                "message": message,
-            })
+            profile = get_stage_profile(stage)
+            await task.emit_runtime_snapshot(
+                internal_status=TaskInternalStatus.RUNNING,
+                progress=abs_progress,
+                message=message,
+                context={
+                    "stage": stage.value,
+                    "stageLabel": profile.display_label,
+                    "stageProgress": stage_progress,
+                },
+                event="progress",
+            )
         except Exception:
-            pass  # SSE 发射失败不影响流水线
+            logger.warning(
+                "SSE emit failed  task_id=%s  stage=%s",
+                task.context.task_id, stage.value,
+                exc_info=True,
+            )
 
 
 def get_video_pipeline_service(

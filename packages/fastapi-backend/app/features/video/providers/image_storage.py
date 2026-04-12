@@ -8,15 +8,15 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from pathlib import Path
 
-from pydantic import BaseModel
-
 from app.core.logging import get_logger
+from pydantic import BaseModel
 
 logger = get_logger("app.features.video.image_storage")
 
 
 class ImageStorageResult(BaseModel):
     """图片存储结果。"""
+
     image_ref: str
     relative_path: str
 
@@ -30,7 +30,9 @@ class ImageStorage(ABC):
         return False
 
     @abstractmethod
-    async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+    async def upload(
+        self, file_bytes: bytes, filename: str, content_type: str
+    ) -> ImageStorageResult:
         """上传图片。"""
         raise NotImplementedError
 
@@ -42,6 +44,7 @@ class ImageStorage(ABC):
 
 class LocalImageStorage(ImageStorage):
     """基于本地文件系统的图片存储实现。"""
+
     def __init__(self, base_dir: str | Path = "data/uploads/video") -> None:
         """初始化图片存储。"""
         self._base_dir = Path(base_dir)
@@ -51,7 +54,9 @@ class LocalImageStorage(ImageStorage):
         """本地文件存储只允许作为开发/测试回退。"""
         return True
 
-    async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+    async def upload(
+        self, file_bytes: bytes, filename: str, content_type: str
+    ) -> ImageStorageResult:
         """上传图片。"""
         date_prefix = datetime.now(UTC).strftime("%Y%m%d")
         extension = _extract_extension(filename, content_type)
@@ -82,12 +87,17 @@ class LocalImageStorage(ImageStorage):
 
 class CosImageStorage(ImageStorage):
     """腾讯云 COS 图片存储实现（待完成）。"""
-    def __init__(self, bucket: str = "xiaomai-video", region: str = "ap-guangzhou") -> None:
+
+    def __init__(
+        self, bucket: str = "xiaomai-video", region: str = "ap-guangzhou"
+    ) -> None:
         """初始化图片存储。"""
         self._bucket = bucket
         self._region = region
 
-    async def upload(self, file_bytes: bytes, filename: str, content_type: str) -> ImageStorageResult:
+    async def upload(
+        self, file_bytes: bytes, filename: str, content_type: str
+    ) -> ImageStorageResult:
         """上传图片。"""
         raise NotImplementedError("COS 图片存储尚未实现，当前请使用 LocalImageStorage")
 

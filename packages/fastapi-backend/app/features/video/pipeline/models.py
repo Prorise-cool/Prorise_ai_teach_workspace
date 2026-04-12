@@ -9,7 +9,7 @@ from typing import Any, Literal
 from pydantic import Field, field_serializer
 
 from app.core.logging import format_trace_timestamp
-from app.features.video.modeling import VideoCamelModel
+from app.features.video.models.base import VideoCamelModel
 
 
 class VideoStage(StrEnum):

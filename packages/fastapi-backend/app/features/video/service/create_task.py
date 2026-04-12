@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from app.core.errors import AppError
 from app.core.logging import format_trace_timestamp, get_logger
 from app.core.security import AccessContext, has_permission
-from app.features.video.create_task_models import (
+from app.features.video.models.create_task import (
     CreateVideoTaskAcceptedPayload,
     CreateVideoTaskRequest,
     IdempotentConflictPayload,

@@ -13,8 +13,8 @@ from app.features.video.pipeline.models import (
     build_stage_snapshot,
 )
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
-from app.features.video.pipeline.orchestrator import VideoPipelineService
-from app.features.video.pipeline.runtime import VideoRuntimeStateStore
+from app.features.video.pipeline.orchestration.orchestrator import VideoPipelineService
+from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
 from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
@@ -23,7 +23,7 @@ from app.features.video.pipeline.sandbox import (
     resolve_local_fallback_policy,
     scan_script_safety,
 )
-from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.services import _cleanup_pipeline_temp_dirs
 from app.features.video.service import VideoService
 from app.infra.redis_client import RuntimeStore
