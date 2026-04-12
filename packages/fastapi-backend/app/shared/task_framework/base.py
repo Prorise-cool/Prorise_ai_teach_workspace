@@ -188,7 +188,11 @@ class BaseTask(ABC):
             or TaskErrorCode.UNHANDLED_EXCEPTION
         )
         message = str(exc) or "任务执行失败"
-        return TaskResult.failed(message=message, error_code=TaskErrorCode(error_code))
+        try:
+            resolved_code = TaskErrorCode(error_code)
+        except ValueError:
+            resolved_code = TaskErrorCode.UNHANDLED_EXCEPTION
+        return TaskResult.failed(message=message, error_code=resolved_code)
 
     async def finalize(self, result: TaskResult) -> TaskResult:
         """任务收尾钩子（可选覆盖）。

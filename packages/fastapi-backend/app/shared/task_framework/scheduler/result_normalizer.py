@@ -86,7 +86,11 @@ class ResultNormalizerMixin:
             or getattr(exc, "code", None)
             or TaskErrorCode.UNHANDLED_EXCEPTION
         )
-        return TaskErrorCode(raw_error_code)
+        # 域特定错误码（如 VideoTaskErrorCode）不是 TaskErrorCode 成员，直接回退
+        try:
+            return TaskErrorCode(raw_error_code)
+        except ValueError:
+            return TaskErrorCode.UNHANDLED_EXCEPTION
 
     @staticmethod
     def _internal_status_for_result(result: TaskResult) -> TaskInternalStatus:

@@ -11,6 +11,7 @@ from app.core.errors import IntegrationError
 from app.core.logging import get_logger
 from app.providers.factory import ProviderFactory
 from app.providers.protocols import (
+    PROVIDER_ID_PATTERN,
     LLMProvider,
     ProviderCapability,
     ProviderConfigurationError,
@@ -208,9 +209,16 @@ class ProviderRuntimeResolver:
         for binding in bindings:
             if not binding.stage_code or not binding.provider_id:
                 continue
-            capability = ProviderCapability(binding.capability)
-            config = self._build_runtime_config(binding)
-            self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
+            try:
+                capability = ProviderCapability(binding.capability)
+                config = self._build_runtime_config(binding)
+                self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
+            except (ProviderConfigurationError, ProviderNotFoundError, ValueError) as exc:
+                logger.warning(
+                    "Skip invalid RuoYi binding  provider_id=%s  stage=%s  error=%s",
+                    binding.provider_id, binding.stage_code, exc,
+                )
+                continue
 
             target = llm_config_map if capability is ProviderCapability.LLM else tts_config_map
             target.setdefault(binding.stage_code, []).append(config)
@@ -255,6 +263,12 @@ class ProviderRuntimeResolver:
 
     def _build_runtime_config(self, binding: RuoYiAiRuntimeBinding) -> ProviderRuntimeConfig:
         api_key = binding.api_key or binding.access_token
+        # RuoYi 可能返回纯数字 provider_id（如 202604070402），需要转为合法 {vendor}-{id} 格式
+        raw_pid = binding.provider_id.strip().lower()
+        if raw_pid and not PROVIDER_ID_PATTERN.fullmatch(raw_pid):
+            vendor = _read_text(binding.vendor_code, binding.provider_type) or "ruoyi"
+            raw_pid = f"{vendor.strip().lower()}-{raw_pid}"
+        provider_id = raw_pid
         settings = {
             "provider_type": binding.provider_type,
             "vendor_code": binding.vendor_code,
@@ -278,7 +292,7 @@ class ProviderRuntimeResolver:
             **dict(binding.runtime_settings),
         }
         return ProviderRuntimeConfig(
-            provider_id=binding.provider_id,
+            provider_id=provider_id,
             priority=binding.priority,
             timeout_seconds=binding.timeout_seconds,
             retry_attempts=binding.retry_attempts,
