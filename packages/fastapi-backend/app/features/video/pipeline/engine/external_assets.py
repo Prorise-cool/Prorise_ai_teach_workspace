@@ -1,10 +1,13 @@
 import json
+import logging
 import requests
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .prompts import get_prompt_download_assets, get_prompt_place_assets
+from ..prompts import get_prompt_download_assets, get_prompt_place_assets
+
+logger = logging.getLogger(__name__)
 
 
 class SmartSVGDownloader:
@@ -23,7 +26,6 @@ class SmartSVGDownloader:
             if len(sections) > 1:
                 selected_sections.append(sections[-1])
         temp_storyboard = {"sections": selected_sections}
-        # print(temp_storyboard)
 
         elements = self._analyze_assets_needed(temp_storyboard)
 
@@ -37,7 +39,7 @@ class SmartSVGDownloader:
                 filepath = self._download_element(el)
                 if filepath:
                     downloaded_assets[el] = filepath
-                    print(f"✓ 下载: {el} -> {filepath}")
+                    logger.info("Downloaded: %s -> %s", el, filepath)
 
         prompt = self._build_enhancement_prompt(storyboard, downloaded_assets)
         api_response = self.api_function(prompt, max_tokens=2000)[0]
@@ -103,10 +105,10 @@ class SmartSVGDownloader:
             return enhanced_storyboard
 
         except json.JSONDecodeError as e:
-            print(f"API response parsing failed: {e}")
+            logger.warning("API response parsing failed: %s", e)
             return original_storyboard
         except Exception as e:
-            print(f"Error occurred while processing API response: {e}")
+            logger.warning("Error occurred while processing API response: %s", e)
             return original_storyboard
 
     def _analyze_assets_needed(self, storyboard_data) -> List[str]:
@@ -118,11 +120,11 @@ class SmartSVGDownloader:
             response = self.api_function(prompt, max_tokens=100)[0]
             try:
                 content = response.candidates[0].content.parts[0].text
-            except:
+            except Exception:
                 content = response.choices[0].message.content
             elements = [line.strip().lower() for line in content.strip().split("\n") if line.strip()]
             return list(dict.fromkeys(elements))[:4]
-        except:
+        except Exception:
             return []
 
     def _check_cache(self, element: str) -> Optional[str]:
@@ -137,7 +139,10 @@ class SmartSVGDownloader:
 
     def _download_iconfinder(self, element: str) -> Optional[str]:
         try:
-            url = f"https://api.iconfinder.com/v4/icons/search?query={element}&count=1&premium=0"
+            from app.core.config import get_settings
+            settings = get_settings()
+            base = settings.iconfinder_api_base_url.rstrip("/")
+            url = f"{base}/icons/search?query={element}&count=1&premium=0"
             headers = {"Authorization": f"Bearer {self.iconfinder_api_key}"}
             resp = requests.get(url, headers=headers, timeout=10)
             if resp.status_code != 200:
@@ -162,23 +167,28 @@ class SmartSVGDownloader:
                     filepath = self.assets_dir / f"{element}.png"
                     filepath.write_bytes(img_resp.content)
                     return str(filepath.absolute())
-        except:
+        except Exception:
+            logger.debug("Iconfinder download failed for: %s", element)
             return None
 
     def _download_iconify(self, element: str) -> Optional[str]:
         try:
-            search_url = f"https://api.iconify.design/search?query={element}&limit=1"
+            from app.core.config import get_settings
+            settings = get_settings()
+            base = settings.iconify_api_base_url.rstrip("/")
+            search_url = f"{base}/search?query={element}&limit=1"
             r = requests.get(search_url, timeout=8)
             if r.status_code == 200 and r.json().get("icons"):
                 icon_id = r.json()["icons"][0]
                 collection, name = icon_id.split(":", 1)
-                svg_url = f"https://api.iconify.design/{collection}/{name}.svg"
+                svg_url = f"{base}/{collection}/{name}.svg"
                 svg_resp = requests.get(svg_url, timeout=8)
                 if svg_resp.status_code == 200:
                     filepath = self.assets_dir / f"{element}.svg"
                     filepath.write_text(svg_resp.text, encoding="utf-8")
                     return str(filepath.absolute())
-        except:
+        except Exception:
+            logger.debug("Iconify download failed for: %s", element)
             return None
 
     def _enhance_animations(self, animations: List[str], assets: Dict[str, str]) -> List[str]:
@@ -196,24 +206,3 @@ def process_storyboard_with_assets(
 ) -> Dict:
     downloader = SmartSVGDownloader(assets_dir, api_function, iconfinder_api_key)
     return downloader.process_storyboard(storyboard)
-
-
-if __name__ == "__main__":
-    from .gpt_request import request_gpt41_token
-
-    sb = {
-        "sections": [
-            {
-                "lecture_lines": ["A robot will guide the lesson", "The computer will process the data"],
-                "animations": ["Show robot", "Display computer screen"],
-            },
-            {
-                "lecture_lines": ["We will draw circles"],
-                "animations": ["Draw blue circles"],
-            },
-        ]
-    }
-
-    downloader = SmartSVGDownloader("./assets/icon", request_gpt41_token, "Your API token")
-    result = downloader.process_storyboard(sb)
-    print(json.dumps(result, indent=2, ensure_ascii=False))

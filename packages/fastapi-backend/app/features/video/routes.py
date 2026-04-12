@@ -12,7 +12,7 @@ from app.api.routes.tasks import get_task_status as get_shared_task_status
 from app.core.config import get_settings
 from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
-from app.features.video.create_task_models import (
+from app.features.video.models.create_task import (
     CreateVideoTaskAcceptedPayload,
     CreateVideoTaskRequest,
     CreateVideoTaskSuccessEnvelope,
@@ -24,8 +24,8 @@ from app.features.video.pipeline.models import (
     PublishOperationResponseEnvelope,
     VideoResultDetailResponseEnvelope,
 )
-from app.features.video.preprocess_models import VideoPreprocessSuccessEnvelope
-from app.features.video.services.voice_catalog import VideoVoiceCatalogService
+from app.features.video.models.preprocess import VideoPreprocessSuccessEnvelope
+from app.features.video.service.voice_catalog import VideoVoiceCatalogService
 from app.features.video.schemas import (
     VideoTaskMetadataCreateRequest,
     VideoTaskMetadataPageResponse,
@@ -33,15 +33,15 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
-from app.features.video.pipeline.assets import LocalAssetStore
-from app.features.video.voice_models import VideoVoiceListResponseEnvelope
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
+from app.features.video.models.voice import VideoVoiceListResponseEnvelope
 from app.providers.factory import get_provider_factory
 from app.providers.runtime_config_service import ProviderRuntimeResolver
-from app.features.video.services.create_task import (
+from app.features.video.service.create_task import (
     create_video_task,
     ensure_video_task_create_permission,
 )
-from app.features.video.services.preprocess import PreprocessService
+from app.features.video.service.preprocess import PreprocessService
 from app.schemas.common import ErrorResponseEnvelope, TaskSnapshotResponseEnvelope, build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus

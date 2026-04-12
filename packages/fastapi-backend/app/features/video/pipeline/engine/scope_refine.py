@@ -500,19 +500,19 @@ class ScopeRefineFixer:
                             if is_dry_run_ok:
                                 return merged_code
                             else:
-                                print(f"⚠️ The dry run failed after local repair: {dry_run_error}")
+                                logger.warning("Dry run failed after local repair: %s", dry_run_error)
                         else:
-                            print(f"⚠️ The syntax error after local repair: {syntax_error}")
+                            logger.warning("Syntax error after local repair: %s", syntax_error)
                     else:
-                        print("⚠️ The code block merge failed after local repair")
+                        logger.warning("Code block merge failed after local repair")
                 else:
-                    print("⚠️ The local repair failed after local repair")
+                    logger.warning("Local repair failed")
             else:
-                print("⚠️ The relevant code block cannot be extracted after local repair")
+                logger.warning("Relevant code block cannot be extracted after local repair")
         else:
-            print("🔄 The error scope is large, directly use complete repair")
+            logger.info("Error scope is large, directly use complete repair")
 
-        print("⚠️ The smart repair failed, fallback to complete repair")
+        logger.warning("Smart repair failed, fallback to complete repair")
         return self.fix_code_with_multi_stage_validation(section_id, code, error_msg, output_dir)
 
     def fix_code_with_multi_stage_validation(
@@ -624,7 +624,7 @@ class ScopeRefineFixer:
             return self._clean_code_format(fixed_code)
 
         except Exception as e:
-            print(f"Fix code block failed: {e}")
+            logger.warning("Fix code block failed: %s", e)
             return None
 
     def _merge_fixed_block(self, original_code: str, original_block: str, fixed_block: str, error_info: Dict) -> Optional[str]:
@@ -660,11 +660,11 @@ class ScopeRefineFixer:
                             return "\n".join(new_lines)
 
             # If all intelligent merging fails, return None to let the system fallback to full repair
-            print("⚠️ Code block merging failed, will fallback to full repair")
+            logger.warning("Code block merging failed, will fallback to full repair")
             return None
 
         except Exception as e:
-            print(f"Error merging code block: {e}")
+            logger.warning("Error merging code block: %s", e)
             return None
 
 
@@ -767,7 +767,6 @@ class GridCodeModifier:
             if not (0 <= line_idx < len(modified_lines)):
                 continue
             original_line = modified_lines[line_idx]
-            # print(f"Replace line {line_idx + 1}: {original_line} -> {mod['new_code'].strip()}")
             indent = len(original_line) - len(original_line.lstrip())
             new_code = " " * indent + mod["new_code"].strip()
             modified_lines[line_idx] = new_code

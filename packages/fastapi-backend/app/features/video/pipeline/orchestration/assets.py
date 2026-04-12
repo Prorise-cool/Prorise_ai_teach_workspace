@@ -21,6 +21,7 @@ from app.shared.cos_client import CosAsset, CosClient
 
 class LocalAssetStore:
     """视频流水线本地资产存储。"""
+
     def __init__(self, *, root_dir: Path, cos_client: CosClient) -> None:
         """初始化本地资产存储。"""
         self.root_dir = root_dir
@@ -102,7 +103,7 @@ class LocalAssetStore:
         """将资产引用转为存储 key。"""
         base_url = self.cos_client.base_url.rstrip("/")
         if ref.startswith(f"{base_url}/"):
-            return ref[len(base_url) + 1:]
+            return ref[len(base_url) + 1 :]
         parsed = urlparse(ref)
         if parsed.scheme in {"http", "https"} and parsed.path:
             path = parsed.path
@@ -112,5 +113,5 @@ class LocalAssetStore:
             marker = "/video/"
             if marker in path:
                 start = path.find(marker)
-                return path[start + 1:].lstrip("/")
+                return path[start + 1 :].lstrip("/")
         return ref.lstrip("/")

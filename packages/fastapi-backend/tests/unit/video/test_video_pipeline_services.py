@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.features.video.pipeline.auto_fix import ast_fix_code
-from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.manim_runtime_prelude import (
     MANIM_RUNTIME_PRELUDE,
     MANIM_RUNTIME_TEX_TEMPLATE_NAME,
@@ -21,7 +21,7 @@ from app.features.video.pipeline.models import (
     Storyboard,
     UnderstandingResult,
 )
-from app.features.video.pipeline.runtime import VideoRuntimeStateStore
+from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
 from app.features.video.pipeline.script_templates import (
     build_default_fix_script,
     build_default_manim_script,

@@ -66,6 +66,8 @@ def configure_logging() -> None:
 
     幂等：首次调用完成配置后，后续调用直接返回，
     避免多次调用（如 main.py + lifespan.py）导致 handler 重复添加。
+
+    日志级别通过 ``FASTAPI_LOG_LEVEL`` 环境变量控制，默认 INFO。
     """
     global _logging_configured
 
@@ -74,8 +76,12 @@ def configure_logging() -> None:
 
     _ensure_trace_record_factory()
 
+    from app.core.config import get_settings
+    settings = get_settings()
+    level = getattr(logging, settings.log_level.upper(), logging.INFO)
+
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(level)
 
     trace_handler = next(
         (handler for handler in root_logger.handlers if handler.get_name() == _trace_handler_name),
@@ -85,7 +91,7 @@ def configure_logging() -> None:
         trace_handler = logging.StreamHandler()
         trace_handler.set_name(_trace_handler_name)
 
-    trace_handler.setLevel(logging.INFO)
+    trace_handler.setLevel(level)
     trace_handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATE_FORMAT))
 
     other_handlers = [handler for handler in root_logger.handlers if handler.get_name() != _trace_handler_name]
