@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.features.video.voice_models import VideoVoiceListPayload, VideoVoiceOption
+from app.features.video.models.voice import VideoVoiceListPayload, VideoVoiceOption
 from app.providers.runtime_config_service import ProviderRuntimeResolver
 
 
 @dataclass(slots=True)
 class VideoVoiceCatalogService:
     """视频音色目录查询服务。"""
+
     resolver: ProviderRuntimeResolver
 
     async def list_voices(

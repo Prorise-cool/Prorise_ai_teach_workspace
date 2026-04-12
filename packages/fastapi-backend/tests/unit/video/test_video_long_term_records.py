@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from app.features.video.long_term_records import (
+from app.features.video.long_term.records import (
     build_session_artifact_batch_request,
     video_publication_from_ruoyi_data,
 )

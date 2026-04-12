@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.features.video.pipeline.errors import VideoTaskErrorCode
-from app.features.video.preprocess_models import VideoPreprocessResult
+from app.features.video.models.preprocess import VideoPreprocessResult
 from app.features.video.providers.image_storage import ImageStorage, LocalImageStorage
 from app.features.video.providers.ocr import MockOcrProvider, OcrProvider, OcrResult
 

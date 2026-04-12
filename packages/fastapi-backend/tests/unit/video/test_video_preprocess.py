@@ -7,10 +7,10 @@ import struct
 import pytest
 
 from app.core.errors import AppError
-from app.features.video.preprocess_models import VideoPreprocessResult
+from app.features.video.models.preprocess import VideoPreprocessResult
 from app.features.video.providers.image_storage import ImageStorage, ImageStorageResult
 from app.features.video.providers.ocr import OcrProvider, OcrResult
-from app.features.video.services.preprocess import (
+from app.features.video.service.preprocess import (
     MAX_FILE_SIZE_BYTES,
     ImageValidationError,
     PreprocessService,

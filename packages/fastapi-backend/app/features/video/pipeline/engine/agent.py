@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import random
 import re
 import subprocess
@@ -9,11 +10,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ..prompts import *  # noqa: F403
 from .c2v_utils import *  # noqa: F403
 from .external_assets import process_storyboard_with_assets
 from .gpt_request import *  # noqa: F403
-from .prompts import *  # noqa: F403
 from .scope_refine import *  # noqa: F403
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -160,7 +163,7 @@ class TeachingVideoAgent:
         outline_file = self.output_dir / "outline.json"
 
         if outline_file.exists():
-            print("📂 ...")
+            logger.info("...")
             with open(outline_file, "r", encoding="utf-8") as f:
                 outline_data = json.load(f)
         else:
@@ -175,7 +178,7 @@ class TeachingVideoAgent:
                 knowledge_point=self.learning_topic, reference_image_path=refer_img_path
             )
 
-            print("📝 Generating Outline...")
+            logger.info("Generating Outline...")
 
             for attempt in range(1, self.max_regenerate_tries + 1):
                 api_func = (
@@ -185,7 +188,7 @@ class TeachingVideoAgent:
                 )
                 response = api_func(prompt1, max_tokens=self.max_code_token_length)
                 if response is None:
-                    print(f"⚠️ Attempt {attempt} failed, retrying...")
+                    logger.warning("Attempt %s failed, retrying...", attempt)
                     if attempt == self.max_regenerate_tries:
                         raise ValueError("API requests failed multiple times")
                     continue
@@ -205,7 +208,9 @@ class TeachingVideoAgent:
                         json.dump(outline_data, f, ensure_ascii=False, indent=2)
                     break
                 except json.JSONDecodeError:
-                    print(f"⚠️ Outline format invalid on attempt {attempt}, retrying...")
+                    logger.warning(
+                        "Outline format invalid on attempt %s, retrying...", attempt
+                    )
                     if attempt == self.max_regenerate_tries:
                         raise ValueError(
                             "Outline format invalid multiple times, check prompt or API response"
@@ -216,7 +221,7 @@ class TeachingVideoAgent:
             target_audience=outline_data["target_audience"],
             sections=outline_data["sections"],
         )
-        print(f"== Outline generated: {self.outline.topic}")
+        logger.info("== Outline generated: %s", self.outline.topic)
         return self.outline
 
     def generate_storyboard(self) -> List[Section]:
@@ -228,11 +233,11 @@ class TeachingVideoAgent:
         enhanced_storyboard_file = self.output_dir / "storyboard_with_assets.json"
 
         if enhanced_storyboard_file.exists():
-            print("📂 Found enhanced storyboard, loading...")
+            logger.info("Found enhanced storyboard, loading...")
             with open(enhanced_storyboard_file, "r", encoding="utf-8") as f:
                 self.enhanced_storyboard = json.load(f)
         elif storyboard_file.exists():
-            print("📂 Found storyboard, loading...")
+            logger.info("Found storyboard, loading...")
             with open(storyboard_file, "r", encoding="utf-8") as f:
                 storyboard_data = json.load(f)
             if self.use_assets:
@@ -242,7 +247,7 @@ class TeachingVideoAgent:
             else:
                 self.enhanced_storyboard = storyboard_data
         else:
-            print("🎬 Generating storyboard...")
+            logger.info("Generating storyboard...")
             refer_img_path = (
                 self.knowledge_ref_img_folder / img_name
                 if (img_name := self.KNOWLEDGE2PATH.get(self.learning_topic))
@@ -259,7 +264,9 @@ class TeachingVideoAgent:
                 api_func = self._request_api_and_track_tokens
                 response = api_func(prompt2, max_tokens=self.max_code_token_length)
                 if response is None:
-                    print(f"⚠️ Outline format invalid on attempt {attempt}, retrying...")
+                    logger.warning(
+                        "Outline format invalid on attempt %s, retrying...", attempt
+                    )
                     if attempt == self.max_regenerate_tries:
                         raise ValueError("API requests failed multiple times")
                     continue
@@ -290,8 +297,8 @@ class TeachingVideoAgent:
                     break
 
                 except json.JSONDecodeError:
-                    print(
-                        f"⚠️ Storyboard format invalid on attempt {attempt}, retrying..."
+                    logger.warning(
+                        "Storyboard format invalid on attempt %s, retrying...", attempt
                     )
                     if attempt == self.max_regenerate_tries:
                         raise ValueError(
@@ -309,12 +316,14 @@ class TeachingVideoAgent:
             )
             self.sections.append(section)
 
-        print(f"== Storyboard processed, {len(self.sections)} sections generated")
+        logger.info(
+            "== Storyboard processed, %s sections generated", len(self.sections)
+        )
         return self.sections
 
     def _enhance_storyboard_with_assets(self, storyboard_data: dict) -> dict:
         """Enhance storyboard: smart analysis and download assets"""
-        print("🤖 Enhancing storyboard: smart analysis and download assets...")
+        logger.info("Enhancing storyboard: smart analysis and download assets...")
 
         try:
             enhanced_storyboard = process_storyboard_with_assets(
@@ -326,11 +335,11 @@ class TeachingVideoAgent:
             enhanced_storyboard_file = self.output_dir / "storyboard_with_assets.json"
             with open(enhanced_storyboard_file, "w", encoding="utf-8") as f:
                 json.dump(enhanced_storyboard, f, ensure_ascii=False, indent=2)
-            print("✅ Storyboard enhanced with assets")
+            logger.info("Storyboard enhanced with assets")
             return enhanced_storyboard
 
         except Exception as e:
-            print(f"⚠️ Asset download failed, using original storyboard: {e}")
+            logger.warning("Asset download failed, using original storyboard: %s", e)
             return storyboard_data
 
     def generate_section_code(
@@ -340,12 +349,11 @@ class TeachingVideoAgent:
         code_file = self.output_dir / f"{section.id}.py"
 
         if attempt == 1 and code_file.exists() and not feedback_improvements:
-            print(f"📂 Found existing code for {section.id}, reading...")
+            logger.info("Found existing code for %s, reading...", section.id)
             with open(code_file, "r", encoding="utf-8") as f:
                 code = f.read()
                 self.section_codes[section.id] = code
                 return code
-        # print(f"💻 Generating Manim code for {section.id} (attempt {attempt}/{self.max_regenerate_tries})...")
         regenerate_note = ""
         if attempt > 1:
             regenerate_note = get_regenerate_note(
@@ -366,7 +374,9 @@ class TeachingVideoAgent:
                 self.section_codes[section.id] = modified_code
                 return modified_code
             except Exception as e:
-                print(f"⚠️ GridCodeModifier failed, falling back to original code: {e}")
+                logger.warning(
+                    "GridCodeModifier failed, falling back to original code: %s", e
+                )
                 code_gen_prompt = get_feedback_improve_code(
                     feedback=get_feedback_list_prefix(feedback_improvements),
                     code=current_code,
@@ -381,7 +391,7 @@ class TeachingVideoAgent:
             code_gen_prompt, max_tokens=self.max_code_token_length
         )
         if response is None:
-            print(f"❌ Failed to generate code for {section.id} via API call.")
+            logger.error("Failed to generate code for %s via API call.", section.id)
             return ""
 
         try:
@@ -411,8 +421,12 @@ class TeachingVideoAgent:
             return False
 
         for fix_attempt in range(max_fix_attempts):
-            print(
-                f"🔧 {self.learning_topic} Debugging {section_id} (attempt {fix_attempt + 1}/{max_fix_attempts})"
+            logger.info(
+                "%s Debugging %s (attempt %s/%s)",
+                self.learning_topic,
+                section_id,
+                fix_attempt + 1,
+                max_fix_attempts,
             )
 
             try:
@@ -446,7 +460,9 @@ class TeachingVideoAgent:
                     for video_path in video_patterns:
                         if video_path.exists():
                             self.section_videos[section_id] = str(video_path)
-                            print(f"✅ {self.learning_topic} {section_id} finished")
+                            logger.info(
+                                "%s %s finished", self.learning_topic, section_id
+                            )
                             return True
 
                 current_code = self.section_codes[section_id]
@@ -462,11 +478,14 @@ class TeachingVideoAgent:
                     break
 
             except subprocess.TimeoutExpired:
-                print(f"❌ {self.learning_topic} {section_id} timed out")
+                logger.error("%s %s timed out", self.learning_topic, section_id)
                 break
             except Exception as e:
-                print(
-                    f"❌ {self.learning_topic} {section_id} failed with exception: {e}"
+                logger.error(
+                    "%s %s failed with exception: %s",
+                    self.learning_topic,
+                    section_id,
+                    e,
                 )
                 break
 
@@ -475,8 +494,12 @@ class TeachingVideoAgent:
     def get_mllm_feedback(
         self, section: Section, video_path: str, round_number: int = 1
     ) -> VideoFeedback:
-        print(
-            f"🤖 {self.learning_topic} Using MLLM to analyze video ({round_number}/{self.feedback_rounds}): {section.id}"
+        logger.info(
+            "%s Using MLLM to analyze video (%s/%s): %s",
+            self.learning_topic,
+            round_number,
+            self.feedback_rounds,
+            section.id,
         )
 
         current_code = self.section_codes[section.id]
@@ -502,8 +525,9 @@ class TeachingVideoAgent:
                             )
 
             except json.JSONDecodeError:
-                print(
-                    f"⚠️ {self.learning_topic} JSON parse failed, fallback to keyword analysis"
+                logger.warning(
+                    "%s JSON parse failed, fallback to keyword analysis",
+                    self.learning_topic,
                 )
 
                 for m in re.finditer(
@@ -544,7 +568,7 @@ class TeachingVideoAgent:
             return feedback
 
         except Exception as e:
-            print(f"❌ {self.learning_topic} MLLM analysis failed: {str(e)}")
+            logger.error("%s MLLM analysis failed: %s", self.learning_topic, str(e))
             return VideoFeedback(
                 section_id=section.id,
                 video_path=video_path,
@@ -556,15 +580,19 @@ class TeachingVideoAgent:
     def optimize_with_feedback(self, section: Section, feedback: VideoFeedback) -> bool:
         """Optimize the code based on feedback from the MLLM"""
         if not feedback.has_issues or not feedback.suggested_improvements:
-            print(f"✅ {self.learning_topic} {section.id} no optimization needed")
+            logger.info("%s %s no optimization needed", self.learning_topic, section.id)
             return True
 
         # === Step 1: back up original code ===
         original_code_content = self.section_codes[section.id]
 
         for attempt in range(self.max_feedback_gen_code_tries):
-            print(
-                f"🎯 {self.learning_topic} MLLM feedback optimization {section.id} code, attempt {attempt + 1}/{self.max_feedback_gen_code_tries}"
+            logger.info(
+                "%s MLLM feedback optimization %s code, attempt %s/%s",
+                self.learning_topic,
+                section.id,
+                attempt + 1,
+                self.max_feedback_gen_code_tries,
             )
 
             # === Step 2: back up original code and apply improvements ===
@@ -592,21 +620,33 @@ class TeachingVideoAgent:
                     if original_video_path.exists():
                         original_video_path.rename(optimized_video_path)
                         self.section_videos[section.id] = str(optimized_video_path)
-                        print(
-                            f"✨ {self.learning_topic} {section.id} optimized video saved: {optimized_video_path}"
+                        logger.info(
+                            "%s %s optimized video saved: %s",
+                            self.learning_topic,
+                            section.id,
+                            optimized_video_path,
                         )
                     else:
-                        print(
-                            f"⚠️ {self.learning_topic} {section.id} original video file not found: {original_video_path}"
+                        logger.warning(
+                            "%s %s original video file not found: %s",
+                            self.learning_topic,
+                            section.id,
+                            original_video_path,
                         )
                 else:
-                    print(
-                        f"⚠️ {self.learning_topic} {section.id} no optimized video path found"
+                    logger.warning(
+                        "%s %s no optimized video path found",
+                        self.learning_topic,
+                        section.id,
                     )
                 return True
             else:
-                print(
-                    f"❌ {self.learning_topic} {section.id} MLLM optimization failed, attempt {attempt + 1}/{self.max_feedback_gen_code_tries}"
+                logger.error(
+                    "%s %s MLLM optimization failed, attempt %s/%s",
+                    self.learning_topic,
+                    section.id,
+                    attempt + 1,
+                    self.max_feedback_gen_code_tries,
                 )
 
         return False
@@ -631,8 +671,11 @@ class TeachingVideoAgent:
             for future in as_completed(futures):
                 section_id, err = future.result()
                 if err:
-                    print(
-                        f"❌ {self.learning_topic} {section_id} code generation failed: {err}"
+                    logger.error(
+                        "%s %s code generation failed: %s",
+                        self.learning_topic,
+                        section_id,
+                        err,
                     )
 
         return self.section_codes
@@ -643,7 +686,6 @@ class TeachingVideoAgent:
         try:
             success = False
             for regenerate_attempt in range(self.max_regenerate_tries):
-                # print(f"🎯 Processing {section_id} (regenerate attempt {regenerate_attempt + 1}/{self.max_regenerate_tries})")
                 try:
                     if regenerate_attempt > 0:
                         self.generate_section_code(
@@ -657,13 +699,18 @@ class TeachingVideoAgent:
                     else:
                         pass
                 except Exception as e:
-                    print(
-                        f"⚠️ {section_id} attempt {regenerate_attempt + 1} raised exception: {str(e)}"
+                    logger.warning(
+                        "%s attempt %s raised exception: %s",
+                        section_id,
+                        regenerate_attempt + 1,
+                        str(e),
                     )
                     continue
             if not success:
-                print(
-                    f"❌{self.learning_topic} {section_id} all failed, skipping section"
+                logger.error(
+                    "%s %s all failed, skipping section",
+                    self.learning_topic,
+                    section_id,
                 )
                 return False
 
@@ -673,8 +720,10 @@ class TeachingVideoAgent:
                     for round in range(self.feedback_rounds):
                         current_video = self.section_videos.get(section_id)
                         if not current_video:
-                            print(
-                                f"❌ {self.learning_topic} {section_id} no video available for MLLM feedback"
+                            logger.error(
+                                "%s %s no video available for MLLM feedback",
+                                self.learning_topic,
+                                section_id,
                             )
                             return success
                         try:
@@ -688,25 +737,38 @@ class TeachingVideoAgent:
                             if optimization_success:
                                 pass
                             else:
-                                print(
-                                    f"⚠️ {self.learning_topic} {section_id} round {round + 1} MLLM feedback optimization failed, using current version"
+                                logger.warning(
+                                    "%s %s round %s MLLM feedback optimization failed, using current version",
+                                    self.learning_topic,
+                                    section_id,
+                                    round + 1,
                                 )
                         except Exception as e:
-                            print(
-                                f"⚠️ {self.learning_topic} {section_id} round {round + 1} MLLM feedback processing exception: {str(e)}"
+                            logger.warning(
+                                "%s %s round %s MLLM feedback processing exception: %s",
+                                self.learning_topic,
+                                section_id,
+                                round + 1,
+                                str(e),
                             )
                             continue
 
                 except Exception as e:
-                    print(
-                        f"⚠️ {self.learning_topic} {section_id} MLLM feedback processing exception: {str(e)}"
+                    logger.warning(
+                        "%s %s MLLM feedback processing exception: %s",
+                        self.learning_topic,
+                        section_id,
+                        str(e),
                     )
 
             return success
 
         except Exception as e:
-            print(
-                f"❌ {self.learning_topic} {section_id} render process exception: {str(e)}"
+            logger.error(
+                "%s %s render process exception: %s",
+                self.learning_topic,
+                section_id,
+                str(e),
             )
             return False
 
@@ -721,14 +783,18 @@ class TeachingVideoAgent:
             return section_id, success, video_path
 
         except Exception as e:
-            print(
-                f"❌ {self.learning_topic} {section_id} render process exception: {str(e)}"
+            logger.error(
+                "%s %s render process exception: %s",
+                self.learning_topic,
+                section_id,
+                str(e),
             )
             return section_id, False, None
 
     def render_all_sections(self, max_workers: int = 2) -> Dict[str, str]:
-        print(
-            f"🎥 Start parallel rendering of all section videos (up to {max_workers} threads)..."
+        logger.info(
+            "Start parallel rendering of all section videos (up to %s threads)...",
+            max_workers,
         )
 
         results = {}
@@ -743,30 +809,74 @@ class TeachingVideoAgent:
                     future = executor.submit(self.render_section, section)
                     future_to_section[future] = section.id
 
-                for future in as_completed(future_to_section, timeout=per_section_timeout * len(self.sections)):
+                for future in as_completed(
+                    future_to_section, timeout=per_section_timeout * len(self.sections)
+                ):
                     section_id = future_to_section[future]
                     try:
                         success = future.result(timeout=per_section_timeout)
                         if success and section_id in self.section_videos:
                             results[section_id] = self.section_videos[section_id]
                             successful_count += 1
-                            print(f"✅ {section_id} video rendered successfully: {results[section_id]}")
+                            logger.info(
+                                "%s video rendered successfully: %s",
+                                section_id,
+                                results[section_id],
+                            )
                         else:
                             failed_count += 1
-                            print(f"⚠️ {section_id} video rendering failed")
+                            logger.warning("%s video rendering failed", section_id)
                     except Exception as e:
                         failed_count += 1
-                        print(f"❌ {section_id} video rendering process error: {str(e)}")
+                        logger.error(
+                            "%s video rendering process error: %s", section_id, str(e)
+                        )
 
         except TimeoutError:
-            print("⚠️ Some sections timed out, proceeding with available videos")
+            logger.info("Some sections timed out, proceeding with available videos")
         except Exception as e:
-            print(f"❌ Rendering error: {str(e)}")
+            logger.error("Rendering error: %s", str(e))
 
-        print(f"\n📊 Render Results:")
-        print(f"   Total Sections: {len(self.sections)}")
-        print(f"   Successful: {successful_count}")
-        print(f"   Failed: {failed_count}")
+        logger.info("\n📊 Render Results:")
+        logger.info("   Total Sections: %s", len(self.sections))
+        logger.info("   Successful: %s", successful_count)
+        logger.info("   Failed: %s", failed_count)
+
+        # 质量门禁：成功率不够时，对失败的 section 再来一轮
+        total = len(self.sections)
+        if total > 0 and failed_count > 0 and successful_count / total < 0.6:
+            failed_sections = [
+                s for s in self.sections if s.id not in results
+            ]
+            logger.warning(
+                "Render success rate %d/%d (%.0f%%) below 60%%, retrying %d failed sections...",
+                successful_count, total, successful_count / total * 100, len(failed_sections),
+            )
+            for section in failed_sections:
+                try:
+                    self.generate_section_code(section, attempt=2)
+                    success = self.debug_and_fix_code(
+                        section.id, max_fix_attempts=self.max_fix_bug_tries
+                    )
+                    if success and section.id in self.section_videos:
+                        results[section.id] = self.section_videos[section.id]
+                        successful_count += 1
+                        failed_count -= 1
+                        logger.info("Retry succeeded for %s", section.id)
+                except Exception as e:
+                    logger.error("Retry failed for %s: %s", section.id, e)
+
+            logger.info(
+                "After retry: %d/%d succeeded (%.0f%%)",
+                successful_count, total, successful_count / total * 100,
+            )
+
+        # 最终门禁：重试后仍不够就失败
+        if total > 0 and successful_count / total < 0.6:
+            raise ValueError(
+                f"Render quality gate failed after retry: {successful_count}/{total} sections "
+                f"({successful_count / total:.0%}), minimum 60% required"
+            )
 
         return results
 
@@ -781,7 +891,7 @@ class TeachingVideoAgent:
 
         output_path = self.output_dir / output_filename
 
-        print("🔗 Start merging section videos...")
+        logger.info("Start merging section videos...")
 
         video_list_file = self.output_dir / "video_list.txt"
         with open(video_list_file, "w", encoding="utf-8") as f:
@@ -814,10 +924,10 @@ class TeachingVideoAgent:
             if result.returncode == 0:
                 return str(output_path)
             else:
-                print(f"❌ Failed to merge section videos: {result.stderr}")
+                logger.error("Failed to merge section videos: %s", result.stderr)
                 return None
         except Exception as e:
-            print(f"❌ Failed to merge section videos: {e}")
+            logger.error("Failed to merge section videos: %s", e)
             return None
 
     def GENERATE_VIDEO(self) -> str:
@@ -829,18 +939,18 @@ class TeachingVideoAgent:
             self.render_all_sections()
             final_video = self.merge_videos()
             if final_video:
-                print(f"🎉 Video generated success: {final_video}")
+                logger.info("Video generated success: %s", final_video)
                 return final_video
             else:
-                print(f"❌{self.learning_topic}  failed")
+                logger.error("%s  failed", self.learning_topic)
                 return None
         except Exception as e:
-            print(f"❌ Video generation failed: {e}")
+            logger.error("Video generation failed: %s", e)
             return None
 
 
 def process_knowledge_point(idx, kp, folder_path: Path, cfg: RunConfig):
-    print(f"\n🚀 Processing knowledge topic: {kp}")
+    logger.info("\n🚀 Processing knowledge topic: %s", kp)
     start_time = time.time()
 
     agent = TeachingVideoAgent(
@@ -854,8 +964,11 @@ def process_knowledge_point(idx, kp, folder_path: Path, cfg: RunConfig):
     duration_minutes = (time.time() - start_time) / 60
     total_tokens = agent.token_usage["total_tokens"]
 
-    print(
-        f"✅ Knowledge topic '{kp}' processed. Cost Time: {duration_minutes:.2f} minutes, Tokens used: {total_tokens}"
+    logger.info(
+        "Knowledge topic '%s' processed. Cost Time: %.2f minutes, Tokens used: %s",
+        kp,
+        duration_minutes,
+        total_tokens,
     )
     return kp, video_path, duration_minutes, total_tokens
 
@@ -864,19 +977,24 @@ def process_batch(batch_data, cfg: RunConfig):
     """Process a batch of knowledge points (serial within a batch)"""
     batch_idx, kp_batch, folder_path = batch_data
     results = []
-    print(f"Batch {batch_idx + 1} starts processing {len(kp_batch)} knowledge points")
+    logger.info(
+        "Batch %s starts processing %s knowledge points", batch_idx + 1, len(kp_batch)
+    )
 
     for local_idx, (idx, kp) in enumerate(kp_batch):
         try:
             if local_idx > 0:
                 delay = random.uniform(3, 6)
-                print(
-                    f"⏳ Batch {batch_idx + 1} waits {delay:.1f}s before processing {kp}..."
+                logger.info(
+                    "Batch %s waits %.1fs before processing %s...",
+                    batch_idx + 1,
+                    delay,
+                    kp,
                 )
                 time.sleep(delay)
             results.append(process_knowledge_point(idx, kp, folder_path, cfg))
         except Exception as e:
-            print(f"❌ Batch {batch_idx + 1} processing {kp} failed: {e}")
+            logger.error("Batch %s processing %s failed: %s", batch_idx + 1, kp, e)
             results.append((kp, None, 0, 0))
     return batch_idx, results
 
@@ -899,8 +1017,11 @@ def run_Code2Video(
             ]
             batches.append((i // batch_size, batch, folder_path))
 
-        print(
-            f"🔄 Parallel batch processing mode: {len(batches)} batches, each with {batch_size} knowledge points, {max_workers} concurrent batches"
+        logger.info(
+            "Parallel batch processing mode: %s batches, each with %s knowledge points, %s concurrent batches",
+            len(batches),
+            batch_size,
+            max_workers,
         )
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {
@@ -910,40 +1031,44 @@ def run_Code2Video(
                 try:
                     batch_idx, batch_results = future.result()
                     all_results.extend(batch_results)
-                    print(f"✅ Batch {batch_idx + 1} completed")
+                    logger.info("Batch %s completed", batch_idx + 1)
                 except Exception as e:
-                    print(f"❌ Batch {batch_idx + 1} processing failed: {e}")
+                    logger.error("Batch %s processing failed: %s", batch_idx + 1, e)
     else:
-        print("🔄 Serial processing mode")
+        logger.info("Serial processing mode")
         for idx, kp in enumerate(knowledge_points):
             try:
                 all_results.append(process_knowledge_point(idx, kp, folder_path, cfg))
             except Exception as e:
-                print(f"❌ Serial processing {kp} failed: {e}")
+                logger.error("Serial processing %s failed: %s", kp, e)
                 all_results.append((kp, None, 0, 0))
 
     successful_runs = [r for r in all_results if r[1] is not None]
     total_runs = len(all_results)
     if not successful_runs:
-        print("\nAll knowledge points failed, cannot calculate average.")
+        logger.info("\nAll knowledge points failed, cannot calculate average.")
         return
 
     total_duration = sum(r[2] for r in successful_runs)
     total_tokens_consumed = sum(r[3] for r in successful_runs)
     num_successful = len(successful_runs)
 
-    print("\n" + "=" * 50)
-    print(f"   Total knowledge points: {total_runs}")
-    print(
-        f"   Successfully processed: {num_successful} ({num_successful / total_runs * 100:.1f}%)"
+    logger.info("=" * 50)
+    logger.info("   Total knowledge points: %s", total_runs)
+    logger.info(
+        "   Successfully processed: %s (%.1f%)",
+        num_successful,
+        num_successful / total_runs * 100,
     )
-    print(
-        f"   Average duration [min]: {total_duration / num_successful:.2f} minutes/knowledge point"
+    logger.info(
+        "   Average duration [min]: %.2f minutes/knowledge point",
+        total_duration / num_successful,
     )
-    print(
-        f"   Average token consumption: {total_tokens_consumed / num_successful:,.0f} tokens/knowledge point"
+    logger.info(
+        "   Average token consumption: %,.0f tokens/knowledge point",
+        total_tokens_consumed / num_successful,
     )
-    print("=" * 50)
+    logger.info("=" * 50)
 
 
 def get_api_and_output(API_name):
@@ -963,7 +1088,7 @@ def get_api_and_output(API_name):
 
 def build_and_parse_args():
     parser = argparse.ArgumentParser()
-    # TODO: Core hyperparameters
+    # Core hyperparameters
     parser.add_argument(
         "--API",
         type=str,

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from app.core.logging import get_logger
 from app.core.security import AccessContext
-from app.features.video.long_term_records import build_session_artifact_batch_request
+from app.features.video.long_term.records import build_session_artifact_batch_request
 from app.features.video.pipeline.models import VideoArtifactGraph
 
 if TYPE_CHECKING:

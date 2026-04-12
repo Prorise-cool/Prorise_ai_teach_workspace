@@ -8,8 +8,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.core.logging import get_logger
-from app.features.video.long_term_service import VideoArtifactIndexService, VideoPublicationService
-from app.features.video.pipeline.assets import LocalAssetStore
+from app.features.video.long_term.service import VideoArtifactIndexService, VideoPublicationService
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.schemas import VideoBootstrapResponse, VideoTaskMetadataCreateRequest
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import TaskType

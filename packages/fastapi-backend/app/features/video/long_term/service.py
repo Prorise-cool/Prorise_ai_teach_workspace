@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Mapping
 from pydantic import ValidationError
 
 from app.core.errors import IntegrationError
-from app.features.video.long_term_records import (
+from app.features.video.long_term.records import (
     VideoPublicationPage,
     VideoPublicationSnapshot,
     VideoPublicationSyncRequest,
