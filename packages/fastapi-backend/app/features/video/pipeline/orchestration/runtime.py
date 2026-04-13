@@ -6,10 +6,14 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
+from app.core.logging import format_trace_timestamp
 from app.features.video.pipeline.models import (
     VideoFailure,
+    VideoPreviewSection,
+    VideoPreviewSectionStatus,
     VideoResultDetail,
     VideoStage,
+    VideoTaskPreview,
     build_stage_snapshot,
 )
 from app.infra.redis_client import RuntimeStore
@@ -99,6 +103,128 @@ class VideoRuntimeStateStore:
         """加载所有修复日志。"""
         existing = self.load_value("fix_log")
         return list(existing) if isinstance(existing, list) else []
+
+    def save_preview(self, preview: VideoTaskPreview) -> None:
+        """保存渐进预览运行态。"""
+        self.save_model("preview", preview)
+
+    def load_preview(self) -> VideoTaskPreview | None:
+        """读取渐进预览运行态。"""
+        return self.load_model("preview", VideoTaskPreview)
+
+
+def build_preview_state(
+    *,
+    task_id: str,
+    summary: str,
+    knowledge_points: list[str],
+    sections: list[VideoPreviewSection],
+    status: str = "processing",
+    preview_available: bool = False,
+    preview_version: int = 0,
+) -> VideoTaskPreview:
+    """构建视频等待页渐进预览状态。"""
+    ready_sections = sum(1 for section in sections if section.status == VideoPreviewSectionStatus.READY)
+    failed_sections = sum(1 for section in sections if section.status == VideoPreviewSectionStatus.FAILED)
+    return VideoTaskPreview(
+        task_id=task_id,
+        status=status,
+        preview_available=preview_available,
+        preview_version=preview_version,
+        summary=summary,
+        knowledge_points=list(knowledge_points),
+        total_sections=len(sections),
+        ready_sections=ready_sections,
+        failed_sections=failed_sections,
+        sections=list(sections),
+        updated_at=format_trace_timestamp(),
+    )
+
+
+def update_preview_section(
+    preview: VideoTaskPreview,
+    *,
+    section_id: str,
+    status: VideoPreviewSectionStatus,
+    preview_available: bool | None = None,
+    clip_url: str | None = None,
+    audio_url: str | None = None,
+    error_message: str | None = None,
+    fix_attempt: int | None = None,
+) -> VideoTaskPreview:
+    """更新指定 section 的预览状态，并自动刷新聚合统计。"""
+    updated_sections: list[VideoPreviewSection] = []
+    for section in preview.sections:
+        if section.section_id != section_id:
+            updated_sections.append(section)
+            continue
+
+        updated_sections.append(
+            section.model_copy(
+                update={
+                    "status": status,
+                    "clip_url": clip_url if clip_url is not None else section.clip_url,
+                    "audio_url": audio_url if audio_url is not None else section.audio_url,
+                    "error_message": error_message,
+                    "fix_attempt": fix_attempt,
+                    "updated_at": format_trace_timestamp(),
+                }
+            )
+        )
+
+    return build_preview_state(
+        task_id=preview.task_id,
+        status=preview.status,
+        preview_available=preview.preview_available if preview_available is None else preview_available,
+        preview_version=preview.preview_version + 1,
+        summary=preview.summary,
+        knowledge_points=preview.knowledge_points,
+        sections=updated_sections,
+    )
+
+
+def attach_preview_audio_urls(
+    preview: VideoTaskPreview,
+    *,
+    audio_urls: dict[str, str],
+    preview_available: bool = True,
+) -> VideoTaskPreview:
+    """为预览 sections 绑定旁白试听 URL。"""
+    updated_sections = [
+        section.model_copy(
+            update={
+                "audio_url": audio_urls.get(section.section_id, section.audio_url),
+                "updated_at": format_trace_timestamp(),
+            }
+        )
+        for section in preview.sections
+    ]
+    return build_preview_state(
+        task_id=preview.task_id,
+        status=preview.status,
+        preview_available=preview_available,
+        preview_version=preview.preview_version + 1,
+        summary=preview.summary,
+        knowledge_points=preview.knowledge_points,
+        sections=updated_sections,
+    )
+
+
+def mark_preview_status(
+    preview: VideoTaskPreview,
+    *,
+    status: str,
+) -> VideoTaskPreview:
+    """更新预览顶层状态并递增版本号。"""
+    return build_preview_state(
+        task_id=preview.task_id,
+        status=status,
+        preview_available=preview.preview_available,
+        preview_version=preview.preview_version + 1,
+        summary=preview.summary,
+        knowledge_points=preview.knowledge_points,
+        sections=preview.sections,
+    )
 
 
 def build_failure(
