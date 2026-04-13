@@ -12,6 +12,8 @@ from app.shared.task_framework.contracts import TaskContractPayload
 TaskEventName = Literal[
     "connected",
     "progress",
+    "section_progress",
+    "section_ready",
     "provider_switch",
     "completed",
     "failed",

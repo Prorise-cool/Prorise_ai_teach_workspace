@@ -20,6 +20,7 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     list_route = payload["paths"]["/api/v1/contracts/tasks"]["get"]
     auth_login_route = payload["paths"]["/api/v1/auth/login"]["post"]
     auth_me_route = payload["paths"]["/api/v1/auth/me"]["get"]
+    video_preview_route = payload["paths"]["/api/v1/video/tasks/{task_id}/preview"]["get"]
     learning_preview_route = payload["paths"]["/api/v1/learning/persistence-preview"]["post"]
     learning_persist_route = payload["paths"]["/api/v1/learning/persistence"]["post"]
     feature_bootstrap_paths = {
@@ -39,6 +40,7 @@ def test_openapi_exposes_contract_routes_and_examples() -> None:
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["request_id"] == "req_20260329_conflict"
     assert snapshot_route["responses"]["409"]["content"]["application/json"]["example"]["data"]["task_id"] == "video_20260329161500_ab12cd34"
     assert list_route["responses"]["200"]["content"]["application/json"]["example"]["total"] == 2
+    assert video_preview_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/VideoTaskPreviewResponseEnvelope"
     assert learning_preview_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
     assert learning_preview_route["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceResponse"
     assert learning_persist_route["requestBody"]["content"]["application/json"]["schema"]["$ref"] == "#/components/schemas/LearningPersistenceRequest"
