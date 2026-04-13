@@ -193,8 +193,10 @@
 
 ### Story 4.8: 视频结果页、播放器与结果操作
 - [文档](./4-8-视频结果页播放器与结果操作.md)
+- [热修记录](./4-8-视频结果页result-detail运行态回退修复-20260412.md)
 - **状态**: ready-for-dev
 - **说明**: Video.js 播放器封装、结果页布局、后续动作入口（disabled）、结果操作区壳层
+- **热修摘要**: 2026-04-12 已修复 `detail_ref` 缺失时结果接口只返回 `{status: completed}` 的回退缺口，并同日补齐 Worker 超时失败写回、`taskElapsedSeconds/renderSummary` 结果语义；实机任务 `vtask_20260412135924_6a80addf` 在 `17m28s` 内完成 `5/5` 渲染并正常返回 `videoUrl`
 
 ### Story 4.9: 视频侧 SessionArtifactGraph 回写
 - [文档](./4-9-视频侧-sessionartifactgraph-回写.md)
@@ -205,6 +207,11 @@
 - [文档](./4-10-视频结果公开发布与输入页复用卡片.md)
 - **状态**: ready-for-dev
 - **说明**: publish/unpublish API、PublishedVideoCard schema、公开列表分页与 Story 3.6 发现区对接
+
+### Story 4.11: 视频等待页渐进式产物展示与分段预览
+- [文档](./4-11-视频等待页渐进式产物展示与分段预览.md)
+- **状态**: ready-for-dev
+- **说明**: 在等待页渐进展示真实 storyboard 与已完成 section clip，保持结果页只消费最终 `videoUrl` 的成功态边界
 
 ## 快速导航
 

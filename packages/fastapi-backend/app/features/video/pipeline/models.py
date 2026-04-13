@@ -324,6 +324,8 @@ class VideoResult(VideoCamelModel):
     ai_content_flag: bool = True
     title: str
     provider_used: dict[str, Any] = Field(default_factory=dict)
+    task_elapsed_seconds: int | None = Field(default=None, ge=1)
+    render_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class VideoFailure(VideoCamelModel):
