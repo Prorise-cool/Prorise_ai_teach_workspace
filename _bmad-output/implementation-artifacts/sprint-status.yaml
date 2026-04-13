@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-10 15:34:29 +0800
+# last_updated: 2026-04-13 08:39:56 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-10 15:34:29 +0800
+last_updated: 2026-04-13 08:39:56 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -107,9 +107,20 @@ development_status:
   # - render_verify 保留新修复循环，同时恢复 render / manim_fix SSE 语义，并在成功后补发 render_verify 阶段。
   # - student-web 已补齐 solve / render_verify 文案与 VIDEO_SOLVE_FAILED 错误映射。
   # - 20260410_plan_d_stage_bindings.sql 已改为按 module/provider/resource code 动态解析主键，避免依赖固定种子 ID。
+  # 2026-04-12 视频结果页热修：
+  # - get_result_detail 在 detail_ref 缺失时，现会优先读取 Redis xm_video_task:{id}:result_detail，再回退到 xm_task_runtime:{id}:state。
+  # - 已新增 tests/unit/video/test_video_result_service.py，覆盖 completed 结果恢复与 pending -> processing 的兼容回退。
+  # - 同日补充：worker 超时会写 failed result_detail + EXECUTION_TIMEOUT；orchestrator 显式拆出 understanding/storyboard/manim_gen/render/tts/compose/upload，并返回 taskElapsedSeconds/renderSummary。
+  # - 管理员 token 实机任务 vtask_20260412135924_6a80addf 已完成 createdAt=13:59:24Z -> completedAt=14:16:53Z，wall-clock/taskElapsedSeconds=1053.215s/1048s，renderSummary=5/5 full，result.videoUrl 正常返回。
+  # - 第二轮计时样本 vtask_20260412143844_92ee9db0 已完成 createdAt=14:38:44Z -> completedAt=14:48:39Z，wall-clock/taskElapsedSeconds=599.213s/594s；SSE 估算 understanding/storyboard/manim_gen/render/tts/compose/upload=38.579/41.692/459.229/49.412/4.86/0.521/4.567s。
+  # - 当前剩余观察：stage 内 heartbeat 不会刷新 /status.timestamp，只能证明任务活性，不能体现 stage 内细粒度进度。
+  # 2026-04-13 渐进展示方案收口：
+  # - 新增 Story 4.11，明确等待体验优化走“真实中间产物 + section 分段预览”而不走“manim_gen 阶段流式播放最终视频”的错误承诺。
+  # - 推荐新增 /api/v1/video/tasks/{id}/preview，并在既有 SSE/status 中补充 preview version 信号，保持结果页仍只消费最终 videoUrl。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review
+  4-11-视频等待页渐进式产物展示与分段预览: ready-for-dev
   epic-4-retrospective: optional
   epic-5: in-progress
   5-1-课堂任务契约结果-schema-与-mock-session-基线: ready-for-dev

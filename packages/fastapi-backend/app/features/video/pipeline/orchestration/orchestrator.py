@@ -17,6 +17,7 @@ import base64
 import logging
 import shutil
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -288,6 +289,7 @@ class VideoPipelineService:
     async def run(self, task: BaseTask) -> TaskResult:
         """执行完整视频生成管线。"""
         task_id = task.context.task_id
+        pipeline_started_at = time.monotonic()
         runtime = VideoRuntimeStateStore(self._runtime_store, task_id)
         metadata = task.context.metadata or {}
         source_payload = metadata.get("sourcePayload", {})
@@ -329,17 +331,58 @@ class VideoPipelineService:
             bridge = self._build_bridge(assembly)
             configure_bridge(bridge)
 
-            # --- 3. 运行 Code2Video Agent（同步，在线程池中执行） ---
-            await self._emit(task, VideoStage.UNDERSTANDING, 0.1, "生成教学大纲...")
+            # --- 3. 逐阶段执行 Code2Video Agent，并持续刷新运行态 ---
+            loop = asyncio.get_running_loop()
+            agent = self._create_c2v_agent(
+                knowledge_point=knowledge_point,
+                work_dir=work_dir,
+                bridge=bridge,
+            )
 
-            agent, final_video = await asyncio.get_event_loop().run_in_executor(
+            await self._emit(task, VideoStage.UNDERSTANDING, 0.1, "生成教学大纲...")
+            await loop.run_in_executor(None, agent.generate_outline)
+            await self._emit(task, VideoStage.UNDERSTANDING, 1.0, "教学大纲生成完成")
+
+            await self._emit(task, VideoStage.STORYBOARD, 0.0, "生成视频分镜...")
+            await loop.run_in_executor(None, agent.generate_storyboard)
+            await self._emit(task, VideoStage.STORYBOARD, 1.0, "视频分镜生成完成")
+
+            await self._emit(task, VideoStage.MANIM_GEN, 0.0, "生成动画脚本...")
+            await loop.run_in_executor(None, agent.generate_codes)
+            await self._emit(task, VideoStage.MANIM_GEN, 1.0, "动画脚本生成完成")
+
+            await self._emit(task, VideoStage.RENDER, 0.0, "渲染视频片段...")
+            rendered_sections = await loop.run_in_executor(
                 None,
-                self._run_c2v_agent,
-                knowledge_point,
-                work_dir,
-                bridge,
-                task,
-                assembly,
+                self._render_agent_sections,
+                agent,
+                pipeline_started_at,
+            )
+            render_summary = dict(getattr(agent, "render_summary", {}) or {})
+            if not rendered_sections:
+                raise VideoPipelineError(
+                    stage=VideoStage.RENDER,
+                    error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
+                    message="Code2Video agent 未生成视频片段",
+                )
+            render_successes = int(
+                render_summary.get("successfulSections", len(rendered_sections))
+            )
+            render_total = int(
+                render_summary.get("totalSections", max(render_successes, len(rendered_sections)))
+            )
+            render_message = (
+                "视频片段渲染完成"
+                if render_successes >= render_total
+                else f"视频片段渲染完成（{render_successes}/{render_total}）"
+            )
+            await self._emit(task, VideoStage.RENDER, 1.0, render_message)
+
+            final_video = await loop.run_in_executor(
+                None,
+                self._merge_rendered_sections,
+                agent,
+                rendered_sections,
             )
 
             if final_video is None:
@@ -411,6 +454,22 @@ class VideoPipelineService:
                     s.get("title", "") for s in (agent.outline.sections or [])
                 ]
 
+            pipeline_elapsed_seconds = max(
+                1,
+                int(round(time.monotonic() - pipeline_started_at)),
+            )
+            completion_message = "视频生成完成"
+            if render_successes < render_total:
+                completion_message = (
+                    f"视频生成完成（部分片段降级，已渲染 {render_successes}/{render_total}）"
+                )
+                logger.warning(
+                    "Pipeline completed with degraded render coverage task_id=%s render_success=%s/%s",
+                    task_id,
+                    render_successes,
+                    render_total,
+                )
+
             video_result = VideoResult(
                 task_id=task_id,
                 video_url=upload_result.video_url,
@@ -422,6 +481,8 @@ class VideoPipelineService:
                 completed_at=_utc_iso(),
                 title=knowledge_point[:60],
                 provider_used=assembly.provider_summary(),
+                task_elapsed_seconds=pipeline_elapsed_seconds,
+                render_summary=render_summary,
             )
 
             # 持久化结果
@@ -432,11 +493,18 @@ class VideoPipelineService:
             )
             runtime.save_model("result_detail", detail)
 
-            await self._emit(task, VideoStage.UPLOAD, 1.0, "完成")
-            logger.info("Pipeline done  task_id=%s  duration=%ds", task_id, duration)
+            await self._emit(task, VideoStage.UPLOAD, 1.0, completion_message)
+            logger.info(
+                "Pipeline done  task_id=%s  elapsed_ms=%s  output_duration_s=%s  render_success=%s/%s",
+                task_id,
+                int(round((time.monotonic() - pipeline_started_at) * 1000)),
+                duration,
+                render_successes,
+                render_total,
+            )
 
             return TaskResult.completed(
-                message="视频生成完成",
+                message=completion_message,
                 context=video_result.model_dump(mode="json", by_alias=True),
             )
 
@@ -456,15 +524,13 @@ class VideoPipelineService:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _run_c2v_agent(
+    def _create_c2v_agent(
         self,
         knowledge_point: str,
         work_dir: Path,
         bridge: LLMBridge,
-        task: BaseTask,
-        assembly: VideoProviderRuntimeAssembly,
-    ) -> tuple[TeachingVideoAgent, str | None]:
-        """在同步上下文中运行 Code2Video agent。"""
+    ) -> TeachingVideoAgent:
+        """创建 Code2Video agent。"""
         cfg = RunConfig(
             use_feedback=False,  # 暂时关闭 MLLM 反馈（需要 Gemini 视频分析，较慢）
             use_assets=False,  # 暂时关闭外部资产下载
@@ -483,9 +549,44 @@ class VideoPipelineService:
             folder=str(work_dir),
             cfg=cfg,
         )
+        return agent
 
-        final_video = agent.GENERATE_VIDEO()
-        return agent, final_video
+    def _render_agent_sections(
+        self,
+        agent: TeachingVideoAgent,
+        pipeline_started_at: float,
+    ) -> dict[str, str]:
+        """在 Dramatiq 预算内尽量完成全部 section 渲染。"""
+        total_sections = max(1, len(getattr(agent, "sections", []) or []))
+        task_budget_seconds = max(
+            1.0,
+            float(getattr(self._settings, "dramatiq_task_time_limit_ms", 0) or 0) / 1000.0,
+        )
+        elapsed_seconds = max(0.0, time.monotonic() - pipeline_started_at)
+        remaining_budget_seconds = max(30.0, task_budget_seconds - elapsed_seconds - 15.0)
+        render_grace_seconds = max(45.0, remaining_budget_seconds - 15.0)
+
+        logger.info(
+            "Render budget computed  total_sections=%s  elapsed_s=%.3f  remaining_s=%.3f  grace_s=%.3f",
+            total_sections,
+            elapsed_seconds,
+            remaining_budget_seconds,
+            render_grace_seconds,
+        )
+
+        return agent.render_all_sections(
+            per_section_timeout=max(1.0, remaining_budget_seconds / total_sections),
+            overall_timeout=remaining_budget_seconds,
+            success_grace_seconds=render_grace_seconds,
+        )
+
+    def _merge_rendered_sections(
+        self,
+        agent: TeachingVideoAgent,
+        rendered_sections: dict[str, str],
+    ) -> str | None:
+        """合并已完成渲染的 section。"""
+        return agent.merge_videos(video_map=rendered_sections)
 
     async def _run_tts(
         self,
@@ -537,7 +638,10 @@ class VideoPipelineService:
             return final_video_path, cover
 
         # 有 TTS：逐 section 合并音频，再 concat
-        section_videos = getattr(agent, "section_videos", {})
+        section_videos = (
+            getattr(agent, "render_results", None)
+            or getattr(agent, "section_videos", {})
+        )
         if not section_videos:
             cover = composed_dir / "cover.jpg"
             _extract_cover(final_video_path, cover)
