@@ -123,7 +123,7 @@ class Settings(BaseSettings):
         default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES"
     )
     dramatiq_task_time_limit_ms: int = Field(
-        default=900_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
+        default=1_200_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
     )
     ruoyi_base_url: str = Field(
         default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL"
