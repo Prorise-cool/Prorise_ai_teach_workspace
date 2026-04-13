@@ -8,6 +8,9 @@ from unittest.mock import AsyncMock
 
 from app.features.video.pipeline.models import (
     PublishState,
+    VideoPreviewSection,
+    VideoPreviewSectionStatus,
+    VideoTaskPreview,
     VideoResult,
     VideoResultDetail,
 )
@@ -127,3 +130,71 @@ def test_get_result_detail_falls_back_to_runtime_state_when_runtime_detail_missi
     assert result.status == "processing"
     assert result.result is None
     publication_service.get_publication.assert_not_awaited()
+
+
+def test_get_preview_detail_reads_runtime_preview_when_available(tmp_path: Path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    publication_service = SimpleNamespace(get_publication=AsyncMock(return_value=None))
+    service = _StubVideoService(
+        asset_store=asset_store,
+        publication_service=publication_service,
+    )
+    service.snapshot = _build_snapshot()
+    runtime_store = _build_runtime_store("video-task-001")
+    preview = VideoTaskPreview(
+        task_id="video-task-001",
+        status="processing",
+        preview_available=True,
+        preview_version=3,
+        summary="勾股定理讲解",
+        knowledge_points=["直角三角形"],
+        total_sections=1,
+        ready_sections=1,
+        failed_sections=0,
+        sections=[
+            VideoPreviewSection(
+                section_id="section_1",
+                section_index=0,
+                title="认识题目",
+                lecture_lines=["先看条件"],
+                status=VideoPreviewSectionStatus.READY,
+                audio_url="https://cdn.test/audio.mp3",
+                clip_url="https://cdn.test/clip.mp4",
+            )
+        ],
+    )
+    VideoRuntimeStateStore(runtime_store, "video-task-001").save_preview(preview)
+
+    result = asyncio.run(service.get_preview_detail("video-task-001", runtime_store=runtime_store))
+
+    assert result.preview_version == 3
+    assert result.preview_available is True
+    assert result.sections[0].clip_url == "https://cdn.test/clip.mp4"
+
+
+def test_get_preview_detail_falls_back_to_minimal_structure_when_preview_missing(tmp_path: Path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    publication_service = SimpleNamespace(get_publication=AsyncMock(return_value=None))
+    service = _StubVideoService(
+        asset_store=asset_store,
+        publication_service=publication_service,
+    )
+    service.snapshot = _build_snapshot()
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    runtime_store.set_task_state(
+        task_id="video-task-001",
+        task_type="video",
+        internal_status=TaskInternalStatus.RUNNING,
+        message="正在处理",
+        progress=42,
+        request_id="req-video-preview-001",
+        user_id="10001",
+        source="video",
+    )
+
+    result = asyncio.run(service.get_preview_detail("video-task-001", runtime_store=runtime_store))
+
+    assert result.status == "processing"
+    assert result.preview_available is False
+    assert result.summary == "勾股定理讲解"
+    assert result.sections == []

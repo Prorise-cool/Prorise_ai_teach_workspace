@@ -3,645 +3,894 @@
 
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>小麦 XiaoMai - 视频生成中</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>小麦视频生成 - 渐进式渲染体验版 (响应式高保真)</title>
+
+	<!-- 引入 Google Fonts 提升字体质感 -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+		rel="stylesheet">
+
 	<!-- 引入 Tailwind CSS -->
 	<script src="https://cdn.tailwindcss.com"></script>
+
 	<!-- 引入 Remix Icon -->
 	<link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
-	<!-- 引入 Inter 字体 -->
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
 
-	<!-- 配置 Tailwind 及 XiaoMai Design Tokens -->
+	<!-- 引入 KaTeX -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+	<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+	<!-- 引入 Marked.js -->
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+	<!-- 严格配置 Tailwind：收敛圆角，克制动效 -->
 	<script>
 		tailwind.config = {
-			darkMode: 'class',
+			darkMode: "class",
 			theme: {
 				extend: {
-					fontFamily: {
-						sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'sans-serif'],
-						mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-					},
 					colors: {
-						brand: {
-							primary: '#f5c547',
-							'primary-dark': '#e6b841',
-							secondary: '#f5ede1',
-							'secondary-dark': '#2a2420',
-							decorative: '#3b1701',
-							'bg-light': '#f5ede1',
-							'surface-light': '#ffffff',
-							'text-primary': '#3b1701',
-							'text-secondary': '#6b4421',
-							'border-light': '#e6dcc8',
-							'bg-dark': '#1a1614',
-							'surface-dark': '#2a2420',
-							'text-primary-dark': '#f5ede1',
-							'text-secondary-dark': '#c4b8a8',
-							'border-dark': '#3d3630',
-							success: '#52c41a',
-							warning: '#ff6700',
-							error: '#f82834',
-						}
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
+						decorative: '#3b1701',
+						bg: { light: '#f5ede1', dark: '#110e0d' },
+						surface: { light: '#ffffff', dark: '#1f1a18' },
+						text: {
+							primary: '#3b1701', 'primary-dark': '#f5ede1',
+							secondary: '#6b4421', 'secondary-dark': '#a89f91'
+						},
+						bordercolor: { light: '#e6dcc8', dark: '#302824' },
+						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
+						success: { DEFAULT: '#52c41a', dark: '#51d712' },
+						error: { DEFAULT: '#f82834', dark: '#bf0004' }
+					},
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+					},
+					borderRadius: {
+						'sm': '2px', 'md': '4px', 'lg': '8px', 'xl': '12px', 'full': '9999px',
 					},
 					boxShadow: {
 						'sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
-						'md': '0 8px 24px rgba(0, 0, 0, 0.06)',
+						'md': '0 8px 24px rgba(0, 0, 0, 0.08)',
 						'lg': '0 20px 40px -8px rgba(0, 0, 0, 0.12)',
-						'inner-soft': 'inset 0 2px 10px rgba(0, 0, 0, 0.03)',
-						'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.05)',
+					},
+					animation: {
+						'shimmer': 'shimmer 2s linear infinite',
+						'spin-slow': 'spin 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+					},
+					keyframes: {
+						shimmer: {
+							'0%': { transform: 'translateX(-100%)' },
+							'100%': { transform: 'translateX(100%)' }
+						}
 					}
 				}
 			}
 		}
 	</script>
 
-	<!-- 主题初始化脚本 (防止闪烁) -->
-	<script>
-		if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-			document.documentElement.classList.add('dark');
-		} else {
-			document.documentElement.classList.remove('dark');
-		}
-	</script>
-
 	<style>
-		/* ================= 核心 CSS 变量 ================= */
-		:root {
-			/* 背景系统 */
-			--bg-color: #fcfaf7;
-			--grid-color: rgba(107, 68, 33, 0.06);
-			--glow-color: rgba(245, 197, 71, 0.15);
-			/* 日志面板玻璃态 */
-			--glass-bg: rgba(255, 255, 255, 0.5);
-			--glass-border: rgba(230, 220, 200, 0.5);
-			--log-mask-end: rgba(255, 255, 255, 1);
-
-			/* 原版 Loading 动画颜色适配 */
-			--loader-text: #3b1701;
-			--loader-spotlight-main: rgba(59, 23, 1, 0.9);
-			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		/* ================= 基础主题 ================= */
+		html.light {
+			background-color: #f5ede1;
+			color: #3b1701;
 		}
 
-		.dark {
-			/* 背景系统 */
-			--bg-color: #151210;
-			--grid-color: rgba(245, 237, 225, 0.04);
-			--glow-color: rgba(245, 197, 71, 0.08);
-			/* 日志面板玻璃态 */
-			--glass-bg: rgba(42, 36, 32, 0.4);
-			--glass-border: rgba(61, 54, 48, 0.5);
-			--log-mask-end: rgba(21, 18, 16, 1);
-
-			/* 原版 Loading 动画颜色适配 (解决暗色下显脏的问题) */
-			--loader-text: #f5ede1;
-			/* 暗色下聚光灯变为极其清透的米白发光体 */
-			--loader-spotlight-main: rgba(245, 237, 225, 0.9);
-			--loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+		html.dark {
+			background-color: #110e0d;
+			color: #f5ede1;
 		}
 
-		/* 沉浸式网格背景 */
 		body {
-			background-color: var(--bg-color);
+			transition: background-color 0.3s ease, color 0.3s ease;
+			-webkit-font-smoothing: antialiased;
+		}
+
+		/* ================= 高级背景修饰 ================= */
+		.bg-grid-pattern {
 			background-image:
-				linear-gradient(var(--grid-color) 1px, transparent 1px),
-				linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-			background-size: 32px 32px;
-			transition: background-color 0.5s ease, background-image 0.5s ease;
+				linear-gradient(to right, rgba(59, 23, 1, 0.03) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(59, 23, 1, 0.03) 1px, transparent 1px);
+			background-size: 40px 40px;
+			mask-image: radial-gradient(ellipse at top, black 40%, transparent 90%);
+			-webkit-mask-image: radial-gradient(ellipse at top, black 40%, transparent 90%);
 		}
 
-		/* 居中环境光晕 */
-		.ambient-glow {
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 80vw;
-			height: 80vh;
-			background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
-			pointer-events: none;
-			z-index: -1;
-			transition: background 0.5s ease;
-		}
-
-		/* ================= 原汁原味的 Loading 动画 ================= */
-		.loader-wrapper {
-			position: relative;
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			font-size: 2.75rem;
-			/* 稍微放大一点点增强视觉冲击力 */
-			font-weight: 900;
-			user-select: none;
-			color: var(--loader-text);
-			letter-spacing: 0.1em;
-			overflow: hidden;
-			font-family: 'Inter', sans-serif;
-			text-transform: uppercase;
-			transition: color 0.5s ease;
-		}
-
-		.loader {
-			position: absolute;
-			inset: 0;
-			z-index: 1;
-			background-color: transparent;
-			/* 经典的条纹遮罩 */
-			mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
-			-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
-		}
-
-		.loader::after {
-			content: "";
-			position: absolute;
-			inset: 0;
-			/* 聚光灯：引用CSS变量，使得暗色模式下发白光，亮色模式下发深色光 */
+		html.dark .bg-grid-pattern {
 			background-image:
-				radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
-				radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
-			mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
-			-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
-			animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
+				linear-gradient(to right, rgba(245, 237, 225, 0.02) 1px, transparent 1px),
+				linear-gradient(to bottom, rgba(245, 237, 225, 0.02) 1px, transparent 1px);
 		}
 
-		.loader-letter {
-			position: relative;
-			display: inline-block;
-			opacity: 0.15;
-			animation: loader-letter-anim 4.2s infinite linear;
-			z-index: 2;
+		/* 隐藏无用的默认滚动条，保留响应 */
+		.no-scrollbar::-webkit-scrollbar {
+			display: none;
 		}
 
-		/* 字母延迟动画 */
-		.loader-letter:nth-child(1) {
-			animation-delay: 0.1s;
+		.no-scrollbar {
+			-ms-overflow-style: none;
+			scrollbar-width: none;
 		}
 
-		.loader-letter:nth-child(2) {
-			animation-delay: 0.22s;
+		/* 统一全局滚动条系统 */
+		::-webkit-scrollbar {
+			width: 6px;
+			height: 6px;
 		}
 
-		.loader-letter:nth-child(3) {
-			animation-delay: 0.34s;
-		}
-
-		.loader-letter:nth-child(4) {
-			animation-delay: 0.46s;
-		}
-
-		.loader-letter:nth-child(5) {
-			animation-delay: 0.58s;
-		}
-
-		.loader-letter:nth-child(6) {
-			animation-delay: 0.70s;
-		}
-
-		.loader-letter:nth-child(7) {
-			animation-delay: 0.82s;
-		}
-
-		.loader-letter:nth-child(8) {
-			animation-delay: 0.94s;
-		}
-
-		.loader-letter:nth-child(9) {
-			animation-delay: 1.06s;
-		}
-
-		.loader-letter:nth-child(10) {
-			animation-delay: 1.18s;
-		}
-
-		@keyframes transform-animation {
-			0% {
-				transform: translate(-60%);
-			}
-
-			100% {
-				transform: translate(60%);
-			}
-		}
-
-		@keyframes opacity-animation {
-
-			0%,
-			100% {
-				opacity: 0;
-			}
-
-			18% {
-				opacity: 1;
-			}
-
-			64% {
-				opacity: 0.2;
-			}
-		}
-
-		@keyframes loader-letter-anim {
-			0% {
-				opacity: 0.15;
-				filter: blur(0);
-			}
-
-			6% {
-				opacity: 1;
-				filter: blur(0);
-				transform: scale(1.03) translateY(-2px);
-			}
-
-			22% {
-				opacity: 0.4;
-			}
-
-			100% {
-				opacity: 0.15;
-				filter: blur(2px);
-			}
-		}
-
-		/* ================= 进度条动效 ================= */
-		.progress-fill {
-			height: 100%;
-			width: 50%;
-			border-radius: 9999px;
-			background-color: #f5c547;
-			background-image: linear-gradient(-45deg,
-					rgba(255, 255, 255, 0.4) 25%, transparent 25%, transparent 50%,
-					rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 75%, transparent);
-			background-size: 32px 32px;
-			animation: progress-pan 1.5s linear infinite;
-			transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-			position: relative;
-		}
-
-		.progress-fill::after {
-			content: '';
-			position: absolute;
-			inset: 0;
-			border-radius: 9999px;
-			box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
-			opacity: 0.7;
-		}
-
-		@keyframes progress-pan {
-			0% {
-				background-position: 0 0;
-			}
-
-			100% {
-				background-position: 32px 0;
-			}
-		}
-
-		/* ================= 玻璃态日志面板 ================= */
-		.glass-panel {
-			background: var(--glass-bg);
-			backdrop-filter: blur(16px);
-			-webkit-backdrop-filter: blur(16px);
-			border: 1px solid var(--glass-border);
-			/* 添加上下渐隐效果，融入背景 */
-			mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-			-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-		}
-
-		.log-scroll::-webkit-scrollbar {
-			width: 4px;
-		}
-
-		.log-scroll::-webkit-scrollbar-track {
+		::-webkit-scrollbar-track {
 			background: transparent;
 		}
 
-		.log-scroll::-webkit-scrollbar-thumb {
-			background: var(--glass-border);
-			border-radius: 4px;
+		::-webkit-scrollbar-thumb {
+			background: theme('colors.bordercolor.light');
+			border-radius: theme('borderRadius.sm');
 		}
 
-		.log-item {
-			animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-			opacity: 0;
-			transform: translateX(-8px);
+		.dark ::-webkit-scrollbar-thumb {
+			background: theme('colors.bordercolor.dark');
 		}
 
-		@keyframes slideIn {
+		/* Markdown 排版克制化 */
+		.markdown-body h1,
+		.markdown-body h2,
+		.markdown-body h3 {
+			color: theme('colors.text.primary');
+			margin-top: 1.5em;
+			margin-bottom: 0.5em;
+			font-weight: 700;
+		}
+
+		.dark .markdown-body h1,
+		.dark .markdown-body h2,
+		.dark .markdown-body h3 {
+			color: theme('colors.text.primary-dark');
+		}
+
+		.markdown-body p {
+			margin-bottom: 1em;
+			line-height: 1.7;
+		}
+
+		.markdown-body p:last-child {
+			margin-bottom: 0;
+		}
+
+		.markdown-body strong {
+			color: theme('colors.text.primary');
+			font-weight: 700;
+		}
+
+		.dark .markdown-body strong {
+			color: theme('colors.text.primary-dark');
+		}
+
+		.markdown-body ul {
+			list-style-type: disc;
+			padding-left: 1.5em;
+			margin-bottom: 1em;
+		}
+
+		.markdown-body li {
+			margin-bottom: 0.25em;
+		}
+
+		/* ================= 果冻弹性微动效 ================= */
+		.jelly {
+			transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.jelly-fast {
+			transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+
+		.fade-in-up {
+			animation: fadeInUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+		}
+
+		@keyframes fadeInUp {
+			from {
+				opacity: 0;
+				transform: translateY(12px);
+			}
+
 			to {
 				opacity: 1;
-				transform: translateX(0);
+				transform: translateY(0);
 			}
 		}
 
-		@keyframes blink {
-
-			0%,
-			100% {
-				opacity: 1;
-			}
-
-			50% {
-				opacity: 0;
-			}
+		/* ================= 侧边小巧 Toast ================= */
+		.toast-container {
+			transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
 		}
 
-		.cursor-blink {
-			display: inline-block;
-			width: 6px;
-			height: 14px;
-			background-color: #f5c547;
-			animation: blink 1s step-end infinite;
-			vertical-align: middle;
-			margin-left: 6px;
-			border-radius: 2px;
-		}
-
-		/* Tips 动画 */
-		.tip-transition {
-			transition: opacity 0.5s ease, transform 0.5s ease;
-		}
-
-		.tip-hidden {
+		.toast-hidden {
+			transform: translateX(120%);
 			opacity: 0;
-			transform: translateY(10px);
+			pointer-events: none;
 		}
 
-		.tip-visible {
+		.toast-visible {
+			transform: translateX(0);
 			opacity: 1;
-			transform: translateY(0);
 		}
 	</style>
 </head>
 
-<body
-	class="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 text-brand-text-primary dark:text-brand-text-primary-dark transition-colors duration-500 relative z-0 overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden relative">
 
-	<!-- 环境光晕 -->
-	<div class="ambient-glow"></div>
-
-	<!-- 顶部控制区 (返回工作台 & 主题切换) -->
-	<header class="fixed top-0 left-0 w-full px-8 py-6 flex items-center justify-between z-50">
-		<a href="#"
-			class="text-sm font-medium text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-text-primary dark:hover:text-brand-text-primary-dark flex items-center gap-2 transition-colors group">
-			<div
-				class="w-8 h-8 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center group-hover:bg-brand-border-light dark:group-hover:bg-brand-border-dark transition-colors backdrop-blur-sm">
-				<i class="ri-arrow-left-line text-lg"></i>
-			</div>
-			返回工作台
-		</a>
-
-		<!-- 主题切换按钮 -->
-		<button onclick="toggleTheme()"
-			class="w-10 h-10 rounded-full border border-brand-border-light dark:border-brand-border-dark flex items-center justify-center text-brand-text-secondary dark:text-brand-text-secondary-dark hover:bg-brand-border-light dark:hover:bg-brand-border-dark transition-all backdrop-blur-sm shadow-sm group">
-			<i
-				class="ri-sun-line text-lg block dark:hidden group-hover:rotate-45 transition-transform duration-300"></i>
-			<i
-				class="ri-moon-line text-lg hidden dark:block group-hover:-rotate-12 transition-transform duration-300"></i>
-		</button>
-	</header>
-
-	<!-- 左下角状态模拟器 (弱化显示) -->
-	<div
-		class="fixed bottom-6 left-6 flex flex-col gap-2 z-50 opacity-40 hover:opacity-100 transition-opacity duration-300">
-		<span
-			class="text-[10px] font-bold uppercase tracking-widest text-brand-text-secondary dark:text-brand-text-secondary-dark ml-2 mb-1">Debug
-			Controls</span>
+	<!-- 背景层：高光与网格 -->
+	<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+		<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
 		<div
-			class="flex flex-col gap-2 bg-white/50 dark:bg-black/30 backdrop-blur-md p-2 rounded-xl border border-brand-border-light dark:border-brand-border-dark">
-			<button onclick="simulateSSE('normal')"
-				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-primary px-3 py-1.5 rounded-md text-xs font-medium transition-colors">1.
-				渲染动画 (50%)</button>
-			<button onclick="simulateSSE('fix')"
-				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-warning px-3 py-1.5 rounded-md text-xs font-medium transition-colors">2.
-				触发修复 (60%)</button>
-			<button onclick="simulateSSE('tts')"
-				class="text-left text-brand-text-secondary dark:text-brand-text-secondary-dark hover:text-brand-success px-3 py-1.5 rounded-md text-xs font-medium transition-colors">3.
-				合成视频 (90%)</button>
+			class="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/20 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen jelly">
 		</div>
 	</div>
 
-	<!-- ==================== 核心内容区 (无盒子设计) ==================== -->
-	<main class="w-full max-w-2xl relative z-10 flex flex-col items-center mt-8">
+	<!-- 1. 顶栏导航 (增加严格的防遮挡响应式布局) -->
+	<header
+		class="w-[96%] max-w-[1600px] mx-auto mt-4 shrink-0 z-40 rounded-full flex justify-between items-center p-2 px-4 md:px-5 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
 
-		<!-- 还原的原版 Loading 动效 -->
-		<div class="mb-14 mt-4">
-			<div class="loader-wrapper" aria-label="Generating">
-				<span class="loader-letter">G</span>
-				<span class="loader-letter">E</span>
-				<span class="loader-letter">N</span>
-				<span class="loader-letter">E</span>
-				<span class="loader-letter">R</span>
-				<span class="loader-letter">A</span>
-				<span class="loader-letter">T</span>
-				<span class="loader-letter">I</span>
-				<span class="loader-letter">N</span>
-				<span class="loader-letter">G</span>
-				<div class="loader"></div>
-			</div>
-		</div>
-
-		<!-- 进度与状态文字区 -->
-		<div class="w-full mb-10 px-4 md:px-0">
-			<div class="flex justify-between items-end mb-4 px-1">
-				<div class="flex flex-col">
-					<span class="text-xl font-bold mb-1 transition-colors" id="status-title">正在渲染动画帧</span>
-					<span class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80"
-						id="eta-text">预计还需要 2 分 30 秒</span>
-				</div>
-				<span id="progress-text"
-					class="text-4xl font-black font-mono tracking-tighter drop-shadow-sm">50%</span>
-			</div>
-
-			<!-- 进度条轨道 -->
+		<!-- 左侧 Logo: shrink-0 防止被压缩 -->
+		<a href="#" class="font-bold text-base flex items-center gap-2.5 jelly-fast hover:opacity-80 shrink-0">
 			<div
-				class="h-3 w-full bg-brand-border-light/50 dark:bg-brand-border-dark/50 rounded-full shadow-inner-soft overflow-hidden p-0.5 backdrop-blur-sm">
-				<div class="progress-fill shadow-sm" id="progress-bar"></div>
+				class="w-7 h-7 bg-text-primary dark:bg-text-primary-dark rounded flex items-center justify-center shadow-sm">
+				<i class="ri-leaf-fill text-bg-light dark:text-bg-dark text-sm"></i>
 			</div>
+			<span class="tracking-tight text-text-primary dark:text-text-primary-dark hidden md:block">XiaoMai</span>
+		</a>
+
+		<!-- 阶段导航：极窄屏幕下滚动，不再溢出遮挡 -->
+		<div class="flex items-center gap-1 bg-secondary/50 dark:bg-[#110e0d]/50 p-1 rounded-full border border-bordercolor-light dark:border-bordercolor-dark shadow-inner overflow-x-auto no-scrollbar mx-2 max-w-[50vw] sm:max-w-[60vw] md:max-w-none"
+			id="timeline-nav">
+			<button data-stage="0"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed">1.
+				摘要</button>
+			<button data-stage="1"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed">2.
+				步骤</button>
+			<button data-stage="2"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed">3.
+				分镜</button>
+			<button data-stage="3"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed">4.
+				资源</button>
+			<button data-stage="4"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed flex items-center gap-1.5"><i
+					class="ri-video-line hidden"></i>5. 渲染流</button>
+			<button data-stage="5"
+				class="nav-btn px-4 py-1.5 text-xs font-bold rounded-full jelly-fast whitespace-nowrap opacity-40 cursor-not-allowed">6.
+				合成</button>
 		</div>
 
-		<!-- 玻璃态无界日志面板 -->
-		<div
-			class="w-full glass-panel rounded-2xl font-mono text-[13px] relative shadow-glass overflow-hidden flex flex-col h-48">
-			<div class="log-scroll flex-1 overflow-y-auto p-6 space-y-4 relative">
-				<!-- 常规阶段内容 -->
-				<div class="log-normal space-y-4">
-					<div
-						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
-						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
-						<span class="leading-relaxed">题目语义解析完成 <span
-								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Understanding</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
-						style="animation-delay: 0.1s;">
-						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
-						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
-								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
-								Gen</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
-						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
-						<span class="leading-relaxed">沙箱环境运行中：正在渲染 Manim 动画帧<span class="cursor-blink"></span></span>
-					</div>
-				</div>
-
-				<!-- 修复阶段内容 -->
-				<div class="log-fix hidden space-y-4">
-					<div
-						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
-						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
-						<span class="leading-relaxed">分镜脚本与 Manim 代码生成完毕 <span
-								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Code
-								Gen</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 text-brand-warning font-medium">
-						<i class="ri-error-warning-fill mt-0.5 text-base"></i>
-						<span class="leading-relaxed">沙箱渲染异常，触发自动修复链 <span
-								class="text-[10px] ml-1.5 bg-brand-warning/10 border border-brand-warning/30 px-1.5 py-0.5 rounded text-brand-warning">Auto-Fix
-								1/2</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 font-medium mt-2">
-						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
-						<span class="leading-relaxed">正在重新编译代码并渲染...<span class="cursor-blink"></span></span>
-					</div>
-				</div>
-
-				<!-- TTS/合成阶段内容 -->
-				<div class="log-tts hidden space-y-4">
-					<div
-						class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60">
-						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
-						<span class="leading-relaxed">沙箱渲染 Manim 动画帧成功 <span
-								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Render
-								Completed</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-60"
-						style="animation-delay: 0.1s;">
-						<i class="ri-checkbox-circle-fill text-brand-success mt-0.5 text-base"></i>
-						<span class="leading-relaxed">TTS 语音轨道合成完毕 <span
-								class="text-[10px] ml-1.5 border border-brand-border-light dark:border-brand-border-dark px-1.5 py-0.5 rounded opacity-70">Audio
-								Gen</span></span>
-					</div>
-					<div class="log-item flex items-start gap-3 font-medium" style="animation-delay: 0.2s;">
-						<i class="ri-loader-4-line animate-spin text-brand-primary mt-0.5 text-base"></i>
-						<span class="leading-relaxed">正在合成最终视频并推送到云端...<span class="cursor-blink"></span></span>
-					</div>
-				</div>
-			</div>
+		<!-- 右侧 控制区: shrink-0 防止换行 -->
+		<div class="flex items-center gap-2 md:gap-3 shrink-0">
+			<button onclick="startSimulation()" id="sim-btn"
+				class="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-text-primary dark:bg-text-primary-dark hover:opacity-90 text-surface-light dark:text-surface-dark text-xs font-bold rounded-full jelly-fast shadow-sm">
+				<i class="ri-play-fill"></i> <span class="hidden sm:inline">开始模拟</span><span
+					class="inline sm:hidden">执行</span>
+			</button>
+			<div class="w-px h-4 bg-bordercolor-light dark:border-bordercolor-dark mx-1 hidden sm:block"></div>
+			<button onclick="toggleTheme()"
+				class="w-7 h-7 flex items-center justify-center rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark jelly-fast shrink-0">
+				<i class="ri-sun-line text-xs block dark:hidden"></i>
+				<i class="ri-moon-line text-xs hidden dark:block"></i>
+			</button>
 		</div>
+	</header>
 
-		<!-- 极简 Tips 提示 -->
-		<div class="mt-8 flex items-center justify-center gap-2 max-w-lg w-full">
-			<i class="ri-sparkling-fill text-brand-primary animate-pulse text-lg"></i>
+	<!-- 2. 小巧侧边 Toast 提示区 (移至右下角，远离核心内容区) -->
+	<div id="toast-island"
+		class="fixed bottom-6 right-6 z-[100] toast-container toast-hidden bg-surface-dark text-text-primary-dark dark:bg-surface-light dark:text-text-primary px-4 py-3 rounded-lg shadow-lg border border-white/10 dark:border-black/10 flex items-center gap-3 w-max max-w-[280px]">
+		<div class="w-6 h-6 rounded bg-brand/20 flex items-center justify-center shrink-0">
+			<i class="ri-notification-3-fill text-brand text-xs"></i>
+		</div>
+		<span class="text-[13px] font-medium tracking-wide leading-snug" id="toast-text">系统提示信息</span>
+	</div>
+
+	<main class="flex flex-col lg:flex-row gap-5 p-4 md:p-6 max-w-[1600px] mx-auto w-full flex-1 min-h-0 relative z-10">
+
+		<!-- ==================== 左侧栏：全局状态 (占比 35%) ==================== -->
+		<div class="w-full lg:w-[35%] flex flex-col gap-5 h-full min-h-0">
+
+			<!-- 进度面板 -->
 			<div
-				class="text-sm text-brand-text-secondary dark:text-brand-text-secondary-dark opacity-80 font-medium overflow-hidden h-5 w-full relative">
-				<div id="tip-text" class="absolute w-full tip-transition tip-visible truncate text-center">
-					小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-lg shadow-sm p-6 flex-shrink-0 relative overflow-hidden transition-colors">
+				<div class="flex justify-between items-start mb-6 relative z-10">
+					<div class="flex flex-col gap-1">
+						<div class="flex items-center gap-2 mb-1">
+							<div class="w-1.5 h-1.5 rounded-full bg-text-secondary dark:bg-text-secondary-dark jelly"
+								id="status-indicator"></div>
+							<span
+								class="text-xs font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-widest"
+								id="status-label">系统就绪</span>
+						</div>
+						<h2 class="text-xl md:text-2xl font-black text-text-primary dark:text-text-primary-dark tracking-tight"
+							id="main-title">微积分：导数几何意义</h2>
+						<span class="text-[12px] font-medium text-text-secondary dark:text-text-secondary-dark mt-1"
+							id="sub-title">点击右上角“开始模拟”体验</span>
+					</div>
+					<span
+						class="text-3xl md:text-4xl font-black font-mono text-text-primary dark:text-text-primary-dark leading-none tracking-tighter jelly"
+						id="progress-text">0%</span>
+				</div>
+
+				<!-- 精致的黄条进度条 -->
+				<div
+					class="w-full h-1.5 bg-secondary dark:bg-[#1a1614] rounded-full overflow-hidden border border-bordercolor-light/50 dark:border-bordercolor-dark/50 relative z-10">
+					<div class="h-full bg-brand rounded-full jelly relative" id="progress-bar" style="width: 0%;">
+						<div class="absolute inset-0 bg-white/20 animate-shimmer"></div>
+					</div>
+				</div>
+
+				<!-- 修复点：补回 tags-container 容器 -->
+				<div class="mt-4 flex gap-2 flex-wrap" id="tags-container">
+					<!-- 动态 Tags -->
+				</div>
+			</div>
+
+			<!-- 活动日志 (全中文纯净排版) -->
+			<div
+				class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-lg shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden transition-colors">
+				<div
+					class="px-5 py-3 border-b border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#1a1614] flex justify-between items-center flex-shrink-0">
+					<span
+						class="text-[11px] font-bold text-text-primary dark:text-text-primary-dark uppercase tracking-wider flex items-center gap-2">
+						<i class="ri-terminal-box-line text-text-secondary dark:text-text-secondary-dark"></i> 执行日志
+					</span>
+				</div>
+				<div class="p-5 flex-1 overflow-y-auto space-y-3 text-[12px] text-text-primary dark:text-text-primary-dark scroll-smooth font-mono"
+					id="log-container">
+					<div class="opacity-50 text-center py-10">...</div>
 				</div>
 			</div>
 		</div>
 
+		<!-- ==================== 右侧栏：内容区 (占比 65%) ==================== -->
+		<div class="w-full lg:w-[65%] flex flex-col h-full min-h-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-lg shadow-sm overflow-hidden relative transition-colors"
+			id="right-panel">
+
+			<!-- 占位状态 -->
+			<div id="view-empty"
+				class="absolute inset-0 flex flex-col items-center justify-center text-text-secondary dark:text-text-secondary-dark">
+				<i class="ri-box-3-line text-5xl mb-4 opacity-20"></i>
+				<p class="text-[13px] font-medium tracking-wide">等待数据渲染流挂载</p>
+			</div>
+
+			<!-- 动态内容注入区 (Stage 0, 1, 2, 3, 5) -->
+			<div id="view-dynamic" class="absolute inset-0 flex-col hidden overflow-y-auto p-4 scroll-smooth">
+				<!-- 由 JS 注入 -->
+			</div>
+
+			<!-- 渐进式渲染播放器视图 (Stage 4 专属) 
+                 彻底重构：完全基于 Flex 垂直布局，不使用 absolute 占满全屏导致的底部被遮挡 -->
+			<div id="view-player"
+				class="absolute inset-0 hidden flex-col bg-surface-light dark:bg-surface-dark overflow-hidden">
+
+				<!-- 1. 主播放器 (限制最高 45vh 保留底部空间，按 16:9 自适应) -->
+				<div class="w-full shrink-0 bg-[#050505] relative flex items-center justify-center border-b border-bordercolor-light dark:border-bordercolor-dark"
+					style="max-height: 45vh; aspect-ratio: 16/9;">
+					<video id="master-video" class="w-full h-full object-contain" muted loop autoplay></video>
+
+					<div
+						class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+					</div>
+					<div class="absolute top-4 left-5 z-10">
+						<span
+							class="bg-surface-light/20 backdrop-blur-md text-surface-light border border-surface-light/30 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest mb-1.5 inline-block">Stream</span>
+						<h3 class="text-white text-base font-bold tracking-wide jelly" id="player-title">--</h3>
+					</div>
+
+					<!-- 极简 Loading (果冻浮现，不跳脱) -->
+					<div id="player-overlay-state"
+						class="absolute inset-0 flex items-center justify-center bg-[#050505]/70 backdrop-blur-sm z-20 hidden jelly">
+						<div class="text-center flex flex-col items-center">
+							<i id="overlay-icon"
+								class="ri-loader-3-line animate-spin-slow text-3xl text-brand mb-2"></i>
+							<span id="overlay-text"
+								class="text-white/90 font-medium text-xs tracking-widest uppercase">GENERATING</span>
+						</div>
+					</div>
+				</div>
+
+				<!-- 2. 弹性扩展轨道区 -->
+				<div
+					class="bg-surface-light dark:bg-surface-dark p-3 shrink-0 border-b border-bordercolor-light dark:border-bordercolor-dark z-30 shadow-sm relative">
+					<div class="flex justify-between items-end mb-2 px-1">
+						<span
+							class="text-text-secondary dark:text-text-secondary-dark text-[11px] font-bold tracking-wider uppercase">Scene
+							Tracks</span>
+						<span class="text-text-primary dark:text-text-primary-dark text-[11px] font-mono font-bold"
+							id="player-status-hint">0 / 8</span>
+					</div>
+					<!-- 支持水平滚动 -->
+					<div class="flex gap-1.5 overflow-x-auto no-scrollbar scroll-smooth w-full px-1 pb-1"
+						id="interactive-tracks">
+						<!-- 动态渲染 -->
+					</div>
+					<div
+						class="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-surface-light dark:from-surface-dark to-transparent pointer-events-none">
+					</div>
+				</div>
+
+				<!-- 3. 底部详情区 (最关键：flex-1 和 min-h-0 让它在容器内自由滚动，不会被顶出屏幕) -->
+				<div class="flex-1 overflow-y-auto p-5 md:p-8 bg-secondary/20 dark:bg-bg-dark/20 min-h-0"
+					id="player-details">
+					<div class="max-w-3xl mx-auto fade-in-up" id="player-script-content">
+						<!-- 动态渲染 -->
+					</div>
+				</div>
+			</div>
+
+		</div>
 	</main>
 
-	<!-- 交互脚本 -->
+	<!-- ==================== 数据与静态模板 ==================== -->
 	<script>
-		// 主题切换逻辑
-		function toggleTheme() {
-			if (document.documentElement.classList.contains('dark')) {
-				document.documentElement.classList.remove('dark');
-				localStorage.theme = 'light';
-			} else {
-				document.documentElement.classList.add('dark');
-				localStorage.theme = 'dark';
-			}
-		}
-
-		// 轮播 Tips 数据
-		const tips = [
-			"小麦提示：生成完毕后，您还可以通过自然语言二次修改画面哦",
-			"你知道吗？复杂的数学公式推导，小麦会自动为您添加高亮引导",
-			"视频渲染过程需要在云端沙箱进行大量计算，感谢您的耐心等待",
-			"小麦可以根据您的需求，随时切换板书风格和讲述人声音",
-			"生成历史会自动保存在您的工作台，随时可以回来查看或修改"
+		// 场景扩展至 8 个，以验证复杂页面的弹性响应
+		const sectionsData = [
+			{ id: 1, title: "开篇：生活中的速度", narration: "想象你在驾驶一辆汽车，速度表上的指针随时在跳动。在这个瞬间，你的速度到底是多少？", visual: "引入真实行驶的汽车素材，平滑缩放聚焦于仪表盘特写。速度指针在 `60km/h` 处闪烁高亮。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
+			{ id: 2, title: "初探：平均变化率", narration: "如果我们记录两秒钟内的位移，就能算出一个平均速度。", visual: "动画展示一段位移的测量，并浮现公式 $v = \\frac{\\Delta s}{\\Delta t}$", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" },
+			{ id: 3, title: "抽象：坐标系与割线", narration: "在数学世界里，我们把这段运动画在坐标系上，平均速度就是连接两点的割线斜率。", visual: "绘制直角坐标系，平滑画出曲线 $f(x)$。标出两点 $P$ 与 $Q$，连线形成割线。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" },
+			{ id: 4, title: "思想：时间间隔缩小", narration: "关键的一步来了，如果我们将时间间隔缩小到 0.1 秒，0.01 秒呢？", visual: "点 $Q$ 开始向 $P$ 移动，割线斜率不断变化，旁边的数值实时更新。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4" },
+			{ id: 5, title: "质变：割线变切线", narration: "魔法发生在这里。当时间间隔无限缩小，两点重合，割线就完美蜕变成了切线。", visual: "演示极限过程 $\\lim_{\\Delta x \\to 0}$：重合瞬间，线条突变为亮黄色的切线。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
+			{ id: 6, title: "定义：导数诞生", narration: "这条切线的斜率，就是导数！这就是微积分中最重要的概念之一。", visual: "画面中心清理，重点定格最终公式：$\\lim_{\\Delta x \\to 0} \\frac{\\Delta y}{\\Delta x} = f'(x)$", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4" },
+			{ id: 7, title: "拓展：代数视角的验证", narration: "通过代数展开，我们同样可以验证这个极限结果。", visual: "快速演示一段 $f(x)=x^2$ 的导数代数推导过程。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
+			{ id: 8, title: "总结：几何与代数的统一", narration: "切线与瞬时速度，几何与代数在此刻完美统一。", visual: "分屏展示切线动画与导数公式，最后淡出至主题 Logo。", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4" }
 		];
-		let currentTipIndex = 0;
-		const tipElement = document.getElementById('tip-text');
 
-		// 轮播逻辑
-		setInterval(() => {
-			tipElement.classList.remove('tip-visible');
-			tipElement.classList.add('tip-hidden');
+		// 扁平颜色的轨道状态枚举
+		const TRACK_STATE = {
+			WAIT: { class: 'bg-bordercolor-light dark:bg-bordercolor-dark opacity-50', label: 'Pending' },
+			GEN: { class: 'bg-brand/40 dark:bg-brand/30', label: 'Coding' },
+			RENDER: { class: 'bg-brand relative overflow-hidden', label: 'Rendering', extra: '<div class="absolute inset-0 bg-white/30 animate-shimmer"></div>' },
+			FIX: { class: 'bg-warning', label: 'Fixing Layout' },
+			READY: { class: 'bg-text-primary dark:bg-text-primary-dark', label: 'Ready' }
+		};
 
-			setTimeout(() => {
-				currentTipIndex = (currentTipIndex + 1) % tips.length;
-				tipElement.innerText = tips[currentTipIndex];
-				tipElement.classList.remove('tip-hidden');
-				tipElement.classList.add('tip-visible');
-			}, 500);
-		}, 6000);
+		// UI 模板 (外容器，无内部卡片包裹，圆角极简)
+		const TEMPLATES = {
+			stage0: `
+                <div class="w-full max-w-3xl mx-auto p-5 md:p-8 fade-in-up">
+                    <h3 class="text-lg font-bold mb-5 flex items-center gap-3 text-text-primary dark:text-text-primary-dark border-b border-bordercolor-light dark:border-bordercolor-dark pb-3">
+                        <i class="ri-scan-2-line text-brand"></i> 意图解析摘要
+                    </h3>
+                    <div class="markdown-content text-text-secondary dark:text-text-secondary-dark text-[13px]">
+                        ### 核心诉求定位
+                        本视频旨在通过**直观的几何图像**，将抽象的**导数公式 $f'(x)$** 还原为生活中可感知的**瞬时变化率**。
+                        
+                        ### 目标受众与基调
+                        * **受众**：高中生 / 微积分初学者。
+                        * **基调**：几何化、直观、克制。避免初期引入繁杂计算。
+                        * **核心**：从“割线”逼近“切线”的**极限思想**。
+                    </div>
+                </div>
+            `,
+			stage1: `
+                <div class="w-full max-w-3xl mx-auto p-5 md:p-8 fade-in-up">
+                    <h3 class="text-lg font-bold mb-5 flex items-center gap-3 text-text-primary dark:text-text-primary-dark border-b border-bordercolor-light dark:border-bordercolor-dark pb-3">
+                        <i class="ri-mind-map text-brand"></i> 逻辑推导路径
+                    </h3>
+                    <div class="space-y-5 pl-4 border-l-2 border-bordercolor-light dark:border-bordercolor-dark ml-2 mt-4 relative">
+                        <div class="relative">
+                            <div class="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-brand ring-[3px] ring-surface-light dark:ring-surface-dark"></div>
+                            <h4 class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark mb-1">1. 抛出生活疑问</h4>
+                            <p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">利用汽车行驶的物理场景，建立直观好奇心。</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark ring-[3px] ring-surface-light dark:ring-surface-dark"></div>
+                            <h4 class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark mb-1">2. 建立数学模型</h4>
+                            <p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">映射到直角坐标系中的曲线 $y = f(x)$ 与割线斜率。</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark ring-[3px] ring-surface-light dark:ring-surface-dark"></div>
+                            <h4 class="text-[14px] font-bold text-text-primary dark:text-text-primary-dark mb-1">3. 引入极限思想</h4>
+                            <p class="text-[12px] text-text-secondary dark:text-text-secondary-dark">动态展示两点距离无限缩小的过程，完成概念跨越。</p>
+                        </div>
+                    </div>
+                </div>
+            `,
+			stage2: `
+                <div class="w-full max-w-4xl mx-auto p-5 md:p-8 fade-in-up">
+                    <div class="flex items-center justify-between mb-5 border-b border-bordercolor-light dark:border-bordercolor-dark pb-3">
+                        <h3 class="text-lg font-bold flex items-center gap-3 text-text-primary dark:text-text-primary-dark">
+                            <i class="ri-clapperboard-line text-brand"></i> 剧本与分镜设计
+                        </h3>
+                        <span class="text-[10px] font-bold px-2 py-1 bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark rounded border border-bordercolor-light dark:border-bordercolor-dark">共 ${sectionsData.length} 幕</span>
+                    </div>
+                    <div class="space-y-6">
+                        ${sectionsData.map(s => `
+                            <div class="border-l-2 border-bordercolor-light dark:border-bordercolor-dark pl-4">
+                                <h4 class="text-[14px] font-bold mb-2.5 flex items-center gap-2 text-text-primary dark:text-text-primary-dark">
+                                    <span class="text-brand font-mono text-xs">${s.id}.</span> ${s.title}
+                                </h4>
+                                <div class="grid grid-cols-[36px_1fr] gap-3 text-[12px] mb-2.5">
+                                    <span class="text-text-secondary dark:text-text-secondary-dark font-bold mt-0.5">旁白</span>
+                                    <span class="font-serif italic text-text-primary dark:text-text-primary-dark">"${s.narration}"</span>
+                                </div>
+                                <div class="grid grid-cols-[36px_1fr] gap-3 text-[12px]">
+                                    <span class="text-text-secondary dark:text-text-secondary-dark font-bold mt-0.5">画面</span>
+                                    <div class="markdown-content text-text-secondary dark:text-text-secondary-dark">${s.visual}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `,
+			stage3: `
+                <div class="w-full flex-1 flex flex-col items-center justify-center p-10 text-center fade-in-up">
+                    <div class="relative w-12 h-12 mb-5">
+                        <i class="ri-sound-module-line absolute inset-0 text-3xl text-brand"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-text-primary dark:text-text-primary-dark tracking-tight">资源与环境预载</h3>
+                    <p class="text-[12px] text-text-secondary dark:text-text-secondary-dark max-w-sm leading-relaxed">正在调用 TTS 合成旁白音轨，并实例化沙盒引擎环境。</p>
+                </div>
+            `,
+			stage5: `
+                <div class="w-full flex-1 flex flex-col items-center justify-center p-10 text-center fade-in-up">
+                    <div class="w-12 h-12 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center mb-5 shadow-sm jelly">
+                        <i class="ri-check-line text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 text-text-primary dark:text-text-primary-dark tracking-tight">合并与封装</h3>
+                    <p class="text-[12px] text-text-secondary dark:text-text-secondary-dark max-w-sm leading-relaxed">通过流媒体节点拼接分段成片并混合背景音效，输出就绪。</p>
+                </div>
+            `
+		};
 
-		// 模拟状态切换逻辑
-		function simulateSSE(stage) {
-			const progressBar = document.getElementById('progress-bar');
-			const progressText = document.getElementById('progress-text');
-			const etaText = document.getElementById('eta-text');
-			const statusTitle = document.getElementById('status-title');
+		let currentStage = -1;
+		let unlockedStages = [];
+		let sectionStates = Array(sectionsData.length).fill(TRACK_STATE.WAIT);
+		let activeTrackIndex = 0;
+		let toastTimeout;
+		let logCounter = 0;
 
-			// 隐藏所有日志
-			document.querySelector('.log-normal').classList.add('hidden');
-			document.querySelector('.log-fix').classList.add('hidden');
-			document.querySelector('.log-tts').classList.add('hidden');
+		// 主题切换
+		function toggleTheme() { document.documentElement.classList.toggle('dark'); }
 
-			// 移除可能附加的特殊颜色类
-			statusTitle.classList.remove('text-brand-warning', 'text-brand-success');
+		// 侧边小巧 Toast
+		function showToast(msg, duration = 3000) {
+			const island = document.getElementById('toast-island');
+			document.getElementById('toast-text').innerText = msg;
+			island.classList.remove('toast-hidden');
+			island.classList.add('toast-visible');
 
-			if (stage === 'normal') {
-				progressBar.style.width = '50%';
-				progressText.innerText = '50%';
-				statusTitle.innerText = '正在渲染动画帧';
-				document.querySelector('.log-normal').classList.remove('hidden');
-				etaText.innerText = '预计还需要 2 分 30 秒，后台会自动完成';
+			clearTimeout(toastTimeout);
+			toastTimeout = setTimeout(() => {
+				island.classList.remove('toast-visible');
+				island.classList.add('toast-hidden');
+			}, duration);
+		}
+
+		// 纯中文克制日志
+		function addLog(msg, type = 'info', replaceLast = false) {
+			const container = document.getElementById('log-container');
+			if (logCounter === 0) container.innerHTML = '';
+
+			let icon = '<i class="ri-subtract-line text-text-secondary dark:text-text-secondary-dark"></i>';
+			let textClass = 'text-text-secondary dark:text-text-secondary-dark';
+
+			if (type === 'success') {
+				icon = '<i class="ri-check-line text-text-primary dark:text-text-primary-dark font-bold"></i>';
+				textClass = 'text-text-primary dark:text-text-primary-dark font-bold';
 			}
-			else if (stage === 'fix') {
-				progressBar.style.width = '60%';
-				progressText.innerText = '60%';
-				statusTitle.innerText = '自动优化代码逻辑';
-				statusTitle.classList.add('text-brand-warning');
-				document.querySelector('.log-fix').classList.remove('hidden');
-				etaText.innerText = '系统正在尝试自动修复动画 (1/2)，请多花一点点耐心';
+			if (type === 'spin') {
+				icon = '<i class="ri-loader-4-line animate-spin text-brand font-bold"></i>';
+				textClass = 'text-text-primary dark:text-text-primary-dark font-bold';
 			}
-			else if (stage === 'tts') {
-				progressBar.style.width = '90%';
-				progressText.innerText = '90%';
-				statusTitle.innerText = '视频合成中';
-				statusTitle.classList.add('text-brand-success');
-				document.querySelector('.log-tts').classList.remove('hidden');
-				etaText.innerText = '马上就好！即将为您展现最终内容...';
+			if (type === 'warn') {
+				icon = '<i class="ri-error-warning-line text-warning font-bold"></i>';
+				textClass = 'text-warning font-bold';
+			}
+
+			const logHtml = `
+                <div class="flex items-start gap-2 fade-in-up mt-1 border-b border-bordercolor-light/20 dark:border-bordercolor-dark/20 pb-2 last:border-0">
+                    <div class="mt-0.5">${icon}</div>
+                    <span class="leading-relaxed ${textClass}">${msg}</span>
+                </div>
+            `;
+
+			if (replaceLast && container.lastElementChild) {
+				container.lastElementChild.outerHTML = logHtml;
+			} else {
+				container.insertAdjacentHTML('beforeend', logHtml);
+			}
+			container.scrollTop = container.scrollHeight;
+			logCounter++;
+		}
+
+		function renderMarkdown() {
+			document.querySelectorAll('.markdown-content').forEach(el => {
+				const rawLines = el.innerHTML.split('\n');
+				const cleanedHtml = rawLines.map(line => line.trim()).join('\n');
+				el.innerHTML = marked.parse(cleanedHtml);
+			});
+			if (window.renderMathInElement) {
+				renderMathInElement(document.body, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }], throwOnError: false });
 			}
 		}
-	</script>
 
+		// 顶栏 UI 适配
+		function updateTimelineNavUI() {
+			const btns = document.querySelectorAll('.nav-btn');
+			btns.forEach((btn, index) => {
+				btn.className = "nav-btn px-3 py-1 text-[11px] font-bold rounded-full jelly whitespace-nowrap border border-transparent";
 
-	<script>
-		// 初始化图标
-		if (window.lucide) {
-			window.lucide.createIcons();
-		}
-		// 亮暗色切换
-		const themeToggleBtn = document.getElementById('dockThemeToggle');
-		function applyTheme(theme) {
-			document.documentElement.classList.toggle('dark', theme === 'dark');
-			document.documentElement.classList.toggle('light', theme !== 'dark');
-			localStorage.setItem('xiaomai-theme', theme);
-		}
-		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
-		if (themeToggleBtn) {
-			themeToggleBtn.addEventListener('click', () => {
-				const isDark = document.documentElement.classList.contains('dark');
-				applyTheme(isDark ? 'light' : 'dark');
+				if (index === currentStage) {
+					btn.classList.add('bg-text-primary', 'dark:bg-text-primary-dark', 'text-surface-light', 'dark:text-surface-dark', 'shadow-sm');
+				} else if (unlockedStages.includes(index)) {
+					btn.classList.add('bg-surface-light', 'dark:bg-surface-dark', 'text-text-secondary', 'dark:text-text-secondary-dark', 'border-bordercolor-light', 'dark:border-bordercolor-dark', 'hover:text-text-primary');
+					btn.onclick = () => switchStage(index);
+				} else {
+					btn.classList.add('opacity-40', 'cursor-not-allowed', 'bg-transparent', 'text-text-secondary', 'dark:text-text-secondary-dark');
+					btn.onclick = null;
+				}
+
+				if (index === 4) {
+					const icon = btn.querySelector('i');
+					if (index === currentStage || unlockedStages.includes(index)) icon.classList.remove('hidden');
+					else icon.classList.add('hidden');
+				}
 			});
 		}
+
+		// 左侧状态控制
+		function updateLeftPanel(stage) {
+			const pText = document.getElementById('progress-text');
+			const pBar = document.getElementById('progress-bar');
+			const sLabel = document.getElementById('status-label');
+			const subTitle = document.getElementById('sub-title');
+			const tags = document.getElementById('tags-container');
+
+			const stageConfig = [
+				{ p: 5, l: "解析中", s: "提取知识点", tag: "文本分析" },
+				{ p: 15, l: "规划中", s: "推导逻辑节奏", tag: "逻辑演绎" },
+				{ p: 25, l: "编排中", s: "生成结构化分镜", tag: "剧本生成" },
+				{ p: 35, l: "预载中", s: "准备音频与沙盒", tag: "TTS处理" },
+				{ p: 35, l: "渲染中", s: "流式生成动画帧", tag: "引擎运算,排版自修复" },
+				{ p: 95, l: "封装中", s: "合成与压制输出", tag: "FFmpeg" }
+			];
+
+			const cfg = stageConfig[stage];
+			pText.innerText = cfg.p + '%';
+			pBar.style.width = cfg.p + '%';
+			sLabel.innerText = cfg.l;
+			subTitle.innerText = cfg.s;
+
+			tags.innerHTML = cfg.tag.split(',').map(t => `<span class="text-[10px] font-bold px-2 py-0.5 border border-bordercolor-light dark:border-bordercolor-dark rounded bg-secondary/50 dark:bg-[#1a1614] text-text-secondary dark:text-text-secondary-dark tracking-wide">${t}</span>`).join('');
+		}
+
+		// 弹性滚动轨道设计
+		function updatePlayerTracks() {
+			const trackContainer = document.getElementById('interactive-tracks');
+			trackContainer.innerHTML = '';
+
+			let readyCount = 0;
+
+			sectionStates.forEach((state, idx) => {
+				const isActive = idx === activeTrackIndex;
+				const extraHtml = state.extra || '';
+
+				if (state === TRACK_STATE.READY) readyCount++;
+
+				// 果冻弹性宽度：非激活最小 32px，激活扩展
+				const widthClass = isActive ? 'min-w-[80px] md:min-w-[100px]' : 'min-w-[32px] md:min-w-[40px] hover:min-w-[48px]';
+
+				const trackHtml = `
+                    <div id="track-${idx}" class="h-1.5 rounded-full shrink-0 cursor-pointer jelly ${widthClass} ${state.class}" 
+                         onclick="selectTrack(${idx})" title="幕 ${idx + 1}">
+                        ${extraHtml}
+                    </div>
+                `;
+				trackContainer.insertAdjacentHTML('beforeend', trackHtml);
+			});
+
+			document.getElementById('player-status-hint').innerText = `${readyCount} / ${sectionsData.length}`;
+
+			const activeEl = document.getElementById(`track-${activeTrackIndex}`);
+			if (activeEl) {
+				activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+			}
+		}
+
+		function selectTrack(idx) {
+			if (sectionStates[idx] === TRACK_STATE.WAIT && idx !== activeTrackIndex) return;
+
+			activeTrackIndex = idx;
+			updatePlayerTracks();
+
+			const sec = sectionsData[idx];
+			const state = sectionStates[idx];
+			const video = document.getElementById('master-video');
+			const overlay = document.getElementById('player-overlay-state');
+
+			document.getElementById('player-title').innerText = `Sc.${sec.id} ${sec.title}`;
+
+			if (state === TRACK_STATE.READY) {
+				overlay.classList.add('hidden');
+				if (video.src !== sec.videoUrl) video.src = sec.videoUrl;
+				video.play();
+			} else {
+				overlay.classList.remove('hidden');
+				video.pause();
+				const icon = document.getElementById('overlay-icon');
+				const text = document.getElementById('overlay-text');
+
+				if (state === TRACK_STATE.FIX) {
+					icon.className = "ri-tools-line animate-bounce text-3xl text-warning mb-1.5";
+					text.innerText = "LAYOUT FIXING";
+				} else {
+					icon.className = "ri-loader-3-line animate-spin-slow text-3xl text-brand mb-1.5";
+					text.innerText = "GENERATING";
+				}
+			}
+
+			const detailsHtml = `
+                <div class="border-l-2 border-bordercolor-light dark:border-bordercolor-dark pl-3.5 mb-5">
+                    <h4 class="text-base font-bold flex items-center gap-2 text-text-primary dark:text-text-primary-dark mb-1.5">
+                        <span class="text-brand font-mono text-[13px]">${sec.id}.</span> 
+                        ${sec.title}
+                    </h4>
+                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark shadow-sm uppercase">${state.label}</span>
+                </div>
+                <div class="grid grid-cols-[36px_1fr] gap-3 mb-5 text-[12px]">
+                    <span class="font-bold text-text-secondary dark:text-text-secondary-dark mt-1">配音</span>
+                    <p class="leading-relaxed font-serif italic text-text-primary dark:text-text-primary-dark bg-surface-light dark:bg-surface-dark px-3.5 py-2.5 rounded border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">"${sec.narration}"</p>
+                </div>
+                <div class="grid grid-cols-[36px_1fr] gap-3 text-[12px]">
+                    <span class="font-bold text-text-secondary dark:text-text-secondary-dark mt-1">画面</span>
+                    <div class="markdown-content text-text-secondary dark:text-text-secondary-dark leading-relaxed">${sec.visual}</div>
+                </div>
+            `;
+			const contentDiv = document.getElementById('player-script-content');
+			contentDiv.innerHTML = detailsHtml;
+			renderMarkdown();
+
+			contentDiv.classList.remove('fade-in-up');
+			void contentDiv.offsetWidth;
+			contentDiv.classList.add('fade-in-up');
+		}
+
+		// 阶段切换与显示逻辑
+		function switchStage(stage) {
+			if (stage === currentStage) return;
+			currentStage = stage;
+			if (!unlockedStages.includes(stage)) unlockedStages.push(stage);
+
+			updateTimelineNavUI();
+			updateLeftPanel(stage);
+
+			const vEmpty = document.getElementById('view-empty');
+			const vDynamic = document.getElementById('view-dynamic');
+			const vPlayer = document.getElementById('view-player');
+
+			vEmpty.classList.add('hidden');
+
+			if (stage === 4) {
+				// 流式渲染特有布局：完全基于 flex，底部通过 min-h-0 可滚动
+				vDynamic.classList.add('hidden');
+				vDynamic.classList.remove('flex');
+				vPlayer.classList.remove('hidden');
+				vPlayer.classList.add('flex');
+				updatePlayerTracks();
+				selectTrack(activeTrackIndex);
+			} else {
+				vPlayer.classList.add('hidden');
+				vPlayer.classList.remove('flex');
+				vDynamic.classList.remove('hidden');
+				vDynamic.classList.add('flex');
+				vDynamic.innerHTML = TEMPLATES[`stage${stage}`];
+				renderMarkdown();
+			}
+		}
+
+		const delay = ms => new Promise(res => setTimeout(res, ms));
+
+		// 纯正中文驱动的运行脚本
+		async function startSimulation() {
+			const btn = document.getElementById('sim-btn');
+			btn.disabled = true;
+			btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> 执行中...';
+			btn.classList.add('opacity-60', 'cursor-not-allowed');
+
+			unlockedStages = [];
+			sectionStates = Array(sectionsData.length).fill(TRACK_STATE.WAIT);
+			activeTrackIndex = 0;
+			document.getElementById('log-container').innerHTML = '';
+			logCounter = 0;
+
+			// Stage 0
+			switchStage(0);
+			addLog("接收任务请求，初始化专属工作空间", "success");
+			showToast("正在深度解析教学意图", 2500);
+			await delay(1000);
+			addLog("语义解析运行中...", "spin");
+			await delay(1500);
+			addLog("完成意图解析，提炼核心节点", "success", true);
+
+			// Stage 1
+			switchStage(1);
+			addLog("构建教学逻辑路径...", "spin");
+			showToast("正在为您规划循序渐进的教学结构");
+			await delay(1500);
+			addLog("教学逻辑节奏规划完毕", "success", true);
+
+			// Stage 2
+			switchStage(2);
+			addLog("生成骨架分镜与台本结构...", "spin");
+			await delay(1500);
+			addLog(`成功创建 ${sectionsData.length} 幕结构化分镜`, "success", true);
+
+			// Stage 3
+			switchStage(3);
+			addLog("请求智能 TTS 语音合成集群...", "spin");
+			await delay(1200);
+			addLog("物理沙盒与渲染环境已预热", "success");
+
+			// Stage 4 (核心无阻挡布局展示)
+			switchStage(4);
+			showToast("启动流式渲染，您可以边生成边预览", 3500);
+			addLog("启动 Pipeline：进入分布式流式渲染");
+
+			for (let i = 0; i < sectionsData.length; i++) {
+				sectionStates[i] = TRACK_STATE.GEN;
+				activeTrackIndex = i;
+				updatePlayerTracks();
+				selectTrack(i);
+				addLog(`[第 ${i + 1} 幕] 正在编译图形动画逻辑代码...`, "spin");
+
+				const currentP = Math.floor(35 + (i * (55 / sectionsData.length)));
+				document.getElementById('progress-text').innerText = currentP + '%';
+				document.getElementById('progress-bar').style.width = currentP + '%';
+				await delay(1200);
+
+				sectionStates[i] = TRACK_STATE.RENDER;
+				updatePlayerTracks();
+				selectTrack(i);
+				addLog(`[第 ${i + 1} 幕] 语法通过，沙盒正在渲染动画帧...`, "spin", true);
+				await delay(1500);
+
+				if (i === 1 || i === 4) {
+					sectionStates[i] = TRACK_STATE.FIX;
+					updatePlayerTracks();
+					selectTrack(i);
+					addLog(`[第 ${i + 1} 幕] 质量网关拦截：检测到元素重叠，触发排版自愈...`, "warn");
+					showToast("发现细节瑕疵，正在自动微调重绘", 2500);
+					await delay(1800);
+				}
+
+				sectionStates[i] = TRACK_STATE.READY;
+				updatePlayerTracks();
+				selectTrack(i);
+				addLog(`[第 ${i + 1} 幕] 媒体片段合成完毕。`, "success");
+
+				if (i < sectionsData.length - 1) await delay(800);
+			}
+
+			// Stage 5
+			switchStage(5);
+			addLog("全量片段校验通过，启动 FFmpeg 封装节点...", "spin");
+			showToast("压制最后成片，即将大功告成");
+			document.getElementById('progress-text').innerText = '95%';
+			document.getElementById('progress-bar').style.width = '95%';
+			await delay(2500);
+
+			document.getElementById('progress-text').innerText = '100%';
+			document.getElementById('progress-bar').style.width = '100%';
+			addLog("视频生成任务圆满完成！", "success", true);
+
+			btn.innerHTML = '<i class="ri-check-line"></i> 体验完成';
+			btn.classList.remove('opacity-60', 'cursor-not-allowed', 'bg-text-primary', 'dark:bg-text-primary-dark', 'text-surface-light', 'dark:text-surface-dark');
+			btn.className = "flex items-center gap-1.5 px-4 py-1.5 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark text-xs font-bold rounded-full jelly shadow-sm";
+			showToast("体验已结束，正式环境将跳转至播放页。", 4000);
+		}
 	</script>
-	<script src="../../_shared/page-hub.js" defer data-page-hub></script>
 </body>
 
 </html>
