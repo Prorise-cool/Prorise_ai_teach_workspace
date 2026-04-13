@@ -372,6 +372,48 @@ class PublishState(VideoCamelModel):
     author_name: str | None = None
 
 
+class VideoPreviewSectionStatus(StrEnum):
+    """等待页分段预览状态。"""
+
+    PENDING = "pending"
+    GENERATING = "generating"
+    RENDERING = "rendering"
+    FIXING = "fixing"
+    READY = "ready"
+    FAILED = "failed"
+
+
+class VideoPreviewSection(VideoCamelModel):
+    """单个 section 的渐进预览状态。"""
+
+    section_id: str
+    section_index: int = Field(ge=0)
+    title: str
+    lecture_lines: list[str] = Field(default_factory=list)
+    status: VideoPreviewSectionStatus = VideoPreviewSectionStatus.PENDING
+    audio_url: str | None = None
+    clip_url: str | None = None
+    error_message: str | None = None
+    fix_attempt: int | None = Field(default=None, ge=1)
+    updated_at: str = Field(default_factory=format_trace_timestamp)
+
+
+class VideoTaskPreview(VideoCamelModel):
+    """视频任务等待页渐进预览数据。"""
+
+    task_id: str
+    status: Literal["processing", "completed", "failed", "cancelled"] = "processing"
+    preview_available: bool = False
+    preview_version: int = Field(default=0, ge=0)
+    summary: str = ""
+    knowledge_points: list[str] = Field(default_factory=list)
+    total_sections: int = Field(default=0, ge=0)
+    ready_sections: int = Field(default=0, ge=0)
+    failed_sections: int = Field(default=0, ge=0)
+    sections: list[VideoPreviewSection] = Field(default_factory=list)
+    updated_at: str = Field(default_factory=format_trace_timestamp)
+
+
 class VideoResultDetail(VideoCamelModel):
     """视频任务完整结果详情。"""
     task_id: str
@@ -417,6 +459,14 @@ class VideoResultDetailResponseEnvelope(VideoCamelModel):
     code: int = 200
     msg: str = "查询成功"
     data: VideoResultDetail
+
+
+class VideoTaskPreviewResponseEnvelope(VideoCamelModel):
+    """视频任务渐进预览响应信封。"""
+
+    code: int = 200
+    msg: str = "查询成功"
+    data: VideoTaskPreview
 
 
 class PublishOperationResponseEnvelope(VideoCamelModel):

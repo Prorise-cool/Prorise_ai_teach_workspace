@@ -1,10 +1,20 @@
 """视频功能域路由模块。"""
 
 import mimetypes
-from functools import lru_cache
 from datetime import datetime
+from functools import lru_cache
 
-from fastapi import APIRouter, Depends, File, HTTPException, Header, Query, Request, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.api.routes.tasks import get_task_events as get_shared_task_events
@@ -16,16 +26,18 @@ from app.features.video.models.create_task import (
     CreateVideoTaskAcceptedPayload,
     CreateVideoTaskRequest,
     CreateVideoTaskSuccessEnvelope,
-    IdempotentConflictPayload,
     IdempotentConflictEnvelope,
+    IdempotentConflictPayload,
 )
+from app.features.video.models.preprocess import VideoPreprocessSuccessEnvelope
+from app.features.video.models.voice import VideoVoiceListResponseEnvelope
 from app.features.video.pipeline.models import (
     PublishedVideoPageResponseEnvelope,
     PublishOperationResponseEnvelope,
     VideoResultDetailResponseEnvelope,
+    VideoTaskPreviewResponseEnvelope,
 )
-from app.features.video.models.preprocess import VideoPreprocessSuccessEnvelope
-from app.features.video.service.voice_catalog import VideoVoiceCatalogService
+from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.schemas import (
     VideoTaskMetadataCreateRequest,
     VideoTaskMetadataPageResponse,
@@ -33,16 +45,19 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
-from app.features.video.pipeline.orchestration.assets import LocalAssetStore
-from app.features.video.models.voice import VideoVoiceListResponseEnvelope
-from app.providers.factory import get_provider_factory
-from app.providers.runtime_config_service import ProviderRuntimeResolver
 from app.features.video.service.create_task import (
     create_video_task,
     ensure_video_task_create_permission,
 )
 from app.features.video.service.preprocess import PreprocessService
-from app.schemas.common import ErrorResponseEnvelope, TaskSnapshotResponseEnvelope, build_success_envelope
+from app.features.video.service.voice_catalog import VideoVoiceCatalogService
+from app.providers.factory import get_provider_factory
+from app.providers.runtime_config_service import ProviderRuntimeResolver
+from app.schemas.common import (
+    ErrorResponseEnvelope,
+    TaskSnapshotResponseEnvelope,
+    build_success_envelope,
+)
 from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus
 
@@ -78,9 +93,13 @@ def get_video_voice_catalog_service() -> VideoVoiceCatalogService:
     responses={
         200: {
             "description": "视频功能域 bootstrap 基线",
-            "content": {"application/json": {"example": build_feature_bootstrap_example("video")}}
+            "content": {
+                "application/json": {
+                    "example": build_feature_bootstrap_example("video")
+                }
+            },
         }
-    }
+    },
 )
 async def video_bootstrap(
     service: VideoService = Depends(get_video_service),
@@ -114,7 +133,9 @@ async def get_local_video_asset(asset_key: str) -> Response:
     """开发态读取本地落盘的视频流水线产物。"""
     settings = get_settings()
     if settings.environment != "development":
-        raise HTTPException(status_code=404, detail="Asset route is only available in development")
+        raise HTTPException(
+            status_code=404, detail="Asset route is only available in development"
+        )
 
     store = LocalAssetStore.from_settings(settings)
     try:
@@ -140,7 +161,9 @@ async def list_video_voices(
         access_token=access_context.token,
         client_id=access_context.client_id,
     )
-    return VideoVoiceListResponseEnvelope(data=payload).model_dump(mode="json", by_alias=True)
+    return VideoVoiceListResponseEnvelope(data=payload).model_dump(
+        mode="json", by_alias=True
+    )
 
 
 @router.post(
@@ -148,7 +171,10 @@ async def list_video_voices(
     status_code=202,
     response_model=CreateVideoTaskSuccessEnvelope,
     responses={
-        409: {"model": IdempotentConflictEnvelope, "description": "幂等键冲突，返回已有任务"},
+        409: {
+            "model": IdempotentConflictEnvelope,
+            "description": "幂等键冲突，返回已有任务",
+        },
     },
 )
 async def create_video_task_endpoint(
@@ -169,7 +195,9 @@ async def create_video_task_endpoint(
     if isinstance(result, IdempotentConflictPayload):
         return JSONResponse(
             status_code=409,
-            content=IdempotentConflictEnvelope(data=result).model_dump(mode="json", by_alias=True),
+            content=IdempotentConflictEnvelope(data=result).model_dump(
+                mode="json", by_alias=True
+            ),
         )
     return CreateVideoTaskSuccessEnvelope(
         data=CreateVideoTaskAcceptedPayload.model_validate(result)
@@ -208,7 +236,7 @@ async def list_video_tasks(
         page_num=page_num,
         page_size=page_size,
         access_context=access_context,
-)
+    )
 
 
 @router.get("/tasks/{task_id}", response_model=VideoTaskMetadataSnapshot)
@@ -232,7 +260,36 @@ async def get_video_task_result(
     service: VideoService = Depends(get_video_service),
 ) -> dict[str, object]:
     """获取视频任务的完整结果详情。"""
-    payload = await service.get_result_detail(task_id, runtime_store=request.app.state.runtime_store, access_context=access_context)
+    payload = await service.get_result_detail(
+        task_id,
+        runtime_store=request.app.state.runtime_store,
+        access_context=access_context,
+    )
+    return build_success_envelope(payload)
+
+
+@router.get(
+    "/tasks/{task_id}/preview",
+    response_model=VideoTaskPreviewResponseEnvelope,
+    responses={
+        404: {
+            "model": ErrorResponseEnvelope,
+            "description": "任务不存在或预览运行态已过期",
+        }
+    },
+)
+async def get_video_task_preview(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    """获取视频等待页渐进式预览数据。"""
+    payload = await service.get_preview_detail(
+        task_id,
+        runtime_store=request.app.state.runtime_store,
+        access_context=access_context,
+    )
     return build_success_envelope(payload)
 
 
@@ -266,7 +323,7 @@ async def get_video_task_status(
                     "example": (
                         "id: video_20260329161500_ab12cd34:evt:000004\n"
                         "event: progress\n"
-                        "data: {\"taskId\":\"video_20260329161500_ab12cd34\"}\n\n"
+                        'data: {"taskId":"video_20260329161500_ab12cd34"}\n\n'
                     )
                 }
             },
@@ -287,7 +344,9 @@ async def get_video_task_events(
     return await get_shared_task_events(task_id, request, last_event_id, access_context)
 
 
-@router.post("/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope)
+@router.post(
+    "/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope
+)
 async def publish_video_task(
     task_id: str,
     request: Request,
@@ -303,7 +362,9 @@ async def publish_video_task(
     return build_success_envelope(payload, msg="公开发布成功")
 
 
-@router.delete("/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope)
+@router.delete(
+    "/tasks/{task_id}/publish", response_model=PublishOperationResponseEnvelope
+)
 async def unpublish_video_task(
     task_id: str,
     request: Request,
@@ -337,7 +398,9 @@ async def list_published_video_tasks(
     return build_success_envelope(payload)
 
 
-@router.get("/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse)
+@router.get(
+    "/sessions/{session_id}/replay", response_model=VideoTaskMetadataPageResponse
+)
 async def replay_video_session(
     session_id: str,
     access_context: AccessContext = Depends(get_access_context),

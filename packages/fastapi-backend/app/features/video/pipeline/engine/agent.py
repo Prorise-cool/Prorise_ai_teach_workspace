@@ -143,6 +143,7 @@ class TeachingVideoAgent:
         self.section_videos = {}
         self.render_results = {}
         self.render_summary = {}
+        self.section_status_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         self.video_feedbacks = {}
 
         """6. For Efficiency"""
@@ -444,6 +445,12 @@ class TeachingVideoAgent:
             return False
 
         for fix_attempt in range(max_fix_attempts):
+            self._notify_section_status(
+                section_id=section_id,
+                status="fixing",
+                attemptNo=fix_attempt + 1,
+                maxFixAttempts=max_fix_attempts,
+            )
             logger.info(
                 "%s Debugging %s (attempt %s/%s)",
                 self.learning_topic,
@@ -513,6 +520,21 @@ class TeachingVideoAgent:
                 break
 
         return False
+
+    def _notify_section_status(self, *, section_id: str, status: str, **payload: Any) -> None:
+        """向外部协调器回传 section 级别的运行信号。"""
+        if self.section_status_callback is None:
+            return
+        try:
+            self.section_status_callback(
+                {
+                    "sectionId": section_id,
+                    "status": status,
+                    **payload,
+                }
+            )
+        except Exception:
+            logger.debug("section status callback failed for %s", section_id, exc_info=True)
 
     def get_mllm_feedback(
         self, section: Section, video_path: str, round_number: int = 1

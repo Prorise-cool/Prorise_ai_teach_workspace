@@ -9,9 +9,13 @@ from app.core.errors import AppError, IntegrationError
 from app.core.logging import get_logger
 from app.core.security import AccessContext
 from app.features.video.pipeline.models import (
+    VideoTaskPreview,
     VideoResultDetail,
 )
-from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
+from app.features.video.pipeline.orchestration.runtime import (
+    VideoRuntimeStateStore,
+    build_preview_state,
+)
 from app.features.video.service._helpers import resolve_publish_state
 from app.infra.redis_client import RuntimeStore
 
@@ -113,3 +117,54 @@ class ResultServiceMixin:
                 )
 
         return VideoResultDetail(task_id=task_id, status="processing")
+
+    async def get_preview_detail(
+        self: "ResultServiceMixin",
+        task_id: str,
+        *,
+        runtime_store: RuntimeStore | None = None,
+        access_context: AccessContext | None = None,
+    ) -> VideoTaskPreview:
+        """获取视频任务等待页渐进预览数据。"""
+        snapshot = await self.get_task(task_id, access_context=access_context)
+        if snapshot is None:
+            raise AppError(
+                code="COMMON_NOT_FOUND",
+                message="视频任务不存在",
+                status_code=404,
+                task_id=task_id,
+            )
+        if access_context is not None and snapshot.user_id != access_context.user_id:
+            raise AppError(
+                code="AUTH_PERMISSION_DENIED",
+                message="仅任务创建者可查看任务预览",
+                status_code=403,
+                task_id=task_id,
+            )
+
+        if runtime_store is not None:
+            runtime = VideoRuntimeStateStore(runtime_store, task_id)
+            preview = runtime.load_preview()
+            if preview is not None:
+                return preview
+            state = runtime_store.get_task_state(task_id)
+            if state is not None:
+                raw_status = str(state.get("status") or "processing")
+                preview_status = "processing" if raw_status == "pending" else raw_status
+                return build_preview_state(
+                    task_id=task_id,
+                    status=preview_status,
+                    preview_available=False,
+                    summary=snapshot.summary,
+                    knowledge_points=[],
+                    sections=[],
+                )
+
+        return build_preview_state(
+            task_id=task_id,
+            status="processing",
+            preview_available=False,
+            summary=snapshot.summary,
+            knowledge_points=[],
+            sections=[],
+        )
