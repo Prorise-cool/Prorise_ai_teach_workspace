@@ -573,11 +573,22 @@ class TeachingVideoAgent:
             return has_layout_issues, suggested_improvements
 
         try:
-            response = request_gemini_video_img(
-                prompt=analysis_prompt,
-                video_path=video_path,
-                image_path=self.GRID_IMG_PATH,
-            )
+            if os.path.isfile(self.GRID_IMG_PATH):
+                response = request_gemini_video_img(
+                    prompt=analysis_prompt,
+                    video_path=video_path,
+                    image_path=self.GRID_IMG_PATH,
+                )
+            else:
+                logger.warning(
+                    "%s GRID.png not found (%s), using video-only feedback",
+                    self.learning_topic,
+                    self.GRID_IMG_PATH,
+                )
+                response = request_gemini_with_video(
+                    prompt=analysis_prompt,
+                    video_path=video_path,
+                )
             feedback_content = extract_answer_from_response(response)
             has_layout_issues, suggested_improvements = _parse_layout(feedback_content)
             feedback = VideoFeedback(

@@ -530,18 +530,23 @@ class VideoPipelineService:
         work_dir: Path,
         bridge: LLMBridge,
     ) -> TeachingVideoAgent:
-        """创建 Code2Video agent。"""
+        """创建 Code2Video agent。动态检测 mllm_feedback endpoint 决定是否开启视觉反馈。"""
+        has_mllm = "mllm_feedback" in bridge._endpoints
         cfg = RunConfig(
-            use_feedback=False,  # 暂时关闭 MLLM 反馈（需要 Gemini 视频分析，较慢）
+            use_feedback=has_mllm,  # 有 vision provider 时开启 MLLM 反馈
             use_assets=False,  # 暂时关闭外部资产下载
             api=bridge.text_api("manim_gen"),
-            feedback_rounds=0,
+            feedback_rounds=1 if has_mllm else 0,
             max_code_token_length=10000,
             max_fix_bug_tries=5,
             max_regenerate_tries=3,
             max_feedback_gen_code_tries=2,
             max_mllm_fix_bugs_tries=2,
         )
+        if has_mllm:
+            logger.info("MLLM feedback ENABLED (1 round) for formula/layout correction")
+        else:
+            logger.info("MLLM feedback DISABLED — no mllm_feedback binding in database")
 
         agent = TeachingVideoAgent(
             idx=0,
@@ -685,7 +690,7 @@ class VideoPipelineService:
             "storyboard": "storyboard",
             "manim_gen": "manim_gen",
             "manim_fix": "manim_fix",
-            "mllm_feedback": "manim_fix",
+            "mllm_feedback": "mllm_feedback",
         }
 
         for c2v_stage, our_stage in stage_mapping.items():
