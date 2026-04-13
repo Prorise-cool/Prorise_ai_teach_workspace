@@ -197,7 +197,7 @@ def topic_to_safe_name(knowledge_point):
     safe_name = re.sub(SAFE_PATTERN, "", knowledge_point)
     # Replace consecutive spaces with a single underscore
     safe_name = re.sub(r"\s+", "_", safe_name.strip())
-    return safe_name
+    return safe_name or "video"
 
 
 def get_output_dir(idx, knowledge_point, base_dir, get_safe_name=False):

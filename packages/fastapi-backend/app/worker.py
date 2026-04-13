@@ -4,11 +4,26 @@ from __future__ import annotations
 
 
 import asyncio
+import time
 from threading import Lock
 
 import dramatiq
+from dramatiq.middleware.time_limit import TimeLimitExceeded
 
 from app.core.config import get_settings
+from app.core.logging import (
+    EMPTY_TRACE_VALUE,
+    bind_trace_context,
+    format_trace_timestamp,
+    get_logger,
+    reset_trace_context,
+)
+from app.features.video.pipeline.models import VideoResultDetail, VideoStage
+from app.features.video.pipeline.orchestration.runtime import (
+    VideoRuntimeStateStore,
+    build_failure,
+    merge_result_detail,
+)
 from app.features.video.service import VideoService
 from app.features.video.tasks.video_task_actor import VideoTask
 from app.infra.redis_client import RuntimeStore, create_dramatiq_broker, create_runtime_store
@@ -20,6 +35,7 @@ from app.shared.task_framework.scheduler import (
     deserialize_task_context,
     register_task,
 )
+from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus
 
 # ---------------------------------------------------------------------------
 # 延迟初始化：避免 import app.worker 时立即创建 Redis 连接和加载配置
@@ -33,6 +49,8 @@ runtime_store: RuntimeStore | None = None
 broker: object = None
 video_metadata_service: VideoService | None = None
 task_actor: object = None
+
+logger = get_logger("app.worker")
 
 
 def _ensure_initialized() -> None:
@@ -95,21 +113,166 @@ def build_video_worker_task(context: TaskContext) -> VideoTask:
     )
 
 
+def _resolve_video_timeout_stage(state: dict[str, object] | None) -> VideoStage:
+    context = state.get("context") if isinstance(state, dict) else None
+    if isinstance(context, dict):
+        for key in ("currentStage", "current_stage", "stage"):
+            raw_value = context.get(key)
+            if not isinstance(raw_value, str):
+                continue
+            try:
+                return VideoStage(raw_value)
+            except ValueError:
+                continue
+    return VideoStage.RENDER
+
+
+def _persist_video_timeout_detail(
+    *,
+    context: TaskContext,
+    message: str,
+    error_code: TaskErrorCode,
+    state: dict[str, object] | None,
+) -> None:
+    if runtime_store is None:
+        return
+
+    runtime = VideoRuntimeStateStore(runtime_store, context.task_id)
+    current = runtime.load_model("result_detail", VideoResultDetail)
+    if current is not None and current.status == "completed":
+        return
+
+    failure = build_failure(
+        task_id=context.task_id,
+        stage=_resolve_video_timeout_stage(state),
+        error_code=error_code,
+        message=message,
+        failed_at=format_trace_timestamp(),
+    )
+    detail = merge_result_detail(
+        current,
+        status="failed",
+        failure=failure.model_dump(mode="json", by_alias=True),
+    )
+    runtime.save_model("result_detail", detail)
+
+
+def _emit_worker_timeout_snapshot(
+    *,
+    scheduler: TaskScheduler,
+    context: TaskContext,
+    task_type: str,
+    elapsed_ms: int,
+    budget_ms: int,
+) -> None:
+    if runtime_store is None:
+        return
+
+    state = runtime_store.get_task_state(context.task_id)
+    existing_context = state.get("context") if isinstance(state, dict) else None
+    payload = dict(existing_context) if isinstance(existing_context, dict) else {}
+    payload.update(
+        {
+            "workerTimeout": True,
+            "elapsedMs": elapsed_ms,
+            "timeLimitMs": budget_ms,
+            "timedOutAt": format_trace_timestamp(),
+        }
+    )
+    progress = int(state.get("progress") or 0) if isinstance(state, dict) else 0
+    message = f"任务执行超时，已达到 Worker 上限 {budget_ms}ms"
+
+    scheduler._emit_snapshot(
+        context=context,
+        internal_status=TaskInternalStatus.ERROR,
+        progress=progress,
+        message=message,
+        error_code=TaskErrorCode.EXECUTION_TIMEOUT,
+        event="failed",
+        payload=payload,
+    )
+
+    if task_type == "video":
+        _persist_video_timeout_detail(
+            context=context,
+            message=message,
+            error_code=TaskErrorCode.EXECUTION_TIMEOUT,
+            state=state,
+        )
+
+
 def consume_task_message(task_type: str, context_payload: dict[str, object]) -> dict[str, object]:
     """消费 Dramatiq 任务消息并同步执行。"""
     _ensure_initialized()
     context = deserialize_task_context(context_payload)
+    budget_ms = int(getattr(settings, "dramatiq_task_time_limit_ms", 0) or 0)
+    trace_tokens = bind_trace_context(
+        request_id=context.request_id or EMPTY_TRACE_VALUE,
+        task_id=context.task_id,
+        error_code=EMPTY_TRACE_VALUE,
+    )
+    started_at = time.monotonic()
     task = build_task(task_type, context)
     scheduler = TaskScheduler(runtime_store=runtime_store)
-    result = asyncio.run(scheduler.dispatch(task, emit_queued_snapshot=False))
-    return {
-        "taskId": context.task_id,
-        "taskType": task_type,
-        "status": result.status.value,
-        "progress": result.progress,
-        "message": result.message,
-        "errorCode": result.error_code.value if result.error_code is not None else None,
-    }
+
+    try:
+        logger.info(
+            "Task worker execution started task_type=%s budget_ms=%s",
+            task_type,
+            budget_ms,
+        )
+        try:
+            result = asyncio.run(scheduler.dispatch(task, emit_queued_snapshot=False))
+        except TimeLimitExceeded:
+            elapsed_ms = round((time.monotonic() - started_at) * 1000)
+            error_tokens = bind_trace_context(
+                error_code=TaskErrorCode.EXECUTION_TIMEOUT.value
+            )
+            try:
+                logger.error(
+                    "Task worker execution exceeded time limit task_type=%s "
+                    "elapsed_ms=%s budget_ms=%s",
+                    task_type,
+                    elapsed_ms,
+                    budget_ms,
+                )
+            finally:
+                reset_trace_context(error_tokens)
+
+            _emit_worker_timeout_snapshot(
+                scheduler=scheduler,
+                context=context,
+                task_type=task_type,
+                elapsed_ms=elapsed_ms,
+                budget_ms=budget_ms,
+            )
+            return {
+                "taskId": context.task_id,
+                "taskType": task_type,
+                "status": "failed",
+                "progress": 0,
+                "message": f"任务执行超时，已达到 Worker 上限 {budget_ms}ms",
+                "errorCode": TaskErrorCode.EXECUTION_TIMEOUT.value,
+            }
+
+        elapsed_ms = round((time.monotonic() - started_at) * 1000)
+        logger.info(
+            "Task worker execution finished task_type=%s status=%s elapsed_ms=%s budget_ms=%s",
+            task_type,
+            result.status.value,
+            elapsed_ms,
+            budget_ms,
+        )
+        return {
+            "taskId": context.task_id,
+            "taskType": task_type,
+            "status": result.status.value,
+            "progress": result.progress,
+            "message": result.message,
+            "errorCode": result.error_code.value if result.error_code is not None else None,
+        }
+    finally:
+        reset_trace_context(trace_tokens)
 
 
 def send_task_message(task_type: str, context_payload: dict[str, object]) -> str:

@@ -1,11 +1,18 @@
 import argparse
 import json
 import logging
+import math
 import random
 import re
 import subprocess
 import time
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    as_completed,
+    wait,
+)
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -17,6 +24,20 @@ from .gpt_request import *  # noqa: F403
 from .scope_refine import *  # noqa: F403
 
 logger = logging.getLogger(__name__)
+
+RENDER_SUCCESS_RATIO = 0.6
+RENDER_COMPLETION_GRACE_SECONDS = 45.0
+
+
+def required_render_successes(
+    total_sections: int,
+    success_ratio: float = RENDER_SUCCESS_RATIO,
+) -> int:
+    """Return the minimum number of successful sections required by the quality gate."""
+    if total_sections <= 0:
+        return 0
+    normalized_ratio = max(0.0, min(float(success_ratio), 1.0))
+    return max(1, math.ceil(total_sections * normalized_ratio))
 
 
 @dataclass
@@ -120,6 +141,8 @@ class TeachingVideoAgent:
         self.sections = []
         self.section_codes = {}
         self.section_videos = {}
+        self.render_results = {}
+        self.render_summary = {}
         self.video_feedbacks = {}
 
         """6. For Efficiency"""
@@ -791,66 +814,173 @@ class TeachingVideoAgent:
             )
             return section_id, False, None
 
-    def render_all_sections(self, max_workers: int = 2) -> Dict[str, str]:
+    def render_all_sections(
+        self,
+        max_workers: int = 2,
+        *,
+        per_section_timeout: float = 600,
+        overall_timeout: float | None = None,
+        success_ratio: float = RENDER_SUCCESS_RATIO,
+        success_grace_seconds: float = RENDER_COMPLETION_GRACE_SECONDS,
+    ) -> Dict[str, str]:
         logger.info(
             "Start parallel rendering of all section videos (up to %s threads)...",
             max_workers,
         )
 
-        results = {}
-        successful_count = 0
-        failed_count = 0
-        per_section_timeout = 600  # 10 min max per section
+        total = len(self.sections)
+        if total == 0:
+            self.render_results = {}
+            return {}
+
+        max_workers = max(1, min(max_workers, total))
+        required_successes = required_render_successes(total, success_ratio)
+        logger.info(
+            "Render quality gate target: %s/%s sections (%.0f%%), grace window %.1fs",
+            required_successes,
+            total,
+            success_ratio * 100,
+            success_grace_seconds,
+        )
+
+        results: Dict[str, str] = {}
+        future_to_section: dict[object, str] = {}
+        submitted_count = 0
+        early_stop_reason: str | None = None
+        grace_deadline: float | None = None
+        overall_timeout_seconds = (
+            float(overall_timeout)
+            if overall_timeout is not None
+            else float(per_section_timeout) * total
+        )
+        overall_deadline = time.monotonic() + max(1.0, overall_timeout_seconds)
+        section_iter = iter(self.sections)
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+
+        def submit_next_section() -> bool:
+            nonlocal submitted_count
+            try:
+                section = next(section_iter)
+            except StopIteration:
+                return False
+            future = executor.submit(self.render_section, section)
+            future_to_section[future] = section.id
+            submitted_count += 1
+            return True
 
         try:
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_section = {}
-                for section in self.sections:
-                    future = executor.submit(self.render_section, section)
-                    future_to_section[future] = section.id
+            for _ in range(max_workers):
+                if not submit_next_section():
+                    break
 
-                for future in as_completed(
-                    future_to_section, timeout=per_section_timeout * len(self.sections)
-                ):
-                    section_id = future_to_section[future]
+            while future_to_section:
+                now = time.monotonic()
+                if now >= overall_deadline:
+                    early_stop_reason = "overall-render-deadline-reached"
+                    logger.warning(
+                        "Render deadline reached with %s/%s successful sections; "
+                        "proceeding with available videos",
+                        len(results),
+                        total,
+                    )
+                    break
+
+                wait_timeout = min(1.0, max(0.0, overall_deadline - now))
+                if grace_deadline is not None:
+                    wait_timeout = min(
+                        wait_timeout,
+                        max(0.0, grace_deadline - now),
+                    )
+
+                done, _ = wait(
+                    set(future_to_section.keys()),
+                    timeout=wait_timeout,
+                    return_when=FIRST_COMPLETED,
+                )
+                if not done:
+                    continue
+
+                for future in done:
+                    section_id = future_to_section.pop(future)
                     try:
-                        success = future.result(timeout=per_section_timeout)
+                        success = future.result()
                         if success and section_id in self.section_videos:
                             results[section_id] = self.section_videos[section_id]
-                            successful_count += 1
                             logger.info(
                                 "%s video rendered successfully: %s",
                                 section_id,
                                 results[section_id],
                             )
                         else:
-                            failed_count += 1
                             logger.warning("%s video rendering failed", section_id)
                     except Exception as e:
-                        failed_count += 1
                         logger.error(
                             "%s video rendering process error: %s", section_id, str(e)
                         )
 
-        except TimeoutError:
-            logger.info("Some sections timed out, proceeding with available videos")
-        except Exception as e:
-            logger.error("Rendering error: %s", str(e))
+                while len(future_to_section) < max_workers:
+                    if not submit_next_section():
+                        break
+
+                if (
+                    grace_deadline is None
+                    and len(results) >= required_successes
+                    and submitted_count >= total
+                    and future_to_section
+                ):
+                    grace_deadline = min(
+                        overall_deadline,
+                        time.monotonic() + max(0.0, success_grace_seconds),
+                    )
+                    logger.info(
+                        "Render success threshold reached (%s/%s) after submitting all sections. "
+                        "Entering %.1fs grace window before merge",
+                        len(results),
+                        total,
+                        max(0.0, grace_deadline - time.monotonic()),
+                    )
+
+                if grace_deadline is not None and time.monotonic() >= grace_deadline:
+                    early_stop_reason = "quality-gate-grace-expired"
+                    logger.info(
+                        "Render grace window expired after reaching quality gate; "
+                        "stop waiting with %s running sections",
+                        len(future_to_section),
+                    )
+                    break
+        finally:
+            if future_to_section:
+                outstanding_sections = list(future_to_section.values())
+                logger.warning(
+                    "Render wait stopped early reason=%s outstanding_sections=%s",
+                    early_stop_reason or "manual-stop",
+                    outstanding_sections,
+                )
+                for future in future_to_section:
+                    future.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                executor.shutdown(wait=True, cancel_futures=True)
 
         logger.info("\n📊 Render Results:")
-        logger.info("   Total Sections: %s", len(self.sections))
+        successful_count = len(results)
+        failed_count = total - successful_count
+        logger.info("   Total Sections: %s", total)
         logger.info("   Successful: %s", successful_count)
-        logger.info("   Failed: %s", failed_count)
+        logger.info("   Incomplete: %s", failed_count)
 
         # 质量门禁：成功率不够时，对失败的 section 再来一轮
-        total = len(self.sections)
-        if total > 0 and failed_count > 0 and successful_count / total < 0.6:
+        if total > 0 and failed_count > 0 and successful_count / total < success_ratio:
             failed_sections = [
                 s for s in self.sections if s.id not in results
             ]
             logger.warning(
-                "Render success rate %d/%d (%.0f%%) below 60%%, retrying %d failed sections...",
-                successful_count, total, successful_count / total * 100, len(failed_sections),
+                "Render success rate %d/%d (%.0f%%) below %.0f%%, retrying %d failed sections...",
+                successful_count,
+                total,
+                successful_count / total * 100,
+                success_ratio * 100,
+                len(failed_sections),
             )
             for section in failed_sections:
                 try:
@@ -872,17 +1002,37 @@ class TeachingVideoAgent:
             )
 
         # 最终门禁：重试后仍不够就失败
-        if total > 0 and successful_count / total < 0.6:
+        if total > 0 and successful_count / total < success_ratio:
             raise ValueError(
                 f"Render quality gate failed after retry: {successful_count}/{total} sections "
-                f"({successful_count / total:.0%}), minimum 60% required"
+                f"({successful_count / total:.0%}), minimum {success_ratio:.0%} required"
             )
 
+        self.render_results = dict(results)
+        self.render_summary = {
+            "totalSections": total,
+            "successfulSections": successful_count,
+            "incompleteSections": failed_count,
+            "requiredSuccesses": required_successes,
+            "allSectionsRendered": successful_count == total,
+            "completionMode": "full" if successful_count == total else "degraded",
+            "stopReason": early_stop_reason,
+        }
         return results
 
-    def merge_videos(self, output_filename: str = None) -> str:
+    def merge_videos(
+        self,
+        output_filename: str = None,
+        *,
+        video_map: Optional[Dict[str, str]] = None,
+    ) -> str:
         """Step 5: Merge all section videos"""
-        if not self.section_videos:
+        video_sources = (
+            video_map
+            or getattr(self, "render_results", None)
+            or self.section_videos
+        )
+        if not video_sources:
             raise ValueError("No video files available to merge")
 
         if output_filename is None:
@@ -895,8 +1045,8 @@ class TeachingVideoAgent:
 
         video_list_file = self.output_dir / "video_list.txt"
         with open(video_list_file, "w", encoding="utf-8") as f:
-            for section_id in sorted(self.section_videos.keys()):
-                video_path = self.section_videos[section_id].replace(
+            for section_id in sorted(video_sources.keys()):
+                video_path = video_sources[section_id].replace(
                     f"{self.output_dir}/", ""
                 )
                 f.write(f"file '{video_path}'\n")
@@ -936,8 +1086,8 @@ class TeachingVideoAgent:
             self.generate_outline()
             self.generate_storyboard()
             self.generate_codes()
-            self.render_all_sections()
-            final_video = self.merge_videos()
+            rendered_sections = self.render_all_sections()
+            final_video = self.merge_videos(video_map=rendered_sections)
             if final_video:
                 logger.info("Video generated success: %s", final_video)
                 return final_video
