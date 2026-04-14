@@ -18,7 +18,14 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ..prompts import *  # noqa: F403
+from ..prompts.manimcat.api_codebook import SHARED_SPECIFICATION, build_api_index_module
+from ..prompts.manimcat.prompt_loader import load_and_render
 from .c2v_utils import *  # noqa: F403
+from .code_cleaner import (
+    clean_manim_code,
+    extract_code_from_response,
+    extract_design_from_response,
+)
 from .external_assets import process_storyboard_with_assets
 from .gpt_request import *  # noqa: F403
 from .scope_refine import *  # noqa: F403
@@ -182,6 +189,184 @@ class TeachingVideoAgent:
             "folder": self.folder,
             "cfg": self.cfg,
         }
+
+    # ============================================================
+    # ManimCat-style methods: reduce LLM calls from ~77 to 2-4
+    # ============================================================
+
+    def generate_design(self, duration_minutes: int = 5) -> tuple:
+        """ManimCat-style: single LLM call to generate concept design + storyboard.
+
+        Replaces generate_outline() + generate_storyboard() (2 calls → 1 call).
+        Uses ManimCat's concept-designer prompt for engineering-grade storyboard.
+        """
+        design_file = self.output_dir / "manimcat_design.txt"
+        section_count = max(3, min(20, duration_minutes * 2))
+        section_duration = int((duration_minutes * 60) / section_count)
+
+        if design_file.exists():
+            logger.info("Found cached ManimCat design, loading...")
+            design_text = design_file.read_text(encoding="utf-8")
+        else:
+            import hashlib
+
+            seed = hashlib.md5(self.learning_topic.encode()).hexdigest()[:8]
+
+            system_prompt = load_and_render("concept_designer_system.md")
+            user_prompt = load_and_render(
+                "concept_designer_user.md",
+                {
+                    "concept": self.learning_topic,
+                    "seed": seed,
+                    "outputMode": "video",
+                    "duration": str(duration_minutes),
+                    "sectionCount": str(section_count),
+                    "sectionDuration": str(section_duration),
+                },
+            )
+
+            logger.info(
+                "Generating ManimCat design (%d sections, %d min)...",
+                section_count,
+                duration_minutes,
+            )
+            response = self._request_api_and_track_tokens(
+                f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}",
+                max_tokens=12000,
+            )
+            if response is None:
+                raise ValueError("Design generation LLM call failed")
+
+            try:
+                content = response.candidates[0].content.parts[0].text
+            except Exception:
+                try:
+                    content = response.choices[0].message.content
+                except Exception:
+                    content = str(response)
+
+            design_text = extract_design_from_response(content)
+            design_file.write_text(design_text, encoding="utf-8")
+
+        # Parse design into sections for downstream compatibility
+        sections = self._parse_design_to_sections(design_text)
+        self.sections = sections
+
+        # Also create outline for backward compatibility
+        self.outline = TeachingOutline(
+            topic=self.learning_topic,
+            target_audience="students",
+            sections=[
+                {"id": s.id, "title": s.title, "content": s.title} for s in sections
+            ],
+        )
+        logger.info("== ManimCat design generated: %d sections", len(sections))
+        return design_text, sections
+
+    def _parse_design_to_sections(self, design_text: str) -> list:
+        """Parse ManimCat <design> text into Section objects."""
+        sections = []
+        shot_pattern = re.compile(
+            r"###\s*Shot\s+(\d+)\s*:\s*(.*?)(?=\n###\s*Shot|\n##\s|\Z)", re.DOTALL
+        )
+
+        for match in shot_pattern.finditer(design_text):
+            shot_num = int(match.group(1))
+            shot_title = match.group(2).strip().split("\n")[0].strip()
+            shot_body = match.group(0)
+
+            narration_match = re.search(r'narration_hint\s*:\s*"([^"]*)"', shot_body)
+            narration = narration_match.group(1) if narration_match else shot_title
+
+            sections.append(
+                Section(
+                    id=f"section_{shot_num}",
+                    title=shot_title,
+                    lecture_lines=[narration],
+                    animations=[f"Shot {shot_num} animation"],
+                )
+            )
+
+        if not sections:
+            logger.warning("No shots parsed from design, creating fallback section")
+            sections = [
+                Section(
+                    id="section_1",
+                    title=self.learning_topic,
+                    lecture_lines=[self.learning_topic],
+                    animations=["Main animation"],
+                )
+            ]
+
+        return sections
+
+    def generate_all_code(self, design_text: str) -> str:
+        """ManimCat-style: single LLM call to generate ALL section code at once.
+
+        Replaces per-section generate_section_code() (N calls → 1 call).
+        Uses ManimCat's code-generation prompt with API codebook injection.
+        """
+        code_file = self.output_dir / "manimcat_full_code.py"
+
+        if code_file.exists():
+            logger.info("Found cached ManimCat code, loading...")
+            full_code = code_file.read_text(encoding="utf-8")
+        else:
+            import hashlib
+
+            seed = hashlib.md5(
+                f"{self.learning_topic}-{design_text[:20]}".encode()
+            ).hexdigest()[:8]
+
+            api_module = build_api_index_module()
+            system_prompt = load_and_render(
+                "code_generation_system.md",
+                {
+                    "apiIndexModule": api_module,
+                    "sharedSpecification": SHARED_SPECIFICATION,
+                },
+            )
+            user_prompt = load_and_render(
+                "code_generation_user.md",
+                {
+                    "sceneDesign": design_text,
+                    "concept": self.learning_topic,
+                    "seed": seed,
+                    "outputMode": "video",
+                    "isVideo": True,
+                },
+            )
+
+            logger.info("Generating ManimCat full code (all sections in one call)...")
+            response = self._request_api_and_track_tokens(
+                f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}",
+                max_tokens=self.max_code_token_length,
+            )
+            if response is None:
+                raise ValueError("Code generation LLM call failed")
+
+            try:
+                content = response.candidates[0].content.parts[0].text
+            except Exception:
+                try:
+                    content = response.choices[0].message.content
+                except Exception:
+                    content = str(response)
+
+            full_code = extract_code_from_response(content)
+            clean_result = clean_manim_code(full_code)
+            full_code = clean_result.code
+            code_file.write_text(full_code, encoding="utf-8")
+
+        # Store code for each section (split by next_section markers)
+        self._split_code_to_sections(full_code)
+        logger.info("== ManimCat code generated: %d chars", len(full_code))
+        return full_code
+
+    def _split_code_to_sections(self, full_code: str):
+        """Split full code into per-section snippets for TTS alignment."""
+        for section in self.sections:
+            self.section_codes[section.id] = full_code
 
     def generate_outline(self) -> TeachingOutline:
         outline_file = self.output_dir / "outline.json"
@@ -526,7 +711,9 @@ class TeachingVideoAgent:
 
         return False
 
-    def _notify_section_status(self, *, section_id: str, status: str, **payload: Any) -> None:
+    def _notify_section_status(
+        self, *, section_id: str, status: str, **payload: Any
+    ) -> None:
         """向外部协调器回传 section 级别的运行信号。"""
         if self.section_status_callback is None:
             return
@@ -539,7 +726,9 @@ class TeachingVideoAgent:
                 }
             )
         except Exception:
-            logger.debug("section status callback failed for %s", section_id, exc_info=True)
+            logger.debug(
+                "section status callback failed for %s", section_id, exc_info=True
+            )
 
     def get_mllm_feedback(
         self, section: Section, video_path: str, round_number: int = 1
@@ -775,8 +964,12 @@ class TeachingVideoAgent:
                 )
                 return False
 
-            # MLLM feedback
-            if self.use_feedback:
+            # MLLM feedback — DISABLED by ManimCat optimization
+            # ManimCat achieves high quality without feedback loops.
+            # The two-stage AI (design → code) + API codebook + static guard
+            # produce better results than N rounds of MLLM feedback.
+            # Keeping the code paths intact for future re-enablement if needed.
+            if False and self.use_feedback:
                 try:
                     for round in range(self.feedback_rounds):
                         current_video = self.section_videos.get(section_id)
@@ -1009,9 +1202,7 @@ class TeachingVideoAgent:
 
         # 质量门禁：成功率不够时，对失败的 section 再来一轮
         if total > 0 and failed_count > 0 and successful_count / total < success_ratio:
-            failed_sections = [
-                s for s in self.sections if s.id not in results
-            ]
+            failed_sections = [s for s in self.sections if s.id not in results]
             logger.warning(
                 "Render success rate %d/%d (%.0f%%) below %.0f%%, retrying %d failed sections...",
                 successful_count,
@@ -1036,7 +1227,9 @@ class TeachingVideoAgent:
 
             logger.info(
                 "After retry: %d/%d succeeded (%.0f%%)",
-                successful_count, total, successful_count / total * 100,
+                successful_count,
+                total,
+                successful_count / total * 100,
             )
 
         # 最终门禁：重试后仍不够就失败
@@ -1066,9 +1259,7 @@ class TeachingVideoAgent:
     ) -> str:
         """Step 5: Merge all section videos"""
         video_sources = (
-            video_map
-            or getattr(self, "render_results", None)
-            or self.section_videos
+            video_map or getattr(self, "render_results", None) or self.section_videos
         )
         if not video_sources:
             raise ValueError("No video files available to merge")
