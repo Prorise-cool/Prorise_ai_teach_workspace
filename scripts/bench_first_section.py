@@ -25,8 +25,7 @@ import httpx
 BASE_URL = "http://localhost:8090/api/v1"
 TOKEN = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxIiwicm5TdHIiOiJiOXpBZVR5eTNVN2FlT0dFY1RWOUdFdlZ2T3pYaEdaciIs"
-    "ImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MSwidXNlck5hbWUiOiJhZG1pbiIsImRlcHRJZCI6MTAzLCJkZXB0TmFtZSI6IueglOWPkemDqOmXqCIsImRlcHRDYXRlZ29yeSI6IiJ9."
+    "eyJsb2dpblR5cGUiOiJsb2dpbiIsImxvZ2luSWQiOiJzeXNfdXNlcjoxIiwicm5TdHIiOiJiOXpBZVR5eTNVN2FlT0dFY1RWOUdFdlZ2T3pYaEdaciIsImNsaWVudGlkIjoiZTVjZDdlNDg5MWJmOTVkMWQxOTIwNmNlMjRhN2IzMmUiLCJ0ZW5hbnRJZCI6IjAwMDAwMCIsInVzZXJJZCI6MSwidXNlck5hbWUiOiJhZG1pbiIsImRlcHRJZCI6MTAzLCJkZXB0TmFtZSI6IueglOWPkemDqOmXqCIsImRlcHRDYXRlZ29yeSI6IiJ9."
     "pUeXj235ehqt6XHA5uG5Y48-xE-HLXabxRKbtvcoxXI"
 )
 
@@ -113,14 +112,14 @@ async def listen_sse(
                         continue
 
                     now = time.monotonic()
-                    evt_name = event_data.get("event") or event_data.get("_event", "?")
-                    msg = event_data.get("message", "")
-                    stage = event_data.get("stage") or event_data.get("currentStage", "")
-                    progress = event_data.get("progress", "")
-                    status = event_data.get("status", "")
+                    evt_name = event_data.get("event") or event_data.get("_event") or "?"
+                    msg = event_data.get("message") or ""
+                    stage = event_data.get("stage") or event_data.get("currentStage") or ""
+                    progress = event_data.get("progress") or ""
+                    status = event_data.get("status") or ""
                     context = event_data.get("context", {})
 
-                    log_line = f"T+{elapsed(milestones.t0, now):>6.1f}s  {evt_name:<20} stage={stage:<16} progress={progress} msg={msg[:60]}"
+                    log_line = f"T+{elapsed(milestones.t0, now):>6.1f}s  {evt_name or '?':<20} stage={stage or '':<16} progress={progress or ''} msg={(msg or '')[:60]}"
                     milestones.events_log.append(log_line)
                     print(f"  [SSE] {log_line}")
 
@@ -132,7 +131,7 @@ async def listen_sse(
                     if stage in ("storyboard",) and evt_name == "progress":
                         if milestones.outline_done == 0.0:
                             milestones.outline_done = now
-                    if stage == "storyboard" and "complete" in msg.lower():
+                    if stage == "storyboard" and msg and "complete" in msg.lower():
                         if milestones.storyboard_done == 0.0:
                             milestones.storyboard_done = now
 
