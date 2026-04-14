@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def extract_json_from_markdown(text):
+    if not text:
+        return text
     # Match ```json ... ``` or ``` ... ```
     match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if match:

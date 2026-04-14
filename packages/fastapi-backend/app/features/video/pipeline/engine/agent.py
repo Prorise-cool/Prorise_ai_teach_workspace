@@ -223,6 +223,11 @@ class TeachingVideoAgent:
                         content = response.choices[0].message.content
                     except Exception:
                         content = str(response)
+                if content is None:
+                    logger.warning("LLM returned null content on attempt %s", attempt)
+                    if attempt == self.max_regenerate_tries:
+                        raise ValueError("LLM returned null content multiple times")
+                    continue
                 content = extract_json_from_markdown(content)
                 try:
                     outline_data = json.loads(content)
