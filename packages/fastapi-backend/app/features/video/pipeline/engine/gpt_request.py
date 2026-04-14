@@ -135,13 +135,21 @@ def _call_openai_compatible(
             with httpx.Client(
                 base_url=ep.base_url, timeout=timeout, headers=headers
             ) as client:
+                # DeepSeek max_tokens cap = 8192
+                clamped_tokens = min(max_tokens, 8192)
                 payload = {
                     "model": ep.model_name,
                     "messages": messages,
-                    "max_tokens": max_tokens,
+                    "max_tokens": clamped_tokens,
                 }
 
                 content: str | None = None
+
+                logger.debug(
+                    "LLM request to %s%s model=%s max_tokens=%d messages=%d",
+                    ep.base_url, ep.request_path, ep.model_name,
+                    max_tokens, len(messages),
+                )
 
                 if not skip_non_stream:
                     # --- non-stream attempt ---
@@ -196,9 +204,14 @@ def _call_openai_compatible(
             status_code = e.response.status_code
             if 400 <= status_code < 500:
                 # Client errors (400-499) are deterministic — retrying won't help.
+                body = ""
+                try:
+                    body = e.response.text[:500]
+                except Exception:
+                    pass
                 logger.error(
-                    "LLM client error %d (not retrying): %s",
-                    status_code, e,
+                    "LLM client error %d (not retrying): %s | body: %s",
+                    status_code, e, body,
                 )
                 return None, usage_info
             # 5xx: server errors — retry with backoff

@@ -369,7 +369,19 @@ class VideoPipelineService:
                 "生成教学大纲...",
                 progress_override=3,
             )
-            await loop.run_in_executor(None, agent.generate_outline)
+            # ManimCat optimization: single LLM call for design + storyboard
+            # Instead of: generate_outline() + generate_storyboard() (2 calls)
+            # We now use: generate_design() (1 call) which produces both
+            duration_minutes = metadata.get("duration_minutes", 5)
+            try:
+                design_text, sections = await loop.run_in_executor(
+                    None, agent.generate_design, duration_minutes
+                )
+                logger.info("ManimCat design generated: %d sections", len(sections))
+            except Exception as design_err:
+                logger.warning("ManimCat design failed, falling back to original flow: %s", design_err)
+                await loop.run_in_executor(None, agent.generate_outline)
+                design_text = None
             await self._emit(
                 task,
                 VideoStage.UNDERSTANDING,
@@ -385,7 +397,11 @@ class VideoPipelineService:
                 "生成视频分镜...",
                 progress_override=11,
             )
-            await loop.run_in_executor(None, agent.generate_storyboard)
+            # ManimCat: storyboard is already included in generate_design() result
+            if design_text is None:
+                # Fallback: use original storyboard generation
+                await loop.run_in_executor(None, agent.generate_storyboard)
+            # else: sections already populated by generate_design()
             preview_state = self._build_preview_from_agent(task_id, knowledge_point, agent)
             runtime.save_preview(preview_state)
             await self._emit(
@@ -453,6 +469,41 @@ class VideoPipelineService:
             ordered_section_clips: list[Path] = []
             successful_sections: list[str] = []
 
+            # ManimCat optimization: generate ALL section code in ONE LLM call
+            # Instead of: for section: generate_section_code() (N calls)
+            # We now use: generate_all_code() (1 call) before the loop
+            if design_text is not None:
+                await self._emit(
+                    task,
+                    VideoStage.MANIM_GEN,
+                    0.0,
+                    "ManimCat 全量代码生成...",
+                    progress_override=26,
+                )
+                try:
+                    full_code = await loop.run_in_executor(
+                        None, agent.generate_all_code, design_text
+                    )
+                    logger.info("ManimCat full code generated: %d chars", len(full_code))
+
+                    # Run static guard on full code (0 LLM calls)
+                    from ..engine.static_guard import run_guard_loop
+                    guard_result = await run_guard_loop(full_code, max_passes=3)
+                    if guard_result.passed:
+                        logger.info("Static guard passed in %d passes", guard_result.passes_used)
+                    else:
+                        logger.warning("Static guard found %d issues after %d passes",
+                                       len(guard_result.diagnostics), guard_result.passes_used)
+                    full_code = guard_result.code
+
+                    # Update the cached code file with guarded version
+                    code_file = agent.output_dir / "manimcat_full_code.py"
+                    code_file.write_text(full_code, encoding="utf-8")
+
+                except Exception as codegen_err:
+                    logger.warning("ManimCat full code gen failed, falling back to per-section: %s", codegen_err)
+                    design_text = None  # Fall back to per-section generation
+
             for index, section in enumerate(getattr(agent, "sections", []) or []):
                 preview_state = runtime.load_preview() or preview_state
                 preview_state = update_preview_section(
@@ -485,7 +536,10 @@ class VideoPipelineService:
                     ),
                 )
 
-                await loop.run_in_executor(None, agent.generate_section_code, section)
+                # ManimCat: code already generated in bulk via generate_all_code()
+                # Only fall back to per-section generation if ManimCat path failed
+                if design_text is None:
+                    await loop.run_in_executor(None, agent.generate_section_code, section)
 
                 preview_state = runtime.load_preview() or preview_state
                 preview_state = update_preview_section(

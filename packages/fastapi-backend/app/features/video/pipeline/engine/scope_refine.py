@@ -481,38 +481,42 @@ class ScopeRefineFixer:
         )
 
     def fix_code_smart(self, section_id: str, code: str, error_msg: str, output_dir: Path) -> Optional[str]:
-        """Smart fix code, prioritize local fix, fallback to complete rewrite if failed"""
+        """Smart fix code — ManimCat-optimized: static guard first, LLM patch only if needed.
 
-        # Analyze error
-        error_info = self.analyzer.analyze_error(code, error_msg)
-        # Decide on fix scope based on error analysis
-        if error_info["fix_scope"] in ["single_line", "function", "section"]:
+        Priority order:
+        1. Static analysis (py_compile + mypy) with known pattern fixes — 0 LLM calls
+        2. LLM patch repair (SEARCH/REPLACE format) — 1 LLM call per attempt, max 3
+        3. Fall back to original complete rewrite — last resort
+        """
+        import asyncio
+        from .static_guard import run_guard_loop, run_py_compile, run_mypy
+        from .code_retry import parse_patch_response, apply_patch_set
+        import tempfile
+        from pathlib import Path as P
 
-            relevant_code = error_info.get("relevant_code_block")
-            if relevant_code:
-                fixed_block = self._fix_code_block(section_id, relevant_code, error_msg, error_info)
-                if fixed_block:
-                    merged_code = self._merge_fixed_block(code, relevant_code, fixed_block, error_info)
-                    if merged_code:
-                        is_valid, syntax_error = self.validate_code_syntax(merged_code)
-                        if is_valid:
-                            is_dry_run_ok, dry_run_error = self.dry_run_test(merged_code, section_id, output_dir)
-                            if is_dry_run_ok:
-                                return merged_code
-                            else:
-                                logger.warning("Dry run failed after local repair: %s", dry_run_error)
-                        else:
-                            logger.warning("Syntax error after local repair: %s", syntax_error)
-                    else:
-                        logger.warning("Code block merge failed after local repair")
-                else:
-                    logger.warning("Local repair failed")
-            else:
-                logger.warning("Relevant code block cannot be extracted after local repair")
-        else:
-            logger.info("Error scope is large, directly use complete repair")
+        # Step 1: Try static guard (0 LLM calls)
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = P(tmp)
+            syntax_diags = run_py_compile(code, tmp_path)
+            if not syntax_diags:
+                mypy_diags = run_mypy(code, tmp_path)
+                if not mypy_diags:
+                    logger.info("%s: static guard passed, no fix needed", section_id)
+                    return code
 
-        logger.warning("Smart repair failed, fallback to complete repair")
+                # Try known fixes for mypy issues
+                from .static_guard import try_known_fix
+                fixed_code = code
+                for diag in mypy_diags:
+                    result = try_known_fix(fixed_code, diag)
+                    if result:
+                        fixed_code = result
+                if fixed_code != code:
+                    logger.info("%s: known mypy fixes applied", section_id)
+                    return fixed_code
+
+        # Step 2: LLM patch repair (max 3 attempts, ManimCat SEARCH/REPLACE format)
+        logger.info("%s: static guard found issues, trying LLM patch repair", section_id)
         return self.fix_code_with_multi_stage_validation(section_id, code, error_msg, output_dir)
 
     def fix_code_with_multi_stage_validation(
