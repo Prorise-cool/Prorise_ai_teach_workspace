@@ -196,6 +196,32 @@ class Settings(BaseSettings):
         alias="FASTAPI_VIDEO_SANDBOX_ALLOW_LOCAL_FALLBACK",
     )
 
+    # ManimCat optimization settings
+    video_designer_temperature: float = Field(
+        default=0.8,
+        alias="FASTAPI_VIDEO_DESIGNER_TEMPERATURE",
+    )
+    video_coder_temperature: float = Field(
+        default=0.7,
+        alias="FASTAPI_VIDEO_CODER_TEMPERATURE",
+    )
+    video_static_guard_max_passes: int = Field(
+        default=3,
+        alias="FASTAPI_VIDEO_STATIC_GUARD_MAX_PASSES",
+    )
+    video_patch_retry_max_retries: int = Field(
+        default=4,
+        alias="FASTAPI_VIDEO_PATCH_RETRY_MAX_RETRIES",
+    )
+    video_designer_max_tokens: int = Field(
+        default=12000,
+        alias="FASTAPI_VIDEO_DESIGNER_MAX_TOKENS",
+    )
+    video_default_duration_minutes: int = Field(
+        default=5,
+        alias="FASTAPI_VIDEO_DEFAULT_DURATION_MINUTES",
+    )
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         case_sensitive=False,
