@@ -11,6 +11,7 @@ agent.py via ``from .gpt_request import *``.
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import os
 import random
@@ -21,6 +22,10 @@ from typing import Any
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# Endpoints known to return content=null on non-stream requests.
+# Keyed by (base_url, model_name) so we skip the useless non-stream round-trip.
+_stream_only_endpoints: set[tuple[str, str]] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +113,12 @@ def _call_openai_compatible(
     max_retries: int = 3,
     timeout_override: float | None = None,
 ) -> tuple[Completion | None, dict[str, int]]:
-    """Low-level sync OpenAI-compatible HTTP call with retry."""
+    """Low-level sync OpenAI-compatible HTTP call with retry.
+
+    Strategy: try non-stream first. If the response has ``content: null``,
+    fall back to stream mode and collect chunks — some proxies (e.g. cpa)
+    drop content in non-stream responses but work correctly with streaming.
+    """
     usage_info = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     headers = {
         "Authorization": f"Bearer {ep.api_key}",
@@ -116,6 +126,9 @@ def _call_openai_compatible(
         **ep.extra_headers,
     }
     timeout = timeout_override or ep.timeout
+
+    endpoint_key = (ep.base_url, ep.model_name)
+    skip_non_stream = endpoint_key in _stream_only_endpoints
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -127,20 +140,77 @@ def _call_openai_compatible(
                     "messages": messages,
                     "max_tokens": max_tokens,
                 }
-                response = client.post(ep.request_path, json=payload)
-                response.raise_for_status()
-                data = response.json()
 
-            content = data["choices"][0]["message"]["content"]
-            raw_usage = data.get("usage") or {}
-            usage_info.update(
-                {
-                    k: raw_usage.get(k, 0)
-                    for k in ("prompt_tokens", "completion_tokens", "total_tokens")
-                }
+                content: str | None = None
+
+                if not skip_non_stream:
+                    # --- non-stream attempt ---
+                    response = client.post(ep.request_path, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
+
+                    content = data["choices"][0]["message"]["content"]
+                    raw_usage = data.get("usage") or {}
+                    usage_info.update(
+                        {
+                            k: raw_usage.get(k, 0)
+                            for k in ("prompt_tokens", "completion_tokens", "total_tokens")
+                        }
+                    )
+
+                    # Remember: this endpoint always returns null on non-stream
+                    if content is None:
+                        _stream_only_endpoints.add(endpoint_key)
+                        skip_non_stream = True
+                        logger.info(
+                            "Endpoint %s model=%s returns null on non-stream, "
+                            "switching to stream-only for this session",
+                            ep.base_url, ep.model_name,
+                        )
+
+                if content is None:
+                    content, stream_usage = _call_stream_fallback(
+                        client, ep, payload
+                    )
+                    if stream_usage:
+                        usage_info.update(
+                            {
+                                k: stream_usage.get(k, 0)
+                                for k in (
+                                    "prompt_tokens",
+                                    "completion_tokens",
+                                    "total_tokens",
+                                )
+                            }
+                        )
+
+                if content is None:
+                    logger.warning("Stream returned null content on attempt %s", attempt)
+                    if attempt >= max_retries:
+                        return None, usage_info
+                    continue
+
+                return _build_completion(content, usage_info, ep.model_name), usage_info
+
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            if 400 <= status_code < 500:
+                # Client errors (400-499) are deterministic — retrying won't help.
+                logger.error(
+                    "LLM client error %d (not retrying): %s",
+                    status_code, e,
+                )
+                return None, usage_info
+            # 5xx: server errors — retry with backoff
+            if attempt >= max_retries:
+                logger.error("LLM call failed after %d attempts: %s", max_retries, e)
+                return None, usage_info
+            delay = (2**attempt) * 0.1 + random.random() * 0.1
+            logger.warning(
+                "LLM attempt %d/%d server error %d: %s, retrying in %.2fs",
+                attempt, max_retries, status_code, e, delay,
             )
-            return _build_completion(content, usage_info, ep.model_name), usage_info
-
+            time.sleep(delay)
         except Exception as e:
             if attempt >= max_retries:
                 logger.error("LLM call failed after %d attempts: %s", max_retries, e)
@@ -148,14 +218,57 @@ def _call_openai_compatible(
             delay = (2**attempt) * 0.1 + random.random() * 0.1
             logger.warning(
                 "LLM attempt %d/%d failed: %s, retrying in %.2fs",
-                attempt,
-                max_retries,
-                e,
-                delay,
+                attempt, max_retries, e, delay,
             )
             time.sleep(delay)
 
     return None, usage_info
+
+
+def _call_stream_fallback(
+    client: httpx.Client,
+    ep: ProviderEndpoint,
+    payload: dict[str, Any],
+) -> tuple[str | None, dict[str, int]]:
+    """Collect content from a streaming response. Returns (content, usage)."""
+    payload_stream = {**payload, "stream": True}
+    chunks: list[str] = []
+    usage: dict[str, int] = {}
+
+    try:
+        with client.stream(
+            "POST", ep.request_path, json=payload_stream
+        ) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str.strip() == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                text = delta.get("content")
+                if text:
+                    chunks.append(text)
+                chunk_usage = chunk.get("usage")
+                if chunk_usage:
+                    usage = chunk_usage
+    except httpx.HTTPStatusError as e:
+        if 400 <= e.response.status_code < 500:
+            logger.error("Stream client error %d (not retryable): %s", e.response.status_code, e)
+        else:
+            logger.warning("Stream server error %d: %s", e.response.status_code, e)
+        return None, usage
+    except Exception as e:
+        logger.warning("Stream fallback failed: %s", e)
+        return None, usage
+
+    content = "".join(chunks) if chunks else None
+    return content, usage
 
 
 class LLMBridge:
