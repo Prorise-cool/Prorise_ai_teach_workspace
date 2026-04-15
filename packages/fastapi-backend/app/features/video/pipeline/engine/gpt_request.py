@@ -204,7 +204,7 @@ def _call_openai_compatible(
                 body = ""
                 try:
                     body = e.response.text[:500]
-                except Exception:
+                except (AttributeError, UnicodeDecodeError):
                     pass
                 logger.error(
                     "LLM client error %d (not retrying): %s | body: %s",
@@ -221,7 +221,7 @@ def _call_openai_compatible(
                 attempt, max_retries, status_code, e, delay,
             )
             time.sleep(delay)
-        except Exception as e:
+        except (httpx.RequestError, ValueError, KeyError) as e:
             if attempt >= max_retries:
                 logger.error("LLM call failed after %d attempts: %s", max_retries, e)
                 return None, usage_info
@@ -273,7 +273,7 @@ def _call_stream_fallback(
         else:
             logger.warning("Stream server error %d: %s", e.response.status_code, e)
         return None, usage
-    except Exception as e:
+    except (httpx.RequestError, ValueError, KeyError) as e:
         logger.warning("Stream fallback failed: %s", e)
         return None, usage
 
@@ -310,11 +310,18 @@ class LLMBridge:
     # -- Code2Video-compatible API factory methods --
 
     def text_api(self, stage: str | None = None):
-        """Return ``(prompt, max_tokens, max_retries) -> (Completion, usage_info)``."""
+        """Return a text API compatible with prompt-only and prebuilt message payloads."""
         ep = self.endpoint_for(stage)
 
-        def fn(prompt: str, max_tokens: int = 10000, max_retries: int = 3):
-            messages = [{"role": "user", "content": prompt}]
+        def fn(
+            prompt_or_messages: str | list[dict[str, Any]],
+            max_tokens: int = 10000,
+            max_retries: int = 3,
+        ):
+            if isinstance(prompt_or_messages, list):
+                messages = prompt_or_messages
+            else:
+                messages = [{"role": "user", "content": prompt_or_messages}]
             return _call_openai_compatible(
                 ep, messages, max_tokens=max_tokens, max_retries=max_retries
             )

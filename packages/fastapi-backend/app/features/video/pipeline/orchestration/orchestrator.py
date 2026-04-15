@@ -18,6 +18,7 @@ import logging
 import shutil
 import subprocess
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,11 +29,17 @@ from app.features.video.pipeline.engine.agent import (
     TeachingVideoAgent,
     required_render_successes,
 )
+from app.features.video.pipeline.engine.code_retry import detect_doom_loop
 from app.features.video.pipeline.engine.gpt_request import (
     LLMBridge,
     configure_bridge,
     endpoint_from_provider,
 )
+from app.features.video.pipeline.engine.render_failure import (
+    RenderFailureStore,
+    compute_error_signature,
+)
+from app.features.video.pipeline.engine.sanitizer import sanitize_render_error
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
@@ -54,6 +61,10 @@ from app.features.video.pipeline.orchestration.runtime import (
     mark_preview_status,
     merge_result_detail,
     update_preview_section,
+)
+from app.features.video.pipeline.sandbox import (
+    DockerSandboxExecutor,
+    resolve_local_fallback_policy,
 )
 from app.features.video.pipeline.orchestration.upload import UploadService
 from app.features.video.pipeline.protocols import VideoMetadataPersister
@@ -104,6 +115,66 @@ def _utc_iso() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Pipeline-stage data classes (avoid dict passing between stages)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _PipelineContext:
+    """Immutable context set once during _init_pipeline."""
+
+    task_id: str
+    knowledge_point: str
+    work_dir: Path
+    video_root: Path
+    pipeline_started_at: float
+
+
+@dataclass
+class _AgentSetup:
+    """Outputs of _setup_agent — provider resolution, bridge, and agent."""
+
+    assembly: VideoProviderRuntimeAssembly
+    bridge: LLMBridge
+    agent: TeachingVideoAgent
+    loop: asyncio.AbstractEventLoop
+
+
+@dataclass
+class _DesignResult:
+    """Outputs of _run_design_stage."""
+
+    design_text: str
+    sections: list[Any]
+    preview_state: Any = None
+
+
+@dataclass
+class _TTSResult:
+    """Outputs of _run_tts_stage."""
+
+    tts_audio_map: dict[str, Path]
+    audio_urls: dict[str, str]
+    preview_state: Any = None
+
+
+@dataclass
+class _CodegenResult:
+    """Outputs of _run_codegen_stage."""
+
+    full_code: str
+
+
+@dataclass
+class _RenderResult:
+    """Outputs of _run_render_stage."""
+
+    ordered_clips: list[Path] = field(default_factory=list)
+    successful_sections: list[str] = field(default_factory=list)
+    render_summary: dict[str, object] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
 # TTS runner (bridges our async TTS providers into the pipeline)
 # ---------------------------------------------------------------------------
 
@@ -146,7 +217,7 @@ async def _run_tts_for_sections(
                     )
                     success = True
                     break
-            except Exception:
+            except (ConnectionError, TimeoutError, OSError):
                 if attempt < 3:
                     delay = attempt * 5  # 5s, 10s
                     logger.warning(
@@ -186,7 +257,7 @@ async def _run_tts_for_sections(
                     audio_path.write_bytes(base64.b64decode(audio_b64))
                     results[section_id] = audio_path
                     logger.info("TTS batch retry succeeded for %s", section_id)
-            except Exception:
+            except (ConnectionError, TimeoutError, OSError):
                 logger.error("TTS batch retry failed for %s", section_id)
 
     return results
@@ -309,20 +380,195 @@ class VideoPipelineService:
         runtime_store: RuntimeStore,
         metadata_service: VideoMetadataPersister,
         *,
+        provider_factory: Any | None = None,
         settings: Settings | None = None,
+        asset_store: LocalAssetStore | None = None,
     ) -> None:
         self._runtime_store = runtime_store
         self._metadata_service = metadata_service
+        # Keep legacy constructor kwargs accepted while orchestration owns
+        # provider resolution and asset-store creation internally.
+        self._provider_factory = provider_factory
         self._settings = settings or get_settings()
+        self._asset_store = asset_store
+        self._max_emitted_progress = 0
+        self.sandbox_executor = DockerSandboxExecutor(
+            allow_local_fallback=resolve_local_fallback_policy(
+                environment=str(getattr(self._settings, "environment", "production")),
+                configured=bool(
+                    getattr(self._settings, "video_sandbox_allow_local_fallback", False)
+                ),
+            ),
+            render_quality=str(getattr(self._settings, "video_render_quality", "l")),
+        )
+
+    # ── Stage 0: Thin coordinator ──────────────────────────────────
+
+    async def _emit_stage(
+        self,
+        task: BaseTask,
+        stage: VideoStage,
+        ratio: float,
+        message: str,
+        *,
+        extra: dict[str, object] | None = None,
+        event: str = "progress",
+    ) -> None:
+        """Legacy stage emitter that clamps regressive progress updates."""
+        absolute_progress, stage_progress = resolve_stage_progress(stage, ratio)
+        clamped_progress = max(self._max_emitted_progress, absolute_progress)
+        self._max_emitted_progress = clamped_progress
+        profile = get_stage_profile(stage)
+        context = {
+            "stage": stage.value,
+            "stageLabel": profile.display_label,
+            "stageProgress": stage_progress,
+        }
+        context.update(extra or {})
+        await task.emit_runtime_snapshot(
+            internal_status=TaskInternalStatus.RUNNING,
+            progress=clamped_progress,
+            message=message,
+            context=context,
+            event=event,
+        )
+
+    async def _handle_pipeline_failure(
+        self,
+        task_context: Any,
+        runtime: VideoRuntimeStateStore,
+        error: VideoPipelineError,
+    ) -> Any:
+        """Legacy failure helper retained for unit-test compatibility."""
+        self._persist_failure_runtime(runtime, runtime.load_preview(), error)
+        absolute_progress, stage_progress = resolve_stage_progress(error.stage, 1.0)
+        clamped_progress = max(self._max_emitted_progress, absolute_progress)
+        self._max_emitted_progress = clamped_progress
+        profile = get_stage_profile(error.stage)
+        return type(
+            "PipelineFailureSnapshot",
+            (),
+            {
+                "progress": clamped_progress,
+                "message": str(error),
+                "context": {
+                    "stage": error.stage.value,
+                    "stageLabel": profile.display_label,
+                    "stageProgress": stage_progress,
+                    "failedStage": error.stage.value,
+                    "progress": clamped_progress,
+                    "taskId": getattr(task_context, "task_id", runtime.task_id),
+                },
+            },
+        )()
+
+    async def _run_understanding(
+        self,
+        task: BaseTask,
+        understanding_service: Any,
+        *,
+        source_payload: dict[str, object],
+        user_profile: dict[str, object],
+    ) -> Any:
+        """Legacy understanding runner preserved for compatibility tests."""
+        await self._emit_stage(task, VideoStage.UNDERSTANDING, 0.0, "正在理解题目...")
+        result = await understanding_service.execute(
+            source_payload=source_payload,
+            user_profile=user_profile,
+        )
+        await self._emit_stage(task, VideoStage.UNDERSTANDING, 1.0, "题目理解完成")
+        return result
+
+    async def _run_render_verify(
+        self,
+        task: BaseTask,
+        render_verify_service: Any,
+        *,
+        manim_code: Any,
+        resource_limits: Any,
+    ) -> tuple[Any, Any]:
+        """Legacy render-verify wrapper used by unit tests."""
+
+        async def emit_event(
+            event_name: str,
+            *,
+            attempt_no: int | None = None,
+            message: str,
+        ) -> None:
+            if event_name == "fix_start":
+                await self._emit_stage(
+                    task,
+                    VideoStage.MANIM_FIX,
+                    0.4,
+                    message,
+                    extra={"attemptNo": attempt_no, "fixEvent": "fix_attempt_start"},
+                )
+                return
+            if event_name == "fix_applied":
+                await self._emit_stage(
+                    task,
+                    VideoStage.MANIM_FIX,
+                    1.0,
+                    message,
+                    extra={"attemptNo": attempt_no, "fixEvent": "fix_attempt_success"},
+                )
+                return
+            await self._emit_stage(
+                task,
+                VideoStage.RENDER,
+                1.0 if event_name == "render_success" else 0.0,
+                message,
+            )
+
+        result, final_code = await render_verify_service.execute(
+            manim_code=manim_code,
+            resource_limits=resource_limits,
+            emit_event=emit_event,
+        )
+        await self._emit_stage(task, VideoStage.RENDER_VERIFY, 0.0, "开始校验渲染结果")
+        await self._emit_stage(task, VideoStage.RENDER_VERIFY, 1.0, "渲染结果校验完成")
+        return result, final_code
 
     async def run(self, task: BaseTask) -> TaskResult:
-        """执行完整视频生成管线。"""
+        """Execute full video generation pipeline (thin coordinator)."""
+        runtime = VideoRuntimeStateStore(self._runtime_store, task.context.task_id)
+        preview_state = None
+
+        try:
+            ctx = self._init_pipeline(task)
+            setup = await self._setup_agent(task, ctx, runtime)
+            design = await self._run_design_stage(task, ctx, setup, runtime)
+            preview_state = design.preview_state
+            tts = await self._run_tts_stage(task, ctx, setup, design, runtime)
+            preview_state = tts.preview_state
+            codegen = await self._run_codegen_stage(task, ctx, setup)
+            render = await self._run_render_stage(
+                task, ctx, setup, tts, codegen, runtime,
+            )
+            return await self._run_finalize(
+                task, ctx, setup, tts, render, runtime,
+            )
+
+        except VideoPipelineError as exc:
+            self._persist_failure_runtime(runtime, preview_state, exc)
+            raise
+        except Exception as exc:
+            logger.exception("Pipeline failed  task_id=%s", task.context.task_id)
+            pipeline_error = VideoPipelineError(
+                stage=VideoStage.RENDER,
+                error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
+                message=str(exc),
+            )
+            self._persist_failure_runtime(runtime, preview_state, pipeline_error)
+            raise pipeline_error from exc
+
+    # ── Stage 1: Init paths & validate ─────────────────────────────
+
+    def _init_pipeline(self, task: BaseTask) -> _PipelineContext:
+        """Validate input and prepare working directories."""
         task_id = task.context.task_id
-        pipeline_started_at = time.monotonic()
-        runtime = VideoRuntimeStateStore(self._runtime_store, task_id)
         metadata = task.context.metadata or {}
         source_payload = metadata.get("sourcePayload", {})
-        preview_state = None
 
         knowledge_point = (
             source_payload.get("text", "")
@@ -347,418 +593,536 @@ class VideoPipelineService:
             ref_mapping.write_text("{}", encoding="utf-8")
         logger.info("Pipeline start  task_id=%s  work_dir=%s", task_id, work_dir)
 
+        return _PipelineContext(
+            task_id=task_id,
+            knowledge_point=knowledge_point,
+            work_dir=work_dir,
+            video_root=video_root,
+            pipeline_started_at=time.monotonic(),
+        )
+
+    # ── Stage 2: Resolve providers & create agent ──────────────────
+
+    async def _setup_agent(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        runtime: VideoRuntimeStateStore,
+    ) -> _AgentSetup:
+        """Resolve providers, build bridge, create agent."""
+        await self._emit(
+            task, VideoStage.UNDERSTANDING, 0.0,
+            "正在初始化 Provider...", progress_override=0,
+        )
+        assembly = await self._resolve_providers(task)
+
+        bridge = self._build_bridge(assembly)
+        configure_bridge(bridge)
+
+        loop = asyncio.get_running_loop()
+        agent = self._create_c2v_agent(
+            knowledge_point=ctx.knowledge_point,
+            work_dir=ctx.work_dir,
+            bridge=bridge,
+        )
+        self._bind_agent_section_callback(agent, loop, task, runtime)
+        return _AgentSetup(assembly=assembly, bridge=bridge, agent=agent, loop=loop)
+
+    # ── Stage 3: Design (understanding + storyboard) ───────────────
+
+    async def _run_design_stage(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        runtime: VideoRuntimeStateStore,
+    ) -> _DesignResult:
+        """Generate design text and build initial preview state."""
+        metadata = task.context.metadata or {}
+        await self._emit(
+            task, VideoStage.UNDERSTANDING, 0.1,
+            "生成教学大纲...", progress_override=3,
+        )
+
+        duration_minutes = metadata.get(
+            "duration_minutes",
+            getattr(self._settings, "video_default_duration_minutes", 5),
+        )
+        self._layout_hint = metadata.get("layout_hint", None)
+        design_text, sections = await setup.loop.run_in_executor(
+            None, setup.agent.generate_design, duration_minutes,
+        )
+        logger.info("ManimCat design generated: %d sections", len(sections))
+        await self._emit(
+            task, VideoStage.UNDERSTANDING, 1.0,
+            "教学大纲生成完成", progress_override=10,
+        )
+
+        await self._emit(
+            task, VideoStage.STORYBOARD, 0.0,
+            "生成视频分镜...", progress_override=11,
+        )
+        preview_state = self._build_preview_from_agent(
+            ctx.task_id, ctx.knowledge_point, setup.agent,
+        )
+        runtime.save_preview(preview_state)
+        await self._emit(
+            task, VideoStage.STORYBOARD, 1.0,
+            "视频分镜生成完成", progress_override=20,
+            extra_context=self._preview_signal(preview_state),
+        )
+        return _DesignResult(
+            design_text=design_text, sections=sections,
+            preview_state=preview_state,
+        )
+
+    # ── Stage 4: TTS ───────────────────────────────────────────────
+
+    async def _run_tts_stage(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        design: _DesignResult,
+        runtime: VideoRuntimeStateStore,
+    ) -> _TTSResult:
+        """Run TTS for all sections and publish audio URLs."""
+        preview_state = design.preview_state
+        await self._emit(
+            task, VideoStage.TTS, 0.0,
+            "生成旁白...", progress_override=21,
+            extra_context=self._preview_signal(preview_state),
+        )
+        tts_audio_map = await self._run_tts(
+            setup.agent, setup.assembly, ctx.work_dir,
+        )
+        expected_sections = len(preview_state.sections)
+        tts_success = len(tts_audio_map)
+        if expected_sections > 0 and tts_success == 0:
+            raise VideoPipelineError(
+                stage=VideoStage.TTS,
+                error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
+                message=f"TTS 全部失败（0/{expected_sections} sections），已重试",
+            )
+        if expected_sections > 0 and tts_success < expected_sections:
+            logger.warning(
+                "TTS partial: %d/%d sections have audio, proceeding",
+                tts_success, expected_sections,
+            )
+
+        asset_store = LocalAssetStore.from_settings(self._settings)
+        audio_urls = self._publish_tts_audio_assets(
+            asset_store, task_id=ctx.task_id, tts_audio_map=tts_audio_map,
+        )
+        preview_state = attach_preview_audio_urls(
+            preview_state, audio_urls=audio_urls, preview_available=True,
+        )
+        runtime.save_preview(preview_state)
+        await self._emit(
+            task, VideoStage.TTS, 1.0,
+            "旁白生成完成", progress_override=25,
+            extra_context=self._preview_signal(preview_state),
+        )
+        return _TTSResult(
+            tts_audio_map=tts_audio_map,
+            audio_urls=audio_urls,
+            preview_state=preview_state,
+        )
+
+    # ── Stage 5: Code generation ───────────────────────────────────
+
+    async def _run_codegen_stage(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+    ) -> _CodegenResult:
+        """Generate full Manim code from design text."""
+        await self._emit(
+            task, VideoStage.MANIM_GEN, 0.0,
+            "ManimCat 全量代码生成...", progress_override=26,
+        )
         try:
-            await self._emit(
-                task,
-                VideoStage.UNDERSTANDING,
-                0.0,
-                "正在初始化 Provider...",
-                progress_override=0,
+            full_code = await setup.loop.run_in_executor(
+                None, setup.agent.generate_all_code, None,
             )
-            assembly = await self._resolve_providers(task)
+            logger.info("ManimCat full code generated: %d chars", len(full_code))
+        except (VideoPipelineError, RuntimeError, OSError) as codegen_err:
+            raise VideoPipelineError(
+                stage=VideoStage.MANIM_GEN,
+                error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
+                message=f"ManimCat 全量代码生成失败: {codegen_err}",
+            ) from codegen_err
+        return _CodegenResult(full_code=full_code)
 
-            bridge = self._build_bridge(assembly)
-            configure_bridge(bridge)
+    # ── Stage 6: Render with sanitizer + render_failure integration ─
 
-            loop = asyncio.get_running_loop()
-            agent = self._create_c2v_agent(
-                knowledge_point=knowledge_point,
-                work_dir=work_dir,
-                bridge=bridge,
-            )
-            self._bind_agent_section_callback(agent, loop, task, runtime)
-
-            await self._emit(
-                task,
-                VideoStage.UNDERSTANDING,
-                0.1,
-                "生成教学大纲...",
-                progress_override=3,
-            )
-            # ManimCat two-stage: design (1 LLM call)
-            duration_minutes = metadata.get(
-                "duration_minutes",
-                getattr(self._settings, "video_default_duration_minutes", 5),
-            )
-            self._layout_hint = metadata.get("layout_hint", None)
-            design_text, sections = await loop.run_in_executor(
-                None, agent.generate_design, duration_minutes
-            )
-            logger.info("ManimCat design generated: %d sections", len(sections))
-            await self._emit(
-                task,
-                VideoStage.UNDERSTANDING,
-                1.0,
-                "教学大纲生成完成",
-                progress_override=10,
+    async def _run_render_stage(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        tts: _TTSResult,
+        codegen: _CodegenResult,
+        runtime: VideoRuntimeStateStore,
+    ) -> _RenderResult:
+        """Bulk render sections with error sanitization and doom-loop detection."""
+        preview_state = tts.preview_state
+        total_sections = len(preview_state.sections)
+        if total_sections == 0:
+            raise VideoPipelineError(
+                stage=VideoStage.STORYBOARD,
+                error_code=VideoTaskErrorCode.VIDEO_STORYBOARD_FAILED,
+                message="未生成任何分段内容",
             )
 
-            await self._emit(
-                task,
-                VideoStage.STORYBOARD,
-                0.0,
-                "生成视频分镜...",
-                progress_override=11,
+        await self._emit(
+            task, VideoStage.RENDER, 0.0,
+            "ManimCat bulk render 输出分段视频...", progress_override=27,
+            extra_context=self._preview_signal(preview_state),
+        )
+        try:
+            bulk_section_videos = await setup.loop.run_in_executor(
+                None, setup.agent.render_full_video_with_sections,
+                codegen.full_code,
             )
-            # Sections already populated by generate_design()
-            preview_state = self._build_preview_from_agent(
-                task_id, knowledge_point, agent
-            )
-            runtime.save_preview(preview_state)
-            await self._emit(
-                task,
-                VideoStage.STORYBOARD,
-                1.0,
-                "视频分镜生成完成",
-                progress_override=20,
-                extra_context=self._preview_signal(preview_state),
-            )
-
-            await self._emit(
-                task,
-                VideoStage.TTS,
-                0.0,
-                "生成旁白...",
-                progress_override=21,
-                extra_context=self._preview_signal(preview_state),
-            )
-            tts_audio_map = await self._run_tts(agent, assembly, work_dir)
-            expected_sections = len(preview_state.sections)
-            tts_success = len(tts_audio_map)
-            if expected_sections > 0 and tts_success == 0:
-                raise VideoPipelineError(
-                    stage=VideoStage.TTS,
-                    error_code=VideoTaskErrorCode.VIDEO_TTS_ALL_PROVIDERS_FAILED,
-                    message=f"TTS 全部失败（0/{expected_sections} sections），已重试",
-                )
-            if expected_sections > 0 and tts_success < expected_sections:
-                logger.warning(
-                    "TTS partial: %d/%d sections have audio, proceeding with available",
-                    tts_success,
-                    expected_sections,
-                )
-
-            asset_store = LocalAssetStore.from_settings(self._settings)
-            audio_urls = self._publish_tts_audio_assets(
-                asset_store,
-                task_id=task_id,
-                tts_audio_map=tts_audio_map,
-            )
-            preview_state = attach_preview_audio_urls(
-                preview_state,
-                audio_urls=audio_urls,
-                preview_available=True,
-            )
-            runtime.save_preview(preview_state)
-            await self._emit(
-                task,
-                VideoStage.TTS,
-                1.0,
-                "旁白生成完成",
-                progress_override=25,
-                extra_context=self._preview_signal(preview_state),
-            )
-
-            total_sections = len(preview_state.sections)
-            if total_sections == 0:
-                raise VideoPipelineError(
-                    stage=VideoStage.STORYBOARD,
-                    error_code=VideoTaskErrorCode.VIDEO_STORYBOARD_FAILED,
-                    message="未生成任何分段内容",
-                )
-
-            ordered_section_clips: list[Path] = []
-            successful_sections: list[str] = []
-
-            # ManimCat two-stage: code generation + bulk render
-            await self._emit(
-                task,
-                VideoStage.MANIM_GEN,
-                0.0,
-                "ManimCat 全量代码生成...",
-                progress_override=26,
-                extra_context=self._preview_signal(preview_state),
-            )
-            try:
-                full_code = await loop.run_in_executor(
-                    None, agent.generate_all_code, design_text
-                )
-                logger.info(
-                    "ManimCat full code generated: %d chars", len(full_code)
-                )
-            except Exception as codegen_err:
-                raise VideoPipelineError(
-                    stage=VideoStage.MANIM_GEN,
-                    error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
-                    message=f"ManimCat 全量代码生成失败: {codegen_err}",
-                ) from codegen_err
-
-            await self._emit(
-                task,
-                VideoStage.RENDER,
-                0.0,
-                "ManimCat bulk render 输出分段视频...",
-                progress_override=27,
-                extra_context=self._preview_signal(preview_state),
-            )
-            try:
-                bulk_section_videos = await loop.run_in_executor(
-                    None, agent.render_full_video_with_sections, full_code
-                )
-            except Exception as render_err:
-                raise VideoPipelineError(
-                    stage=VideoStage.RENDER,
-                    error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
-                    message=f"ManimCat bulk render 失败: {render_err}",
-                ) from render_err
-
-            for index, section in enumerate(getattr(agent, "sections", []) or []):
-                preview_state = runtime.load_preview() or preview_state
-                section_video = bulk_section_videos.get(section.id)
-                if section_video:
-                    preview_state = update_preview_section(
-                        preview_state,
-                        section_id=section.id,
-                        status=VideoPreviewSectionStatus.RENDERING,
-                        preview_available=True,
-                        error_message=None,
-                        fix_attempt=None,
-                    )
-                    runtime.save_preview(preview_state)
-                    await self._emit_section_event(
-                        task,
-                        preview=preview_state,
-                        stage=VideoStage.RENDER,
-                        status=VideoPreviewSectionStatus.RENDERING,
-                        event="section_progress",
-                        section_id=section.id,
-                        section_index=index,
-                        total_sections=total_sections,
-                        message=self._section_message(
-                            VideoPreviewSectionStatus.RENDERING,
-                            section_index=index,
-                            total_sections=total_sections,
-                        ),
-                        progress_override=self._section_progress(
-                            section_index=index,
-                            total_sections=total_sections,
-                            status=VideoPreviewSectionStatus.RENDERING,
-                        ),
-                    )
-                    section_video_path = Path(section_video)
-                    section_clip_path = self._compose_section_clip(
-                        section_id=section.id,
-                        section_video_path=section_video_path,
-                        audio_path=tts_audio_map.get(section.id),
-                        work_dir=work_dir,
-                    )
-                    clip_url = self._publish_section_clip(
-                        asset_store,
-                        task_id=task_id,
-                        section_id=section.id,
-                        section_clip_path=section_clip_path,
-                    )
-                    ordered_section_clips.append(section_clip_path)
-                    successful_sections.append(section.id)
-                    preview_state = update_preview_section(
-                        preview_state,
-                        section_id=section.id,
-                        status=VideoPreviewSectionStatus.READY,
-                        preview_available=True,
-                        clip_url=clip_url,
-                        audio_url=audio_urls.get(section.id),
-                        error_message=None,
-                        fix_attempt=None,
-                    )
-                    runtime.save_preview(preview_state)
-                    await self._emit_section_event(
-                        task,
-                        preview=preview_state,
-                        stage=VideoStage.RENDER,
-                        status=VideoPreviewSectionStatus.READY,
-                        event="section_ready",
-                        section_id=section.id,
-                        section_index=index,
-                        total_sections=total_sections,
-                        message=self._section_message(
-                            VideoPreviewSectionStatus.READY,
-                            section_index=index,
-                            total_sections=total_sections,
-                        ),
-                        progress_override=self._section_progress(
-                            section_index=index,
-                            total_sections=total_sections,
-                            status=VideoPreviewSectionStatus.READY,
-                        ),
-                        clip_url=clip_url,
-                    )
-                    continue
-
-                preview_state = update_preview_section(
-                    preview_state,
-                    section_id=section.id,
-                    status=VideoPreviewSectionStatus.FAILED,
-                    preview_available=True,
-                    error_message="当前分段渲染失败，已跳过",
-                    fix_attempt=None,
-                )
-                runtime.save_preview(preview_state)
-                await self._emit_section_event(
-                    task,
-                    preview=preview_state,
-                    stage=VideoStage.RENDER,
-                    status=VideoPreviewSectionStatus.FAILED,
-                    event="section_progress",
-                    section_id=section.id,
-                    section_index=index,
-                    total_sections=total_sections,
-                    message=self._section_message(
-                        VideoPreviewSectionStatus.FAILED,
-                        section_index=index,
-                        total_sections=total_sections,
-                    ),
-                    progress_override=self._section_progress(
-                        section_index=index,
-                        total_sections=total_sections,
-                        status=VideoPreviewSectionStatus.FAILED,
-                    ),
-                    error_message="当前分段渲染失败，已跳过",
-                )
-
-            render_summary = self._build_render_summary(
-                total_sections=total_sections,
-                successful_sections=successful_sections,
-            )
-            agent.render_summary = render_summary
-            render_successes = render_summary["successfulSections"]
-            render_total = render_summary["totalSections"]
-            if render_successes < render_summary["requiredSuccesses"]:
-                raise VideoPipelineError(
-                    stage=VideoStage.RENDER,
-                    error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
-                    message=(
-                        f"Render quality gate failed: {render_successes}/{render_total} sections, "
-                        f"minimum {render_summary['requiredSuccesses']} required"
-                    ),
-                )
-
-            await self._emit(
-                task,
-                VideoStage.COMPOSE,
-                0.0,
-                "拼接最终视频...",
-                progress_override=95,
-                extra_context=self._preview_signal(preview_state),
-            )
-            composed_video, cover_path = self._concatenate_section_clips(
-                ordered_section_clips,
-                work_dir=work_dir,
-            )
-
-            duration = _probe_duration(composed_video)
-            file_size = composed_video.stat().st_size
-            compose_result = ComposeResult(
-                video_path=str(composed_video),
-                cover_path=str(cover_path),
-                duration=max(1, duration),
-                file_size=max(1, file_size),
-            )
-
-            await self._emit(
-                task,
-                VideoStage.UPLOAD,
-                0.0,
-                "上传视频...",
-                progress_override=98,
-                extra_context=self._preview_signal(preview_state),
-            )
-            upload_svc = UploadService(
-                asset_store=asset_store,
-                settings=self._settings,
-                runtime=runtime,
-            )
-            upload_result = await upload_svc.execute(
-                task_id=task_id,
-                compose_result=compose_result,
-            )
-
-            knowledge_points = [
-                section.get("title", "")
-                for section in (
-                    getattr(getattr(agent, "outline", None), "sections", []) or []
-                )
-                if isinstance(section, dict) and section.get("title")
-            ]
-            pipeline_elapsed_seconds = max(
-                1, int(round(time.monotonic() - pipeline_started_at))
-            )
-            completion_message = "视频生成完成"
-            if render_successes < render_total:
-                completion_message = f"视频生成完成（部分片段降级，已渲染 {render_successes}/{render_total}）"
-                logger.warning(
-                    "Pipeline completed with degraded render coverage task_id=%s render_success=%s/%s",
-                    task_id,
-                    render_successes,
-                    render_total,
-                )
-
-            video_result = VideoResult(
-                task_id=task_id,
-                video_url=upload_result.video_url,
-                cover_url=upload_result.cover_url,
-                duration=max(1, duration),
-                summary=knowledge_point[:100],
-                knowledge_points=knowledge_points or [knowledge_point[:50]],
-                result_id=f"vr-{task_id}",
-                completed_at=_utc_iso(),
-                title=knowledge_point[:60],
-                provider_used=assembly.provider_summary(),
-                task_elapsed_seconds=pipeline_elapsed_seconds,
-                render_summary=render_summary,
-            )
-
-            detail = merge_result_detail(
-                runtime.load_model("result_detail", VideoResultDetail),
-                status="completed",
-                result=video_result.model_dump(mode="json", by_alias=True),
-            )
-            runtime.save_model("result_detail", detail)
-
-            preview_state = mark_preview_status(preview_state, status="completed")
-            runtime.save_preview(preview_state)
-            await self._emit(
-                task,
-                VideoStage.UPLOAD,
-                1.0,
-                completion_message,
-                progress_override=100,
-                extra_context=self._preview_signal(preview_state),
-            )
-            logger.info(
-                "Pipeline done  task_id=%s  elapsed_ms=%s  output_duration_s=%s  render_success=%s/%s",
-                task_id,
-                int(round((time.monotonic() - pipeline_started_at) * 1000)),
-                duration,
-                render_successes,
-                render_total,
-            )
-            return TaskResult.completed(
-                message=completion_message,
-                context=video_result.model_dump(mode="json", by_alias=True),
-            )
-
-        except VideoPipelineError as exc:
-            self._persist_failure_runtime(runtime, preview_state, exc)
-            raise
-        except Exception as exc:
-            logger.exception("Pipeline failed  task_id=%s", task_id)
-            pipeline_error = VideoPipelineError(
+        except (subprocess.CalledProcessError, RuntimeError, OSError) as render_err:
+            raise VideoPipelineError(
                 stage=VideoStage.RENDER,
                 error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
-                message=str(exc),
+                message=f"ManimCat bulk render 失败: {render_err}",
+            ) from render_err
+
+        # Failure store for sanitizer + doom-loop
+        failure_store = RenderFailureStore(
+            redis_client=self._runtime_store.client,
+        )
+        asset_store = LocalAssetStore.from_settings(self._settings)
+        ordered_clips: list[Path] = []
+        successful_sections: list[str] = []
+
+        for index, section in enumerate(
+            getattr(setup.agent, "sections", []) or []
+        ):
+            preview_state = runtime.load_preview() or preview_state
+            section_video = bulk_section_videos.get(section.id)
+
+            # --- Section rendered successfully ---
+            if section_video:
+                ordered_clips, successful_sections, preview_state = (
+                    await self._handle_section_success(
+                        task=task,
+                        section=section,
+                        index=index,
+                        total_sections=total_sections,
+                        section_video=section_video,
+                        audio_path=tts.tts_audio_map.get(section.id),
+                        audio_urls=tts.audio_urls,
+                        work_dir=ctx.work_dir,
+                        task_id=ctx.task_id,
+                        asset_store=asset_store,
+                        ordered_clips=ordered_clips,
+                        successful_sections=successful_sections,
+                        preview_state=preview_state,
+                        runtime=runtime,
+                    )
+                )
+                continue
+
+            # --- Section failed: sanitize + persist + doom-loop check ---
+            preview_state = await self._handle_section_failure(
+                task=task,
+                section=section,
+                index=index,
+                total_sections=total_sections,
+                task_id=ctx.task_id,
+                preview_state=preview_state,
+                runtime=runtime,
+                failure_store=failure_store,
             )
-            self._persist_failure_runtime(runtime, preview_state, pipeline_error)
-            raise pipeline_error from exc
+
+        render_summary = self._build_render_summary(
+            total_sections=total_sections,
+            successful_sections=successful_sections,
+        )
+        setup.agent.render_summary = render_summary
+        render_successes = render_summary["successfulSections"]
+        if render_successes < render_summary["requiredSuccesses"]:
+            raise VideoPipelineError(
+                stage=VideoStage.RENDER,
+                error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
+                message=(
+                    f"Render quality gate failed: "
+                    f"{render_successes}/{render_summary['totalSections']} sections, "
+                    f"minimum {render_summary['requiredSuccesses']} required"
+                ),
+            )
+        return _RenderResult(
+            ordered_clips=ordered_clips,
+            successful_sections=successful_sections,
+            render_summary=render_summary,
+        )
+
+    # ── Stage 7: Finalize (compose + upload + result) ──────────────
+
+    async def _run_finalize(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        tts: _TTSResult,
+        render: _RenderResult,
+        runtime: VideoRuntimeStateStore,
+    ) -> TaskResult:
+        """Compose final video, upload, and return TaskResult."""
+        # Prefer the latest persisted preview so render-stage READY/FAILED state survives finalization.
+        preview_state = runtime.load_preview() or tts.preview_state
+        render_successes = render.render_summary["successfulSections"]
+        render_total = render.render_summary["totalSections"]
+
+        await self._emit(
+            task, VideoStage.COMPOSE, 0.0,
+            "拼接最终视频...", progress_override=95,
+            extra_context=self._preview_signal(preview_state),
+        )
+        composed_video, cover_path = self._concatenate_section_clips(
+            render.ordered_clips, work_dir=ctx.work_dir,
+        )
+
+        duration = _probe_duration(composed_video)
+        file_size = composed_video.stat().st_size
+        compose_result = ComposeResult(
+            video_path=str(composed_video),
+            cover_path=str(cover_path),
+            duration=max(1, duration),
+            file_size=max(1, file_size),
+        )
+
+        await self._emit(
+            task, VideoStage.UPLOAD, 0.0,
+            "上传视频...", progress_override=98,
+            extra_context=self._preview_signal(preview_state),
+        )
+        asset_store = LocalAssetStore.from_settings(self._settings)
+        upload_svc = UploadService(
+            asset_store=asset_store, settings=self._settings, runtime=runtime,
+        )
+        upload_result = await upload_svc.execute(
+            task_id=ctx.task_id, compose_result=compose_result,
+        )
+
+        knowledge_points = [
+            section.get("title", "")
+            for section in (
+                getattr(getattr(setup.agent, "outline", None), "sections", []) or []
+            )
+            if isinstance(section, dict) and section.get("title")
+        ]
+        pipeline_elapsed_seconds = max(
+            1, int(round(time.monotonic() - ctx.pipeline_started_at))
+        )
+        completion_message = "视频生成完成"
+        if render_successes < render_total:
+            completion_message = (
+                f"视频生成完成（部分片段降级，已渲染 {render_successes}/{render_total}）"
+            )
+            logger.warning(
+                "Pipeline completed with degraded render task_id=%s render=%s/%s",
+                ctx.task_id, render_successes, render_total,
+            )
+
+        video_result = VideoResult(
+            task_id=ctx.task_id,
+            video_url=upload_result.video_url,
+            cover_url=upload_result.cover_url,
+            duration=max(1, duration),
+            summary=ctx.knowledge_point[:100],
+            knowledge_points=knowledge_points or [ctx.knowledge_point[:50]],
+            result_id=f"vr-{ctx.task_id}",
+            completed_at=_utc_iso(),
+            title=ctx.knowledge_point[:60],
+            provider_used=setup.assembly.provider_summary(),
+            task_elapsed_seconds=pipeline_elapsed_seconds,
+            render_summary=render.render_summary,
+        )
+
+        detail = merge_result_detail(
+            runtime.load_model("result_detail", VideoResultDetail),
+            status="completed",
+            result=video_result.model_dump(mode="json", by_alias=True),
+        )
+        runtime.save_model("result_detail", detail)
+
+        preview_state = mark_preview_status(preview_state, status="completed")
+        runtime.save_preview(preview_state)
+        await self._emit(
+            task, VideoStage.UPLOAD, 1.0,
+            completion_message, progress_override=100,
+            extra_context=self._preview_signal(preview_state),
+        )
+        logger.info(
+            "Pipeline done  task_id=%s  elapsed_ms=%s  duration_s=%s  render=%s/%s",
+            ctx.task_id,
+            int(round((time.monotonic() - ctx.pipeline_started_at) * 1000)),
+            duration, render_successes, render_total,
+        )
+        return TaskResult.completed(
+            message=completion_message,
+            context=video_result.model_dump(mode="json", by_alias=True),
+        )
+
+    # ── Section success/failure helpers ────────────────────────────
+
+    async def _handle_section_success(
+        self,
+        *,
+        task: BaseTask,
+        section: Any,
+        index: int,
+        total_sections: int,
+        section_video: str,
+        audio_path: Path | None,
+        audio_urls: dict[str, str],
+        work_dir: Path,
+        task_id: str,
+        asset_store: LocalAssetStore,
+        ordered_clips: list[Path],
+        successful_sections: list[str],
+        preview_state,
+        runtime: VideoRuntimeStateStore,
+    ) -> tuple[list[Path], list[str], Any]:
+        """Process a successfully rendered section: compose, publish, emit."""
+        preview_state = update_preview_section(
+            preview_state,
+            section_id=section.id,
+            status=VideoPreviewSectionStatus.RENDERING,
+            preview_available=True,
+        )
+        runtime.save_preview(preview_state)
+        await self._emit_section_event(
+            task, preview=preview_state, stage=VideoStage.RENDER,
+            status=VideoPreviewSectionStatus.RENDERING,
+            event="section_progress", section_id=section.id,
+            section_index=index, total_sections=total_sections,
+            message=self._section_message(
+                VideoPreviewSectionStatus.RENDERING,
+                section_index=index, total_sections=total_sections,
+            ),
+            progress_override=self._section_progress(
+                section_index=index, total_sections=total_sections,
+                status=VideoPreviewSectionStatus.RENDERING,
+            ),
+        )
+
+        section_video_path = Path(section_video)
+        section_clip_path = self._compose_section_clip(
+            section_id=section.id,
+            section_video_path=section_video_path,
+            audio_path=audio_path,
+            work_dir=work_dir,
+        )
+        clip_url = self._publish_section_clip(
+            asset_store, task_id=task_id,
+            section_id=section.id, section_clip_path=section_clip_path,
+        )
+        ordered_clips.append(section_clip_path)
+        successful_sections.append(section.id)
+
+        preview_state = update_preview_section(
+            preview_state,
+            section_id=section.id,
+            status=VideoPreviewSectionStatus.READY,
+            preview_available=True,
+            clip_url=clip_url,
+            audio_url=audio_urls.get(section.id),
+        )
+        runtime.save_preview(preview_state)
+        await self._emit_section_event(
+            task, preview=preview_state, stage=VideoStage.RENDER,
+            status=VideoPreviewSectionStatus.READY,
+            event="section_ready", section_id=section.id,
+            section_index=index, total_sections=total_sections,
+            message=self._section_message(
+                VideoPreviewSectionStatus.READY,
+                section_index=index, total_sections=total_sections,
+            ),
+            progress_override=self._section_progress(
+                section_index=index, total_sections=total_sections,
+                status=VideoPreviewSectionStatus.READY,
+            ),
+            clip_url=clip_url,
+        )
+        return ordered_clips, successful_sections, preview_state
+
+    async def _handle_section_failure(
+        self,
+        *,
+        task: BaseTask,
+        section: Any,
+        index: int,
+        total_sections: int,
+        task_id: str,
+        preview_state,
+        runtime: VideoRuntimeStateStore,
+        failure_store: RenderFailureStore,
+    ) -> Any:
+        """Sanitize render error, persist failure, check doom loop."""
+        # Sanitize with generic message (no per-section stderr available)
+        sanitized = sanitize_render_error(
+            stderr="Section video not exported after bulk render",
+            stdout="",
+            code="",
+        )
+        error_sig = compute_error_signature(sanitized.message)
+
+        # Persist to failure store
+        await failure_store.record_failure(
+            task_id=task_id,
+            section_id=section.id,
+            error_type=sanitized.error_type.value,
+            sanitized_message=sanitized.message,
+            code_snippet=sanitized.code_snippet,
+        )
+
+        # Check doom loop from history
+        history = await failure_store.get_failure_history(task_id, section.id)
+        signatures = [r.error_signature for r in history]
+        is_doom = detect_doom_loop(signatures)
+        error_detail = (
+            f"Doom loop detected ({sanitized.error_type.value}): {sanitized.message}"
+            if is_doom
+            else f"[{sanitized.error_type.value}] {sanitized.message}"
+        )
+        if is_doom:
+            logger.warning(
+                "Doom loop detected for section %s, stopping retries",
+                section.id,
+            )
+
+        preview_state = update_preview_section(
+            preview_state,
+            section_id=section.id,
+            status=VideoPreviewSectionStatus.FAILED,
+            preview_available=True,
+            error_message=error_detail,
+        )
+        runtime.save_preview(preview_state)
+        await self._emit_section_event(
+            task, preview=preview_state, stage=VideoStage.RENDER,
+            status=VideoPreviewSectionStatus.FAILED,
+            event="section_progress", section_id=section.id,
+            section_index=index, total_sections=total_sections,
+            message=self._section_message(
+                VideoPreviewSectionStatus.FAILED,
+                section_index=index, total_sections=total_sections,
+            ),
+            progress_override=self._section_progress(
+                section_index=index, total_sections=total_sections,
+                status=VideoPreviewSectionStatus.FAILED,
+            ),
+            error_message=error_detail,
+        )
+        return preview_state
 
     def _create_c2v_agent(
         self,
@@ -1213,7 +1577,7 @@ class VideoPipelineService:
                     endpoint.base_url[:50],
                     endpoint.model_name,
                 )
-            except Exception as exc:
+            except (ValueError, KeyError, AttributeError) as exc:
                 logger.warning(
                     "Failed to extract endpoint for stage %s provider %s: %s",
                     c2v_stage,
@@ -1224,7 +1588,7 @@ class VideoPipelineService:
         if assembly.default_llm:
             try:
                 bridge.set_default(endpoint_from_provider(assembly.default_llm[0]))
-            except Exception as exc:
+            except (ValueError, KeyError, AttributeError) as exc:
                 logger.warning("Failed to set default endpoint: %s", exc)
         return bridge
 

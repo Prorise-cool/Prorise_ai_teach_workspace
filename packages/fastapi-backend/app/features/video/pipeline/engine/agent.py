@@ -21,10 +21,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from ..prompts.manimcat.api_codebook import build_api_index_module, SHARED_SPECIFICATION
+from ..prompts.manimcat.api_codebook import SHARED_SPECIFICATION, build_api_index_module
 from ..prompts.manimcat.prompt_loader import load_and_render
-from .c2v_utils import get_output_dir, topic_to_safe_name
-from .code_cleaner import clean_manim_code, extract_code_from_response, extract_design_from_response
+from .c2v_utils import get_output_dir
+from .code_cleaner import clean_manim_code, extract_code_from_response
 from .code_generator import generate_code_from_design
 from .scene_designer import generate_scene_design
 
@@ -181,7 +181,9 @@ class TeachingVideoAgent:
         self.outline = TeachingOutline(
             topic=self.learning_topic,
             target_audience="students",
-            sections=[{"id": s.id, "title": s.title, "content": s.title} for s in sections],
+            sections=[
+                {"id": s.id, "title": s.title, "content": s.title} for s in sections
+            ],
         )
         logger.info("Scene design generated: %d sections", len(sections))
         return design_text, sections
@@ -297,7 +299,11 @@ class TeachingVideoAgent:
                 return dict(self.section_videos)
 
             last_error = stderr or last_error
-            logger.warning("Patch retry %d still failing: %s", attempt, extract_error_message(last_error))
+            logger.warning(
+                "Patch retry %d still failing: %s",
+                attempt,
+                extract_error_message(last_error),
+            )
 
         raise ValueError(
             f"Bulk render failed after {self.patch_retry_max_retries + 1} attempts: "
@@ -325,7 +331,9 @@ class TeachingVideoAgent:
         code_path.write_text(code, encoding="utf-8")
         return code_path
 
-    def _render_main_scene(self, code: str, scene_name: str = "MainScene") -> tuple[bool, str]:
+    def _render_main_scene(
+        self, code: str, scene_name: str = "MainScene"
+    ) -> tuple[bool, str]:
         """Render the full bulk scene once and export section videos."""
         from .static_guard import run_guard_loop
 
@@ -348,19 +356,28 @@ class TeachingVideoAgent:
         scene_file = self._write_full_code_file(guard_result.code)
 
         docker_cmd = [
-            "docker", "run", "--rm",
-            "-v", f"{self.output_dir}:/workspace",
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{self.output_dir}:/workspace",
             "manimcommunity/manim:stable",
-            "bash", "-c",
+            "bash",
+            "-c",
             f"cd /workspace && manim -ql --save_sections {scene_file.name} {scene_name}",
         ]
         try:
-            result = subprocess.run(docker_cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(
+                docker_cmd, capture_output=True, text=True, timeout=300
+            )
         except FileNotFoundError:
             logger.warning("Docker not available, falling back to local manim")
             result = subprocess.run(
                 ["manim", "-ql", "--save_sections", scene_file.name, scene_name],
-                capture_output=True, text=True, cwd=self.output_dir, timeout=300,
+                capture_output=True,
+                text=True,
+                cwd=self.output_dir,
+                timeout=300,
             )
 
         if result.returncode != 0:
@@ -393,7 +410,11 @@ class TeachingVideoAgent:
             return {}
 
         expected_ids = {s.id for s in self.sections}
-        for index_path in sorted(media_dir.rglob(f"{scene_name}.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        for index_path in sorted(
+            media_dir.rglob(f"{scene_name}.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        ):
             try:
                 payload = json.loads(index_path.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
@@ -403,7 +424,11 @@ class TeachingVideoAgent:
             for item in payload if isinstance(payload, list) else []:
                 sid = str(item.get("name") or "").strip()
                 video_name = str(item.get("video") or "").strip()
-                if not sid or not video_name or (expected_ids and sid not in expected_ids):
+                if (
+                    not sid
+                    or not video_name
+                    or (expected_ids and sid not in expected_ids)
+                ):
                     continue
                 video_path = index_path.parent / video_name
                 if video_path.exists():
@@ -420,7 +445,10 @@ class TeachingVideoAgent:
 
         system_prompt = load_and_render(
             "code_retry_system.md",
-            {"apiIndexModule": build_api_index_module(), "sharedSpecification": SHARED_SPECIFICATION},
+            {
+                "apiIndexModule": build_api_index_module(),
+                "sharedSpecification": SHARED_SPECIFICATION,
+            },
         )
         user_prompt = load_and_render(
             "code_retry_user.md",
@@ -436,8 +464,10 @@ class TeachingVideoAgent:
         request_api = self.API
         try:
             request_api = get_bridge().text_api("manim_fix")
-        except Exception:
-            logger.warning("manim_fix bridge unavailable, using default API", exc_info=True)
+        except (RuntimeError, AttributeError):
+            logger.warning(
+                "manim_fix bridge unavailable, using default API", exc_info=True
+            )
 
         response = request_api(
             f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}",
@@ -448,16 +478,22 @@ class TeachingVideoAgent:
 
         try:
             return response.choices[0].message.content
-        except Exception:
+        except (AttributeError, IndexError, TypeError):
             return str(response)
 
     # ── Section status callback ─────────────────────────────────
 
-    def _notify_section_status(self, *, section_id: str, status: str, **payload: Any) -> None:
+    def _notify_section_status(
+        self, *, section_id: str, status: str, **payload: Any
+    ) -> None:
         """Report section-level status to the orchestrator."""
         if self.section_status_callback is None:
             return
         try:
-            self.section_status_callback({"sectionId": section_id, "status": status, **payload})
-        except Exception:
-            logger.debug("section status callback failed for %s", section_id, exc_info=True)
+            self.section_status_callback(
+                {"sectionId": section_id, "status": status, **payload}
+            )
+        except (TypeError, RuntimeError):
+            logger.debug(
+                "section status callback failed for %s", section_id, exc_info=True
+            )

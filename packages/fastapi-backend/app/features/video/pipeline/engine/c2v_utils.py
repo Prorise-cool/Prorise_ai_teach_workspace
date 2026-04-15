@@ -25,10 +25,10 @@ def extract_json_from_markdown(text):
 def extract_answer_from_response(response):
     try:
         content = response.candidates[0].content.parts[0].text
-    except Exception:
+    except (AttributeError, IndexError):
         try:
             content = response.choices[0].message.content
-        except Exception:
+        except (AttributeError, IndexError):
             content = str(response)
     content = extract_json_from_markdown(content)
     return content
@@ -92,7 +92,7 @@ def monitor_system_resources():
             logger.warning("Memory usage is high")
 
         return True
-    except Exception:
+    except (OSError, IOError):
         return False
 
 
