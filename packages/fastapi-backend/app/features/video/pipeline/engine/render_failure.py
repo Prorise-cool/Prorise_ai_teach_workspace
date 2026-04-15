@@ -115,20 +115,3 @@ class RenderFailureStore:
         except (OSError, ConnectionError, AttributeError, json.JSONDecodeError):
             logger.warning("Failed to read failure history from Redis", exc_info=True)
             return []
-
-    async def update_recovery_status(
-        self, task_id: str, section_id: str, status: str
-    ) -> None:
-        """Mark the most recent failure as recovered or abandoned."""
-        if not self._redis:
-            return
-
-        key = self._get_key(task_id, section_id)
-        try:
-            raw_list = await self._redis.lrange(key, -1, -1)
-            if raw_list:
-                record = RenderFailureRecord.from_dict(json.loads(raw_list[0]))
-                record.recovery_status = status
-                await self._redis.lset(key, -1, json.dumps(record.to_dict()))
-        except (OSError, ConnectionError, AttributeError, json.JSONDecodeError):
-            logger.warning("Failed to update recovery status", exc_info=True)
