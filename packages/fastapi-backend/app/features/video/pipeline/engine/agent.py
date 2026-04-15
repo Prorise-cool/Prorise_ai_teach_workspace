@@ -1,21 +1,13 @@
-import argparse
+import asyncio
 import json
 import logging
 import math
-import random
 import re
+import shutil
 import subprocess
-import time
-from concurrent.futures import (
-    FIRST_COMPLETED,
-    ProcessPoolExecutor,
-    ThreadPoolExecutor,
-    as_completed,
-    wait,
-)
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 from ..prompts import *  # noqa: F403
 from ..prompts.manimcat.api_codebook import SHARED_SPECIFICATION, build_api_index_module
@@ -83,6 +75,9 @@ class RunConfig:
     max_regenerate_tries: int = 10
     max_feedback_gen_code_tries: int = 3
     max_mllm_fix_bugs_tries: int = 3
+    layout_hint: str | None = None
+    static_guard_max_passes: int = 3
+    patch_retry_max_retries: int = 3
 
 
 class TeachingVideoAgent:
@@ -108,6 +103,13 @@ class TeachingVideoAgent:
         self.max_regenerate_tries = cfg.max_regenerate_tries
         self.max_feedback_gen_code_tries = cfg.max_feedback_gen_code_tries
         self.max_mllm_fix_bugs_tries = cfg.max_mllm_fix_bugs_tries
+        self.layout_hint = getattr(cfg, "layout_hint", None)
+        self.static_guard_max_passes = max(
+            1, int(getattr(cfg, "static_guard_max_passes", 3))
+        )
+        self.patch_retry_max_retries = max(
+            0, int(getattr(cfg, "patch_retry_max_retries", 3))
+        )
 
         """2. Path for output"""
         self.folder = folder
@@ -152,6 +154,7 @@ class TeachingVideoAgent:
         self.render_summary = {}
         self.section_status_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         self.video_feedbacks = {}
+        self.full_scene_video: Optional[str] = None
 
         """6. For Efficiency"""
         self.token_usage = {
@@ -222,6 +225,8 @@ class TeachingVideoAgent:
                     "duration": str(duration_minutes),
                     "sectionCount": str(section_count),
                     "sectionDuration": str(section_duration),
+                    "layoutHint": self.layout_hint
+                    or "choose the best layout for this concept",
                 },
             )
 
@@ -367,6 +372,259 @@ class TeachingVideoAgent:
         """Split full code into per-section snippets for TTS alignment."""
         for section in self.sections:
             self.section_codes[section.id] = full_code
+
+    def _normalize_full_code(self, code: str) -> str:
+        """Normalize full-scene code before guard / render."""
+        normalized = extract_code_from_response(code)
+        normalized = clean_manim_code(normalized).code.strip()
+        normalized = re.sub(r"^```(?:python)?\s*", "", normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r"\s*```$", "", normalized)
+
+        if not re.search(r"class\s+MainScene\s*\(", normalized):
+            normalized = re.sub(
+                r"class\s+\w+\s*\(([^)]*Scene[^)]*)\)\s*:",
+                r"class MainScene(\1):",
+                normalized,
+                count=1,
+            )
+        return normalized.strip() + "\n"
+
+    def _write_full_code_file(self, code: str) -> Path:
+        code_path = self.output_dir / "manimcat_full_code.py"
+        code_path.write_text(code, encoding="utf-8")
+        return code_path
+
+    def _render_main_scene(self, code: str, scene_name: str = "MainScene") -> tuple[bool, str]:
+        """Render the full bulk scene once and export section videos."""
+        from .static_guard import run_guard_loop
+
+        self.section_videos = {}
+        self.full_scene_video = None
+        media_dir = self.output_dir / "media"
+        if media_dir.exists():
+            shutil.rmtree(media_dir)
+
+        normalized = self._normalize_full_code(code)
+        guard_result = asyncio.run(
+            run_guard_loop(normalized, max_passes=self.static_guard_max_passes)
+        )
+        if not guard_result.passed:
+            logger.warning(
+                "Bulk static guard left %d diagnostics after %d passes",
+                len(guard_result.diagnostics),
+                guard_result.passes_used,
+            )
+        scene_file = self._write_full_code_file(guard_result.code)
+
+        docker_cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{self.output_dir}:/workspace",
+            "manimcommunity/manim:stable",
+            "bash",
+            "-c",
+            f"cd /workspace && manim -ql --save_sections {scene_file.name} {scene_name}",
+        ]
+        try:
+            result = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+        except FileNotFoundError:
+            logger.warning(
+                "Docker not available for bulk render, falling back to local manim"
+            )
+            result = subprocess.run(
+                ["manim", "-ql", "--save_sections", scene_file.name, scene_name],
+                capture_output=True,
+                text=True,
+                cwd=self.output_dir,
+                timeout=300,
+            )
+
+        if result.returncode != 0:
+            return False, result.stderr or result.stdout
+
+        section_videos = self._load_saved_section_videos(scene_name)
+        if not section_videos:
+            return (
+                False,
+                "Bulk render succeeded but Manim did not export any section videos",
+            )
+
+        self.section_videos = section_videos
+        full_scene_video = self._find_rendered_scene_video(scene_name)
+        if full_scene_video is not None:
+            self.full_scene_video = str(full_scene_video)
+        return True, ""
+
+    def _find_rendered_scene_video(self, scene_name: str) -> Path | None:
+        media_dir = self.output_dir / "media"
+        if not media_dir.exists():
+            return None
+
+        candidates = [
+            path
+            for path in media_dir.rglob(f"{scene_name}.mp4")
+            if "sections" not in path.parts and "partial_movie_files" not in path.parts
+        ]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda path: path.stat().st_mtime)
+
+    def _load_saved_section_videos(self, scene_name: str) -> Dict[str, str]:
+        media_dir = self.output_dir / "media"
+        if not media_dir.exists():
+            return {}
+
+        expected_section_ids = {section.id for section in self.sections}
+        index_candidates = sorted(
+            media_dir.rglob(f"{scene_name}.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for index_path in index_candidates:
+            try:
+                payload = json.loads(index_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+
+            section_videos: Dict[str, str] = {}
+            for item in payload if isinstance(payload, list) else []:
+                section_id = str(item.get("name") or "").strip()
+                video_name = str(item.get("video") or "").strip()
+                if (
+                    not section_id
+                    or not video_name
+                    or (expected_section_ids and section_id not in expected_section_ids)
+                ):
+                    continue
+                video_path = index_path.parent / video_name
+                if video_path.exists():
+                    section_videos[section_id] = str(video_path)
+
+            if section_videos:
+                return section_videos
+        return {}
+
+    def _request_patch_repair(
+        self,
+        code: str,
+        error_message: str,
+        attempt: int,
+        code_snippet: str | None,
+    ) -> str:
+        """Request a minimal SEARCH/REPLACE patch from the manim_fix stage."""
+        system_prompt = load_and_render(
+            "code_retry_system.md",
+            {
+                "apiIndexModule": build_api_index_module(),
+                "sharedSpecification": SHARED_SPECIFICATION,
+            },
+        )
+        user_prompt = load_and_render(
+            "code_retry_user.md",
+            {
+                "concept": self.learning_topic,
+                "attempt": str(attempt),
+                "errorMessage": error_message,
+                "code": code,
+                "codeSnippet": code_snippet or "",
+            },
+        )
+
+        request_api = self.API
+        try:
+            request_api = get_bridge().text_api("manim_fix")
+        except Exception:
+            logger.warning(
+                "manim_fix bridge unavailable, falling back to default generation API",
+                exc_info=True,
+            )
+
+        response = request_api(
+            f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}",
+            max_tokens=self.max_code_token_length,
+        )
+        if isinstance(response, tuple):
+            response = response[0]
+
+        try:
+            return response.choices[0].message.content
+        except Exception:
+            return str(response)
+
+    def render_full_video_with_sections(self, full_code: str) -> Dict[str, str]:
+        """Render the ManimCat bulk code once and recover with minimal patches."""
+        from .code_retry import (
+            apply_patch_set,
+            extract_error_message,
+            extract_error_snippet,
+            parse_patch_response,
+        )
+
+        current_code = self._normalize_full_code(full_code)
+        success, stderr = self._render_main_scene(current_code)
+        if success:
+            return dict(self.section_videos)
+
+        last_error = stderr or "Unknown bulk render failure"
+        logger.warning(
+            "%s bulk render failed on initial attempt: %s",
+            self.learning_topic,
+            extract_error_message(last_error),
+        )
+
+        for attempt in range(1, self.patch_retry_max_retries + 1):
+            snippet = extract_error_snippet(last_error, current_code)
+            raw_patch = self._request_patch_repair(
+                current_code,
+                extract_error_message(last_error),
+                attempt,
+                snippet,
+            )
+            patch_set = parse_patch_response(raw_patch)
+            if not patch_set.patches:
+                logger.warning(
+                    "Bulk render patch retry %d returned no valid SEARCH/REPLACE patches",
+                    attempt,
+                )
+                continue
+
+            patched_code = apply_patch_set(current_code, patch_set)
+            if patched_code == current_code:
+                logger.warning(
+                    "Bulk render patch retry %d produced no code changes",
+                    attempt,
+                )
+                continue
+
+            current_code = patched_code
+            success, stderr = self._render_main_scene(current_code)
+            if success:
+                logger.info(
+                    "%s bulk render recovered after %d patch retries",
+                    self.learning_topic,
+                    attempt,
+                )
+                return dict(self.section_videos)
+
+            last_error = stderr or last_error
+            logger.warning(
+                "Bulk render patch retry %d still failing: %s",
+                attempt,
+                extract_error_message(last_error),
+            )
+
+        raise ValueError(
+            "Bulk render failed after "
+            f"{self.patch_retry_max_retries + 1} attempts: "
+            f"{extract_error_message(last_error)}"
+        )
 
     def generate_outline(self) -> TeachingOutline:
         outline_file = self.output_dir / "outline.json"
@@ -652,15 +910,37 @@ class TeachingVideoAgent:
             try:
                 scene_name = f"{section_id.title().replace('_', '')}Scene"
                 code_file = f"{section_id}.py"
-                cmd = ["manim", "-ql", str(code_file), scene_name]
 
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=self.output_dir,
-                    timeout=180,
-                )
+                # Docker render (has LaTeX for MathTex support)
+                # Falls back to local manim if Docker unavailable
+                docker_cmd = [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "-v",
+                    f"{self.output_dir}:/workspace",
+                    "manimcommunity/manim:stable",
+                    "bash",
+                    "-c",
+                    f"cd /workspace && manim -ql {code_file} {scene_name}",
+                ]
+                try:
+                    result = subprocess.run(
+                        docker_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=180,
+                    )
+                except FileNotFoundError:
+                    # Docker not installed — fall back to local manim
+                    logger.warning("Docker not available, falling back to local manim")
+                    result = subprocess.run(
+                        ["manim", "-ql", str(code_file), scene_name],
+                        capture_output=True,
+                        text=True,
+                        cwd=self.output_dir,
+                        timeout=180,
+                    )
 
                 if result.returncode == 0:
                     video_patterns = [
@@ -901,35 +1181,6 @@ class TeachingVideoAgent:
 
         return False
 
-    def generate_codes(self) -> Dict[str, str]:
-        if not self.sections:
-            raise ValueError(
-                f"{self.learning_topic} Please generate teaching sections first"
-            )
-
-        def task(section):
-            try:
-                self.generate_section_code(section, attempt=1)
-                return section.id, None
-            except Exception as e:
-                return section.id, e
-
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = {
-                executor.submit(task, section): section for section in self.sections
-            }
-            for future in as_completed(futures):
-                section_id, err = future.result()
-                if err:
-                    logger.error(
-                        "%s %s code generation failed: %s",
-                        self.learning_topic,
-                        section_id,
-                        err,
-                    )
-
-        return self.section_codes
-
     def render_section(self, section: Section) -> bool:
         section_id = section.id
 
@@ -1025,575 +1276,3 @@ class TeachingVideoAgent:
                 str(e),
             )
             return False
-
-    def render_section_worker(self, section_data) -> Tuple[str, bool, Optional[str]]:
-        section_id = "unknown"
-        try:
-            section, agent_class, kwargs = section_data
-            section_id = section.id
-            agent = agent_class(**kwargs)
-            success = agent.render_section(section)
-            video_path = agent.section_videos.get(section.id) if success else None
-            return section_id, success, video_path
-
-        except Exception as e:
-            logger.error(
-                "%s %s render process exception: %s",
-                self.learning_topic,
-                section_id,
-                str(e),
-            )
-            return section_id, False, None
-
-    def render_all_sections(
-        self,
-        max_workers: int = 2,
-        *,
-        per_section_timeout: float = 600,
-        overall_timeout: float | None = None,
-        success_ratio: float = RENDER_SUCCESS_RATIO,
-        success_grace_seconds: float = RENDER_COMPLETION_GRACE_SECONDS,
-    ) -> Dict[str, str]:
-        logger.info(
-            "Start parallel rendering of all section videos (up to %s threads)...",
-            max_workers,
-        )
-
-        total = len(self.sections)
-        if total == 0:
-            self.render_results = {}
-            return {}
-
-        max_workers = max(1, min(max_workers, total))
-        required_successes = required_render_successes(total, success_ratio)
-        logger.info(
-            "Render quality gate target: %s/%s sections (%.0f%%), grace window %.1fs",
-            required_successes,
-            total,
-            success_ratio * 100,
-            success_grace_seconds,
-        )
-
-        results: Dict[str, str] = {}
-        future_to_section: dict[object, str] = {}
-        submitted_count = 0
-        early_stop_reason: str | None = None
-        grace_deadline: float | None = None
-        overall_timeout_seconds = (
-            float(overall_timeout)
-            if overall_timeout is not None
-            else float(per_section_timeout) * total
-        )
-        overall_deadline = time.monotonic() + max(1.0, overall_timeout_seconds)
-        section_iter = iter(self.sections)
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-
-        def submit_next_section() -> bool:
-            nonlocal submitted_count
-            try:
-                section = next(section_iter)
-            except StopIteration:
-                return False
-            future = executor.submit(self.render_section, section)
-            future_to_section[future] = section.id
-            submitted_count += 1
-            return True
-
-        try:
-            for _ in range(max_workers):
-                if not submit_next_section():
-                    break
-
-            while future_to_section:
-                now = time.monotonic()
-                if now >= overall_deadline:
-                    early_stop_reason = "overall-render-deadline-reached"
-                    logger.warning(
-                        "Render deadline reached with %s/%s successful sections; "
-                        "proceeding with available videos",
-                        len(results),
-                        total,
-                    )
-                    break
-
-                wait_timeout = min(1.0, max(0.0, overall_deadline - now))
-                if grace_deadline is not None:
-                    wait_timeout = min(
-                        wait_timeout,
-                        max(0.0, grace_deadline - now),
-                    )
-
-                done, _ = wait(
-                    set(future_to_section.keys()),
-                    timeout=wait_timeout,
-                    return_when=FIRST_COMPLETED,
-                )
-                if not done:
-                    continue
-
-                for future in done:
-                    section_id = future_to_section.pop(future)
-                    try:
-                        success = future.result()
-                        if success and section_id in self.section_videos:
-                            results[section_id] = self.section_videos[section_id]
-                            logger.info(
-                                "%s video rendered successfully: %s",
-                                section_id,
-                                results[section_id],
-                            )
-                        else:
-                            logger.warning("%s video rendering failed", section_id)
-                    except Exception as e:
-                        logger.error(
-                            "%s video rendering process error: %s", section_id, str(e)
-                        )
-
-                while len(future_to_section) < max_workers:
-                    if not submit_next_section():
-                        break
-
-                if (
-                    grace_deadline is None
-                    and len(results) >= required_successes
-                    and submitted_count >= total
-                    and future_to_section
-                ):
-                    grace_deadline = min(
-                        overall_deadline,
-                        time.monotonic() + max(0.0, success_grace_seconds),
-                    )
-                    logger.info(
-                        "Render success threshold reached (%s/%s) after submitting all sections. "
-                        "Entering %.1fs grace window before merge",
-                        len(results),
-                        total,
-                        max(0.0, grace_deadline - time.monotonic()),
-                    )
-
-                if grace_deadline is not None and time.monotonic() >= grace_deadline:
-                    early_stop_reason = "quality-gate-grace-expired"
-                    logger.info(
-                        "Render grace window expired after reaching quality gate; "
-                        "stop waiting with %s running sections",
-                        len(future_to_section),
-                    )
-                    break
-        finally:
-            if future_to_section:
-                outstanding_sections = list(future_to_section.values())
-                logger.warning(
-                    "Render wait stopped early reason=%s outstanding_sections=%s",
-                    early_stop_reason or "manual-stop",
-                    outstanding_sections,
-                )
-                for future in future_to_section:
-                    future.cancel()
-                executor.shutdown(wait=False, cancel_futures=True)
-            else:
-                executor.shutdown(wait=True, cancel_futures=True)
-
-        logger.info("\n📊 Render Results:")
-        successful_count = len(results)
-        failed_count = total - successful_count
-        logger.info("   Total Sections: %s", total)
-        logger.info("   Successful: %s", successful_count)
-        logger.info("   Incomplete: %s", failed_count)
-
-        # 质量门禁：成功率不够时，对失败的 section 再来一轮
-        if total > 0 and failed_count > 0 and successful_count / total < success_ratio:
-            failed_sections = [s for s in self.sections if s.id not in results]
-            logger.warning(
-                "Render success rate %d/%d (%.0f%%) below %.0f%%, retrying %d failed sections...",
-                successful_count,
-                total,
-                successful_count / total * 100,
-                success_ratio * 100,
-                len(failed_sections),
-            )
-            for section in failed_sections:
-                try:
-                    self.generate_section_code(section, attempt=2)
-                    success = self.debug_and_fix_code(
-                        section.id, max_fix_attempts=self.max_fix_bug_tries
-                    )
-                    if success and section.id in self.section_videos:
-                        results[section.id] = self.section_videos[section.id]
-                        successful_count += 1
-                        failed_count -= 1
-                        logger.info("Retry succeeded for %s", section.id)
-                except Exception as e:
-                    logger.error("Retry failed for %s: %s", section.id, e)
-
-            logger.info(
-                "After retry: %d/%d succeeded (%.0f%%)",
-                successful_count,
-                total,
-                successful_count / total * 100,
-            )
-
-        # 最终门禁：重试后仍不够就失败
-        if total > 0 and successful_count / total < success_ratio:
-            raise ValueError(
-                f"Render quality gate failed after retry: {successful_count}/{total} sections "
-                f"({successful_count / total:.0%}), minimum {success_ratio:.0%} required"
-            )
-
-        self.render_results = dict(results)
-        self.render_summary = {
-            "totalSections": total,
-            "successfulSections": successful_count,
-            "incompleteSections": failed_count,
-            "requiredSuccesses": required_successes,
-            "allSectionsRendered": successful_count == total,
-            "completionMode": "full" if successful_count == total else "degraded",
-            "stopReason": early_stop_reason,
-        }
-        return results
-
-    def merge_videos(
-        self,
-        output_filename: str = None,
-        *,
-        video_map: Optional[Dict[str, str]] = None,
-    ) -> str:
-        """Step 5: Merge all section videos"""
-        video_sources = (
-            video_map or getattr(self, "render_results", None) or self.section_videos
-        )
-        if not video_sources:
-            raise ValueError("No video files available to merge")
-
-        if output_filename is None:
-            safe_name = topic_to_safe_name(self.learning_topic)
-            output_filename = f"{safe_name}.mp4"
-
-        output_path = self.output_dir / output_filename
-
-        logger.info("Start merging section videos...")
-
-        video_list_file = self.output_dir / "video_list.txt"
-        with open(video_list_file, "w", encoding="utf-8") as f:
-            for section_id in sorted(video_sources.keys()):
-                video_path = video_sources[section_id].replace(
-                    f"{self.output_dir}/", ""
-                )
-                f.write(f"file '{video_path}'\n")
-
-        # ffmpeg
-        try:
-            result = subprocess.run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-f",
-                    "concat",
-                    "-safe",
-                    "0",
-                    "-i",
-                    str(video_list_file),
-                    "-c",
-                    "copy",
-                    str(output_path),
-                ],
-                capture_output=True,
-                text=True,
-            )
-
-            if result.returncode == 0:
-                return str(output_path)
-            else:
-                logger.error("Failed to merge section videos: %s", result.stderr)
-                return None
-        except Exception as e:
-            logger.error("Failed to merge section videos: %s", e)
-            return None
-
-    def GENERATE_VIDEO(self) -> str:
-        """Generate complete video with MLLM feedback optimization"""
-        try:
-            self.generate_outline()
-            self.generate_storyboard()
-            self.generate_codes()
-            rendered_sections = self.render_all_sections()
-            final_video = self.merge_videos(video_map=rendered_sections)
-            if final_video:
-                logger.info("Video generated success: %s", final_video)
-                return final_video
-            else:
-                logger.error("%s  failed", self.learning_topic)
-                return None
-        except Exception as e:
-            logger.error("Video generation failed: %s", e)
-            return None
-
-
-def process_knowledge_point(idx, kp, folder_path: Path, cfg: RunConfig):
-    logger.info("\n🚀 Processing knowledge topic: %s", kp)
-    start_time = time.time()
-
-    agent = TeachingVideoAgent(
-        idx=idx,
-        knowledge_point=kp,
-        folder=folder_path,
-        cfg=cfg,
-    )
-    video_path = agent.GENERATE_VIDEO()
-
-    duration_minutes = (time.time() - start_time) / 60
-    total_tokens = agent.token_usage["total_tokens"]
-
-    logger.info(
-        "Knowledge topic '%s' processed. Cost Time: %.2f minutes, Tokens used: %s",
-        kp,
-        duration_minutes,
-        total_tokens,
-    )
-    return kp, video_path, duration_minutes, total_tokens
-
-
-def process_batch(batch_data, cfg: RunConfig):
-    """Process a batch of knowledge points (serial within a batch)"""
-    batch_idx, kp_batch, folder_path = batch_data
-    results = []
-    logger.info(
-        "Batch %s starts processing %s knowledge points", batch_idx + 1, len(kp_batch)
-    )
-
-    for local_idx, (idx, kp) in enumerate(kp_batch):
-        try:
-            if local_idx > 0:
-                delay = random.uniform(3, 6)
-                logger.info(
-                    "Batch %s waits %.1fs before processing %s...",
-                    batch_idx + 1,
-                    delay,
-                    kp,
-                )
-                time.sleep(delay)
-            results.append(process_knowledge_point(idx, kp, folder_path, cfg))
-        except Exception as e:
-            logger.error("Batch %s processing %s failed: %s", batch_idx + 1, kp, e)
-            results.append((kp, None, 0, 0))
-    return batch_idx, results
-
-
-def run_Code2Video(
-    knowledge_points: List[str],
-    folder_path: Path,
-    parallel=True,
-    batch_size=3,
-    max_workers=8,
-    cfg: RunConfig = RunConfig(),
-):
-    all_results = []
-
-    if parallel:
-        batches = []
-        for i in range(0, len(knowledge_points), batch_size):
-            batch = [
-                (i + j, kp) for j, kp in enumerate(knowledge_points[i : i + batch_size])
-            ]
-            batches.append((i // batch_size, batch, folder_path))
-
-        logger.info(
-            "Parallel batch processing mode: %s batches, each with %s knowledge points, %s concurrent batches",
-            len(batches),
-            batch_size,
-            max_workers,
-        )
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(process_batch, batch, cfg): batch for batch in batches
-            }
-            for future in as_completed(futures):
-                try:
-                    batch_idx, batch_results = future.result()
-                    all_results.extend(batch_results)
-                    logger.info("Batch %s completed", batch_idx + 1)
-                except Exception as e:
-                    logger.error("Batch %s processing failed: %s", batch_idx + 1, e)
-    else:
-        logger.info("Serial processing mode")
-        for idx, kp in enumerate(knowledge_points):
-            try:
-                all_results.append(process_knowledge_point(idx, kp, folder_path, cfg))
-            except Exception as e:
-                logger.error("Serial processing %s failed: %s", kp, e)
-                all_results.append((kp, None, 0, 0))
-
-    successful_runs = [r for r in all_results if r[1] is not None]
-    total_runs = len(all_results)
-    if not successful_runs:
-        logger.info("\nAll knowledge points failed, cannot calculate average.")
-        return
-
-    total_duration = sum(r[2] for r in successful_runs)
-    total_tokens_consumed = sum(r[3] for r in successful_runs)
-    num_successful = len(successful_runs)
-
-    logger.info("=" * 50)
-    logger.info("   Total knowledge points: %s", total_runs)
-    logger.info(
-        "   Successfully processed: %s (%.1f%)",
-        num_successful,
-        num_successful / total_runs * 100,
-    )
-    logger.info(
-        "   Average duration [min]: %.2f minutes/knowledge point",
-        total_duration / num_successful,
-    )
-    logger.info(
-        "   Average token consumption: %,.0f tokens/knowledge point",
-        total_tokens_consumed / num_successful,
-    )
-    logger.info("=" * 50)
-
-
-def get_api_and_output(API_name):
-    mapping = {
-        "gpt-41": (request_gpt41_token, "Chatgpt41"),
-        "claude": (request_claude_token, "CLAUDE"),
-        "gpt-5": (request_gpt5_token, "Chatgpt5"),
-        "gpt-4o": (request_gpt4o_token, "Chatgpt4o"),
-        "gpt-o4mini": (request_o4mini_token, "Chatgpto4mini"),
-        "Gemini": (request_gemini_token, "Gemini"),
-    }
-    try:
-        return mapping[API_name]
-    except KeyError:
-        raise ValueError("Invalid API model name")
-
-
-def build_and_parse_args():
-    parser = argparse.ArgumentParser()
-    # Core hyperparameters
-    parser.add_argument(
-        "--API",
-        type=str,
-        choices=["gpt-41", "claude", "gpt-5", "gpt-4o", "gpt-o4mini", "Gemini"],
-        default="gpt-41",
-    )
-    parser.add_argument(
-        "--folder_prefix",
-        type=str,
-        default="TEST",
-    )
-    parser.add_argument(
-        "--knowledge_file", type=str, default="long_video_topics_list.json"
-    )
-    parser.add_argument("--iconfinder_api_key", type=str, default="")
-
-    # Basically invariant parameters
-    parser.add_argument("--use_feedback", action="store_true", default=False)
-    parser.add_argument("--no_feedback", action="store_false", dest="use_feedback")
-    parser.add_argument("--use_assets", action="store_true", default=False)
-    parser.add_argument("--no_assets", action="store_false", dest="use_assets")
-
-    parser.add_argument(
-        "--max_code_token_length",
-        type=int,
-        help="max # token for generating code",
-        default=10000,
-    )
-    parser.add_argument(
-        "--max_fix_bug_tries",
-        type=int,
-        help="max # tries for SR to fix bug",
-        default=10,
-    )
-    parser.add_argument(
-        "--max_regenerate_tries", type=int, help="max # tries to regenerate", default=10
-    )
-    parser.add_argument(
-        "--max_feedback_gen_code_tries",
-        type=int,
-        help="max # tries for Critic",
-        default=3,
-    )
-    parser.add_argument(
-        "--max_mllm_fix_bugs_tries",
-        type=int,
-        help="max # tries for Critic to fix bug",
-        default=3,
-    )
-    parser.add_argument("--feedback_rounds", type=int, default=2)
-
-    parser.add_argument("--parallel", action="store_true", default=False)
-    parser.add_argument("--no_parallel", action="store_false", dest="parallel")
-    parser.add_argument("--parallel_group_num", type=int, default=3)
-    parser.add_argument(
-        "--max_concepts",
-        type=int,
-        help="Limit # concepts for a quick run, -1 for all",
-        default=-1,
-    )
-    parser.add_argument(
-        "--knowledge_point",
-        type=str,
-        help="if knowledge_file not given, can ignore",
-        default=None,
-    )
-
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = build_and_parse_args()
-
-    api, folder_name = get_api_and_output(args.API)
-    folder = (
-        Path(__file__).resolve().parent
-        / "CASES"
-        / f"{args.folder_prefix}_{folder_name}"
-    )
-
-    _CFG_PATH = pathlib.Path(__file__).with_name("api_config.json")
-    with _CFG_PATH.open("r", encoding="utf-8") as _f:
-        _CFG = json.load(_f)
-    iconfinder_cfg = _CFG.get("iconfinder", {})
-    args.iconfinder_api_key = iconfinder_cfg.get("api_key")
-    if args.iconfinder_api_key:
-        print(f"Iconfinder API Key: {args.iconfinder_api_key}")
-    else:
-        print(
-            "WARNING: Iconfinder API key not found in config file. Using default (None)."
-        )
-
-    if args.knowledge_point:
-        print(f"🔄 Single knowledge point mode: {args.knowledge_point}")
-        knowledge_points = [args.knowledge_point]
-        args.parallel_group_num = 1
-    elif args.knowledge_file:
-        with open(
-            Path(__file__).resolve().parent / "json_files" / args.knowledge_file,
-            "r",
-            encoding="utf-8",
-        ) as f:
-            knowledge_points = json.load(f)
-            if args.max_concepts is not None:
-                knowledge_points = knowledge_points[: args.max_concepts]
-    else:
-        raise ValueError("Must provide --knowledge_point | --knowledge_file")
-
-    cfg = RunConfig(
-        api=api,
-        iconfinder_api_key=args.iconfinder_api_key,
-        use_feedback=args.use_feedback,
-        use_assets=args.use_assets,
-        max_code_token_length=args.max_code_token_length,
-        max_fix_bug_tries=args.max_fix_bug_tries,
-        max_regenerate_tries=args.max_regenerate_tries,
-        max_feedback_gen_code_tries=args.max_feedback_gen_code_tries,
-        max_mllm_fix_bugs_tries=args.max_mllm_fix_bugs_tries,
-        feedback_rounds=args.feedback_rounds,
-    )
-
-    run_Code2Video(
-        knowledge_points,
-        folder,
-        parallel=args.parallel,
-        batch_size=max(1, int(len(knowledge_points) / args.parallel_group_num)),
-        max_workers=get_optimal_workers(),
-        cfg=cfg,
-    )

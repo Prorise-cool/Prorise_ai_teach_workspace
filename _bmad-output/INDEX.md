@@ -15,6 +15,7 @@
 ### implementation-artifacts/
 
 - [index.md](./implementation-artifacts/index.md) - 实施产物总索引与 Story 执行文档入口
+- [4-3-manimcat-bulk-render-save-sections-收口-20260414.md](./implementation-artifacts/4-3-manimcat-bulk-render-save-sections-收口-20260414.md) - Story 4.3 的 ManimCat 真正 bulk-render 收口与实机复验，固定 `MainScene + --save_sections` 路径、记录 full-code 失败样本，并在 2026-04-15 补齐 fatal failure / errorCode / SSE 收口后追加真实 token 复验（`5m24s` 失败、preview `failedSections=10`、无 section 风暴）
 - [4-11-视频等待页渐进式产物展示与分段预览.md](./implementation-artifacts/4-11-视频等待页渐进式产物展示与分段预览.md) - 等待页“先展示分镜与已完成片段、最终结果页仍只认整片”的渐进体验方案 Story
 - [4-11-fastapi-渐进预览后端实现说明-20260413.md](./implementation-artifacts/4-11-fastapi-渐进预览后端实现说明-20260413.md) - Story 4.11 的 FastAPI 后端重构收口，记录 per-section streaming、preview endpoint 与 section SSE 事件
 - [4-8-视频结果页result-detail运行态回退修复-20260412.md](./implementation-artifacts/4-8-视频结果页result-detail运行态回退修复-20260412.md) - 视频结果页“视频不可用”热修记录，补齐 `result_detail` 回退、超时失败语义与 `2026-04-12` 实机全流程验证

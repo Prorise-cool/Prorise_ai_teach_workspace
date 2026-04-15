@@ -22,7 +22,7 @@ from app.shared.task_framework.key_builder import (
     build_task_runtime_key,
 )
 from app.shared.task_framework.runtime_store import TaskRuntimeRecoveryState
-from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus, map_internal_status
+from app.shared.task_framework.status import TaskInternalStatus, map_internal_status
 
 
 class TaskStoreMixin:
@@ -41,7 +41,7 @@ class TaskStoreMixin:
         task_type: str | None = None,
         request_id: str | None = None,
         user_id: str | None = None,
-        error_code: TaskErrorCode | None = None,
+        error_code: str | None = None,
         source: str = "unknown",
         context: dict[str, object] | None = None,
         created_at: str | None = None,
@@ -74,7 +74,7 @@ class TaskStoreMixin:
             "progress": progress,
             "requestId": request_id if request_id is not None else existing.get("requestId"),
             "userId": user_id if user_id is not None else existing.get("userId"),
-            "errorCode": error_code.value if error_code is not None else None,
+            "errorCode": str(error_code) if error_code is not None else None,
             "source": source,
             "context": dict(context or {}),
             "createdAt": created_at or existing.get("createdAt") or format_trace_timestamp(),

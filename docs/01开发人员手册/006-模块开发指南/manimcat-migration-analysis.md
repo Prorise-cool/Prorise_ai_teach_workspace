@@ -1,9 +1,29 @@
 # ManimCat 移植分析与架构决策记录
 
-**文档日期**: 2026-04-14  
+**文档日期**: 2026-04-15  
 **参与者**: Prorise (产品/技术负责人) + AI 助手  
-**状态**: 讨论中，尚未最终决策  
+**状态**: 已形成实现决策，并完成 2026-04-15 上午真实 token 复验（调用预算已收敛，但 5 分钟目标仍未达标）  
 **参考项目**: `references/ManimCat-main/`
+
+---
+
+## 0. 2026-04-15 最新结论
+
+- 已确认当前问题不只是提示词，而是运行时在拿到 bulk code 之后仍可能掉回旧的 per-section 语义；本轮已经把默认主链收口为 `generate_design() -> generate_all_code() -> 本地清洗/静态检查 -> manim --save_sections`。
+- 默认 LLM 调用预算已经收敛到：
+  - 成功路径：`2` 次（design + full code）
+  - 修复路径：`<= 5` 次（design + full code + 最多 3 次 patch repair）
+- 已明确不再允许 bulk code 静默回退到旧的逐 section `generate/render/fix` 风暴。
+- `2026-04-14` 晚间真实任务 `vtask_20260414154217_5be3741d` 进一步证明：
+  - 新链路**没有**再生成 `section_*.py`
+  - 但单次 `manim_gen` full-code 调用仍在 `378s` 后失败
+  - 当前下一步重点已经不是“继续砍 section 修复循环”，而是“提高单次 full-code 调用稳定性，并收口 SSE section 事件语义”
+- `2026-04-15` 上午真实任务 `vtask_20260415013544_1914f169` 再次验证：
+  - 事件链路只经历 `understanding -> storyboard -> tts -> manim_gen -> failed`，没有再出现 bulk full-code 前的伪 `section_progress`
+  - `/api/v1/video/tasks/{id}/preview` 已正确返回 `failedSections=10`，所有 section 都带有 task 级错误信息
+  - case 目录只有 `manimcat_design.txt + tts_audio/section_*.mp3`，没有 `manimcat_full_code.py` 与渲染 `mp4`
+  - 总耗时约 `324s`（`5m24s`），仍然失败在单次 `manim_gen` full-code LLM 调用本身
+  - 从事件与产物推断，本次失败路径只消耗了 `2` 次 LLM 调用（design + full code），没有掉回 patch repair / per-section 修复风暴
 
 ---
 
@@ -335,13 +355,16 @@ ManimCat 没有 TTS，这是我们必须自己解决的问题：
 
 ---
 
-## 9. 待决事项
+## 9. 决策落地状态
 
-- [ ] 最终确认移植方案（全局生成 vs 分批生成 vs Section 优化）
-- [ ] 确认 Section 架构重设计方向
-- [ ] 确认 TTS-Manim 同步策略
-- [ ] 确认是否替换 Dramatiq
-- [ ] 确认新分支名称和开发计划
+- [x] 最终确认移植方案：采用“思路 A 的第一阶段实现”，即 `generate_design()` + `generate_all_code()` + `MainScene + --save_sections` 的全局生成、后期分段路线。
+- [x] 确认 Section 架构重设计方向：section 保留在 storyboard / TTS / preview / compose 层；Manim 代码生成与渲染默认不再逐 section 调用 LLM。
+- [x] 确认是否替换 Dramatiq：本轮不替换，继续沿用现有 FastAPI + Dramatiq + RuoYi 主链，只重构 Manim 生成与渲染路径。
+- [x] 确认短期修复策略：优先本地代码清洗、static guard 和 SEARCH/REPLACE patch repair；默认 patch 上限 `3`，总 LLM 调用预算控制在 `<= 5`。
+- [x] 2026-04-15 厚修复已完成：fatal failure 时未完成 section 会统一收口为 `failed`，`/tasks/{id}/status` 与 failed SSE 会保留 `VIDEO_*` 域错误码，bulk path 的 progress / section 事件顺序已调整为单调递增。
+- [ ] 单次 full-code 调用稳定性：实机样本 `vtask_20260414154217_5be3741d` 在 `manim_gen` 卡住 `378s` 后失败，说明 bulk code 单调用的超时/失败仍未解决。
+- [x] SSE / preview 事件语义：2026-04-15 已移除 full-code generation 前的预占位 `section_progress`，并修正 bulk render 路径的进度回退。
+- [ ] TTS-Manim 更强时长同步：当前仍以 section 级 TTS + 后期合成为主，后续如要进一步降低音画错位，再评估把 TTS 时长回注 codegen prompt。
 - [ ] 数据库表重新设计（用户会删除现有表）
 
 ---

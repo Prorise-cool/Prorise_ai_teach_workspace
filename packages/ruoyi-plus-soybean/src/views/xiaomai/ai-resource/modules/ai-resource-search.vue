@@ -8,6 +8,14 @@ defineOptions({
   name: 'AiResourceSearch'
 });
 
+interface Props {
+  providerOptions?: Array<{ label: string; value: number }>;
+}
+
+withDefaults(defineProps<Props>(), {
+  providerOptions: () => []
+});
+
 interface Emits {
   (e: 'search'): void;
 }
@@ -40,14 +48,20 @@ async function search() {
       <NCollapseItem :title="$t('common.search')" name="xiaomai-ai-resource-search">
         <NForm ref="formRef" :model="model" label-placement="left" :label-width="80">
           <NGrid responsive="screen" item-responsive>
-            <NFormItemGi span="24 s:12 m:6" label="资源名称" label-width="auto" path="resourceName" class="pr-24px">
-              <NInput v-model:value="model.resourceName" placeholder="按名称搜索" clearable />
+            <NFormItemGi span="24 s:12 m:6" label="Provider" label-width="auto" path="providerId" class="pr-24px">
+              <NSelect
+                v-model:value="model.providerId"
+                :options="providerOptions"
+                placeholder="全部"
+                clearable
+                filterable
+              />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="能力类型" label-width="auto" path="capability" class="pr-24px">
               <DictSelect v-model:value="model.capability" placeholder="全部" dict-code="xm_ai_capability" clearable />
             </NFormItemGi>
-            <NFormItemGi span="24 s:12 m:6" label="模型名称" label-width="auto" path="modelName" class="pr-24px">
-              <NInput v-model:value="model.modelName" placeholder="按模型名称搜索" clearable />
+            <NFormItemGi span="24 s:12 m:6" label="资源名称" label-width="auto" path="resourceName" class="pr-24px">
+              <NInput v-model:value="model.resourceName" placeholder="按名称搜索" clearable />
             </NFormItemGi>
             <NFormItemGi span="24 s:12 m:6" label="状态" label-width="auto" path="status" class="pr-24px">
               <DictSelect v-model:value="model.status" placeholder="全部" dict-code="sys_normal_disable" clearable />

@@ -17,7 +17,6 @@ from app.shared.task_framework.publisher import (
 from app.shared.task_framework.runtime import TaskRuntimeRecorder, TaskRuntimeSnapshot
 from app.shared.task_framework.runtime_store import build_task_event
 from app.shared.task_framework.status import (
-    TaskErrorCode,
     TaskInternalStatus,
     map_internal_status
 )
@@ -60,7 +59,7 @@ class RuntimeManagerMixin:
         internal_status: TaskInternalStatus,
         progress: int,
         message: str,
-        error_code: TaskErrorCode | None = None,
+        error_code: str | None = None,
         event: str | None = None,
         payload: dict[str, object] | None = None
     ) -> TaskRuntimeSnapshot:
@@ -107,14 +106,14 @@ class RuntimeManagerMixin:
         self: "RuntimeManagerMixin",
         context: TaskContext,
     ) -> Callable[
-        [TaskInternalStatus, int, str, TaskErrorCode | None, dict[str, object] | None, str | None],
+        [TaskInternalStatus, int, str, str | None, dict[str, object] | None, str | None],
         TaskRuntimeSnapshot,
     ]:
         def emit(
             internal_status: TaskInternalStatus,
             progress: int,
             message: str,
-            error_code: TaskErrorCode | None = None,
+            error_code: str | None = None,
             payload: dict[str, object] | None = None,
             event: str | None = "progress",
         ) -> TaskRuntimeSnapshot:

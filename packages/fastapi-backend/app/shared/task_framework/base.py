@@ -32,7 +32,7 @@ TaskRuntimeSnapshotEmitter = Callable[
         "TaskInternalStatus",
         int,
         str,
-        TaskErrorCode | None,
+        str | None,
         dict[str, object] | None,
         str | None,
     ],
@@ -58,7 +58,7 @@ class TaskResult:
     status: TaskStatus
     message: str
     progress: int | None = None
-    error_code: TaskErrorCode | None = None
+    error_code: str | None = None
     context: dict[str, object] = field(default_factory=dict)
 
     @classmethod
@@ -82,7 +82,7 @@ class TaskResult:
         cls,
         message: str,
         *,
-        error_code: TaskErrorCode = TaskErrorCode.UNHANDLED_EXCEPTION,
+        error_code: TaskErrorCode | str = TaskErrorCode.UNHANDLED_EXCEPTION,
         progress: int = 0,
         context: dict[str, object] | None = None
     ) -> "TaskResult":
@@ -91,7 +91,7 @@ class TaskResult:
             status=TaskStatus.FAILED,
             message=message,
             progress=progress,
-            error_code=error_code,
+            error_code=str(error_code),
             context=context or {}
         )
 
@@ -188,11 +188,7 @@ class BaseTask(ABC):
             or TaskErrorCode.UNHANDLED_EXCEPTION
         )
         message = str(exc) or "任务执行失败"
-        try:
-            resolved_code = TaskErrorCode(error_code)
-        except ValueError:
-            resolved_code = TaskErrorCode.UNHANDLED_EXCEPTION
-        return TaskResult.failed(message=message, error_code=resolved_code)
+        return TaskResult.failed(message=message, error_code=str(error_code))
 
     async def finalize(self, result: TaskResult) -> TaskResult:
         """任务收尾钩子（可选覆盖）。
@@ -250,7 +246,7 @@ class BaseTask(ABC):
         internal_status: "TaskInternalStatus",
         progress: int,
         message: str,
-        error_code: TaskErrorCode | None = None,
+        error_code: str | None = None,
         context: dict[str, object] | None = None,
         event: str | None = "progress",
     ) -> "TaskRuntimeSnapshot | None":

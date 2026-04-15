@@ -162,6 +162,11 @@ def clean_manim_code(code: str) -> CleanResult:
     """Run the full ManimCat-style code cleaning pipeline."""
     changes = []
 
+    extracted = extract_code_from_response(code)
+    if extracted != code.strip():
+        code = extracted
+        changes.append("Stripped response wrapper / markdown fences")
+
     code, fw_count = clean_fullwidth_punctuation(code)
     if fw_count:
         changes.append(f"Replaced {fw_count} full-width punctuation marks")

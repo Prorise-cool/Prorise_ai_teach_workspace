@@ -269,7 +269,7 @@ def consume_task_message(task_type: str, context_payload: dict[str, object]) -> 
             "status": result.status.value,
             "progress": result.progress,
             "message": result.message,
-            "errorCode": result.error_code.value if result.error_code is not None else None,
+            "errorCode": str(result.error_code) if result.error_code is not None else None,
         }
     finally:
         reset_trace_context(trace_tokens)

@@ -18,7 +18,7 @@ from app.features.video.pipeline.models import (
 )
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.key_builder import TASK_RUNTIME_TTL_SECONDS
-from app.shared.task_framework.status import TaskErrorCode, is_retryable_error
+from app.shared.task_framework.status import is_retryable_error
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -210,6 +210,35 @@ def attach_preview_audio_urls(
     )
 
 
+def mark_unfinished_preview_sections_failed(
+    preview: VideoTaskPreview,
+    *,
+    error_message: str,
+) -> VideoTaskPreview:
+    """将所有未完成的 section 收口为 failed，避免 fatal failure 后卡在中间态。"""
+    updated_sections = [
+        section
+        if section.status == VideoPreviewSectionStatus.READY
+        else section.model_copy(
+            update={
+                "status": VideoPreviewSectionStatus.FAILED,
+                "error_message": section.error_message or error_message,
+                "updated_at": format_trace_timestamp(),
+            }
+        )
+        for section in preview.sections
+    ]
+    return build_preview_state(
+        task_id=preview.task_id,
+        status=preview.status,
+        preview_available=preview.preview_available,
+        preview_version=preview.preview_version + 1,
+        summary=preview.summary,
+        knowledge_points=preview.knowledge_points,
+        sections=updated_sections,
+    )
+
+
 def mark_preview_status(
     preview: VideoTaskPreview,
     *,
@@ -231,14 +260,14 @@ def build_failure(
     *,
     task_id: str,
     stage: VideoStage,
-    error_code: TaskErrorCode,
+    error_code: str,
     message: str,
     failed_at: str,
 ) -> VideoFailure:
     """构建视频任务失败详情。"""
     return VideoFailure(
         task_id=task_id,
-        error_code=error_code.value,
+        error_code=str(error_code),
         error_message=message,
         failed_stage=stage,
         failed_at=failed_at,
