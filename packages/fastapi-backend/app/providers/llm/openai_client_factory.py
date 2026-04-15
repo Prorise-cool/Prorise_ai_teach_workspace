@@ -19,6 +19,19 @@ DEFAULT_TIMEOUT = 600.0  # 照抄 ManimCat: OPENAI_TIMEOUT = 600000ms
 MINIMUM_TIMEOUT = 600.0  # 至少 10 分钟
 
 
+def _normalize_base_url(base_url: str, request_path: str = "/v1/chat/completions") -> str:
+    """确保 base_url 包含 API 版本前缀（如 /v1）。
+
+    OpenAI SDK 会自动在 base_url 后追加 /chat/completions，
+    所以 base_url 必须包含 /v1 才能访问 /v1/chat/completions。
+    """
+    base_url = base_url.strip().rstrip("/")
+    prefix = request_path.replace("/chat/completions", "").rstrip("/")
+    if prefix and not base_url.endswith(prefix):
+        base_url += prefix
+    return base_url
+
+
 @dataclass(frozen=True)
 class ProviderEndpoint:
     """Extracted provider endpoint config for SDK client creation."""
@@ -52,7 +65,6 @@ def create_sync_client(
     extra_headers: dict[str, str] | None = None,
 ) -> OpenAI:
     """创建同步 OpenAI client（照抄 ManimCat createCustomOpenAIClient）。"""
-    base_url = base_url.strip().rstrip("/")
     api_key = api_key.strip()
     if not base_url:
         raise ValueError("base_url is required")
@@ -79,7 +91,6 @@ def create_async_client(
     extra_headers: dict[str, str] | None = None,
 ) -> AsyncOpenAI:
     """创建异步 OpenAI client。"""
-    base_url = base_url.strip().rstrip("/")
     api_key = api_key.strip()
     if not base_url:
         raise ValueError("base_url is required")
@@ -101,8 +112,9 @@ def create_async_client(
 def client_from_endpoint(ep: ProviderEndpoint) -> OpenAI:
     """从 ProviderEndpoint 创建 sync client，timeout 至少 MINIMUM_TIMEOUT。"""
     effective_timeout = max(ep.timeout, MINIMUM_TIMEOUT)
+    normalized_url = _normalize_base_url(ep.base_url, ep.request_path)
     return create_sync_client(
-        base_url=ep.base_url,
+        base_url=normalized_url,
         api_key=ep.api_key,
         timeout=effective_timeout,
         extra_headers=ep.extra_headers or None,

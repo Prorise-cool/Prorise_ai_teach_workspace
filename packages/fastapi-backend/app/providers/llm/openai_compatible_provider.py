@@ -7,7 +7,7 @@ from typing import Any, Mapping
 from openai import AsyncOpenAI
 
 from app.providers.http_utils import handle_openai_request_error, require_setting
-from app.providers.llm.openai_client_factory import create_async_client
+from app.providers.llm.openai_client_factory import _normalize_base_url, create_async_client
 from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
 
 logger = logging.getLogger("app.providers.llm.openai_compatible_provider")
@@ -32,8 +32,10 @@ class OpenAICompatibleLLMProvider:
         extra_body = config.settings.get("extra_body", {})
 
         self._extra_body = dict(extra_body) if isinstance(extra_body, Mapping) else {}
+        request_path = config.settings.get("request_path", "/v1/chat/completions")
+        normalized_url = _normalize_base_url(self._base_url, request_path)
         self._client = create_async_client(
-            base_url=self._base_url,
+            base_url=normalized_url,
             api_key=self._api_key,
             timeout=max(config.timeout_seconds, 600.0),
             extra_headers=dict(extra_headers) if isinstance(extra_headers, Mapping) else None,
