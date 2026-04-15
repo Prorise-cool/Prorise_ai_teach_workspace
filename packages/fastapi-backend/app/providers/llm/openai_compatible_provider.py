@@ -1,44 +1,22 @@
-"""OpenAI Compatible LLM Provider 实现。"""
+"""OpenAI Compatible LLM Provider — now uses official OpenAI Python SDK."""
 from __future__ import annotations
 
-import asyncio
-
-import json
+import logging
 from typing import Any, Mapping
 
-import httpx
+from openai import AsyncOpenAI
 
-from app.providers.http_utils import handle_provider_request_error, raise_for_provider_status, require_setting
+from app.providers.http_utils import handle_openai_request_error, require_setting
+from app.providers.llm.openai_client_factory import create_async_client
 from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
 
-
-def _extract_message_content(message: Any) -> str:
-    if isinstance(message, str):
-        return message
-    if isinstance(message, list):
-        chunks: list[str] = []
-        for item in message:
-            if isinstance(item, str):
-                chunks.append(item)
-                continue
-            if isinstance(item, Mapping):
-                text = item.get("text")
-                if isinstance(text, str) and text.strip():
-                    chunks.append(text)
-        return "\n".join(chunk for chunk in chunks if chunk).strip()
-    if isinstance(message, Mapping):
-        content = message.get("content")
-        if isinstance(content, str):
-            return content
-        return _extract_message_content(content)
-    return ""
+logger = logging.getLogger("app.providers.llm.openai_compatible_provider")
 
 
 class OpenAICompatibleLLMProvider:
-    """对接 OpenAI compatible chat completions 的 LLM Provider。"""
+    """对接 OpenAI compatible chat completions 的 LLM Provider（SDK 版本）。"""
 
     def __init__(self, config: ProviderRuntimeConfig) -> None:
-        """初始化 OpenAI Compatible Provider。"""
         self.config = config
         self.provider_id = config.provider_id
 
@@ -49,73 +27,40 @@ class OpenAICompatibleLLMProvider:
                 f"{config.provider_id} api_key 包含非 ASCII 字符，请检查后台 Provider 配置"
             )
         self._model_name = require_setting(config, "model_name")
-        self._request_path = str(config.settings.get("request_path", "/v1/chat/completions"))
         self._temperature = float(config.settings.get("temperature", 0.2))
-        self._transport = config.settings.get("transport")
         extra_headers = config.settings.get("headers", {})
         extra_body = config.settings.get("extra_body", {})
 
-        self._headers = {"Authorization": f"Bearer {self._api_key}"}
-        if isinstance(extra_headers, Mapping):
-            self._headers.update({str(key): str(value) for key, value in extra_headers.items()})
         self._extra_body = dict(extra_body) if isinstance(extra_body, Mapping) else {}
-        self._client: httpx.AsyncClient | None = None
-        self._client_lock = asyncio.Lock()
-
-    async def _get_client(self) -> httpx.AsyncClient:
-        """复用同一 provider 实例的 HTTP client，避免并行场景重复建连。"""
-        if self._client is not None:
-            return self._client
-
-        async with self._client_lock:
-            if self._client is None:
-                self._client = httpx.AsyncClient(
-                    base_url=self._base_url,
-                    timeout=self.config.timeout_seconds,
-                    headers=self._headers,
-                    transport=self._transport,
-                )
-        return self._client
+        self._client = create_async_client(
+            base_url=self._base_url,
+            api_key=self._api_key,
+            timeout=max(config.timeout_seconds, 600.0),
+            extra_headers=dict(extra_headers) if isinstance(extra_headers, Mapping) else None,
+        )
 
     async def generate(self, prompt: str) -> ProviderResult:
-        """调用 OpenAI compatible API 生成文本。"""
+        """调用 OpenAI compatible API 生成文本（via SDK）。"""
         payload = {
-            "model": self._model_name,
-            "messages": [{"role": "user", "content": prompt}],
             "temperature": self._temperature,
             **self._extra_body,
         }
 
-        # DEBUG: log full request details
-        import logging
-        _dbg = logging.getLogger("app.providers.llm.openai_compatible_provider")
-        _dbg.info(
-            "LLM request  provider=%s  base_url=%s  path=%s  model=%s  headers=%s  extra_body=%s  prompt_len=%d",
-            self.provider_id, self._base_url, self._request_path, self._model_name,
-            {k: (v[:8] + "..." if k == "Authorization" else v) for k, v in self._headers.items()},
-            self._extra_body, len(prompt),
+        logger.info(
+            "LLM request  provider=%s  base_url=%s  model=%s  prompt_len=%d",
+            self.provider_id, self._base_url[:50], self._model_name, len(prompt),
         )
 
         try:
-            client = await self._get_client()
-            response = await client.post(self._request_path, json=payload)
+            response = await self._client.chat.completions.create(
+                model=self._model_name,
+                messages=[{"role": "user", "content": prompt}],
+                **payload,
+            )
         except Exception as exc:
-            handle_provider_request_error(self.provider_id, exc)
+            handle_openai_request_error(self.provider_id, exc)
 
-        raise_for_provider_status(self.provider_id, response)
-
-        try:
-            payload = response.json()
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"{self.provider_id} returned invalid json") from exc
-
-        choices = payload.get("choices")
-        if not isinstance(choices, list) or not choices:
-            raise ValueError(f"{self.provider_id} response missing choices")
-
-        first_choice = choices[0] if isinstance(choices[0], Mapping) else {}
-        message = first_choice.get("message", {})
-        content = _extract_message_content(message)
+        content = response.choices[0].message.content if response.choices else None
         if not content:
             raise ValueError(f"{self.provider_id} response missing assistant content")
 
@@ -123,9 +68,13 @@ class OpenAICompatibleLLMProvider:
             provider=self.provider_id,
             content=content,
             metadata={
-                "model": payload.get("model", self._model_name),
-                "finishReason": first_choice.get("finish_reason"),
-                "usage": payload.get("usage"),
+                "model": getattr(response, "model", self._model_name),
+                "finishReason": response.choices[0].finish_reason if response.choices else None,
+                "usage": {
+                    "prompt_tokens": getattr(response.usage, "prompt_tokens", 0),
+                    "completion_tokens": getattr(response.usage, "completion_tokens", 0),
+                    "total_tokens": getattr(response.usage, "total_tokens", 0),
+                } if response.usage else None,
                 "priority": self.config.priority,
                 "timeoutSeconds": self.config.timeout_seconds,
                 "retryAttempts": self.config.retry_attempts,
