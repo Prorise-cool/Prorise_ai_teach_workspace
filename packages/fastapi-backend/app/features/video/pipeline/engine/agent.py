@@ -141,15 +141,6 @@ class TeachingVideoAgent:
             self.token_usage["total_tokens"] += usage.get("total_tokens", 0)
         return response
 
-    def get_serializable_state(self):
-        """Return serializable Agent state."""
-        return {
-            "idx": self.idx,
-            "knowledge_point": self.learning_topic,
-            "folder": self.folder,
-            "cfg": self.cfg,
-        }
-
     # ── Stage 1: Scene Design (delegates to scene_designer) ─────
 
     def generate_design(self, duration_minutes: int = 5) -> tuple:
