@@ -1,6 +1,6 @@
 """Provider HTTP 请求公共工具。
 
-统一处理 httpx 异常转换与 HTTP 状态码分类，供所有 Provider
+统一处理 httpx / OpenAI SDK 异常转换与 HTTP 状态码分类，供所有 Provider
 实现复用，避免逐行复制 HTTP 错误处理逻辑。
 
 抛出的标准异常类型（TimeoutError / ConnectionError / ValueError）
@@ -91,3 +91,28 @@ def require_setting(config: ProviderRuntimeConfig, key: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ProviderConfigurationError(f"{config.provider_id} 缺少配置项：{key}")
     return value.strip()
+
+
+def handle_openai_request_error(provider_id: str, exc: Exception) -> NoReturn:
+    """将 OpenAI SDK 异常转换为标准异常（与 failover.classify_provider_error 对齐）。
+
+    Args:
+        provider_id: Provider 标识符，用于错误消息前缀。
+        exc: 捕获到的 OpenAI SDK 异常。
+
+    Raises:
+        TimeoutError: 请求超时。
+        ConnectionError: 网络层请求失败或限流。
+        ValueError: 认证失败。
+    """
+    from openai import APIConnectionError, APITimeoutError, AuthenticationError, RateLimitError
+
+    if isinstance(exc, APITimeoutError):
+        raise TimeoutError(f"{provider_id} request timed out") from exc
+    if isinstance(exc, RateLimitError):
+        raise ConnectionError(f"{provider_id} rate limited: {exc}") from exc
+    if isinstance(exc, APIConnectionError):
+        raise ConnectionError(f"{provider_id} connection failed: {exc}") from exc
+    if isinstance(exc, AuthenticationError):
+        raise ValueError(f"authentication failed: {exc}") from exc
+    raise exc

@@ -287,6 +287,35 @@ def classify_provider_error(exc: Exception) -> ProviderErrorClassification:
     """将异常分类为标准化的 Provider 错误类型。"""
     message = str(exc).strip() or exc.__class__.__name__
     lowered = message.lower()
+
+    # OpenAI SDK 异常分类（优先级最高）
+    try:
+        from openai import APIConnectionError, AuthenticationError, RateLimitError
+    except ImportError:  # pragma: no cover — openai 包应始终可用
+        pass
+    else:
+        if isinstance(exc, RateLimitError):
+            return ProviderErrorClassification(
+                error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+                reason=message,
+                retryable=True,
+                mark_unhealthy=False,
+            )
+        if isinstance(exc, AuthenticationError):
+            return ProviderErrorClassification(
+                error_code=TaskErrorCode.INVALID_INPUT,
+                reason=message,
+                retryable=False,
+                mark_unhealthy=False,
+            )
+        if isinstance(exc, APIConnectionError):
+            return ProviderErrorClassification(
+                error_code=TaskErrorCode.PROVIDER_UNAVAILABLE,
+                reason=message,
+                retryable=True,
+                mark_unhealthy=True,
+            )
+
     if isinstance(exc, ProviderAllFailedError):
         return ProviderErrorClassification(
             error_code=TaskErrorCode.PROVIDER_ALL_FAILED,
