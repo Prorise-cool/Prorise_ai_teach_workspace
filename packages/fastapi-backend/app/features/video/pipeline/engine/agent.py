@@ -326,8 +326,6 @@ class TeachingVideoAgent:
         self, code: str, scene_name: str = "MainScene"
     ) -> tuple[bool, str]:
         """Render the full bulk scene once and export section videos."""
-        from .static_guard import run_guard_loop
-
         self.section_videos = {}
         self.full_scene_video = None
         media_dir = self.output_dir / "media"
@@ -335,16 +333,7 @@ class TeachingVideoAgent:
             shutil.rmtree(media_dir)
 
         normalized = self._normalize_full_code(code)
-        guard_result = asyncio.run(
-            run_guard_loop(normalized, max_passes=self.static_guard_max_passes)
-        )
-        if not guard_result.passed:
-            logger.warning(
-                "Static guard left %d diagnostics after %d passes",
-                len(guard_result.diagnostics),
-                guard_result.passes_used,
-            )
-        scene_file = self._write_full_code_file(guard_result.code)
+        scene_file = self._write_full_code_file(normalized)
 
         docker_cmd = [
             "docker",
