@@ -1,13 +1,22 @@
 from __future__ import annotations
 
-import time
 from types import SimpleNamespace
 
 from app.features.video.pipeline.engine.agent import (
+    Section,
     TeachingVideoAgent,
     required_render_successes,
+    RunConfig,
 )
 from app.features.video.pipeline.engine.c2v_utils import topic_to_safe_name
+from app.features.video.pipeline.engine.scene_designer import generate_unique_seed, check_response_quality
+from app.features.video.pipeline.engine.sanitizer import (
+    sanitize_render_error,
+    infer_error_type,
+    truncate_output,
+    ErrorType,
+)
+from app.features.video.pipeline.engine.code_retry import detect_doom_loop, DoomLoopError
 
 
 def test_required_render_successes_rounds_up_to_quality_gate() -> None:
@@ -20,107 +29,61 @@ def test_topic_to_safe_name_falls_back_when_title_is_stripped() -> None:
     assert topic_to_safe_name("一元二次方程组") == "video"
 
 
-def test_render_all_sections_keeps_submitting_remaining_sections_after_quality_gate() -> None:
-    agent = TeachingVideoAgent.__new__(TeachingVideoAgent)
-    agent.learning_topic = "测试知识点"
-    agent.sections = [
-        SimpleNamespace(id="section_1"),
-        SimpleNamespace(id="section_2"),
-        SimpleNamespace(id="section_3"),
-        SimpleNamespace(id="section_4"),
-        SimpleNamespace(id="section_5"),
-    ]
-    agent.section_videos = {}
-    agent.render_results = {}
-    agent.render_summary = {}
-    agent.max_fix_bug_tries = 1
-    agent.generate_section_code = lambda *args, **kwargs: None
-    agent.debug_and_fix_code = lambda *args, **kwargs: False
-
-    started_sections: list[str] = []
-    sleep_map = {
-        "section_1": 0.01,
-        "section_2": 0.01,
-        "section_3": 0.01,
-        "section_4": 0.03,
-        "section_5": 0.03,
-    }
-
-    def fake_render(section) -> bool:
-        started_sections.append(section.id)
-        time.sleep(sleep_map[section.id])
-        agent.section_videos[section.id] = f"/tmp/{section.id}.mp4"
-        return True
-
-    agent.render_section = fake_render
-
-    started_at = time.monotonic()
-    results = TeachingVideoAgent.render_all_sections(
-        agent,
-        max_workers=2,
-        per_section_timeout=1,
-        overall_timeout=1,
-        success_grace_seconds=0.05,
-    )
-    elapsed = time.monotonic() - started_at
-
-    assert set(results) == {
-        "section_1",
-        "section_2",
-        "section_3",
-        "section_4",
-        "section_5",
-    }
-    assert "section_5" in started_sections
-    assert agent.render_summary["allSectionsRendered"] is True
-    assert agent.render_summary["completionMode"] == "full"
-    assert elapsed < 0.20
+def test_generate_unique_seed_is_unique() -> None:
+    seeds = {generate_unique_seed("same-concept") for _ in range(20)}
+    assert len(seeds) == 20, "Seeds must be unique due to timestamp+random"
 
 
-def test_render_all_sections_records_degraded_summary_when_budget_expires() -> None:
-    agent = TeachingVideoAgent.__new__(TeachingVideoAgent)
-    agent.learning_topic = "测试知识点"
-    agent.sections = [
-        SimpleNamespace(id="section_1"),
-        SimpleNamespace(id="section_2"),
-        SimpleNamespace(id="section_3"),
-        SimpleNamespace(id="section_4"),
-        SimpleNamespace(id="section_5"),
-    ]
-    agent.section_videos = {}
-    agent.render_results = {}
-    agent.render_summary = {}
-    agent.max_fix_bug_tries = 1
-    agent.generate_section_code = lambda *args, **kwargs: None
-    agent.debug_and_fix_code = lambda *args, **kwargs: False
+def test_check_response_quality_gemini_style() -> None:
+    class FakeCandidate:
+        content = SimpleNamespace(parts=[SimpleNamespace(text="hello")])
+        finish_reason = "STOP"
 
-    sleep_map = {
-        "section_1": 0.01,
-        "section_2": 0.01,
-        "section_3": 0.01,
-        "section_4": 0.30,
-        "section_5": 0.30,
-    }
+    class FakeResponse:
+        candidates = [FakeCandidate()]
 
-    def fake_render(section) -> bool:
-        time.sleep(sleep_map[section.id])
-        agent.section_videos[section.id] = f"/tmp/{section.id}.mp4"
-        return True
+    diag = check_response_quality(FakeResponse())
+    assert diag.content == "hello"
+    assert not diag.is_truncated
+    assert not diag.is_refused
 
-    agent.render_section = fake_render
 
-    results = TeachingVideoAgent.render_all_sections(
-        agent,
-        max_workers=2,
-        per_section_timeout=1,
-        overall_timeout=0.12,
-        success_grace_seconds=0.02,
-    )
+def test_check_response_quality_openai_truncated() -> None:
+    class FakeResponse:
+        class choices_:
+            class message_:
+                content = "partial..."
+            message = message_()
+            finish_reason = "length"
+        choices = [choices_()]
+        model = "gpt-4"
 
-    assert set(results) == {"section_1", "section_2", "section_3", "section_4"}
-    assert agent.render_summary["allSectionsRendered"] is False
-    assert agent.render_summary["completionMode"] == "degraded"
-    assert agent.render_summary["stopReason"] in {
-        "quality-gate-grace-expired",
-        "overall-render-deadline-reached",
-    }
+    diag = check_response_quality(FakeResponse())
+    assert diag.is_truncated
+    assert not diag.is_refused
+
+
+def test_sanitize_render_error_truncates() -> None:
+    long_stderr = "x" * 10000
+    result = sanitize_render_error(long_stderr, code="print(1)")
+    assert result.stderr_truncated
+    assert len(result.message) <= 500
+
+
+def test_sanitize_render_error_classifies() -> None:
+    assert infer_error_type("SyntaxError: invalid syntax") == ErrorType.SYNTAX
+    assert infer_error_type("ModuleNotFoundError: no foo") == ErrorType.IMPORT
+    assert infer_error_type("LaTeX compilation error") == ErrorType.LATEX
+    assert infer_error_type("something weird") == ErrorType.UNKNOWN
+
+
+def test_doom_loop_detection() -> None:
+    assert not detect_doom_loop(["a", "b", "c"])
+    assert not detect_doom_loop(["a", "a"])
+    assert detect_doom_loop(["a", "a", "a"])
+    assert detect_doom_loop(["a", "b", "a", "a", "a"])
+
+
+def test_section_dataclass() -> None:
+    s = Section(id="s1", title="Test", lecture_lines=["line1"], animations=["anim1"])
+    assert s.id == "s1"

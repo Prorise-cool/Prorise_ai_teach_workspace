@@ -116,3 +116,11 @@ class VideoPipelineError(Exception):
         self.stage = stage
         self.error_code = error_code
         self.progress_ratio = progress_ratio
+
+
+class DoomLoopError(VideoPipelineError):
+    """Same error repeated N times — stop retrying and surface to user."""
+
+
+class TruncationError(VideoPipelineError):
+    """LLM response was truncated (finish_reason=MAX_TOKENS)."""

@@ -1,9 +1,9 @@
-"""视频生成编排器 — 基于 Code2Video TeachingVideoAgent。
+"""视频生成编排器 — ManimCat-aligned TeachingVideoAgent。
 
 职责:
 1. 从 ProviderRuntimeResolver 获取 LLM/TTS Provider 配置
-2. 构建 LLMBridge 并注入到 Code2Video agent
-3. 运行 TeachingVideoAgent.GENERATE_VIDEO() 生成无声视频
+2. 构建 LLMBridge 并注入到 agent
+3. 运行两阶段生成: design → code → bulk render
 4. 运行 TTS 生成旁白音频
 5. FFmpeg 合成音频+视频
 6. 上传最终视频
@@ -375,26 +375,16 @@ class VideoPipelineService:
                 "生成教学大纲...",
                 progress_override=3,
             )
-            # ManimCat optimization: single LLM call for design + storyboard
-            # Instead of: generate_outline() + generate_storyboard() (2 calls)
-            # We now use: generate_design() (1 call) which produces both
+            # ManimCat two-stage: design (1 LLM call)
             duration_minutes = metadata.get(
                 "duration_minutes",
                 getattr(self._settings, "video_default_duration_minutes", 5),
             )
             self._layout_hint = metadata.get("layout_hint", None)
-            try:
-                design_text, sections = await loop.run_in_executor(
-                    None, agent.generate_design, duration_minutes
-                )
-                logger.info("ManimCat design generated: %d sections", len(sections))
-            except Exception as design_err:
-                logger.warning(
-                    "ManimCat design failed, falling back to original flow: %s",
-                    design_err,
-                )
-                await loop.run_in_executor(None, agent.generate_outline)
-                design_text = None
+            design_text, sections = await loop.run_in_executor(
+                None, agent.generate_design, duration_minutes
+            )
+            logger.info("ManimCat design generated: %d sections", len(sections))
             await self._emit(
                 task,
                 VideoStage.UNDERSTANDING,
@@ -410,11 +400,7 @@ class VideoPipelineService:
                 "生成视频分镜...",
                 progress_override=11,
             )
-            # ManimCat: storyboard is already included in generate_design() result
-            if design_text is None:
-                # Fallback: use original storyboard generation
-                await loop.run_in_executor(None, agent.generate_storyboard)
-            # else: sections already populated by generate_design()
+            # Sections already populated by generate_design()
             preview_state = self._build_preview_from_agent(
                 task_id, knowledge_point, agent
             )
@@ -483,200 +469,53 @@ class VideoPipelineService:
 
             ordered_section_clips: list[Path] = []
             successful_sections: list[str] = []
-            bulk_render_enabled = design_text is not None and hasattr(
-                agent, "render_full_video_with_sections"
+
+            # ManimCat two-stage: code generation + bulk render
+            await self._emit(
+                task,
+                VideoStage.MANIM_GEN,
+                0.0,
+                "ManimCat 全量代码生成...",
+                progress_override=26,
+                extra_context=self._preview_signal(preview_state),
             )
-
-            if bulk_render_enabled:
-                await self._emit(
-                    task,
-                    VideoStage.MANIM_GEN,
-                    0.0,
-                    "ManimCat 全量代码生成...",
-                    progress_override=26,
-                    extra_context=self._preview_signal(preview_state),
+            try:
+                full_code = await loop.run_in_executor(
+                    None, agent.generate_all_code, design_text
                 )
-                try:
-                    full_code = await loop.run_in_executor(
-                        None, agent.generate_all_code, design_text
-                    )
-                    logger.info(
-                        "ManimCat full code generated: %d chars", len(full_code)
-                    )
-                except Exception as codegen_err:
-                    raise VideoPipelineError(
-                        stage=VideoStage.MANIM_GEN,
-                        error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
-                        message=f"ManimCat 全量代码生成失败: {codegen_err}",
-                    ) from codegen_err
-
-                await self._emit(
-                    task,
-                    VideoStage.RENDER,
-                    0.0,
-                    "ManimCat bulk render 输出分段视频...",
-                    progress_override=27,
-                    extra_context=self._preview_signal(preview_state),
+                logger.info(
+                    "ManimCat full code generated: %d chars", len(full_code)
                 )
-                try:
-                    bulk_section_videos = await loop.run_in_executor(
-                        None, agent.render_full_video_with_sections, full_code
-                    )
-                except Exception as render_err:
-                    raise VideoPipelineError(
-                        stage=VideoStage.RENDER,
-                        error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
-                        message=f"ManimCat bulk render 失败: {render_err}",
-                    ) from render_err
+            except Exception as codegen_err:
+                raise VideoPipelineError(
+                    stage=VideoStage.MANIM_GEN,
+                    error_code=VideoTaskErrorCode.VIDEO_MANIM_GEN_FAILED,
+                    message=f"ManimCat 全量代码生成失败: {codegen_err}",
+                ) from codegen_err
 
-                for index, section in enumerate(getattr(agent, "sections", []) or []):
-                    preview_state = runtime.load_preview() or preview_state
-                    section_video = bulk_section_videos.get(section.id)
-                    if section_video:
-                        preview_state = update_preview_section(
-                            preview_state,
-                            section_id=section.id,
-                            status=VideoPreviewSectionStatus.RENDERING,
-                            preview_available=True,
-                            error_message=None,
-                            fix_attempt=None,
-                        )
-                        runtime.save_preview(preview_state)
-                        await self._emit_section_event(
-                            task,
-                            preview=preview_state,
-                            stage=VideoStage.RENDER,
-                            status=VideoPreviewSectionStatus.RENDERING,
-                            event="section_progress",
-                            section_id=section.id,
-                            section_index=index,
-                            total_sections=total_sections,
-                            message=self._section_message(
-                                VideoPreviewSectionStatus.RENDERING,
-                                section_index=index,
-                                total_sections=total_sections,
-                            ),
-                            progress_override=self._section_progress(
-                                section_index=index,
-                                total_sections=total_sections,
-                                status=VideoPreviewSectionStatus.RENDERING,
-                            ),
-                        )
-                        section_video_path = Path(section_video)
-                        section_clip_path = self._compose_section_clip(
-                            section_id=section.id,
-                            section_video_path=section_video_path,
-                            audio_path=tts_audio_map.get(section.id),
-                            work_dir=work_dir,
-                        )
-                        clip_url = self._publish_section_clip(
-                            asset_store,
-                            task_id=task_id,
-                            section_id=section.id,
-                            section_clip_path=section_clip_path,
-                        )
-                        ordered_section_clips.append(section_clip_path)
-                        successful_sections.append(section.id)
-                        preview_state = update_preview_section(
-                            preview_state,
-                            section_id=section.id,
-                            status=VideoPreviewSectionStatus.READY,
-                            preview_available=True,
-                            clip_url=clip_url,
-                            audio_url=audio_urls.get(section.id),
-                            error_message=None,
-                            fix_attempt=None,
-                        )
-                        runtime.save_preview(preview_state)
-                        await self._emit_section_event(
-                            task,
-                            preview=preview_state,
-                            stage=VideoStage.RENDER,
-                            status=VideoPreviewSectionStatus.READY,
-                            event="section_ready",
-                            section_id=section.id,
-                            section_index=index,
-                            total_sections=total_sections,
-                            message=self._section_message(
-                                VideoPreviewSectionStatus.READY,
-                                section_index=index,
-                                total_sections=total_sections,
-                            ),
-                            progress_override=self._section_progress(
-                                section_index=index,
-                                total_sections=total_sections,
-                                status=VideoPreviewSectionStatus.READY,
-                            ),
-                            clip_url=clip_url,
-                        )
-                        continue
+            await self._emit(
+                task,
+                VideoStage.RENDER,
+                0.0,
+                "ManimCat bulk render 输出分段视频...",
+                progress_override=27,
+                extra_context=self._preview_signal(preview_state),
+            )
+            try:
+                bulk_section_videos = await loop.run_in_executor(
+                    None, agent.render_full_video_with_sections, full_code
+                )
+            except Exception as render_err:
+                raise VideoPipelineError(
+                    stage=VideoStage.RENDER,
+                    error_code=VideoTaskErrorCode.VIDEO_RENDER_FAILED,
+                    message=f"ManimCat bulk render 失败: {render_err}",
+                ) from render_err
 
-                    preview_state = update_preview_section(
-                        preview_state,
-                        section_id=section.id,
-                        status=VideoPreviewSectionStatus.FAILED,
-                        preview_available=True,
-                        error_message="当前分段渲染失败，已跳过",
-                        fix_attempt=None,
-                    )
-                    runtime.save_preview(preview_state)
-                    await self._emit_section_event(
-                        task,
-                        preview=preview_state,
-                        stage=VideoStage.RENDER,
-                        status=VideoPreviewSectionStatus.FAILED,
-                        event="section_progress",
-                        section_id=section.id,
-                        section_index=index,
-                        total_sections=total_sections,
-                        message=self._section_message(
-                            VideoPreviewSectionStatus.FAILED,
-                            section_index=index,
-                            total_sections=total_sections,
-                        ),
-                        progress_override=self._section_progress(
-                            section_index=index,
-                            total_sections=total_sections,
-                            status=VideoPreviewSectionStatus.FAILED,
-                        ),
-                        error_message="当前分段渲染失败，已跳过",
-                    )
-            else:
-                for index, section in enumerate(getattr(agent, "sections", []) or []):
-                    preview_state = runtime.load_preview() or preview_state
-                    preview_state = update_preview_section(
-                        preview_state,
-                        section_id=section.id,
-                        status=VideoPreviewSectionStatus.GENERATING,
-                        preview_available=True,
-                        error_message=None,
-                        fix_attempt=None,
-                    )
-                    runtime.save_preview(preview_state)
-                    await self._emit_section_event(
-                        task,
-                        preview=preview_state,
-                        stage=VideoStage.MANIM_GEN,
-                        status=VideoPreviewSectionStatus.GENERATING,
-                        event="section_progress",
-                        section_id=section.id,
-                        section_index=index,
-                        total_sections=total_sections,
-                        message=self._section_message(
-                            VideoPreviewSectionStatus.GENERATING,
-                            section_index=index,
-                            total_sections=total_sections,
-                        ),
-                        progress_override=self._section_progress(
-                            section_index=index,
-                            total_sections=total_sections,
-                            status=VideoPreviewSectionStatus.GENERATING,
-                        ),
-                    )
-
-                    await loop.run_in_executor(None, agent.generate_section_code, section)
-
-                    preview_state = runtime.load_preview() or preview_state
+            for index, section in enumerate(getattr(agent, "sections", []) or []):
+                preview_state = runtime.load_preview() or preview_state
+                section_video = bulk_section_videos.get(section.id)
+                if section_video:
                     preview_state = update_preview_section(
                         preview_state,
                         section_id=section.id,
@@ -706,68 +545,29 @@ class VideoPipelineService:
                             status=VideoPreviewSectionStatus.RENDERING,
                         ),
                     )
-
-                    success = await loop.run_in_executor(
-                        None, agent.render_section, section
+                    section_video_path = Path(section_video)
+                    section_clip_path = self._compose_section_clip(
+                        section_id=section.id,
+                        section_video_path=section_video_path,
+                        audio_path=tts_audio_map.get(section.id),
+                        work_dir=work_dir,
                     )
-                    preview_state = runtime.load_preview() or preview_state
-
-                    if success and section.id in getattr(agent, "section_videos", {}):
-                        section_video_path = Path(agent.section_videos[section.id])
-                        section_clip_path = self._compose_section_clip(
-                            section_id=section.id,
-                            section_video_path=section_video_path,
-                            audio_path=tts_audio_map.get(section.id),
-                            work_dir=work_dir,
-                        )
-                        clip_url = self._publish_section_clip(
-                            asset_store,
-                            task_id=task_id,
-                            section_id=section.id,
-                            section_clip_path=section_clip_path,
-                        )
-                        ordered_section_clips.append(section_clip_path)
-                        successful_sections.append(section.id)
-                        preview_state = update_preview_section(
-                            preview_state,
-                            section_id=section.id,
-                            status=VideoPreviewSectionStatus.READY,
-                            preview_available=True,
-                            clip_url=clip_url,
-                            audio_url=audio_urls.get(section.id),
-                            error_message=None,
-                            fix_attempt=None,
-                        )
-                        runtime.save_preview(preview_state)
-                        await self._emit_section_event(
-                            task,
-                            preview=preview_state,
-                            stage=VideoStage.RENDER,
-                            status=VideoPreviewSectionStatus.READY,
-                            event="section_ready",
-                            section_id=section.id,
-                            section_index=index,
-                            total_sections=total_sections,
-                            message=self._section_message(
-                                VideoPreviewSectionStatus.READY,
-                                section_index=index,
-                                total_sections=total_sections,
-                            ),
-                            progress_override=self._section_progress(
-                                section_index=index,
-                                total_sections=total_sections,
-                                status=VideoPreviewSectionStatus.READY,
-                            ),
-                            clip_url=clip_url,
-                        )
-                        continue
-
+                    clip_url = self._publish_section_clip(
+                        asset_store,
+                        task_id=task_id,
+                        section_id=section.id,
+                        section_clip_path=section_clip_path,
+                    )
+                    ordered_section_clips.append(section_clip_path)
+                    successful_sections.append(section.id)
                     preview_state = update_preview_section(
                         preview_state,
                         section_id=section.id,
-                        status=VideoPreviewSectionStatus.FAILED,
+                        status=VideoPreviewSectionStatus.READY,
                         preview_available=True,
-                        error_message="当前分段渲染失败，已跳过",
+                        clip_url=clip_url,
+                        audio_url=audio_urls.get(section.id),
+                        error_message=None,
                         fix_attempt=None,
                     )
                     runtime.save_preview(preview_state)
@@ -775,23 +575,55 @@ class VideoPipelineService:
                         task,
                         preview=preview_state,
                         stage=VideoStage.RENDER,
-                        status=VideoPreviewSectionStatus.FAILED,
-                        event="section_progress",
+                        status=VideoPreviewSectionStatus.READY,
+                        event="section_ready",
                         section_id=section.id,
                         section_index=index,
                         total_sections=total_sections,
                         message=self._section_message(
-                            VideoPreviewSectionStatus.FAILED,
+                            VideoPreviewSectionStatus.READY,
                             section_index=index,
                             total_sections=total_sections,
                         ),
                         progress_override=self._section_progress(
                             section_index=index,
                             total_sections=total_sections,
-                            status=VideoPreviewSectionStatus.FAILED,
+                            status=VideoPreviewSectionStatus.READY,
                         ),
-                        error_message="当前分段渲染失败，已跳过",
+                        clip_url=clip_url,
                     )
+                    continue
+
+                preview_state = update_preview_section(
+                    preview_state,
+                    section_id=section.id,
+                    status=VideoPreviewSectionStatus.FAILED,
+                    preview_available=True,
+                    error_message="当前分段渲染失败，已跳过",
+                    fix_attempt=None,
+                )
+                runtime.save_preview(preview_state)
+                await self._emit_section_event(
+                    task,
+                    preview=preview_state,
+                    stage=VideoStage.RENDER,
+                    status=VideoPreviewSectionStatus.FAILED,
+                    event="section_progress",
+                    section_id=section.id,
+                    section_index=index,
+                    total_sections=total_sections,
+                    message=self._section_message(
+                        VideoPreviewSectionStatus.FAILED,
+                        section_index=index,
+                        total_sections=total_sections,
+                    ),
+                    progress_override=self._section_progress(
+                        section_index=index,
+                        total_sections=total_sections,
+                        status=VideoPreviewSectionStatus.FAILED,
+                    ),
+                    error_message="当前分段渲染失败，已跳过",
+                )
 
             render_summary = self._build_render_summary(
                 total_sections=total_sections,

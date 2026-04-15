@@ -179,3 +179,35 @@ async def run_patch_retry(
         logger.info("Retry %d: still failing (%s): %s", attempt, error_type, error_msg[:200])
 
     return RetryResult(code=code, success=False, attempts=max_retries + 1, last_error=error_msg)
+
+
+# ── GAP-8: Doom Loop Prevention ─────────────────────────────────
+
+
+class DoomLoopError(Exception):
+    """Raised when the same error repeats N times, indicating a fix loop."""
+
+
+def detect_doom_loop(
+    error_signatures: list[str],
+    *,
+    threshold: int = 3,
+) -> bool:
+    """Detect if the same error repeats, indicating a doom loop.
+
+    ManimCat: detect repeated errors and stop retrying.
+    Compares error signatures (MD5 hashes of sanitized messages).
+
+    Args:
+        error_signatures: List of error signature hashes from recent failures.
+        threshold: Number of consecutive identical signatures to trigger.
+
+    Returns:
+        True if doom loop detected (same error ≥ threshold times).
+    """
+    if len(error_signatures) < threshold:
+        return False
+
+    # Check if the last `threshold` signatures are all the same
+    recent = error_signatures[-threshold:]
+    return len(set(recent)) == 1
