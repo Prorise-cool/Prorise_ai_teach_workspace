@@ -78,12 +78,15 @@ def _call_openai_compatible(
     messages: list[dict[str, Any]],
     *,
     max_tokens: int = 12_000,
+    max_completion_tokens: int | None = None,
+    temperature: float | None = None,
     max_retries: int = 3,
     timeout_override: float | None = None,
 ) -> tuple[Completion | None, dict[str, int]]:
     """SDK-based LLM call with retry（照抄 ManimCat 模式：stream first → fallback）。
 
     每次重试创建新 client（不复用坏连接）。
+    照抄 ManimCat buildTokenParams: max_completion_tokens = thinkingTokens + maxTokens。
     """
     usage_info: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
@@ -93,8 +96,8 @@ def _call_openai_compatible(
             client = client_from_endpoint(ep)
 
             logger.debug(
-                "LLM request  model=%s  max_tokens=%d  messages=%d  attempt=%d",
-                ep.model_name, max_tokens, len(messages), attempt,
+                "LLM request  model=%s  max_tokens=%d  max_completion_tokens=%s  attempt=%d",
+                ep.model_name, max_tokens, max_completion_tokens, attempt,
             )
 
             result = create_chat_completion_text(
@@ -102,6 +105,8 @@ def _call_openai_compatible(
                 messages,
                 ep.model_name,
                 max_tokens=max_tokens,
+                max_completion_tokens=max_completion_tokens,
+                temperature=temperature,
                 fallback_to_non_stream=True,
                 allow_partial_on_stream_error=True,
             )
@@ -165,13 +170,20 @@ class LLMBridge:
             prompt_or_messages: str | list[dict[str, Any]],
             max_tokens: int = 12_000,
             max_retries: int = 3,
+            *,
+            max_completion_tokens: int | None = None,
+            temperature: float | None = None,
         ):
             if isinstance(prompt_or_messages, list):
                 messages = prompt_or_messages
             else:
                 messages = [{"role": "user", "content": prompt_or_messages}]
             return _call_openai_compatible(
-                ep, messages, max_tokens=max_tokens, max_retries=max_retries
+                ep, messages,
+                max_tokens=max_tokens,
+                max_completion_tokens=max_completion_tokens,
+                temperature=temperature,
+                max_retries=max_retries,
             )
 
         return fn

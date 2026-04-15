@@ -35,6 +35,8 @@ def create_chat_completion_text(
     model: str,
     max_tokens: int = 12_000,
     *,
+    max_completion_tokens: int | None = None,
+    temperature: float | None = None,
     fallback_to_non_stream: bool = True,
     allow_partial_on_stream_error: bool = True,
     idle_timeout_ms: int = STREAM_IDLE_TIMEOUT_MS,
@@ -43,9 +45,21 @@ def create_chat_completion_text(
     """照抄 ManimCat openai-stream.ts createChatCompletionText。
 
     策略：stream first → partial recovery → non-stream fallback。
+
+    照抄 ManimCat buildTokenParams: 用 max_completion_tokens = thinkingTokens + maxTokens，
+    而不是只用 max_tokens。
     """
     started_at = time.monotonic()
     empty_usage: dict[str, int] = {}
+
+    # 照抄 ManimCat buildTokenParams: thinkingTokens + outputTokens
+    token_params: dict = {}
+    if max_completion_tokens is not None:
+        token_params["max_completion_tokens"] = max_completion_tokens
+    else:
+        token_params["max_tokens"] = max_tokens
+    if temperature is not None:
+        token_params["temperature"] = temperature
 
     content = ""
     usage: dict[str, int] = {}
@@ -57,9 +71,9 @@ def create_chat_completion_text(
         stream = client.chat.completions.create(
             model=model,
             messages=messages,
-            max_tokens=max_tokens,
             stream=True,
             stream_options={"include_usage": True},
+            **token_params,
         )
 
         # Idle timeout detection
@@ -144,8 +158,8 @@ def create_chat_completion_text(
                 response = client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    max_tokens=max_tokens,
                     stream=False,
+                    **token_params,
                 )
                 fallback_content = response.choices[0].message.content if response.choices else None
                 ns_usage = {}
