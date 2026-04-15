@@ -12,6 +12,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Awaitable
 
+from .render_failure import compute_error_signature
+
 logger = logging.getLogger(__name__)
 
 
@@ -128,6 +130,8 @@ async def run_patch_retry(
     llm_patch_func: Callable[[str, str, int, str | None], Awaitable[str]],
     concept: str = "",
     max_retries: int = 4,
+    *,
+    error_signatures: list[str] | None = None,
 ) -> RetryResult:
     """Run the patch-based retry loop.
 
@@ -147,6 +151,10 @@ async def run_patch_retry(
     error_msg = extract_error_message(stderr)
     error_type = get_error_type(stderr)
     logger.info("Render failed (%s): %s", error_type, error_msg[:200])
+
+    if error_signatures is None:
+        error_signatures = []
+    error_signatures.append(compute_error_signature(stderr))
 
     for attempt in range(1, max_retries + 1):
         snippet = extract_error_snippet(stderr, code)
@@ -176,7 +184,13 @@ async def run_patch_retry(
 
         error_msg = extract_error_message(stderr)
         error_type = get_error_type(stderr)
+        error_signatures.append(compute_error_signature(stderr))
         logger.info("Retry %d: still failing (%s): %s", attempt, error_type, error_msg[:200])
+
+        if detect_doom_loop(error_signatures, threshold=3):
+            raise DoomLoopError(
+                f"Doom loop detected: last {len(error_signatures)} retries have same error signature"
+            )
 
     return RetryResult(code=code, success=False, attempts=max_retries + 1, last_error=error_msg)
 

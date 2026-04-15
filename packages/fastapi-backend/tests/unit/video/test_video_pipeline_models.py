@@ -19,6 +19,7 @@ from app.features.video.pipeline.sandbox import (
     DockerSandboxExecutor,
     LocalSandboxExecutor,
     ScriptSecurityViolation,
+    _build_manim_runner_script,
     _detect_scene_class_name,
     resolve_local_fallback_policy,
     scan_script_safety,
@@ -476,6 +477,13 @@ def test_docker_sandbox_runs_wrapper_and_collects_rendered_mp4(monkeypatch) -> N
     assert result.success is True
     assert result.output_path is not None
     assert Path(result.output_path).read_bytes() == b"REAL_MP4_DATA"
+
+
+def test_build_manim_runner_script_uses_configured_quality_flag() -> None:
+    script = _build_manim_runner_script("h")
+
+    assert '"-qh"' in script
+    assert '"-ql"' not in script
 
 
 def test_detect_scene_class_name_prefers_concrete_scene_with_construct() -> None:

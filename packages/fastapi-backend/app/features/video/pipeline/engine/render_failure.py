@@ -87,7 +87,7 @@ class RenderFailureStore:
                 await self._redis.rpush(key, json.dumps(record.to_dict()))
                 await self._redis.ltrim(key, -MAX_HISTORY_PER_SECTION, -1)
                 await self._redis.expire(key, 86400)  # 24h TTL
-            except Exception:
+            except (OSError, ConnectionError, AttributeError):
                 logger.warning("Failed to persist render failure to Redis", exc_info=True)
         else:
             logger.debug("No Redis client, skipping failure persistence")
@@ -112,7 +112,7 @@ class RenderFailureStore:
                 RenderFailureRecord.from_dict(json.loads(item))
                 for item in raw_list
             ]
-        except Exception:
+        except (OSError, ConnectionError, AttributeError, json.JSONDecodeError):
             logger.warning("Failed to read failure history from Redis", exc_info=True)
             return []
 
@@ -130,5 +130,5 @@ class RenderFailureStore:
                 record = RenderFailureRecord.from_dict(json.loads(raw_list[0]))
                 record.recovery_status = status
                 await self._redis.lset(key, -1, json.dumps(record.to_dict()))
-        except Exception:
+        except (OSError, ConnectionError, AttributeError, json.JSONDecodeError):
             logger.warning("Failed to update recovery status", exc_info=True)

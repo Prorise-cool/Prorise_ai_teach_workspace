@@ -163,7 +163,7 @@ def build_vision_user_message(
                 "type": "image_url",
                 "image_url": {"url": f"data:{mime};base64,{data}"},
             })
-        except Exception:
+        except (ValueError, OSError):
             logger.warning("Failed to encode reference image: %s", img_path, exc_info=True)
 
     if len(content_parts) == 1:
@@ -257,14 +257,19 @@ def generate_scene_design(
     # Normalize messages (GAP-7)
     messages = normalize_messages(messages)
 
-    # Call LLM — try with images first, fallback without
+    raw_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
+    uses_multimodal_messages = any(
+        isinstance(msg, dict) and isinstance(msg.get("content"), list)
+        for msg in messages
+    )
+
+    # Call LLM — try with structured multimodal messages first, fallback without images.
     try:
-        raw_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
-        response = api_func(raw_prompt, max_tokens=max_tokens)
-    except Exception as e:
-        if reference_images and should_retry_without_images(e):
+        request_payload = messages if uses_multimodal_messages else raw_prompt
+        response = api_func(request_payload, max_tokens=max_tokens)
+    except Exception as e:  # LLM response format is unpredictable across providers
+        if uses_multimodal_messages and should_retry_without_images(e):
             logger.warning("Vision failed, retrying without images: %s", e)
-            raw_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
             response = api_func(raw_prompt, max_tokens=max_tokens)
         else:
             raise

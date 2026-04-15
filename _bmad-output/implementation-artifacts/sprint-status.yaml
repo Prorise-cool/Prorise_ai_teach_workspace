@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-15 09:46:30 +0800
+# last_updated: 2026-04-15 12:24:48 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-15 09:46:30 +0800
+last_updated: 2026-04-15 12:24:48 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -98,6 +98,11 @@ development_status:
   # - /api/v1/tasks/{id}/events 回放仅有 10 条事件：understanding -> storyboard -> tts -> manim_gen -> failed，没有旧的 section_progress 风暴，也没有 progress 回退。
   # - /api/v1/video/tasks/{id}/preview 返回 readySections=0、failedSections=10，所有 section.errorMessage 均已同步 task 级错误，说明厚修复的 preview 收口已在真实链路生效。
   # - case 目录仅有 manimcat_design.txt + tts_audio/section_*.mp3，无 manimcat_full_code.py / mp4；结合事件序列推断，本次失败路径实际 LLM 调用约 2 次（design + full code），没有触发 patch repair。
+  # 2026-04-15 中午审查与兼容修复：
+  # - video 单测此前因 sandbox 错误码漂移、旧 auto_fix/services 稳定入口缺失、以及 finalize 覆盖旧 tts.preview_state 而失效。
+  # - 已补齐 `auto_fix.py`、`services.py`、`manim_runtime_prelude.py`、`script_templates.py` 兼容层，并把 sandbox 错误码统一到 `VideoTaskErrorCode`。
+  # - orchestrator 已恢复旧测试需要的 `_emit_stage/_handle_pipeline_failure/_run_understanding/_run_render_verify` helper，同时完成态 preview 优先读取 runtime 最新 snapshot。
+  # - 回归通过：`pytest packages/fastapi-backend/tests/unit/video -q` => `97 passed`；`pytest packages/fastapi-backend/tests/api/video packages/fastapi-backend/tests/contracts/test_openapi_contracts.py -q` => `3 passed`。
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review

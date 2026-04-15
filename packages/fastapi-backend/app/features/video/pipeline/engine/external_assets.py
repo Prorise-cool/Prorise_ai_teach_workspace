@@ -83,10 +83,10 @@ class SmartSVGDownloader:
         try:
             try:
                 content = response.candidates[0].content.parts[0].text
-            except Exception:
+            except (AttributeError, IndexError):
                 try:
                     content = response.choices[0].message.content
-                except Exception:
+                except (AttributeError, IndexError):
                     content = str(response)
 
             enhanced_animations = json.loads(self._extract_json_from_markdown(content))
@@ -107,7 +107,7 @@ class SmartSVGDownloader:
         except json.JSONDecodeError as e:
             logger.warning("API response parsing failed: %s", e)
             return original_storyboard
-        except Exception as e:
+        except (ValueError, TypeError) as e:
             logger.warning("Error occurred while processing API response: %s", e)
             return original_storyboard
 
@@ -120,11 +120,11 @@ class SmartSVGDownloader:
             response = self.api_function(prompt, max_tokens=100)[0]
             try:
                 content = response.candidates[0].content.parts[0].text
-            except Exception:
+            except (AttributeError, IndexError):
                 content = response.choices[0].message.content
             elements = [line.strip().lower() for line in content.strip().split("\n") if line.strip()]
             return list(dict.fromkeys(elements))[:4]
-        except Exception:
+        except (requests.RequestException, AttributeError, IndexError, TypeError):
             return []
 
     def _check_cache(self, element: str) -> Optional[str]:
@@ -167,7 +167,7 @@ class SmartSVGDownloader:
                     filepath = self.assets_dir / f"{element}.png"
                     filepath.write_bytes(img_resp.content)
                     return str(filepath.absolute())
-        except Exception:
+        except (requests.RequestException, OSError, ValueError, KeyError):
             logger.debug("Iconfinder download failed for: %s", element)
             return None
 
@@ -187,7 +187,7 @@ class SmartSVGDownloader:
                     filepath = self.assets_dir / f"{element}.svg"
                     filepath.write_text(svg_resp.text, encoding="utf-8")
                     return str(filepath.absolute())
-        except Exception:
+        except (requests.RequestException, OSError, ValueError, KeyError):
             logger.debug("Iconify download failed for: %s", element)
             return None
 
