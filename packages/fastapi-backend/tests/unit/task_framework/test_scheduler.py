@@ -42,6 +42,25 @@ class ExplodingTask(OrderedTask):
         return await super().handle_error(exc)
 
 
+class DomainFailureError(RuntimeError):
+    def __init__(self, message: str, *, error_code: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class DomainExplodingTask(OrderedTask):
+    async def run(self) -> TaskResult:
+        self.calls.append("run")
+        raise DomainFailureError(
+            "bulk code generation failed",
+            error_code="VIDEO_MANIM_GEN_FAILED",
+        )
+
+    async def handle_error(self, exc: Exception) -> TaskResult:
+        self.calls.append("handle_error")
+        return await super().handle_error(exc)
+
+
 class RichPayloadTask(OrderedTask):
     async def run(self) -> TaskResult:
         self.calls.append("run")
@@ -191,6 +210,28 @@ def test_scheduler_persists_snapshot_and_event_cache_into_runtime_store() -> Non
     assert [event.sequence for event in events] == [1, 2]
     assert 0 < runtime_store.ttl(build_task_runtime_key(context.task_id))
     assert 0 < runtime_store.ttl(build_task_events_key(context.task_id))
+
+
+def test_scheduler_preserves_domain_error_codes_in_runtime_state() -> None:
+    runtime_store = RuntimeStore(backend="memory-runtime-store", redis_url="redis://memory")
+    scheduler = TaskScheduler(runtime_store=runtime_store)
+    context = create_task_context(
+        prefix="video",
+        task_type="video",
+        user_id="student-domain",
+        request_id="gateway_request_domain",
+        source_module="video",
+    )
+
+    result = asyncio.run(scheduler.dispatch(DomainExplodingTask(context)))
+    snapshot = runtime_store.get_task_state(context.task_id)
+    events = runtime_store.get_task_events(context.task_id)
+
+    assert result.status == TaskStatus.FAILED
+    assert result.error_code == "VIDEO_MANIM_GEN_FAILED"
+    assert snapshot["errorCode"] == "VIDEO_MANIM_GEN_FAILED"
+    assert events[-1].event == "failed"
+    assert events[-1].error_code == "VIDEO_MANIM_GEN_FAILED"
 
 
 def test_scheduler_promotes_stage_and_result_to_top_level_sse_fields() -> None:

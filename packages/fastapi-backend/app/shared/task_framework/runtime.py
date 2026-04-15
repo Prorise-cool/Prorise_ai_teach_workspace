@@ -5,7 +5,7 @@ from typing import Protocol
 
 from app.core.logging import format_trace_timestamp
 from app.shared.task_framework.context import TaskContext
-from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus, TaskStatus
+from app.shared.task_framework.status import TaskInternalStatus, TaskStatus
 
 
 @dataclass(slots=True)
@@ -21,7 +21,7 @@ class TaskRuntimeSnapshot:
     status: TaskStatus
     progress: int
     message: str
-    error_code: TaskErrorCode | None = None
+    error_code: str | None = None
     context: dict[str, object] = field(default_factory=dict)
     timestamp: str = field(default_factory=format_trace_timestamp)
 
@@ -34,7 +34,7 @@ class TaskRuntimeSnapshot:
         status: TaskStatus,
         progress: int,
         message: str,
-        error_code: TaskErrorCode | None = None,
+        error_code: str | None = None,
         payload: dict[str, object] | None = None
     ) -> "TaskRuntimeSnapshot":
         """从 TaskContext 创建运行态快照的工厂方法。"""

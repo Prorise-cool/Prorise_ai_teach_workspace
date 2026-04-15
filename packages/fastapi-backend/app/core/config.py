@@ -210,7 +210,7 @@ class Settings(BaseSettings):
         alias="FASTAPI_VIDEO_STATIC_GUARD_MAX_PASSES",
     )
     video_patch_retry_max_retries: int = Field(
-        default=4,
+        default=3,
         alias="FASTAPI_VIDEO_PATCH_RETRY_MAX_RETRIES",
     )
     video_designer_max_tokens: int = Field(

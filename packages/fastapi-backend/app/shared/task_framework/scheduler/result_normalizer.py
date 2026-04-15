@@ -39,7 +39,7 @@ class ResultNormalizerMixin:
     def _log_task_result(self: "ResultNormalizerMixin", context: TaskContext, result: TaskResult) -> None:
         if result.status == TaskStatus.FAILED:
             error_tokens = bind_trace_context(
-                error_code=result.error_code or TaskErrorCode.UNHANDLED_EXCEPTION
+                error_code=str(result.error_code or TaskErrorCode.UNHANDLED_EXCEPTION)
             )
             try:
                 logger.error(
@@ -61,7 +61,7 @@ class ResultNormalizerMixin:
     def _normalize_result(
         result: TaskResult,
         *,
-        fallback_error_code: TaskErrorCode | None = None
+        fallback_error_code: str | None = None
     ) -> TaskResult:
         progress = result.progress
         if progress is None:
@@ -69,7 +69,9 @@ class ResultNormalizerMixin:
 
         error_code = result.error_code
         if result.status == TaskStatus.FAILED and error_code is None:
-            error_code = fallback_error_code or TaskErrorCode.UNHANDLED_EXCEPTION
+            error_code = str(fallback_error_code or TaskErrorCode.UNHANDLED_EXCEPTION)
+        elif error_code is not None:
+            error_code = str(error_code)
 
         return TaskResult(
             status=TaskStatus(result.status),
@@ -80,17 +82,13 @@ class ResultNormalizerMixin:
         )
 
     @staticmethod
-    def _resolve_error_code(exc: Exception) -> TaskErrorCode:
+    def _resolve_error_code(exc: Exception) -> str:
         raw_error_code = (
             getattr(exc, "error_code", None)
             or getattr(exc, "code", None)
             or TaskErrorCode.UNHANDLED_EXCEPTION
         )
-        # 域特定错误码（如 VideoTaskErrorCode）不是 TaskErrorCode 成员，直接回退
-        try:
-            return TaskErrorCode(raw_error_code)
-        except ValueError:
-            return TaskErrorCode.UNHANDLED_EXCEPTION
+        return str(raw_error_code)
 
     @staticmethod
     def _internal_status_for_result(result: TaskResult) -> TaskInternalStatus:

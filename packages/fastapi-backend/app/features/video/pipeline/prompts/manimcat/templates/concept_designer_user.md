@@ -5,12 +5,14 @@ Seed: {{seed}}
 Output mode: {{outputMode}}
 Target duration: {{duration}} minutes
 Target sections: {{sectionCount}}
+Layout constraint: {{layoutHint}}
 
 ## Goal Layer
 ### Input Expectation
 - The concept is the core teaching target.
 - If the input already contains an upstream structure, preserve its order and intent.
 - Design exactly {{sectionCount}} shots (one per section), each approximately {{sectionDuration}} seconds.
+- If a layout constraint is specified, you MUST use that layout template for all shots.
 
 ### Output Requirement
 - Produce a director-ready storyboard for code generation.

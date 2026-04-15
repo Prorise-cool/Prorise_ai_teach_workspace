@@ -1,7 +1,9 @@
 <script setup lang="tsx">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { NDivider } from 'naive-ui';
 import { fetchBatchDeleteAiResource, fetchGetAiResourceList } from '@/service/api/xiaomai/ai-resource';
+import { fetchGetAiProviderList } from '@/service/api/xiaomai/ai-provider';
 import { useAppStore } from '@/store/modules/app';
 import { useAuth } from '@/hooks/business/auth';
 import { useDict } from '@/hooks/business/dict';
@@ -21,9 +23,33 @@ useDict('xm_ai_capability');
 useDict('xm_ai_resource_type');
 useDict('sys_normal_disable');
 
+const route = useRoute();
 const appStore = useAppStore();
 const { download } = useDownload();
 const { hasAuth } = useAuth();
+
+/** Provider 名称映射表 (id → name) */
+const providerNameMap = ref<Record<string, string>>({});
+/** Provider 下拉选项（搜索用） */
+const providerOptions = ref<Array<{ label: string; value: number }>>([]);
+
+async function loadProviders() {
+  const { data, error } = await fetchGetAiProviderList({ pageSize: 200 });
+  if (!error && data) {
+    const map: Record<string, string> = {};
+    const opts: Array<{ label: string; value: number }> = [];
+    for (const p of data.rows || []) {
+      map[String(p.id)] = p.providerName;
+      opts.push({ label: `${p.providerName} (${p.providerCode})`, value: p.id as number });
+    }
+    providerNameMap.value = map;
+    providerOptions.value = opts;
+  }
+}
+
+onMounted(() => {
+  loadProviders();
+});
 
 const searchParams = ref<Api.Xiaomai.AiResourceSearchParams>({
   pageNum: 1,
@@ -41,6 +67,14 @@ const searchParams = ref<Api.Xiaomai.AiResourceSearchParams>({
   status: null,
   sortOrder: null,
   params: {}
+});
+
+/** 从 Provider 页面跳转过来时，自动设置筛选 */
+onMounted(() => {
+  const { providerId, providerName } = route.query;
+  if (providerId) {
+    searchParams.value.providerId = Number(providerId);
+  }
 });
 
 const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagination, scrollX } =
@@ -65,49 +99,51 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         render: (_, index) => index + 1
       },
       {
-        key: 'resourceName',
-        title: '资源名称',
+        key: 'providerId',
+        title: '所属 Provider',
         align: 'center',
-        minWidth: 160
+        minWidth: 140,
+        render(row) {
+          const name = providerNameMap.value[String(row.providerId)];
+          return name || <span style="color:#999">ID: {row.providerId}</span>;
+        }
       },
       {
         key: 'capability',
-        title: '能力类型',
+        title: '能力',
         align: 'center',
-        minWidth: 100,
+        width: 80,
         render(row) {
           return <DictTag value={row.capability} dictCode="xm_ai_capability" />;
         }
       },
       {
-        key: 'resourceType',
-        title: '资源类型',
+        key: 'resourceName',
+        title: '资源名称',
         align: 'center',
-        minWidth: 100,
-        render(row) {
-          return <DictTag value={row.resourceType} dictCode="xm_ai_resource_type" />;
-        }
+        minWidth: 140
       },
       {
         key: 'modelName',
         title: '模型/音色',
         align: 'center',
-        minWidth: 180,
+        minWidth: 160,
         render(row) {
-          return row.modelName || row.voiceCode || '-';
+          const model = row.capability === 'tts' ? row.voiceCode : row.modelName;
+          return model || '-';
         }
       },
       {
         key: 'runtimeProviderId',
         title: '运行时标识',
         align: 'center',
-        minWidth: 200
+        minWidth: 180
       },
       {
         key: 'status',
         title: '状态',
         align: 'center',
-        minWidth: 80,
+        width: 80,
         render(row) {
           return <DictTag value={row.status} dictCode="sys_normal_disable" />;
         }
@@ -116,7 +152,8 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
         key: 'remark',
         title: '备注',
         align: 'center',
-        minWidth: 160
+        minWidth: 120,
+        ellipsis: { tooltip: true }
       },
       {
         key: 'operate',
@@ -200,7 +237,11 @@ function handleExport() {
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <AiResourceSearch v-model:model="searchParams" @search="getDataByPage" />
+    <AiResourceSearch
+      v-model:model="searchParams"
+      :provider-options="providerOptions"
+      @search="getDataByPage"
+    />
     <NCard title="AI 资源列表" :bordered="false" size="small" class="card-wrapper sm:flex-1-hidden">
       <template #header-extra>
         <TableHeaderOperation

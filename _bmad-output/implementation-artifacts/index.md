@@ -160,10 +160,15 @@
 - [文档](./4-3-manim-代码生成与自动修复链.md)
 - [429 热修记录](./4-3-manim-429-重试风暴热修复-20260410.md)
 - [Plan D 收口记录](./4-2-4-3-plan-d-编排与契约收口-20260410.md)
+- [Bulk render 收口记录](./4-3-manimcat-bulk-render-save-sections-收口-20260414.md)
 - **状态**: ready-for-dev
 - **说明**: 实现 manim_gen service 与 FixChain（RuleBasedFixer → LLMBasedFixer），最大修复 2 次
 - **热修摘要**: 2026-04-10 已修复并行场景生成触发的 429 重试风暴，补齐 jitter、429 健康缓存策略、fallback 缓存绕过、默认并发下调，并补做 DeepSeek 实机并发 smoke test
 - **收口摘要**: 2026-04-10 已移除 merged storyboard 默认捷径，恢复 `render` / `manim_fix` 事件语义，补齐前端 `solve/render_verify` 契约与 SQL 动态种子
+- **补充收口摘要**: 2026-04-14 已把 ManimCat bulk path 改为真实 `MainScene + --save_sections` 单次渲染，并把默认 patch repair 上限收敛到 3，避免 bulk code 再掉回逐 section LLM 修复风暴
+- **实机复验摘要**: 2026-04-14 晚间管理员样本 `vtask_20260414154217_5be3741d` 证明新链路未再生成 `section_*.py`，但单次 `manim_gen` full-code 调用仍在 `466s` 后失败，当前瓶颈已收敛为 bulk code 单调用稳定性而非旧的多轮 section 风暴
+- **厚修复摘要**: 2026-04-15 已补齐 fatal failure 时的 section failed 回写、`/tasks/{id}/status` 的 `VIDEO_*` errorCode 透传，以及 bulk progress/SSE 单调性收口
+- **最新实机摘要**: 2026-04-15 上午管理员样本 `vtask_20260415013544_1914f169` 在 `5m24s` 后仍失败于 `VIDEO_MANIM_GEN_FAILED`；但事件回放已不再伪造 section 级生成进度，`/preview` 也正确收口为 `failedSections=10`
 
 ### Story 4.4: Manim 沙箱执行与资源限制
 - [文档](./4-4-manim-沙箱执行与资源限制.md)

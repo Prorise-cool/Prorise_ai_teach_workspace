@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-13 08:39:56 +0800
+# last_updated: 2026-04-15 09:46:30 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-13 08:39:56 +0800
+last_updated: 2026-04-15 09:46:30 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -81,6 +81,23 @@ development_status:
   4-1-视频流水线阶段进度区间与结果契约冻结: review
   4-2-题目理解与分镜生成服务: review
   4-3-manim-代码生成与自动修复链: review
+  # 2026-04-14 ManimCat bulk render 收口：
+  # - 默认路径已切到 generate_design -> generate_all_code -> render_full_video_with_sections，不再把 bulk code 静默降级回逐 section generate/render/fix。
+  # - clean_manim_code 现会先剥离 fenced code / response wrapper；bulk render 失败时仅允许本地 static guard + 最多 3 次 SEARCH/REPLACE patch repair，默认总 LLM 调用预算 <= 5。
+  # - 定向测试与 local save_sections smoke 已通过，说明 `MainScene + --save_sections` 能被当前 FastAPI 编排器直接消费。
+  # 2026-04-14 晚间实机复验：
+  # - 管理员样本 vtask_20260414154217_5be3741d 在 understanding/storyboard/tts 后停在 manim_gen，共 466s 后失败，result_detail.failedStage=manim_gen，errorCode=VIDEO_MANIM_GEN_FAILED。
+  # - case 目录仅有 0-video/manimcat_design.txt + tts_audio/section_*.mp3，没有 manimcat_full_code.py、section_*.py 或渲染 mp4，说明旧 per-section 回退已被阻断，但单次 full-code LLM 调用仍不稳定。
+  # - preview/SSE 当前会先发 10 条 section_progress 再回落到 “ManimCat 全量代码生成...” 的 26%，事件语义和进度单调性仍需继续收口。
+  # 2026-04-15 厚修复：
+  # - fatal failure 时 preview 会把所有未完成 section 统一标记 failed，并把 task 级错误信息回写到 section.errorMessage。
+  # - task framework 现保留 VIDEO_* 域错误码到 /tasks/{id}/status 与 failed SSE，不再统一压成 TASK_UNHANDLED_EXCEPTION。
+  # - bulk path 不再在 full-code generation 前预发 section_progress；render 事件按 section 顺序发射，整体 progress 保持单调不回退。
+  # 2026-04-15 上午真实 token 全量复验：
+  # - 管理员样本 vtask_20260415013544_1914f169 在 understanding/storyboard/tts 后停在 manim_gen，并于 01:41:08Z 失败；按 taskId 时间戳估算总耗时约 324s（5m24s），仍未达成 5 分钟出成品。
+  # - /api/v1/tasks/{id}/events 回放仅有 10 条事件：understanding -> storyboard -> tts -> manim_gen -> failed，没有旧的 section_progress 风暴，也没有 progress 回退。
+  # - /api/v1/video/tasks/{id}/preview 返回 readySections=0、failedSections=10，所有 section.errorMessage 均已同步 task 级错误，说明厚修复的 preview 收口已在真实链路生效。
+  # - case 目录仅有 manimcat_design.txt + tts_audio/section_*.mp3，无 manimcat_full_code.py / mp4；结合事件序列推断，本次失败路径实际 LLM 调用约 2 次（design + full code），没有触发 patch repair。
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
