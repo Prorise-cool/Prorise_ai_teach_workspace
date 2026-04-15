@@ -474,7 +474,7 @@ class VideoPipelineService:
             preview_state = design.preview_state
             tts = await self._run_tts_stage(task, ctx, setup, design, runtime)
             preview_state = tts.preview_state
-            codegen = await self._run_codegen_stage(task, ctx, setup)
+            codegen = await self._run_codegen_stage(task, ctx, setup, design)
             render = await self._run_render_stage(
                 task, ctx, setup, tts, codegen, runtime,
             )
@@ -669,6 +669,7 @@ class VideoPipelineService:
         task: BaseTask,
         ctx: _PipelineContext,
         setup: _AgentSetup,
+        design: _DesignResult,
     ) -> _CodegenResult:
         """Generate full Manim code from design text."""
         await self._emit(
@@ -677,7 +678,7 @@ class VideoPipelineService:
         )
         try:
             full_code = await setup.loop.run_in_executor(
-                None, setup.agent.generate_all_code, None,
+                None, setup.agent.generate_all_code, design.design_text,
             )
             logger.info("ManimCat full code generated: %d chars", len(full_code))
         except (VideoPipelineError, RuntimeError, OSError) as codegen_err:

@@ -47,6 +47,9 @@ def generate_code_from_design(
     Returns:
         Clean Manim code ready for static guard + rendering.
     """
+    if not scene_design:
+        raise ValueError("scene_design is required for code generation")
+
     # Seed uses concept + design prefix for uniqueness (GAP-5)
     seed = generate_unique_seed(f"{concept}-{scene_design[:50]}")
 
