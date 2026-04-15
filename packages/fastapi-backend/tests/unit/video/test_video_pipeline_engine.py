@@ -101,7 +101,7 @@ def test_generate_scene_design_passes_multimodal_messages_to_api(tmp_path) -> No
         choices = [choices_()]
         model = "gpt-4.1"
 
-    def fake_api(payload, max_tokens=0):  # noqa: ANN001
+    def fake_api(payload, max_tokens=0, **kwargs):  # noqa: ANN001
         captured["payload"] = payload
         captured["max_tokens"] = max_tokens
         return FakeResponse()

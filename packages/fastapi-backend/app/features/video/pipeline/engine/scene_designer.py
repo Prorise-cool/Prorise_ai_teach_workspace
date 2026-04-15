@@ -257,20 +257,29 @@ def generate_scene_design(
     # Normalize messages (GAP-7)
     messages = normalize_messages(messages)
 
-    raw_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
     uses_multimodal_messages = any(
         isinstance(msg, dict) and isinstance(msg.get("content"), list)
         for msg in messages
     )
 
+    # 照抄 ManimCat: messages as list, buildTokenParams, temperature
+    call_kwargs = {
+        "max_tokens": max_tokens,
+        "max_completion_tokens": DESIGNER_MAX_TOKENS + DESIGNER_THINKING_TOKENS,
+        "temperature": DESIGNER_TEMPERATURE,
+    }
+
     # Call LLM — try with structured multimodal messages first, fallback without images.
     try:
-        request_payload = messages if uses_multimodal_messages else raw_prompt
-        response = api_func(request_payload, max_tokens=max_tokens)
+        response = api_func(messages, **call_kwargs)
     except Exception as e:  # LLM response format is unpredictable across providers
         if uses_multimodal_messages and should_retry_without_images(e):
             logger.warning("Vision failed, retrying without images: %s", e)
-            response = api_func(raw_prompt, max_tokens=max_tokens)
+            text_messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            response = api_func(text_messages, **call_kwargs)
         else:
             raise
 

@@ -75,9 +75,19 @@ def generate_code_from_design(
 
     logger.info("Generating code from design (seed=%s)...", seed)
 
-    # Call LLM
-    raw_prompt = f"[SYSTEM]\n{system_prompt}\n\n[USER]\n{user_prompt}"
-    response = api_func(raw_prompt, max_tokens=max_tokens)
+    # 照抄 ManimCat: messages as separate system + user, buildTokenParams for thinking tokens
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    # 照抄 ManimCat buildTokenParams: thinkingTokens + maxTokens = max_completion_tokens
+    response = api_func(
+        messages,
+        max_tokens=max_tokens,
+        max_completion_tokens=CODER_MAX_TOKENS + CODER_THINKING_TOKENS,
+        temperature=CODER_TEMPERATURE,
+    )
 
     if response is None:
         raise ValueError("Code generation LLM call returned None")
