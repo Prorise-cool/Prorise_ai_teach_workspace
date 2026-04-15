@@ -31,3 +31,20 @@ SANDBOX_INFRASTRUCTURE_ERROR_MARKERS = (
     "no such image",
     "tls handshake",
 )
+
+# ── ManimCat-aligned generation constants ───────────────────────
+
+DESIGNER_TEMPERATURE = 0.8
+DESIGNER_MAX_TOKENS = 12000
+DESIGNER_THINKING_TOKENS = 20000
+
+CODER_TEMPERATURE = 0.7
+CODER_MAX_TOKENS = 12000
+CODER_THINKING_TOKENS = 20000
+
+MAX_RENDER_RETRIES = 4  # ManimCat render-with-retry max
+DOOM_LOOP_THRESHOLD = 3  # Same error N times = doom loop
+
+# Error sanitizer limits (ManimCat render-failure/sanitizer.ts)
+STDERR_LIMIT = 4096
+STDOUT_LIMIT = 2048

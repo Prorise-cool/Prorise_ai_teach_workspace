@@ -21,6 +21,8 @@ class _FakeAssembly:
 
 
 class _FakeAgent:
+    """Bulk render agent — section_2 fails, others succeed."""
+
     def __init__(self, work_dir: Path) -> None:
         self.work_dir = work_dir
         self.sections = [
@@ -37,38 +39,23 @@ class _FakeAgent:
         )
         self.section_videos: dict[str, str] = {}
         self.render_summary: dict[str, object] = {}
-        self.generated_sections: list[str] = []
-        self.rendered_sections: list[str] = []
         self.section_status_callback = None
 
-    def generate_outline(self) -> None:
-        return None
+    def generate_design(self, duration_minutes: int) -> tuple[str, list[SimpleNamespace]]:
+        return "<design>test design</design>", self.sections
 
-    def generate_storyboard(self) -> list[SimpleNamespace]:
-        return self.sections
+    def generate_all_code(self, design_text: str) -> str:
+        return "from manim import *\nclass MainScene(Scene):\n    def construct(self):\n        pass\n"
 
-    def generate_section_code(self, section: SimpleNamespace) -> str:
-        self.generated_sections.append(section.id)
-        return f"code-{section.id}"
-
-    def render_section(self, section: SimpleNamespace) -> bool:
-        self.rendered_sections.append(section.id)
-        if section.id == "section_2":
-            if self.section_status_callback is not None:
-                self.section_status_callback(
-                    {
-                        "sectionId": section.id,
-                        "status": "fixing",
-                        "attemptNo": 1,
-                        "maxFixAttempts": 5,
-                    }
-                )
-            return False
-
-        video_path = self.work_dir / f"{section.id}.mp4"
-        video_path.write_bytes(f"video-{section.id}".encode("utf-8"))
-        self.section_videos[section.id] = str(video_path)
-        return True
+    def render_full_video_with_sections(self, full_code: str) -> dict[str, str]:
+        # section_2 fails (no video), others succeed
+        for section in self.sections:
+            if section.id == "section_2":
+                continue
+            video_path = self.work_dir / f"bulk-{section.id}.mp4"
+            video_path.write_bytes(f"bulk-video-{section.id}".encode("utf-8"))
+            self.section_videos[section.id] = str(video_path)
+        return dict(self.section_videos)
 
 
 class _RecordingTask:
@@ -167,8 +154,10 @@ def test_video_pipeline_service_streams_sections_and_persists_preview_runtime(
     task = _RecordingTask()
     result = asyncio.run(service.run(task))
 
-    assert fake_agent.generated_sections == ["section_1", "section_2", "section_3"]
-    assert fake_agent.rendered_sections == ["section_1", "section_2", "section_3"]
+    # Bulk render: section_2 failed, section_1 and section_3 succeeded
+    assert "section_1" in fake_agent.section_videos
+    assert "section_2" not in fake_agent.section_videos
+    assert "section_3" in fake_agent.section_videos
 
     event_names = [snapshot["event"] for snapshot in task.snapshots]
     assert "section_progress" in event_names
@@ -209,8 +198,6 @@ class _FakeBulkAgent:
         )
         self.section_videos: dict[str, str] = {}
         self.render_summary: dict[str, object] = {}
-        self.generated_sections: list[str] = []
-        self.rendered_sections: list[str] = []
         self.bulk_render_calls = 0
         self.section_status_callback = None
 
@@ -232,20 +219,6 @@ class _FakeBulkAgent:
             video_path.write_bytes(f"bulk-video-{section.id}".encode("utf-8"))
             self.section_videos[section.id] = str(video_path)
         return dict(self.section_videos)
-
-    def generate_outline(self) -> None:
-        return None
-
-    def generate_storyboard(self) -> list[SimpleNamespace]:
-        return self.sections
-
-    def generate_section_code(self, section: SimpleNamespace) -> str:
-        self.generated_sections.append(section.id)
-        return f"code-{section.id}"
-
-    def render_section(self, section: SimpleNamespace) -> bool:
-        self.rendered_sections.append(section.id)
-        return True
 
 
 def test_video_pipeline_service_prefers_bulk_render_path_when_manimcat_code_available(
@@ -334,8 +307,6 @@ def test_video_pipeline_service_prefers_bulk_render_path_when_manimcat_code_avai
     result = asyncio.run(service.run(task))
 
     assert fake_agent.bulk_render_calls == 1
-    assert fake_agent.generated_sections == []
-    assert fake_agent.rendered_sections == []
 
     preview = VideoRuntimeStateStore(runtime_store, task.context.task_id).load_preview()
     assert preview is not None

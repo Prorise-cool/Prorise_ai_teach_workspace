@@ -1,11 +1,8 @@
-"""Code2Video LLM bridge — routes all API calls through our Provider per-stage config.
+"""LLM Bridge — routes all API calls through Provider per-stage config.
 
-Provides Code2Video-compatible sync API functions. The orchestrator calls
-``configure_bridge()`` at startup with provider endpoints extracted from
-our ``ProviderRuntimeResolver``.
-
-Module-level functions (``request_gemini_video_img``, etc.) are used by
-agent.py via ``from .gpt_request import *``.
+The orchestrator calls ``configure_bridge()`` at startup with provider
+endpoints extracted from ``ProviderRuntimeResolver``. Agent code calls
+``bridge.text_api(stage)`` or the convenience module-level functions.
 """
 
 from __future__ import annotations
@@ -495,33 +492,9 @@ def request_gemini_video_img(
     max_tokens: int = 10000,
     max_retries: int = 3,
 ):
-    """Multimodal: video + reference image + text → (Completion, usage)."""
+    """Multimodal: video + reference image + text -> (Completion, usage)."""
     return get_bridge().video_img_api("mllm_feedback")(
-        prompt,
-        video_path,
-        image_path,
-        log_id,
-        max_tokens,
-        max_retries,
-    )
-
-
-def request_gemini_video_img_token(
-    prompt: str,
-    video_path: str,
-    image_path: str,
-    log_id: str | None = None,
-    max_tokens: int = 10000,
-    max_retries: int = 3,
-):
-    """Multimodal with token tracking (same as above, both return usage)."""
-    return get_bridge().video_img_api("mllm_feedback")(
-        prompt,
-        video_path,
-        image_path,
-        log_id,
-        max_tokens,
-        max_retries,
+        prompt, video_path, image_path, log_id, max_tokens, max_retries,
     )
 
 
@@ -532,32 +505,7 @@ def request_gemini_with_video(
     max_tokens: int = 10000,
     max_retries: int = 3,
 ):
-    """Video-only analysis → Completion."""
+    """Video-only analysis -> Completion."""
     return get_bridge().video_api("mllm_feedback")(
-        prompt,
-        video_path,
-        log_id,
-        max_tokens,
-        max_retries,
+        prompt, video_path, log_id, max_tokens, max_retries,
     )
-
-
-def request_gpt41_token(
-    prompt: str,
-    log_id: str | None = None,
-    max_tokens: int = 1000,
-    max_retries: int = 3,
-):
-    """Text generation (used by external_assets.py) → (Completion, usage)."""
-    return get_bridge().text_api()(prompt, max_tokens, max_retries)
-
-
-def request_gpt41_img(
-    prompt: str,
-    image_path: str | None = None,
-    log_id: str | None = None,
-    max_tokens: int = 1000,
-    max_retries: int = 3,
-):
-    """Image + text analysis → Completion."""
-    return get_bridge().image_api()(prompt, image_path, log_id, max_tokens, max_retries)
