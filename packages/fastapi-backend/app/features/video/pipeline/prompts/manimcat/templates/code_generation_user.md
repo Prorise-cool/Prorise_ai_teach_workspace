@@ -21,6 +21,7 @@ Output mode: {{outputMode}}
 - Use the storyboard commands directly.
 - Preserve fixed layout templates when present.
 - Respect exact anchors and relative placement.
+- Keep the bottom subtitle safe zone clear because subtitles are rendered by the front-end DOM layer.
 
 ## Behavior Layer
 ### Workflow
@@ -42,10 +43,14 @@ Output mode: {{outputMode}}
 - Use `MainScene` as the main class
 - Use `self.next_section("section_N")` at the start of each section
 - Use `self.clear()` between sections to prevent cross-section occlusion
+- Never set an opaque fullscreen background; the exported WebM must keep transparency
 
-### Language Rule
-- In Chinese mode, all labels, subtitles, captions, and explanatory on-screen text in the code must be Chinese.
-- In English mode, all labels, subtitles, captions, and explanatory on-screen text in the code must be English.
+### Language Rule（强制中文模式）
+- 所有标签、字幕、标题、说明性屏幕文字必须是中文
+- 数学公式使用 MathTex() 对象（LaTeX 格式）
+- 非数学文字使用 Text() 对象（中文内容）
+- 变量名和内部命令用英文，面向用户的文字用中文
+- 示例：`Text("我们来计算这个积分", font_size=24)` 而不是 `Text("Let's calculate this integral", font_size=24)`
 
 ## Constraint Layer
 ### Must Not Do
@@ -53,3 +58,4 @@ Output mode: {{outputMode}}
 - Do not use Markdown code fences.
 - Do not leave temporary objects without cleanup if they are no longer needed.
 - Do not ignore the storyboard's placement and transform intent.
+- Do not place critical content in the subtitle safe zone near the bottom edge.

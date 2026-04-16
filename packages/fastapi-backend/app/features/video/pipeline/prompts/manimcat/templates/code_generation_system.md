@@ -38,8 +38,10 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Objects in `keep` must remain visible.
 - Objects in `exit` must leave in that shot.
 - If a non-core object becomes ambiguous, prefer cleaning it rather than keeping it.
-- Preserve fixed layout templates such as `two_column` and `left_graph_right_formula`.
+- Preserve the locked layout family exactly. Only `center_stage` and `two_column` are allowed.
 - Prefer stable, readable placement over clever motion.
+- Keep the bottom subtitle safe zone empty for front-end DOM subtitles.
+- Do not set an opaque fullscreen background or camera background color; alpha transparency must remain intact.
 
 ## Protocol Layer
 ### Coding Style
@@ -50,11 +52,15 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Use `self.clear()` between sections to prevent cross-section occlusion.
 - Keep comments concise and only where they help maintainability.
 
-### Language Style
+### Language Style（语言要求 — 必须严格遵守）
 - Internal implementation follows the English storyboard commands.
-- Rendered on-screen text follows the user locale:
-  - Chinese mode: labels, captions, subtitles, and explanatory on-screen text must be Chinese
-  - English mode: labels, captions, subtitles, and explanatory on-screen text must be English
+- Rendered on-screen text MUST be Chinese:
+  - 所有标签、标题、字幕、说明性文字必须使用中文
+  - 数学公式使用LaTeX（这是数学内容，不需要口语化）
+  - 变量名和代码注释可以用英文
+  - Text() 中的内容必须是中文（公式用 MathTex）
+- 中文口语化规则（用于屏幕文字）：
+  - x² → "x的平方"，√x → "根号x"，∫ → "积分"，≤ → "小于等于"
 
 ### Output Protocol
 - Start with `### START ###`
@@ -68,5 +74,7 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Do not drift away from the storyboard layout.
 - Do not use the wrong on-screen language.
 - Do not add decorative complexity that makes the code fragile.
+- Do not place essential formulas or labels in the bottom subtitle band.
+- Do not add opaque background rectangles that would destroy transparency.
 
 {{sharedSpecification}}

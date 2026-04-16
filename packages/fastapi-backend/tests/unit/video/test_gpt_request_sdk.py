@@ -1,6 +1,7 @@
 """Tests for gpt_request.py SDK migration — LLMBridge still works after httpx→SDK swap."""
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +11,7 @@ from app.features.video.pipeline.engine.gpt_request import (
     LLMBridge,
     _call_openai_compatible,
     _build_completion,
+    _estimate_message_chars,
 )
 from app.providers.llm.openai_client_factory import ProviderEndpoint
 
@@ -80,6 +82,39 @@ class TestCallOpenaiCompatible:
         )
         assert result is None
         assert mock_stream_fn.call_count == 3
+
+    @patch("app.features.video.pipeline.engine.gpt_request.client_from_endpoint")
+    @patch("app.features.video.pipeline.engine.gpt_request.create_chat_completion_text")
+    def test_large_payload_skips_stream(self, mock_stream_fn, mock_client_fn):
+        """大 payload 直接 non-stream，避免 CDN stream 建连 524。"""
+        mock_stream_fn.return_value = MagicMock(
+            content="generated code", usage={"prompt_tokens": 10}, mode="non-stream",
+        )
+        large_messages = [{"role": "user", "content": "x" * 50}]
+
+        with patch(
+            "app.features.video.pipeline.engine.gpt_request.get_settings",
+            return_value=SimpleNamespace(video_llm_stream_max_input_chars=10),
+        ):
+            result, _ = _call_openai_compatible(_mock_ep(), large_messages)
+
+        assert result is not None
+        assert mock_stream_fn.call_args.kwargs["prefer_stream"] is False
+
+
+class TestMessageSizing:
+    def test_estimate_message_chars_counts_nested_payloads(self):
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "hello"},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                ],
+            }
+        ]
+
+        assert _estimate_message_chars(messages) >= len("hello") + len("data:image/png;base64,abc")
 
 
 class TestLLMBridge:

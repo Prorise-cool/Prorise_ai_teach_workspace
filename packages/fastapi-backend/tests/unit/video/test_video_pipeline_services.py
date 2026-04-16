@@ -15,7 +15,6 @@ from app.features.video.pipeline.manim_runtime_prelude import (
 from app.features.video.pipeline.models import (
     AudioSegment,
     ComposeResult,
-    ExecutionResult,
     ManimCodeResult,
     Scene,
     Storyboard,
@@ -698,31 +697,8 @@ def test_tts_service_filters_provider_chain_by_requested_voice_preference() -> N
 
 def test_compose_service_builds_expected_ffmpeg_commands() -> None:
     service = ComposeService(settings=_build_settings(), runtime=_build_runtime("video_compose_case"))
-
-    subtitle_command = service.build_subtitle_command(
-        "video.mp4",
-        "output.mp4",
-        subtitle_path="subtitles.ass",
-    )
     cover_command = service.build_cover_command("output.mp4", "cover.jpg")
 
-    assert subtitle_command == [
-        "ffmpeg",
-        "-y",
-        "-i",
-        "video.mp4",
-        "-vf",
-        "ass=subtitles.ass",
-        "-c:v",
-        "libx264",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "copy",
-        "-movflags",
-        "+faststart",
-        "output.mp4",
-    ]
     assert cover_command == [
         "ffmpeg",
         "-y",
@@ -738,27 +714,6 @@ def test_compose_service_builds_expected_ffmpeg_commands() -> None:
     ]
 
 
-def test_compose_service_builds_subtitle_entries_and_writes_srt(tmp_path) -> None:
-    service = ComposeService(settings=_build_settings(), runtime=_build_runtime("video_compose_subtitle_case"))
-
-    entries = service.build_subtitle_entries(
-        storyboard=_build_storyboard(),
-        scene_durations=[4.2, 5.0, 3.1],
-        max_chars_per_line=32,
-    )
-    srt_path = tmp_path / "subtitles.srt"
-    service.write_srt(entries, srt_path)
-
-    assert len(entries) == 3
-    assert entries[0].start_seconds == pytest.approx(0.0)
-    assert entries[0].end_seconds == pytest.approx(4.2)
-    assert entries[1].start_seconds == pytest.approx(4.2)
-    assert entries[1].end_seconds == pytest.approx(9.2)
-    assert entries[2].start_seconds == pytest.approx(9.2)
-    assert entries[2].end_seconds == pytest.approx(12.3)
-    assert "00:00:00,000 --> 00:00:04,200" in srt_path.read_text(encoding="utf-8")
-
-
 def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     runtime = _build_runtime("video_upload_case")
     asset_store = LocalAssetStore(root_dir=tmp_path / "assets", cos_client=CosClient("https://cos.test.local"))
@@ -766,7 +721,7 @@ def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytes
 
     compose_dir = tmp_path / "video_compose_upload_case"
     compose_dir.mkdir()
-    video_path = compose_dir / "output.mp4"
+    video_path = compose_dir / "output.webm"
     cover_path = compose_dir / "cover.jpg"
     video_path.write_bytes(b"video")
     cover_path.write_bytes(b"cover")
@@ -802,7 +757,7 @@ def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytes
         service.execute(task_id="video_upload_case", compose_result=compose_result, on_retry=on_retry)
     )
 
-    assert result.video_url.endswith("/video/video_upload_case/output.mp4")
+    assert result.video_url.endswith("/video/video_upload_case/output.webm")
     assert result.cover_url.endswith("/video/video_upload_case/cover.jpg")
     assert retry_events == [(1, 1, "temporary upload failure")]
     assert sleep_calls == [1]
@@ -822,10 +777,10 @@ def test_cos_client_from_settings_falls_back_to_local_asset_route(monkeypatch: p
     monkeypatch.setattr("app.shared.cos_client.get_settings", lambda: settings)
 
     client = CosClient.from_settings()
-    asset = client.build_asset("video/video_upload_case/output.mp4")
+    asset = client.build_asset("video/video_upload_case/output.webm")
 
     assert client.base_url == "http://127.0.0.1:8090/api/v1/video/assets"
-    assert asset.public_url == "http://127.0.0.1:8090/api/v1/video/assets/video/video_upload_case/output.mp4"
+    assert asset.public_url == "http://127.0.0.1:8090/api/v1/video/assets/video/video_upload_case/output.webm"
 
 
 def test_local_asset_store_round_trips_local_asset_route_refs(tmp_path) -> None:
@@ -834,9 +789,9 @@ def test_local_asset_store_round_trips_local_asset_route_refs(tmp_path) -> None:
         cos_client=CosClient("http://127.0.0.1:8090/api/v1/video/assets"),
     )
 
-    asset = asset_store.write_text("video/video_upload_case/output.mp4", "video")
+    asset = asset_store.write_text("video/video_upload_case/output.webm", "video")
 
-    assert asset_store.ref_to_key(asset.public_url) == "video/video_upload_case/output.mp4"
+    assert asset_store.ref_to_key(asset.public_url) == "video/video_upload_case/output.webm"
     assert asset_store.resolve_ref(asset.public_url).read_text(encoding="utf-8") == "video"
 
 

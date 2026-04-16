@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-15 12:24:48 +0800
+# last_updated: 2026-04-16 12:18:00 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-15 12:24:48 +0800
+last_updated: 2026-04-16 12:18:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -103,6 +103,14 @@ development_status:
   # - 已补齐 `auto_fix.py`、`services.py`、`manim_runtime_prelude.py`、`script_templates.py` 兼容层，并把 sandbox 错误码统一到 `VideoTaskErrorCode`。
   # - orchestrator 已恢复旧测试需要的 `_emit_stage/_handle_pipeline_failure/_run_understanding/_run_render_verify` helper，同时完成态 preview 优先读取 runtime 最新 snapshot。
   # - 回归通过：`pytest packages/fastapi-backend/tests/unit/video -q` => `97 passed`；`pytest packages/fastapi-backend/tests/api/video packages/fastapi-backend/tests/contracts/test_openapi_contracts.py -q` => `3 passed`。
+  # 2026-04-16 大 prompt stream 524 修复：
+  # - `gpt_request` 现会递归估算 message payload 字符数，并在超过 `FASTAPI_VIDEO_LLM_STREAM_MAX_INPUT_CHARS`（默认 12000）时跳过 stream。
+  # - `openai_stream.create_chat_completion_text()` 新增 `prefer_stream`，大 payload 会 direct non-stream，不再先尝试 stream 建连后被 CDN 524 截断。
+  # - 回归通过：`pytest tests/unit/video/test_create_chat_completion_text.py -q` => `8 passed`；`pytest tests/unit/video/test_gpt_request_sdk.py -q` => `9 passed`。
+  # 2026-04-16 review cleanup 补充收口：
+  # - `services.py` 已删除未使用字幕 helper，`models.py` 已移除 `ResourceLimits/ExecutionResult`，bulk render / preview / upload 输出统一改走 `VIDEO_OUTPUT_FORMAT`。
+  # - `test_video_pipeline_models.py`、`test_video_pipeline_services.py` 已删除过期的 DockerSandboxExecutor/LocalSandboxExecutor 假设，改为对齐当前“本地 manim + 静态安全扫描”实现。
+  # - 回归通过：`python -m pytest tests/unit/video/ -q` => `105 passed in 2.01s`。
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
@@ -140,6 +148,9 @@ development_status:
   # - 新增 Story 4.11，明确等待体验优化走“真实中间产物 + section 分段预览”而不走“manim_gen 阶段流式播放最终视频”的错误承诺。
   # - 推荐新增 /api/v1/video/tasks/{id}/preview，并在既有 SSE/status 中补充 preview version 信号，保持结果页仍只消费最终 videoUrl。
   # - 当日晚些时候已完成 FastAPI 后端 per-section streaming 重构、preview runtime 持久化、preview endpoint 与 section 级 SSE 事件；前端等待页接入尚未收口，因此 Story 保持 in-progress。
+  # 2026-04-16 本地联调补充：
+  # - development / test 环境下 Dramatiq worker 默认关闭 Prometheus middleware，避免重复启动时占用默认 9191 指标端口。
+  # - `scripts/start-worker.sh` 现会先停止同工作区旧 worker 再启动新 worker，确保 section 预览联调不会出现“旧 worker + 新 worker”并行消费同一队列。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

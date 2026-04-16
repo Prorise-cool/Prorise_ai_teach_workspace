@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.core.config import Settings
+from app.features.video.pipeline.constants import VIDEO_OUTPUT_FORMAT
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
@@ -52,7 +53,7 @@ class UploadService:
         for attempt in range(1, attempts + 1):
             try:
                 video_asset = self.asset_store.copy_file(
-                    compose_result.video_path, f"video/{task_id}/output.mp4"
+                    compose_result.video_path, f"video/{task_id}/output.{VIDEO_OUTPUT_FORMAT}"
                 )
                 cover_asset = self.asset_store.copy_file(
                     compose_result.cover_path, f"video/{task_id}/cover.jpg"

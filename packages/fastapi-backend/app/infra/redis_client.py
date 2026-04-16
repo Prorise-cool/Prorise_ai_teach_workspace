@@ -20,6 +20,7 @@ from threading import Lock
 
 from dramatiq.brokers.redis import RedisBroker
 from dramatiq.brokers.stub import StubBroker
+from dramatiq.middleware import Prometheus, default_middleware
 from redis import Redis
 
 from app.core.config import Settings, get_settings
@@ -291,9 +292,15 @@ def create_dramatiq_broker(settings: Settings | None = None) -> RedisBroker | St
     Returns:
         ``RedisBroker``（生产）或 ``StubBroker``（测试）。
     """
-    broker_config = create_dramatiq_broker_config(settings)
+    active_settings = settings or get_settings()
+    broker_config = create_dramatiq_broker_config(active_settings)
+    middleware = [
+        middleware_cls()
+        for middleware_cls in default_middleware
+        if active_settings.dramatiq_prometheus_enabled or middleware_cls is not Prometheus
+    ]
     if broker_config.backend == "stub":
-        broker = StubBroker()
+        broker = StubBroker(middleware=middleware)
         broker.emit_after("process_boot")
         return broker
-    return RedisBroker(url=broker_config.redis_url)
+    return RedisBroker(url=broker_config.redis_url, middleware=middleware)

@@ -104,6 +104,27 @@ class TestStreamPartialRecovery:
 
 
 class TestStreamFallback:
+    def test_prefer_stream_false_goes_direct_non_stream(self):
+        """大 payload 可直接 non-stream，避免先建 stream。"""
+        client = MagicMock()
+        non_stream_resp = MagicMock()
+        non_stream_resp.choices = [MagicMock()]
+        non_stream_resp.choices[0].message.content = "direct result"
+        non_stream_resp.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+        client.chat.completions.create.return_value = non_stream_resp
+
+        result = create_chat_completion_text(
+            client,
+            messages=[{"role": "user", "content": "hi"}],
+            model="test-model",
+            prefer_stream=False,
+        )
+        assert result.content == "direct result"
+        assert result.mode == "non-stream"
+        calls = client.chat.completions.create.call_args_list
+        assert len(calls) == 1
+        assert calls[0].kwargs.get("stream") is False
+
     def test_stream_fails_fallback_non_stream(self):
         """Stream 完全失败 → fallback 到 non-stream。"""
         client = MagicMock()

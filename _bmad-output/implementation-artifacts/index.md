@@ -162,6 +162,7 @@
 - [Plan D 收口记录](./4-2-4-3-plan-d-编排与契约收口-20260410.md)
 - [Bulk render 收口记录](./4-3-manimcat-bulk-render-save-sections-收口-20260414.md)
 - [审查与兼容修复记录](./4-3-manimcat-review-compat-fix-20260415.md)
+- [大 Prompt Stream 524 修复记录](./4-3-manimcat-large-prompt-stream-524修复-20260416.md)
 - **状态**: review
 - **说明**: 实现 manim_gen service 与 FixChain（RuleBasedFixer → LLMBasedFixer），最大修复 2 次
 - **热修摘要**: 2026-04-10 已修复并行场景生成触发的 429 重试风暴，补齐 jitter、429 健康缓存策略、fallback 缓存绕过、默认并发下调，并补做 DeepSeek 实机并发 smoke test
@@ -171,6 +172,8 @@
 - **厚修复摘要**: 2026-04-15 已补齐 fatal failure 时的 section failed 回写、`/tasks/{id}/status` 的 `VIDEO_*` errorCode 透传，以及 bulk progress/SSE 单调性收口
 - **最新实机摘要**: 2026-04-15 上午管理员样本 `vtask_20260415013544_1914f169` 在 `5m24s` 后仍失败于 `VIDEO_MANIM_GEN_FAILED`；但事件回放已不再伪造 section 级生成进度，`/preview` 也正确收口为 `failedSections=10`
 - **最新审查摘要**: 2026-04-15 中午已修复 video unit test 的导入层断裂、preview 完成态回写旧 snapshot、以及旧 helper/脚本模板缺失，`tests/unit/video` 与 `api/video + openapi contracts` 已重新全绿
+- **最新修复摘要**: 2026-04-16 已在 `gpt_request/openai_stream` 补齐“大 payload 跳过 stream、直接 non-stream”策略，默认阈值 `12000` 字符，避免 code generation 在 CDN 建连阶段直接命中 `524`
+- **最新清理摘要**: 2026-04-16 已删除未使用字幕 helper、移除旧 sandbox 专属模型、统一 `.webm` 输出常量并把 unit tests 对齐到当前本地 `manim` 架构，`python -m pytest tests/unit/video/ -q` 结果为 `105 passed`
 
 ### Story 4.4: Manim 沙箱执行与资源限制
 - [文档](./4-4-manim-沙箱执行与资源限制.md)

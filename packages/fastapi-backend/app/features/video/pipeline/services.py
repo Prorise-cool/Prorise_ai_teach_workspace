@@ -16,7 +16,11 @@ from typing import Any, Sequence
 
 from app.core.config import get_settings
 from app.features.video.pipeline.auto_fix import ast_fix_code
-from app.features.video.pipeline.constants import DEFAULT_FIXED_SCENE_CLASS, DEFAULT_MANIM_SCENE_CLASS
+from app.features.video.pipeline.constants import (
+    DEFAULT_FIXED_SCENE_CLASS,
+    DEFAULT_MANIM_SCENE_CLASS,
+    VIDEO_OUTPUT_FORMAT,
+)
 from app.features.video.pipeline.engine.code_cleaner import extract_code_from_response
 from app.features.video.pipeline.manim_runtime_prelude import MANIM_RUNTIME_PRELUDE
 from app.features.video.pipeline.models import (
@@ -319,25 +323,6 @@ class ComposeService:
     settings: Any
     runtime: VideoRuntimeStateStore
 
-    def build_subtitle_command(self, video_path: str, output_path: str, *, subtitle_path: str) -> list[str]:
-        return [
-            "ffmpeg",
-            "-y",
-            "-i",
-            video_path,
-            "-vf",
-            f"ass={subtitle_path}",
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "copy",
-            "-movflags",
-            "+faststart",
-            output_path,
-        ]
-
     def build_cover_command(self, output_path: str, cover_path: str) -> list[str]:
         return [
             "ffmpeg",
@@ -352,50 +337,6 @@ class ComposeService:
             "2",
             cover_path,
         ]
-
-    def build_subtitle_entries(
-        self,
-        *,
-        storyboard: Storyboard,
-        scene_durations: Sequence[float],
-        max_chars_per_line: int,
-    ) -> list[SimpleNamespace]:
-        del max_chars_per_line
-        entries: list[SimpleNamespace] = []
-        cursor = 0.0
-        for index, (scene, duration) in enumerate(zip(storyboard.scenes, scene_durations, strict=False), start=1):
-            start_seconds = cursor
-            end_seconds = cursor + float(duration)
-            cursor = end_seconds
-            entries.append(
-                SimpleNamespace(
-                    index=index,
-                    start_seconds=start_seconds,
-                    end_seconds=end_seconds,
-                    text=scene.voice_text or scene.narration,
-                )
-            )
-        return entries
-
-    def write_srt(self, entries: Sequence[Any], path: Path) -> None:
-        def _format(seconds: float) -> str:
-            total_ms = round(seconds * 1000)
-            hours, remainder = divmod(total_ms, 3_600_000)
-            minutes, remainder = divmod(remainder, 60_000)
-            secs, millis = divmod(remainder, 1000)
-            return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
-
-        lines: list[str] = []
-        for index, entry in enumerate(entries, start=1):
-            lines.extend(
-                [
-                    str(index),
-                    f"{_format(float(entry.start_seconds))} --> {_format(float(entry.end_seconds))}",
-                    str(entry.text),
-                    "",
-                ]
-            )
-        path.write_text("\n".join(lines), encoding="utf-8")
 
 
 @dataclass(slots=True)
@@ -525,7 +466,10 @@ class UploadService:
 
         for attempt in range(1, total_attempts + 1):
             try:
-                video_asset = self.asset_store.copy_file(compose_result.video_path, f"video/{task_id}/output.mp4")
+                video_asset = self.asset_store.copy_file(
+                    compose_result.video_path,
+                    f"video/{task_id}/output.{VIDEO_OUTPUT_FORMAT}",
+                )
                 cover_asset = self.asset_store.copy_file(compose_result.cover_path, f"video/{task_id}/cover.jpg")
                 result = UploadResult(
                     video_url=video_asset.public_url,

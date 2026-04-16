@@ -16,7 +16,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -64,6 +64,12 @@ def _resolve_runtime_environment() -> RuntimeEnvironment:
     """
 
     return _normalize_runtime_environment(os.getenv("FASTAPI_ENV"))
+
+
+def _default_dramatiq_pid_file() -> str:
+    """返回本地 worker 默认 pid 文件路径。"""
+
+    return str(PROJECT_ROOT / ".runtime" / "dramatiq-worker.pid")
 
 
 def _build_env_file_candidates() -> tuple[Path, ...]:
@@ -124,6 +130,19 @@ class Settings(BaseSettings):
     )
     dramatiq_task_time_limit_ms: int = Field(
         default=1_200_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
+    )
+    dramatiq_prometheus_enabled: bool | None = Field(
+        default=None, alias="FASTAPI_DRAMATIQ_PROMETHEUS_ENABLED"
+    )
+    dramatiq_prometheus_host: str = Field(
+        default="0.0.0.0", alias="FASTAPI_DRAMATIQ_PROMETHEUS_HOST"
+    )
+    dramatiq_prometheus_port: int = Field(
+        default=9191, alias="FASTAPI_DRAMATIQ_PROMETHEUS_PORT"
+    )
+    dramatiq_pid_file: str = Field(
+        default_factory=_default_dramatiq_pid_file,
+        alias="FASTAPI_DRAMATIQ_PID_FILE",
     )
     ruoyi_base_url: str = Field(
         default="http://localhost:8080", alias="FASTAPI_RUOYI_BASE_URL"
@@ -217,9 +236,33 @@ class Settings(BaseSettings):
         default=12000,
         alias="FASTAPI_VIDEO_DESIGNER_MAX_TOKENS",
     )
+    video_llm_stream_max_input_chars: int = Field(
+        default=12000,
+        alias="FASTAPI_VIDEO_LLM_STREAM_MAX_INPUT_CHARS",
+    )
     video_default_duration_minutes: int = Field(
         default=5,
         alias="FASTAPI_VIDEO_DEFAULT_DURATION_MINUTES",
+    )
+    video_section_max_count: int = Field(
+        default=6,
+        alias="FASTAPI_VIDEO_SECTION_MAX_COUNT",
+    )
+    video_section_codegen_concurrency: int = Field(
+        default=1,
+        alias="FASTAPI_VIDEO_SECTION_CODEGEN_CONCURRENCY",
+    )
+    video_section_codegen_max_tokens: int = Field(
+        default=4000,
+        alias="FASTAPI_VIDEO_SECTION_CODEGEN_MAX_TOKENS",
+    )
+    video_section_codegen_max_completion_tokens: int = Field(
+        default=8000,
+        alias="FASTAPI_VIDEO_SECTION_CODEGEN_MAX_COMPLETION_TOKENS",
+    )
+    video_default_layout_hint: str = Field(
+        default="center_stage",
+        alias="FASTAPI_VIDEO_DEFAULT_LAYOUT_HINT",
     )
 
     model_config = SettingsConfigDict(
@@ -263,6 +306,17 @@ class Settings(BaseSettings):
         if isinstance(value, (str, RuntimeEnvironment)) or value is None:
             return _normalize_runtime_environment(value)
         return RuntimeEnvironment.DEVELOPMENT
+
+    @model_validator(mode="after")
+    def apply_runtime_defaults(self) -> Settings:
+        """根据运行环境补齐依赖环境的默认值。"""
+
+        if self.dramatiq_prometheus_enabled is None:
+            self.dramatiq_prometheus_enabled = self.environment not in {
+                RuntimeEnvironment.DEVELOPMENT,
+                RuntimeEnvironment.TEST,
+            }
+        return self
 
 
 @lru_cache

@@ -47,6 +47,40 @@
 - `packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tests/api/video packages/fastapi-backend/tests/contracts/test_openapi_contracts.py -q`
   - 结果：`3 passed`
 
+## 2026-04-16 补充收口
+
+- 死代码继续收敛：
+  - `packages/fastapi-backend/app/features/video/pipeline/services.py`
+  - 已删除不再被当前 DOM 字幕链路使用的 `build_subtitle_command`、`build_subtitle_entries`、`write_srt`。
+- 现架构口径统一：
+  - `packages/fastapi-backend/app/features/video/pipeline/models.py`
+  - `packages/fastapi-backend/app/features/video/pipeline/engine/agent.py`
+  - `packages/fastapi-backend/app/features/video/pipeline/orchestration/orchestrator.py`
+  - `packages/fastapi-backend/app/features/video/pipeline/orchestration/upload.py`
+  - `packages/fastapi-backend/app/features/video/pipeline/services.py`
+  - 已移除仅被旧测试引用的 `ResourceLimits` / `ExecutionResult`，并把 bulk render、preview clip、最终上传结果统一改走 `VIDEO_OUTPUT_FORMAT`，避免 `webm/mp4` 常量散落。
+- 旧 sandbox 假设退场：
+  - `packages/fastapi-backend/tests/unit/video/test_video_pipeline_models.py`
+  - `packages/fastapi-backend/tests/unit/video/test_video_pipeline_services.py`
+  - 已删除对 `DockerSandboxExecutor` / `LocalSandboxExecutor` 的过期断言，改为覆盖当前真实的“本地 `manim` 渲染 + 静态脚本安全扫描”实现。
+- 透明导出注释修正：
+  - `packages/fastapi-backend/app/features/video/pipeline/prompts/base_class.py`
+  - 现明确说明透明导出依赖 Manim CLI `--transparent`，而不是 `background_color` 本身。
+- FFmpeg 降级可观测性补齐：
+  - `packages/fastapi-backend/app/features/video/pipeline/orchestration/orchestrator.py`
+  - 当 `libvorbis` 音频合成失败并回退为 silent clip copy 时，现会先打 warning，避免静默吞掉诊断线索。
+
+## 2026-04-16 补充验证
+
+- `python -m pytest tests/unit/video/ -q`
+  - 结果：`105 passed in 2.01s`
+
+## 与 524 修复的关系
+
+- `2026-04-16` 同日落地的“大 prompt stream 524 修复”集中在 `gpt_request.py`、`openai_stream.py` 与配置阈值判断，目的是对大 payload 跳过 `stream first`。
+- 本次补充收口集中在死代码清理、输出格式统一与测试对齐，没有回滚或重写那条请求层策略。
+- 两批改动的关注面解耦；本次 `tests/unit/video` 全绿也说明 review cleanup 没有把 `524` 热修链路带偏。
+
 ## 与 ManimCat 仍存在的剩余差距
 
 1. 当前仓库已具备 render failure 持久化与 sanitize 能力，但仍缺少类似 `ManimCat` 的 failure admin/export route，问题排查入口偏内聚。

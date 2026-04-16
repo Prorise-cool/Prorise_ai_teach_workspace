@@ -1,9 +1,10 @@
 """应用入口模块，创建 FastAPI 实例。"""
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
-from app.core.config import get_settings
+from app.core.config import RuntimeEnvironment, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.lifespan import create_lifespan
 from app.core.logging import configure_logging
@@ -35,6 +36,19 @@ def create_app() -> FastAPI:
         ]
     )
     application.add_middleware(RequestContextMiddleware)
+    if settings.environment in {
+        RuntimeEnvironment.DEVELOPMENT,
+        RuntimeEnvironment.TEST,
+    }:
+        # Local E2E pages call FastAPI from file:// or a different dev origin
+        # and always trigger browser preflight for Authorization + JSON headers.
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+            expose_headers=["X-Request-ID"],
+        )
     application.include_router(api_router)
     register_exception_handlers(application)
 
