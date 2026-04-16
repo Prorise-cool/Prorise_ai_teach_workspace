@@ -9,6 +9,7 @@ from typing import Any, Literal
 from pydantic import Field, field_serializer
 
 from app.core.logging import format_trace_timestamp
+from app.features.video.pipeline.constants import VIDEO_OUTPUT_FORMAT
 from app.features.video.models.base import VideoCamelModel
 
 
@@ -182,7 +183,9 @@ class Scene(VideoCamelModel):
 class VideoConfig(VideoCamelModel):
     """视频渲染配置。"""
 
-    background_color: str = "#1a1a2e"
+    # Transparent export depends on the Manim CLI `--transparent` flag.
+    # Keep the scene background unset here so prompts do not force an opaque backdrop.
+    background_color: str | None = None
     aspect_ratio: str = "16:9"
     quality: str = "m"
 
@@ -243,27 +246,6 @@ class FixLogEntry(VideoCamelModel):
     message: str
 
 
-class ResourceLimits(VideoCamelModel):
-    """沙箱资源限制配置。"""
-    cpu_count: float = Field(default=1.0, ge=1.0)
-    memory_mb: int = Field(default=2048, ge=512)
-    timeout_seconds: int = Field(default=120, ge=1)
-    tmp_size_mb: int = Field(default=1024, ge=128)
-    allow_network: bool = False
-    allow_subprocess: bool = False
-
-
-class ExecutionResult(VideoCamelModel):
-    """沙箱执行结果。"""
-    success: bool
-    output_path: str | None = None
-    stderr: str | None = None
-    exit_code: int | None = None
-    duration_seconds: float = 0.0
-    resource_usage: dict[str, Any] = Field(default_factory=dict)
-    error_type: str | None = None
-
-
 class AudioSegment(VideoCamelModel):
     """单场景音频片段。"""
     scene_id: str
@@ -299,7 +281,7 @@ class ComposeResult(VideoCamelModel):
     cover_path: str
     duration: int = Field(ge=1)
     file_size: int = Field(ge=1)
-    format: str = "mp4"
+    format: str = VIDEO_OUTPUT_FORMAT
 
 
 class UploadResult(VideoCamelModel):

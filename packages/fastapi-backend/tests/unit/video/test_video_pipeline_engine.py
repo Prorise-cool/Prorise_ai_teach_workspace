@@ -146,3 +146,68 @@ def test_doom_loop_detection() -> None:
 def test_section_dataclass() -> None:
     s = Section(id="s1", title="Test", lecture_lines=["line1"], animations=["anim1"])
     assert s.id == "s1"
+
+
+def test_request_api_and_track_tokens_forwards_new_llm_kwargs(tmp_path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_api(prompt, max_tokens=0, **kwargs):  # noqa: ANN001
+        captured["prompt"] = prompt
+        captured["max_tokens"] = max_tokens
+        captured["kwargs"] = kwargs
+        return SimpleNamespace(choices=[]), {
+            "prompt_tokens": 11,
+            "completion_tokens": 7,
+            "total_tokens": 18,
+        }
+
+    agent = TeachingVideoAgent(
+        idx="bench",
+        knowledge_point="一元二次方程",
+        folder=str(tmp_path),
+        cfg=RunConfig(api=fake_api),
+    )
+
+    response = agent._request_api_and_track_tokens(
+        [{"role": "user", "content": "hello"}],
+        max_tokens=321,
+        max_completion_tokens=654,
+        temperature=0.3,
+    )
+
+    assert response.choices == []
+    assert captured["max_tokens"] == 321
+    assert captured["kwargs"] == {
+        "max_completion_tokens": 654,
+        "temperature": 0.3,
+    }
+    assert agent.token_usage == {
+        "prompt_tokens": 11,
+        "completion_tokens": 7,
+        "total_tokens": 18,
+    }
+
+
+def test_request_api_and_track_tokens_falls_back_for_legacy_api(tmp_path) -> None:
+    calls: list[dict[str, object]] = []
+
+    def legacy_api(prompt, max_tokens=0):  # noqa: ANN001
+        calls.append({"prompt": prompt, "max_tokens": max_tokens})
+        return SimpleNamespace(choices=[]), {"total_tokens": 3}
+
+    agent = TeachingVideoAgent(
+        idx="legacy",
+        knowledge_point="一元二次方程",
+        folder=str(tmp_path),
+        cfg=RunConfig(api=legacy_api),
+    )
+
+    response = agent._request_api_and_track_tokens(
+        "hello",
+        max_tokens=111,
+        max_completion_tokens=222,
+    )
+
+    assert response.choices == []
+    assert calls == [{"prompt": "hello", "max_tokens": 111}]
+    assert agent.token_usage["total_tokens"] == 3

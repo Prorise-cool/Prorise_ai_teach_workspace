@@ -52,6 +52,33 @@ def test_settings_accepts_clean_ruoyi_configuration_without_service_auth(monkeyp
     assert settings.ruoyi_base_url == "http://127.0.0.1:8080"
 
 
+def test_settings_disable_dramatiq_prometheus_by_default_in_development(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("FASTAPI_ENV", raising=False)
+    monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
+
+    settings = Settings(_env_file=())
+
+    assert settings.environment is RuntimeEnvironment.DEVELOPMENT
+    assert settings.dramatiq_prometheus_enabled is False
+    assert settings.dramatiq_pid_file == str(tmp_path / ".runtime" / "dramatiq-worker.pid")
+
+
+def test_settings_enable_dramatiq_prometheus_by_default_in_staging(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("FASTAPI_ENV", RuntimeEnvironment.STAGING.value)
+    monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
+
+    settings = Settings(_env_file=())
+
+    assert settings.environment is RuntimeEnvironment.STAGING
+    assert settings.dramatiq_prometheus_enabled is True
+
+
 def test_settings_accepts_ruoyi_crypto_configuration(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(config_module, "PROJECT_ROOT", tmp_path)
 

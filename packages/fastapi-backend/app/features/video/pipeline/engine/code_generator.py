@@ -31,6 +31,7 @@ def generate_code_from_design(
     output_mode: str = "video",
     api_func=None,
     max_tokens: int = CODER_MAX_TOKENS,
+    max_completion_tokens: int | None = None,
 ) -> str:
     """Generate Manim code from structured scene design.
 
@@ -85,7 +86,11 @@ def generate_code_from_design(
     response = api_func(
         messages,
         max_tokens=max_tokens,
-        max_completion_tokens=CODER_MAX_TOKENS + CODER_THINKING_TOKENS,
+        max_completion_tokens=(
+            max_completion_tokens
+            if max_completion_tokens is not None
+            else CODER_MAX_TOKENS + CODER_THINKING_TOKENS
+        ),
         temperature=CODER_TEMPERATURE,
     )
 

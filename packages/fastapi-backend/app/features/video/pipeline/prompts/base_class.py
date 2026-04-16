@@ -1,8 +1,8 @@
 base_class = """
 class TeachingScene(Scene):
     def setup_layout(self, title_text, lecture_lines):
-        # BASE
-        self.camera.background_color = "#000000"
+        # Keep the scene background unset; real alpha export comes from Manim's --transparent flag.
+        self.camera.background_color = None
         self.title = Text(title_text, font_size=28, color=WHITE).to_edge(UP)
         self.add(self.title)
 
@@ -31,12 +31,12 @@ class TeachingScene(Scene):
     def place_in_area(self, mobject, top_left, bottom_right, scale_factor=1.0):
         tl_pos = self.grid[top_left]
         br_pos = self.grid[bottom_right]
-        
+
         # Calculate center of the area
         center_x = (tl_pos[0] + br_pos[0]) / 2
         center_y = (tl_pos[1] + br_pos[1]) / 2
         center = np.array([center_x, center_y, 0])
-        
+
         mobject.scale(scale_factor)
         mobject.move_to(center)
         return mobject

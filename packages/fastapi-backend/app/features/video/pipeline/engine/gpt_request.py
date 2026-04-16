@@ -14,6 +14,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.core.config import get_settings
+
 # Re-export for backward compatibility
 from app.providers.llm.openai_client_factory import (  # noqa: F401
     ProviderEndpoint,
@@ -24,6 +26,29 @@ from app.features.video.pipeline.engine.openai_stream import create_chat_complet
 from app.providers.llm.openai_client_factory import client_from_endpoint
 
 logger = logging.getLogger(__name__)
+STREAM_MAX_INPUT_CHARS_DISABLED = 0
+
+
+def _estimate_message_chars(payload: Any) -> int:
+    """Estimate total payload size to decide whether stream setup is worth the risk."""
+
+    if isinstance(payload, str):
+        return len(payload)
+    if isinstance(payload, list):
+        return sum(_estimate_message_chars(item) for item in payload)
+    if isinstance(payload, dict):
+        return sum(_estimate_message_chars(value) for value in payload.values())
+    return 0
+
+
+def _should_prefer_stream(messages: list[dict[str, Any]]) -> tuple[bool, int]:
+    """Skip stream for oversized payloads that are likely to 524 before first chunk."""
+
+    estimated_chars = _estimate_message_chars(messages)
+    max_input_chars = get_settings().video_llm_stream_max_input_chars
+    if max_input_chars <= STREAM_MAX_INPUT_CHARS_DISABLED:
+        return True, estimated_chars
+    return estimated_chars <= max_input_chars, estimated_chars
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +114,7 @@ def _call_openai_compatible(
     照抄 ManimCat buildTokenParams: max_completion_tokens = thinkingTokens + maxTokens。
     """
     usage_info: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    prefer_stream, estimated_chars = _should_prefer_stream(messages)
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -96,8 +122,8 @@ def _call_openai_compatible(
             client = client_from_endpoint(ep)
 
             logger.debug(
-                "LLM request  model=%s  max_tokens=%d  max_completion_tokens=%s  attempt=%d",
-                ep.model_name, max_tokens, max_completion_tokens, attempt,
+                "LLM request  model=%s  max_tokens=%d  max_completion_tokens=%s  attempt=%d  prefer_stream=%s  estimated_chars=%d",
+                ep.model_name, max_tokens, max_completion_tokens, attempt, prefer_stream, estimated_chars,
             )
 
             result = create_chat_completion_text(
@@ -109,6 +135,7 @@ def _call_openai_compatible(
                 temperature=temperature,
                 fallback_to_non_stream=True,
                 allow_partial_on_stream_error=True,
+                prefer_stream=prefer_stream,
             )
 
             if result.usage:

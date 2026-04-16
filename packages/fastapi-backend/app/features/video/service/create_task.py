@@ -27,6 +27,8 @@ VIDEO_TASK_TYPE = "video"
 VIDEO_TASK_CREATE_PERMISSION = "video:task:add"
 IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
 IDEMPOTENCY_KEY_PREFIX = "xm_idempotent:video"
+ALLOWED_LAYOUT_HINTS = {"center_stage", "two_column"}
+ALLOWED_RENDER_QUALITIES = {"l", "m", "h"}
 
 
 def ensure_video_task_create_permission(access_context: AccessContext) -> None:
@@ -118,6 +120,83 @@ def normalize_voice_preference(request: CreateVideoTaskRequest) -> dict[str, str
     return normalized or None
 
 
+def _coerce_optional_int(
+    value: object,
+    *,
+    minimum: int,
+    maximum: int,
+) -> int | None:
+    if value is None:
+        return None
+    try:
+        normalized = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    if normalized < minimum or normalized > maximum:
+        return None
+    return normalized
+
+
+def _normalize_layout_hint(value: object) -> str | None:
+    normalized = str(value or "").strip().lower()
+    if normalized in ALLOWED_LAYOUT_HINTS:
+        return normalized
+    return None
+
+
+def _normalize_render_quality(value: object) -> str | None:
+    normalized = str(value or "").strip().lower()
+    if normalized in ALLOWED_RENDER_QUALITIES:
+        return normalized
+    return None
+
+
+def extract_pipeline_options(user_profile: dict[str, object] | None) -> dict[str, object]:
+    """从 userProfile 中提取视频管线调试/收敛选项。"""
+    payload = dict(user_profile or {})
+    options: dict[str, object] = {}
+
+    duration_minutes = _coerce_optional_int(
+        payload.get("durationMinutes") or payload.get("duration_minutes"),
+        minimum=1,
+        maximum=10,
+    )
+    if duration_minutes is not None:
+        options["duration_minutes"] = duration_minutes
+
+    section_count = _coerce_optional_int(
+        payload.get("sectionCount") or payload.get("section_count"),
+        minimum=1,
+        maximum=12,
+    )
+    if section_count is not None:
+        options["section_count"] = section_count
+
+    section_codegen_concurrency = _coerce_optional_int(
+        payload.get("sectionConcurrency")
+        or payload.get("section_codegen_concurrency")
+        or payload.get("sectionCodegenConcurrency"),
+        minimum=1,
+        maximum=8,
+    )
+    if section_codegen_concurrency is not None:
+        options["section_codegen_concurrency"] = section_codegen_concurrency
+
+    layout_hint = _normalize_layout_hint(
+        payload.get("layoutHint") or payload.get("layout_hint")
+    )
+    if layout_hint is not None:
+        options["layout_hint"] = layout_hint
+
+    render_quality = _normalize_render_quality(
+        payload.get("renderQuality") or payload.get("render_quality")
+    )
+    if render_quality is not None:
+        options["render_quality"] = render_quality
+
+    return options
+
+
 def initialize_task_runtime_state(
     runtime_store: RuntimeStore,
     *,
@@ -127,11 +206,14 @@ def initialize_task_runtime_state(
     user_id: str,
     source_payload: dict[str, object],
     voice_preference: dict[str, str] | None = None,
+    pipeline_options: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """在 Redis 中初始化任务运行态。"""
     context = {"sourcePayload": source_payload}
     if voice_preference is not None:
         context["voicePreference"] = voice_preference
+    if pipeline_options:
+        context.update(pipeline_options)
     return runtime_store.set_task_state(
         task_id=task_id,
         task_type=VIDEO_TASK_TYPE,
@@ -239,6 +321,7 @@ async def create_video_task(
     """创建视频任务的完整流程：校验、幂等检测、入队、持久化。"""
     source_payload = validate_create_request(request)
     voice_preference = normalize_voice_preference(request)
+    pipeline_options = extract_pipeline_options(request.user_profile)
     idempotency_key = build_idempotency_key(access_context.user_id, request.client_request_id)
 
     conflict = read_idempotent_conflict(runtime_store, key=idempotency_key)
@@ -272,6 +355,7 @@ async def create_video_task(
         user_id=access_context.user_id,
         source_payload=source_payload,
         voice_preference=voice_preference,
+        pipeline_options=pipeline_options,
     )
     save_video_runtime_auth(
         runtime_store,
@@ -298,6 +382,7 @@ async def create_video_task(
             "sourcePayload": source_payload,
             "userProfile": request.user_profile or {},
             "voicePreference": voice_preference or {},
+            **pipeline_options,
         },
         created_at=created_at,
     )

@@ -41,6 +41,7 @@ def create_chat_completion_text(
     allow_partial_on_stream_error: bool = True,
     idle_timeout_ms: int = STREAM_IDLE_TIMEOUT_MS,
     usage_label: str = "chat-completion",
+    prefer_stream: bool = True,
 ) -> ChatCompletionTextResult:
     """照抄 ManimCat openai-stream.ts createChatCompletionText。
 
@@ -60,6 +61,49 @@ def create_chat_completion_text(
         token_params["max_tokens"] = max_tokens
     if temperature is not None:
         token_params["temperature"] = temperature
+
+    def _call_non_stream(mode_label: str) -> ChatCompletionTextResult:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=False,
+                **token_params,
+            )
+            fallback_content = response.choices[0].message.content if response.choices else None
+            ns_usage = {}
+            if response.usage:
+                ns_usage = {
+                    "prompt_tokens": response.usage.prompt_tokens or 0,
+                    "completion_tokens": response.usage.completion_tokens or 0,
+                    "total_tokens": response.usage.total_tokens or 0,
+                }
+            logger.info(
+                "%s success  model=%s  mode=non-stream  content_len=%d",
+                mode_label,
+                model,
+                len(fallback_content or ""),
+            )
+            return ChatCompletionTextResult(
+                content=fallback_content.strip() if fallback_content else None,
+                usage=ns_usage,
+                mode="non-stream",
+            )
+        except Exception as exc:
+            logger.error("%s failed  model=%s  error=%s", mode_label, model, exc)
+            return ChatCompletionTextResult(
+                content=None,
+                usage=empty_usage,
+                mode="stream-error",
+            )
+
+    if not prefer_stream:
+        logger.info(
+            "Skipping stream request  model=%s  reason=prefer_stream_false  usage_label=%s",
+            model,
+            usage_label,
+        )
+        return _call_non_stream("Direct non-stream request")
 
     content = ""
     usage: dict[str, int] = {}
@@ -154,40 +198,7 @@ def create_chat_completion_text(
         # Non-stream fallback（照抄 ManimCat fallbackToNonStream）
         if fallback_to_non_stream:
             logger.warning("Falling back to non-stream  model=%s", model)
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    stream=False,
-                    **token_params,
-                )
-                fallback_content = response.choices[0].message.content if response.choices else None
-                ns_usage = {}
-                if response.usage:
-                    ns_usage = {
-                        "prompt_tokens": response.usage.prompt_tokens or 0,
-                        "completion_tokens": response.usage.completion_tokens or 0,
-                        "total_tokens": response.usage.total_tokens or 0,
-                    }
-                logger.info(
-                    "Non-stream fallback success  model=%s  mode=non-stream  content_len=%d",
-                    model, len(fallback_content or ""),
-                )
-                return ChatCompletionTextResult(
-                    content=fallback_content.strip() if fallback_content else None,
-                    usage=ns_usage,
-                    mode="non-stream",
-                )
-            except Exception as fallback_exc:
-                logger.error(
-                    "Non-stream fallback also failed  model=%s  error=%s",
-                    model, fallback_exc,
-                )
-                return ChatCompletionTextResult(
-                    content=None,
-                    usage=empty_usage,
-                    mode="stream-error",
-                )
+            return _call_non_stream("Non-stream fallback")
 
         return ChatCompletionTextResult(
             content=None,
