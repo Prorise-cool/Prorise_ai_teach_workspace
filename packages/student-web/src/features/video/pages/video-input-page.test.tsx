@@ -120,7 +120,7 @@ describe('VideoInputPage', () => {
 			</AppProvider>
 		);
 
-		expect(screen.getByText('Video Engine')).toBeInTheDocument();
+		expect(screen.getByText('输入或拍题，')).toBeInTheDocument();
 		expect(screen.getByText(/5分钟生成动画讲解/)).toBeInTheDocument();
 	});
 
@@ -384,10 +384,8 @@ describe('VideoInputPage', () => {
 			screen.getByPlaceholderText(/粘贴题目文本/),
 			'请用动画方式讲解导数的几何意义，并强调切线逼近的过程。'
 		);
-		await user.selectOptions(
-			screen.getByLabelText('生成质量预设'),
-			'cinematic',
-		);
+		await user.click(screen.getByRole('button', { name: '生成质量预设' }));
+		await user.click(screen.getByRole('option', { name: /高质细讲/ }));
 		await user.click(screen.getByRole('button', { name: '高级参数' }));
 		await user.clear(screen.getByLabelText('目标时长（分钟）'));
 		await user.type(screen.getByLabelText('目标时长（分钟）'), '4');
@@ -395,8 +393,8 @@ describe('VideoInputPage', () => {
 		await user.type(screen.getByLabelText('分段数量'), '6');
 		await user.clear(screen.getByLabelText('并发生成数'));
 		await user.type(screen.getByLabelText('并发生成数'), '1');
-		await user.selectOptions(screen.getByLabelText('渲染质量'), 'h');
-		await user.selectOptions(screen.getByLabelText('布局偏好'), 'two_column');
+		await user.click(screen.getByRole('button', { name: '高质精修' }));
+		await user.click(screen.getByRole('button', { name: '双栏讲解' }));
 		await user.click(screen.getByRole('button', { name: '完成设置' }));
 		await user.click(screen.getByRole('button', { name: /生成视频/ }));
 

@@ -4,7 +4,7 @@
  */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Sparkles } from 'lucide-react';
-import { type FormEvent, useCallback, useRef } from 'react';
+import { type FormEvent, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -20,14 +20,17 @@ import { VideoInputCard } from '@/features/video/components/video-input-card';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
 import {
+	type VideoInputValidationMessages,
+	createVideoInputFormSchema,
 	type VideoInputFormValues,
-	videoInputFormSchema,
 } from '@/features/video/schemas/video-input-schema';
 import { useFeedback } from '@/shared/feedback';
 import {
-  VIDEO_DEFAULT_QUALITY_PRESET,
-  VIDEO_QUALITY_PRESET_DEFAULTS,
-  type VideoPublicCard,
+	VIDEO_DEFAULT_QUALITY_PRESET,
+	VIDEO_QUALITY_PRESET_DEFAULTS,
+	VIDEO_TEXT_MAX_LENGTH,
+	VIDEO_TEXT_MIN_LENGTH,
+	type VideoPublicCard,
 } from '@/types/video';
 
 import '@/components/input-page/styles/input-page-shared.scss';
@@ -42,8 +45,26 @@ export function VideoInputPage() {
 	const { t } = useAppTranslation();
 	const { notify } = useFeedback();
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+	const validationMessages = useMemo<VideoInputValidationMessages>(() => ({
+		durationRange: t('videoInput.validation.durationRange'),
+		sectionCountRange: t('videoInput.validation.sectionCountRange'),
+		sectionConcurrencyRange: t('videoInput.validation.sectionConcurrencyRange'),
+		textMin: t('videoInput.validation.textMin', {
+			count: VIDEO_TEXT_MIN_LENGTH,
+		}),
+		textMax: t('videoInput.validation.textMax', {
+			count: VIDEO_TEXT_MAX_LENGTH,
+		}),
+		imageRequired: t('videoInput.validation.imageRequired'),
+		imageType: t('videoInput.validation.imageType'),
+		imageSize: t('videoInput.validation.imageSize'),
+	}), [t]);
+	const formSchema = useMemo(
+		() => createVideoInputFormSchema(validationMessages),
+		[validationMessages],
+	);
 	const form = useForm<VideoInputFormValues>({
-		resolver: zodResolver(videoInputFormSchema),
+		resolver: zodResolver(formSchema),
 		defaultValues: {
 			inputType: 'text',
 			text: '',
@@ -79,30 +100,33 @@ export function VideoInputPage() {
 	const submitLabel = t('videoInput.submitLabel');
 	const smartMatchHint = t('classroomInput.smartMatchHint');
 	const smartMatchDesc = t('classroomInput.smartMatchDesc');
-		const multiAgentHint = t('classroomInput.multiAgentHint');
-		const toolUploadImage = t('videoInput.toolUploadImage');
-		const toolVoiceInput = t('classroomInput.toolVoiceInput');
-		const qualityPresetLabel = t('videoInput.qualityPresetLabel');
-		const qualityPresetHint = t('videoInput.qualityPresetHint');
-		const advancedSettingsLabel = t('videoInput.advancedSettingsLabel');
-		const presetQuick = t('videoInput.qualityPresets.fast');
-		const presetBalanced = t('videoInput.qualityPresets.balanced');
-		const presetCinematic = t('videoInput.qualityPresets.cinematic');
-		const advancedTitle = t('videoInput.advancedDialogTitle');
-		const advancedDescription = t('videoInput.advancedDialogDescription');
-		const advancedReset = t('videoInput.advancedDialogReset');
-		const advancedDone = t('videoInput.advancedDialogDone');
-		const durationLabel = t('videoInput.advancedFields.durationMinutes');
-		const sectionCountLabel = t('videoInput.advancedFields.sectionCount');
-		const concurrencyLabel = t('videoInput.advancedFields.sectionConcurrency');
-		const renderQualityLabel = t('videoInput.advancedFields.renderQuality');
-		const layoutHintLabel = t('videoInput.advancedFields.layoutHint');
-		const renderQuickLabel = t('videoInput.renderQualityOptions.l');
-		const renderBalancedLabel = t('videoInput.renderQualityOptions.m');
-		const renderHighLabel = t('videoInput.renderQualityOptions.h');
-		const layoutCenterLabel = t('videoInput.layoutHintOptions.center_stage');
-		const layoutTwoColumnLabel = t('videoInput.layoutHintOptions.two_column');
-		const suggestionsLabel = t('videoInput.suggestionsLabel');
+	const multiAgentHint = t('classroomInput.multiAgentHint');
+	const toolUploadImage = t('videoInput.toolUploadImage');
+	const toolVoiceInput = t('classroomInput.toolVoiceInput');
+	const qualityPresetLabel = t('videoInput.qualityPresetLabel');
+	const qualityPresetHint = t('videoInput.qualityPresetHint');
+	const advancedSettingsLabel = t('videoInput.advancedSettingsLabel');
+	const presetQuick = t('videoInput.qualityPresets.fast');
+	const presetBalanced = t('videoInput.qualityPresets.balanced');
+	const presetCinematic = t('videoInput.qualityPresets.cinematic');
+	const advancedTitle = t('videoInput.advancedDialogTitle');
+	const advancedDescription = t('videoInput.advancedDialogDescription');
+	const advancedReset = t('videoInput.advancedDialogReset');
+	const advancedDone = t('videoInput.advancedDialogDone');
+	const durationLabel = t('videoInput.advancedFields.durationMinutes');
+	const sectionCountLabel = t('videoInput.advancedFields.sectionCount');
+	const concurrencyLabel = t('videoInput.advancedFields.sectionConcurrency');
+	const renderQualityLabel = t('videoInput.advancedFields.renderQuality');
+	const layoutHintLabel = t('videoInput.advancedFields.layoutHint');
+	const renderQuickLabel = t('videoInput.renderQualityOptions.l');
+	const renderBalancedLabel = t('videoInput.renderQualityOptions.m');
+	const renderHighLabel = t('videoInput.renderQualityOptions.h');
+	const layoutCenterLabel = t('videoInput.layoutHintOptions.center_stage');
+	const layoutTwoColumnLabel = t('videoInput.layoutHintOptions.two_column');
+	const durationUnit = t('videoInput.summaryUnits.duration');
+	const sectionUnit = t('videoInput.summaryUnits.section');
+	const concurrencyShortLabel = t('videoInput.summaryUnits.concurrency');
+	const suggestionsLabel = t('videoInput.suggestionsLabel');
 	const suggestions = t('videoInput.suggestions', {
 		returnObjects: true
 	}) as string[];
@@ -202,37 +226,40 @@ export function VideoInputPage() {
 					isSubmitting={createMutation.isPending}
 					isRecording={isRecording}
 					onToggleRecording={toggleRecording}
-						labels={{
-							smartMatchHint,
-							smartMatchDesc,
-							multiAgentHint,
-							placeholder,
-							submitLabel,
-							toolUploadImage,
-							toolVoiceInput,
-							qualityPresetLabel,
-							qualityPresetHint,
-							advancedSettingsLabel,
-							presetQuick,
-							presetBalanced,
-							presetCinematic,
-							advancedTitle,
-							advancedDescription,
-							advancedReset,
-							advancedDone,
-							durationLabel,
-							sectionCountLabel,
-							concurrencyLabel,
-							renderQualityLabel,
-							layoutHintLabel,
-							renderQuickLabel,
-							renderBalancedLabel,
-							renderHighLabel,
-							layoutCenterLabel,
-							layoutTwoColumnLabel,
-						}}
-						textAreaRef={textareaRef}
-					/>
+					labels={{
+						smartMatchHint,
+						smartMatchDesc,
+						multiAgentHint,
+						placeholder,
+						submitLabel,
+						toolUploadImage,
+						toolVoiceInput,
+						qualityPresetLabel,
+						qualityPresetHint,
+						advancedSettingsLabel,
+						presetQuick,
+						presetBalanced,
+						presetCinematic,
+						advancedTitle,
+						advancedDescription,
+						advancedReset,
+						advancedDone,
+						durationLabel,
+						sectionCountLabel,
+						concurrencyLabel,
+						renderQualityLabel,
+						layoutHintLabel,
+						renderQuickLabel,
+						renderBalancedLabel,
+						renderHighLabel,
+						layoutCenterLabel,
+						layoutTwoColumnLabel,
+						durationUnit,
+						sectionUnit,
+						concurrencyShortLabel,
+					}}
+					textAreaRef={textareaRef}
+				/>
 			}
 			suggestionsLabel={suggestionsLabel}
 			suggestions={suggestions}

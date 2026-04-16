@@ -3,30 +3,34 @@
  * 负责顶部胶囊导航、35/65 双栏布局、Stage 4 播放区和沉浸式状态浮层等复杂视觉。
  */
 
-:root {
-	--xm-generating-bg: #f5ede1;
-	--xm-generating-surface: rgba(255, 255, 255, 0.84);
-	--xm-generating-surface-strong: #ffffff;
-	--xm-generating-border: rgba(59, 23, 1, 0.12);
-	--xm-generating-text: #3b1701;
-	--xm-generating-muted: #6b4421;
-	--xm-generating-grid-color: rgba(59, 23, 1, 0.04);
-	--xm-generating-glow-color: rgba(245, 197, 71, 0.18);
-	--xm-generating-toast-bg: rgba(31, 26, 24, 0.92);
-	--xm-generating-toast-text: #f5ede1;
+.xm-generating-shell {
+	--xm-generating-bg: color-mix(in srgb, var(--xm-color-secondary) 70%, var(--xm-color-surface) 30%);
+	--xm-generating-surface: color-mix(in srgb, var(--xm-color-surface) 82%, transparent);
+	--xm-generating-surface-strong: color-mix(in srgb, var(--xm-color-surface) 96%, transparent);
+	--xm-generating-border: color-mix(in srgb, var(--xm-color-border) 90%, transparent);
+	--xm-generating-text: var(--xm-color-text-primary);
+	--xm-generating-muted: var(--xm-color-text-secondary);
+	--xm-generating-grid-color: color-mix(in srgb, var(--xm-color-text-primary) 5%, transparent);
+	--xm-generating-glow-color: color-mix(in srgb, var(--xm-color-brand-500) 18%, transparent);
+	--xm-generating-toast-bg: color-mix(in srgb, var(--xm-color-text-primary) 92%, transparent);
+	--xm-generating-toast-text: var(--xm-color-surface-strong, #fff);
+	--xm-generating-screen-bg: color-mix(in srgb, #050505 88%, var(--xm-color-text-primary) 12%);
+	--xm-generating-screen-overlay: rgba(5, 5, 5, 0.72);
 }
 
-.dark {
-	--xm-generating-bg: #110e0d;
-	--xm-generating-surface: rgba(31, 26, 24, 0.82);
-	--xm-generating-surface-strong: #1f1a18;
-	--xm-generating-border: rgba(245, 237, 225, 0.08);
-	--xm-generating-text: #f5ede1;
-	--xm-generating-muted: #bfae9b;
-	--xm-generating-grid-color: rgba(245, 237, 225, 0.03);
-	--xm-generating-glow-color: rgba(245, 197, 71, 0.1);
-	--xm-generating-toast-bg: rgba(255, 255, 255, 0.92);
-	--xm-generating-toast-text: #3b1701;
+.dark .xm-generating-shell {
+	--xm-generating-bg: color-mix(in srgb, var(--xm-color-background) 88%, #15110f 12%);
+	--xm-generating-surface: color-mix(in srgb, var(--xm-color-surface) 72%, transparent);
+	--xm-generating-surface-strong: color-mix(in srgb, var(--xm-color-surface) 88%, transparent);
+	--xm-generating-border: color-mix(in srgb, var(--xm-color-border) 76%, transparent);
+	--xm-generating-text: var(--xm-color-text-primary);
+	--xm-generating-muted: var(--xm-color-text-secondary);
+	--xm-generating-grid-color: color-mix(in srgb, var(--xm-color-text-primary) 5%, transparent);
+	--xm-generating-glow-color: color-mix(in srgb, var(--xm-color-brand-500) 12%, transparent);
+	--xm-generating-toast-bg: color-mix(in srgb, var(--xm-color-surface) 92%, transparent);
+	--xm-generating-toast-text: var(--xm-color-text-primary);
+	--xm-generating-screen-bg: color-mix(in srgb, #050505 92%, var(--xm-color-background) 8%);
+	--xm-generating-screen-overlay: rgba(5, 5, 5, 0.76);
 }
 
 .xm-generating-bg-grid {
@@ -149,12 +153,20 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 2.25rem;
-		height: 2.25rem;
+		width: 2.5rem;
+		height: 2.5rem;
 		border-radius: 0.75rem;
-		background: var(--xm-generating-text);
-		color: var(--xm-generating-bg);
+		padding: 0.2rem;
+		background: rgba(255, 255, 255, 0.56);
+		border: 1px solid rgba(255, 255, 255, 0.3);
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	&__brand-logo {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
 	}
 
 	&__nav {
@@ -162,7 +174,7 @@
 		align-items: center;
 		gap: 0.25rem;
 		flex: 1;
-		max-width: 44rem;
+		max-width: 28rem;
 		padding: 0.25rem;
 		margin: 0 0.5rem;
 		border-radius: 999px;
@@ -611,6 +623,15 @@
 		font-weight: 800;
 	}
 
+	&__eyebrow {
+		margin-bottom: 0.3rem;
+		font-size: 0.72rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--xm-generating-muted);
+	}
+
 	&__row {
 		align-items: flex-start;
 	}
@@ -726,7 +747,7 @@
 		position: relative;
 		overflow: hidden;
 		border-bottom: 1px solid var(--xm-generating-border);
-		background: #050505;
+		background: var(--xm-generating-screen-bg);
 		aspect-ratio: 16 / 9;
 		max-height: 45vh;
 	}
@@ -738,7 +759,7 @@
 	}
 
 	&__empty-layer {
-		background: #050505;
+		background: var(--xm-generating-screen-bg);
 	}
 
 	&__gradient {
@@ -787,7 +808,7 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.75rem;
-		background: rgba(5, 5, 5, 0.72);
+		background: var(--xm-generating-screen-overlay);
 		backdrop-filter: blur(6px);
 	}
 
