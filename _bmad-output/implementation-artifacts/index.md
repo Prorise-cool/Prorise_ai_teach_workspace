@@ -222,8 +222,8 @@
 - [文档](./4-11-视频等待页渐进式产物展示与分段预览.md)
 - [后端实现说明](./4-11-fastapi-渐进预览后端实现说明-20260413.md)
 - [前端接入需求说明](./4-11-视频等待页渐进预览前端接入需求说明-20260416.md)
-- **状态**: in-progress
-- **说明**: 等待页渐进展示真实 storyboard 与已完成 section clip；`2026-04-13` 已落地 FastAPI 后端 per-section streaming、preview runtime / endpoint 与 section SSE 事件；`2026-04-16` 已补齐前端接入需求文档，明确等待页三段式能力、消费边界与代码归属点
+- **状态**: review
+- **说明**: 等待页渐进展示真实 storyboard 与已完成 section clip；`2026-04-13` 已落地 FastAPI 后端 per-section streaming、preview runtime / endpoint 与 section SSE 事件；`2026-04-16` 已完成 student-web 前端接入、section 级状态机扩展、Mac 灵动岛风格等待页编排，以及 preview/SSE/adapter 定向测试收口
 
 ## 快速导航
 

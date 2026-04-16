@@ -372,6 +372,7 @@ class VideoPreviewSection(VideoCamelModel):
     section_index: int = Field(ge=0)
     title: str
     lecture_lines: list[str] = Field(default_factory=list)
+    visual_notes: list[str] = Field(default_factory=list)
     status: VideoPreviewSectionStatus = VideoPreviewSectionStatus.PENDING
     audio_url: str | None = None
     clip_url: str | None = None

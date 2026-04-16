@@ -58,6 +58,15 @@ export {
   resolveVideoResultAdapter,
 } from './video-result-adapter';
 export type {
+  VideoPreviewAdapter,
+} from './video-preview-adapter';
+export {
+  VideoPreviewAdapterError,
+  createMockVideoPreviewAdapter,
+  createRealVideoPreviewAdapter,
+  resolveVideoPreviewAdapter,
+} from './video-preview-adapter';
+export type {
   VideoPublishAdapter,
   VideoPublishResult,
 } from './video-publish-adapter';

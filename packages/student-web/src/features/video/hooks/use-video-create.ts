@@ -11,6 +11,8 @@ import { useFeedback } from '@/shared/feedback';
 import type { VideoInputFormValues } from '@/features/video/schemas/video-input-schema';
 import type { VideoTaskCreateRequest } from '@/types/video';
 
+const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
+
 /**
  * 管理视频任务创建链路。
  *
@@ -28,6 +30,13 @@ export function useVideoCreate() {
     mutationKey: ['video', 'create'],
     mutationFn: async (values: VideoInputFormValues) => {
       const clientRequestId = `video_${nanoid(12)}`;
+      const userProfile = {
+        durationMinutes: values.durationMinutes,
+        sectionCount: values.sectionCount,
+        sectionConcurrency: values.sectionConcurrency,
+        layoutHint: values.layoutHint,
+        renderQuality: values.renderQuality,
+      };
       let request: VideoTaskCreateRequest;
 
       if (values.inputType === 'image' && values.imageFiles.length > 0) {
@@ -48,6 +57,7 @@ export function useVideoCreate() {
             imageRef: preprocessResult.imageRef,
             ocrText: values.text.trim() || preprocessResult.ocrText || undefined,
           },
+          userProfile,
           clientRequestId,
         };
       } else {
@@ -56,13 +66,27 @@ export function useVideoCreate() {
           sourcePayload: {
             text: values.text.trim(),
           },
+          userProfile,
           clientRequestId,
         };
       }
 
       return videoTaskAdapter.createTask(request);
     },
-    onSuccess: (result) => {
+    onSuccess: (result, values) => {
+      const draftTitle =
+        values.text.trim() ||
+        `视频讲解任务 ${values.durationMinutes} 分钟 · ${values.sectionCount} 段`;
+
+      try {
+        window.sessionStorage.setItem(
+          `${VIDEO_TASK_DRAFT_CACHE_PREFIX}${result.taskId}`,
+          draftTitle,
+        );
+      } catch {
+        // 忽略浏览器存储异常，不影响主提交流程。
+      }
+
       void navigate(`/video/${result.taskId}/generating`, { replace: true });
     },
     onError: (error) => {

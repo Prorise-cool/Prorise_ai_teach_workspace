@@ -1,47 +1,51 @@
 /**
- * 文件说明：封装视频等待页的 SSE 事件流消费 hook（Story 4.7 重构）。
- * 使用 services/sse 统一 parser，将 SSE 事件映射到 zustand store。
- * 支持视频流水线专属 stage 字段和修复上下文。
+ * 文件说明：封装视频等待页的 SSE 事件流消费 hook。
+ * 继续复用统一 SSE parser，同时识别 preview 信号与 section 级事件。
  */
 import { useCallback, useEffect, useRef } from 'react';
 
-import { readRecord } from '@/lib/type-guards';
+import {
+  readBooleanProperty,
+  readNumberProperty,
+  readRecord,
+  readStringProperty,
+} from '@/lib/type-guards';
 import { resolveTaskEventStream } from '@/services/sse';
 import type { TaskStreamEventPayload } from '@/types/task';
 import {
   isVideoPipelineStage,
+  isVideoPreviewSectionStatus,
 } from '@/types/video';
 
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-/**
- * 从 SSE 事件中提取视频流水线扩展字段。
- * 使用运行时类型检查代替 unsafe cast，确保字段类型安全。
- *
- * @param event - SSE 事件 payload。
- * @returns 扩展字段对象。
- */
 function extractPipelineFields(event: TaskStreamEventPayload) {
   const context = readRecord(event.context) ?? null;
   const currentStage = event.currentStage ?? event.stage ?? null;
+  const fixAttempt = context
+    ? readNumberProperty(context, 'fixAttempt') ?? readNumberProperty(context, 'attemptNo')
+    : undefined;
 
   return {
     currentStage: isVideoPipelineStage(currentStage) ? currentStage : null,
     stageLabel: typeof event.stageLabel === 'string' ? event.stageLabel : null,
-    stageProgress: typeof event.stageProgress === 'number' ? event.stageProgress : null,
-    attemptNo: typeof context?.attemptNo === 'number' ? context.attemptNo : null,
-    fixEvent: typeof context?.fixEvent === 'string' ? context.fixEvent : null,
-    failure:
-      readRecord(context?.failure) ?? null,
+    previewAvailable: context ? readBooleanProperty(context, 'previewAvailable') : undefined,
+    previewVersion: context ? readNumberProperty(context, 'previewVersion') : undefined,
+    sectionId: context ? readStringProperty(context, 'sectionId') : undefined,
+    sectionIndex: context ? readNumberProperty(context, 'sectionIndex') : undefined,
+    totalSections: context ? readNumberProperty(context, 'totalSections') : undefined,
+    sectionStatus:
+      context && isVideoPreviewSectionStatus(context.sectionStatus)
+        ? context.sectionStatus
+        : undefined,
+    clipUrl: context ? readStringProperty(context, 'clipUrl') : undefined,
+    errorMessage: context ? readStringProperty(context, 'errorMessage') : undefined,
+    fixAttempt,
+    maxFixAttempts: context ? readNumberProperty(context, 'maxFixAttempts') : undefined,
+    failure: context ? readRecord(context.failure) ?? null : null,
   };
 }
 
-/**
- * 消费任务 SSE 事件流并驱动 zustand store 状态。
- *
- * @param taskId - 任务 ID；为空时不连接。
- * @param options - 可选配置。
- */
 export function useVideoTaskSse(
   taskId: string | undefined,
   options?: { enabled?: boolean },
@@ -52,6 +56,14 @@ export function useVideoTaskSse(
   const handleEvent = useCallback((event: TaskStreamEventPayload) => {
     const pipeline = extractPipelineFields(event);
     const state = store.getState();
+
+    if (pipeline.previewAvailable !== undefined || pipeline.previewVersion !== undefined) {
+      state.setPreviewSignal({
+        previewAvailable: pipeline.previewAvailable,
+        previewVersion: pipeline.previewVersion,
+        totalSections: pipeline.totalSections,
+      });
+    }
 
     if (event.event === 'connected') {
       state.setSseConnected(true);
@@ -67,9 +79,7 @@ export function useVideoTaskSse(
       state.setFailed({
         errorCode:
           event.errorCode ??
-          (typeof pipeline.failure?.errorCode === 'string'
-            ? pipeline.failure.errorCode
-            : null),
+          (typeof pipeline.failure?.errorCode === 'string' ? pipeline.failure.errorCode : null),
         errorMessage:
           event.message ??
           (typeof pipeline.failure?.errorMessage === 'string'
@@ -104,18 +114,31 @@ export function useVideoTaskSse(
       return;
     }
 
-    // progress / heartbeat / provider_switch
     if (pipeline.currentStage) {
       state.updateStage({
         currentStage: pipeline.currentStage,
         stageLabel: pipeline.stageLabel ?? pipeline.currentStage,
         progress: event.progress,
-        fixAttempt: pipeline.attemptNo ?? undefined,
+        fixAttempt: pipeline.fixAttempt,
+        fixTotal: pipeline.maxFixAttempts,
       });
     } else {
       state.updateProgress({
         progress: event.progress,
-        message: event.message,
+        currentStage: state.currentStage,
+        stageLabel: pipeline.stageLabel ?? state.stageLabel,
+      });
+    }
+
+    if (pipeline.sectionId) {
+      state.upsertSection({
+        sectionId: pipeline.sectionId,
+        sectionIndex: pipeline.sectionIndex,
+        totalSections: pipeline.totalSections,
+        status: pipeline.sectionStatus,
+        clipUrl: pipeline.clipUrl,
+        errorMessage: pipeline.errorMessage,
+        fixAttempt: pipeline.fixAttempt ?? null,
       });
     }
   }, [store]);
@@ -149,7 +172,7 @@ export function useVideoTaskSse(
 
     const currentState = store.getState();
     if (currentState.taskId !== taskId || !currentState.hasHydratedRuntime) {
-      store.getState().resetState(taskId);
+      currentState.resetState(taskId);
     }
 
     startStream(taskId, controller.signal).catch((err) => {

@@ -24,7 +24,11 @@ import {
 	videoInputFormSchema,
 } from '@/features/video/schemas/video-input-schema';
 import { useFeedback } from '@/shared/feedback';
-import type { VideoPublicCard } from '@/types/video';
+import {
+  VIDEO_DEFAULT_QUALITY_PRESET,
+  VIDEO_QUALITY_PRESET_DEFAULTS,
+  type VideoPublicCard,
+} from '@/types/video';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/video/styles/video-input-page.scss';
@@ -44,6 +48,8 @@ export function VideoInputPage() {
 			inputType: 'text',
 			text: '',
 			imageFiles: [],
+			qualityPreset: VIDEO_DEFAULT_QUALITY_PRESET,
+			...VIDEO_QUALITY_PRESET_DEFAULTS[VIDEO_DEFAULT_QUALITY_PRESET],
 		},
 		mode: 'onSubmit',
 	});
@@ -73,10 +79,30 @@ export function VideoInputPage() {
 	const submitLabel = t('videoInput.submitLabel');
 	const smartMatchHint = t('classroomInput.smartMatchHint');
 	const smartMatchDesc = t('classroomInput.smartMatchDesc');
-	const multiAgentHint = t('classroomInput.multiAgentHint');
-	const toolUploadImage = t('videoInput.toolUploadImage');
-	const toolVoiceInput = t('classroomInput.toolVoiceInput');
-	const suggestionsLabel = t('videoInput.suggestionsLabel');
+		const multiAgentHint = t('classroomInput.multiAgentHint');
+		const toolUploadImage = t('videoInput.toolUploadImage');
+		const toolVoiceInput = t('classroomInput.toolVoiceInput');
+		const qualityPresetLabel = t('videoInput.qualityPresetLabel');
+		const qualityPresetHint = t('videoInput.qualityPresetHint');
+		const advancedSettingsLabel = t('videoInput.advancedSettingsLabel');
+		const presetQuick = t('videoInput.qualityPresets.fast');
+		const presetBalanced = t('videoInput.qualityPresets.balanced');
+		const presetCinematic = t('videoInput.qualityPresets.cinematic');
+		const advancedTitle = t('videoInput.advancedDialogTitle');
+		const advancedDescription = t('videoInput.advancedDialogDescription');
+		const advancedReset = t('videoInput.advancedDialogReset');
+		const advancedDone = t('videoInput.advancedDialogDone');
+		const durationLabel = t('videoInput.advancedFields.durationMinutes');
+		const sectionCountLabel = t('videoInput.advancedFields.sectionCount');
+		const concurrencyLabel = t('videoInput.advancedFields.sectionConcurrency');
+		const renderQualityLabel = t('videoInput.advancedFields.renderQuality');
+		const layoutHintLabel = t('videoInput.advancedFields.layoutHint');
+		const renderQuickLabel = t('videoInput.renderQualityOptions.l');
+		const renderBalancedLabel = t('videoInput.renderQualityOptions.m');
+		const renderHighLabel = t('videoInput.renderQualityOptions.h');
+		const layoutCenterLabel = t('videoInput.layoutHintOptions.center_stage');
+		const layoutTwoColumnLabel = t('videoInput.layoutHintOptions.two_column');
+		const suggestionsLabel = t('videoInput.suggestionsLabel');
 	const suggestions = t('videoInput.suggestions', {
 		returnObjects: true
 	}) as string[];
@@ -176,17 +202,37 @@ export function VideoInputPage() {
 					isSubmitting={createMutation.isPending}
 					isRecording={isRecording}
 					onToggleRecording={toggleRecording}
-					labels={{
-						smartMatchHint,
-						smartMatchDesc,
-						multiAgentHint,
-						placeholder,
-						submitLabel,
-						toolUploadImage,
-						toolVoiceInput,
-					}}
-					textAreaRef={textareaRef}
-				/>
+						labels={{
+							smartMatchHint,
+							smartMatchDesc,
+							multiAgentHint,
+							placeholder,
+							submitLabel,
+							toolUploadImage,
+							toolVoiceInput,
+							qualityPresetLabel,
+							qualityPresetHint,
+							advancedSettingsLabel,
+							presetQuick,
+							presetBalanced,
+							presetCinematic,
+							advancedTitle,
+							advancedDescription,
+							advancedReset,
+							advancedDone,
+							durationLabel,
+							sectionCountLabel,
+							concurrencyLabel,
+							renderQualityLabel,
+							layoutHintLabel,
+							renderQuickLabel,
+							renderBalancedLabel,
+							renderHighLabel,
+							layoutCenterLabel,
+							layoutTwoColumnLabel,
+						}}
+						textAreaRef={textareaRef}
+					/>
 			}
 			suggestionsLabel={suggestionsLabel}
 			suggestions={suggestions}

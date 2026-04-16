@@ -6,6 +6,8 @@ import { act, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { VideoTaskPreviewResult } from '@/features/video/hooks/use-video-task-preview';
+import { useVideoTaskPreview } from '@/features/video/hooks/use-video-task-preview';
 import { useVideoTaskSse } from '@/features/video/hooks/use-video-task-sse';
 import type { VideoTaskStatusResult } from '@/features/video/hooks/use-video-task-status';
 import { useVideoTaskStatus } from '@/features/video/hooks/use-video-task-status';
@@ -13,15 +15,25 @@ import { VideoGeneratingPage } from '@/features/video/pages/video-generating-pag
 import { useVideoGeneratingStore } from '@/features/video/stores/video-generating-store';
 import { renderWithApp } from '@/test/utils/render-app';
 import type { TaskSnapshot } from '@/types/task';
+import type { VideoTaskPreview } from '@/types/video';
 
 vi.mock('@/features/video/hooks/use-video-task-status', () => ({
   useVideoTaskStatus: vi.fn(),
+}));
+
+vi.mock('@/features/video/hooks/use-video-task-preview', () => ({
+  useVideoTaskPreview: vi.fn(),
 }));
 
 vi.mock('@/features/video/hooks/use-video-task-sse', () => ({
   useVideoTaskSse: vi.fn(),
 }));
 
+vi.mock('@/features/video/components/video-player', () => ({
+  VideoPlayer: ({ videoUrl }: { videoUrl: string }) => <div data-testid="mock-video-player">{videoUrl}</div>,
+}));
+
+const useVideoTaskPreviewMock = vi.mocked(useVideoTaskPreview);
 const useVideoTaskStatusMock = vi.mocked(useVideoTaskStatus);
 const useVideoTaskSseMock = vi.mocked(useVideoTaskSse);
 
@@ -55,6 +67,62 @@ function createStatusResult(
   };
 }
 
+function createPreview(overrides: Partial<VideoTaskPreview> = {}): VideoTaskPreview {
+  return {
+    taskId: 'vtask_mock_text_001',
+    status: 'processing',
+    previewAvailable: true,
+    previewVersion: 2,
+    summary: '先建立导数直觉，再过渡到切线斜率与导数定义。',
+    knowledgePoints: ['平均变化率', '切线斜率'],
+    totalSections: 3,
+    readySections: 1,
+    failedSections: 0,
+    sections: [
+      {
+        sectionId: 'section_1',
+        sectionIndex: 0,
+        title: '瞬时速度切入',
+        lectureLines: ['从速度表过渡到函数变化率。'],
+        status: 'ready',
+        audioUrl: 'https://static.prorise.test/audio-1.mp3',
+        clipUrl: 'https://static.prorise.test/clip-1.mp4',
+        errorMessage: null,
+        fixAttempt: null,
+        updatedAt: '2026-04-16T10:00:00Z',
+      },
+      {
+        sectionId: 'section_2',
+        sectionIndex: 1,
+        title: '割线到切线',
+        lectureLines: ['观察平均变化率如何逼近切线斜率。'],
+        status: 'rendering',
+        audioUrl: 'https://static.prorise.test/audio-2.mp3',
+        clipUrl: null,
+        errorMessage: null,
+        fixAttempt: null,
+        updatedAt: '2026-04-16T10:00:10Z',
+      },
+    ],
+    updatedAt: '2026-04-16T10:00:10Z',
+    ...overrides,
+  };
+}
+
+function createPreviewResult(
+  overrides: Partial<VideoTaskPreviewResult> = {},
+): VideoTaskPreviewResult {
+  return {
+    preview: null,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
 function createGeneratingRouter(
   initialEntry = '/video/vtask_mock_text_001/generating',
 ) {
@@ -81,14 +149,17 @@ function createGeneratingRouter(
 
 describe('VideoGeneratingPage', () => {
   beforeEach(() => {
+    useVideoTaskPreviewMock.mockReset();
     useVideoTaskStatusMock.mockReset();
     useVideoTaskSseMock.mockReset();
     useVideoTaskStatusMock.mockReturnValue(createStatusResult());
+    useVideoTaskPreviewMock.mockReturnValue(createPreviewResult());
     useVideoGeneratingStore.getState().resetState('vtask_mock_text_001');
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    useVideoGeneratingStore.getState().resetState();
   });
 
   it('使用 status 快照承接任务上下文，并以 enabled=true 启动 SSE', async () => {
@@ -97,6 +168,9 @@ describe('VideoGeneratingPage', () => {
     renderWithApp(<RouterProvider router={router} />);
 
     expect(useVideoTaskStatusMock).toHaveBeenCalledWith('vtask_mock_text_001');
+    expect(useVideoTaskPreviewMock).toHaveBeenCalledWith('vtask_mock_text_001', {
+      enabled: true,
+    });
     expect(useVideoTaskSseMock).toHaveBeenCalledWith('vtask_mock_text_001', {
       enabled: true,
     });
@@ -125,9 +199,27 @@ describe('VideoGeneratingPage', () => {
 
     renderWithApp(<RouterProvider router={router} />);
 
-    // i18n key 'video.stages.tts' 翻译为中文 '生成旁白'
-    expect(screen.getByText('生成旁白')).toBeInTheDocument();
-    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.getAllByText('生成旁白').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
+  });
+
+  it('在 preview 数据就绪且进入渲染流阶段时展示播放器、轨道与分段详情', async () => {
+    useVideoTaskPreviewMock.mockReturnValue(
+      createPreviewResult({
+        preview: createPreview(),
+      }),
+    );
+    const router = createGeneratingRouter();
+
+    renderWithApp(<RouterProvider router={router} />);
+
+    await screen.findByText('已有 1 段开放预览');
+    expect(await screen.findByTestId('mock-video-player')).toHaveTextContent('https://static.prorise.test/clip-1.mp4');
+
+    expect(screen.getByRole('button', { name: /5\. 渲染流/ })).toBeInTheDocument();
+    expect(screen.getByText('实时预览')).toBeInTheDocument();
+    expect(screen.getByText('自动修复')).toBeInTheDocument();
+    expect(screen.getAllByText('1 / 3 段已就绪').length).toBeGreaterThan(0);
   });
 
   it('在失败态展示可读错误信息和操作按钮', () => {

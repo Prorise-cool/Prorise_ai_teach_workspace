@@ -5,8 +5,10 @@
 import type { TaskEventPayload } from '@/types/task';
 import type {
   VideoFailure,
+  VideoPreviewSection,
   VideoPipelineMockScenario,
   VideoResult,
+  VideoTaskPreview,
 } from '@/types/video';
 
 import successFlowJson from '../../../../../../mocks/video/v1/pipeline-stages.success-flow.json';
@@ -52,6 +54,161 @@ export function getVideoPipelineEventSequence(
 const videoResultSuccess: VideoResult = videoResultSuccessJson as unknown as VideoResult;
 const videoResultFailure: VideoFailure = videoResultFailureJson as unknown as VideoFailure;
 
+const PREVIEW_TIMESTAMP = '2026-04-16T10:00:00Z';
+
+function createPreviewSection(
+  overrides: Partial<VideoPreviewSection>,
+): VideoPreviewSection {
+  return {
+    sectionId: 'section_1',
+    sectionIndex: 0,
+    title: '导数的生活入口',
+    lectureLines: ['从速度表切入，建立“瞬时变化率”的直觉。'],
+    visualNotes: ['镜头从汽车仪表盘推入，速度指针在高亮区域轻微跳动。'],
+    status: 'pending',
+    audioUrl: null,
+    clipUrl: null,
+    errorMessage: null,
+    fixAttempt: null,
+    updatedAt: PREVIEW_TIMESTAMP,
+    ...overrides,
+  };
+}
+
+function buildPreview(
+  taskId: string,
+  status: VideoTaskPreview['status'],
+  sections: VideoPreviewSection[],
+  previewVersion: number,
+): VideoTaskPreview {
+  const readySections = sections.filter((section) => section.status === 'ready').length;
+  const failedSections = sections.filter((section) => section.status === 'failed').length;
+
+  return {
+    taskId,
+    status,
+    previewAvailable: true,
+    previewVersion,
+    summary: '先建立“瞬时速度”的生活直觉，再把平均变化率收敛到切线斜率，最后落到导数定义。',
+    knowledgePoints: ['平均变化率', '切线斜率', '极限', '导数定义'],
+    totalSections: sections.length,
+    readySections,
+    failedSections,
+    sections,
+    updatedAt: PREVIEW_TIMESTAMP,
+  };
+}
+
+const previewFixtures: Record<VideoPipelineMockScenario, VideoTaskPreview> = {
+  success: buildPreview(
+    'vtask_mock_preview_success',
+    'processing',
+    [
+      createPreviewSection({
+        sectionId: 'section_1',
+        sectionIndex: 0,
+        title: '生活中的瞬时速度',
+        status: 'ready',
+        audioUrl: 'https://static.prorise.test/preview/section_1.mp3',
+        clipUrl: 'https://static.prorise.test/preview/section_1.mp4',
+      }),
+      createPreviewSection({
+        sectionId: 'section_2',
+        sectionIndex: 1,
+        title: '平均变化率到割线斜率',
+        lectureLines: ['把运动映射到函数图像，引出割线斜率。'],
+        visualNotes: ['绘制函数曲线，并用两点连线显示割线斜率。'],
+        status: 'ready',
+        audioUrl: 'https://static.prorise.test/preview/section_2.mp3',
+        clipUrl: 'https://static.prorise.test/preview/section_2.mp4',
+      }),
+      createPreviewSection({
+        sectionId: 'section_3',
+        sectionIndex: 2,
+        title: '极限逼近切线',
+        lectureLines: ['让第二个点不断靠近，观察割线如何变成切线。'],
+        visualNotes: ['第二个点沿曲线缓慢移动，割线逐步贴合为切线。'],
+        status: 'rendering',
+        audioUrl: 'https://static.prorise.test/preview/section_3.mp3',
+      }),
+      createPreviewSection({
+        sectionId: 'section_4',
+        sectionIndex: 3,
+        title: '导数定义收口',
+        lectureLines: ['把几何直觉压缩成导数的代数定义。'],
+        visualNotes: ['画面收束为导数极限公式，并突出最终结论。'],
+        status: 'pending',
+      }),
+    ],
+    4,
+  ),
+  fix: buildPreview(
+    'vtask_mock_preview_fix',
+    'processing',
+    [
+      createPreviewSection({
+        sectionId: 'section_1',
+        sectionIndex: 0,
+        title: '问题引入',
+        status: 'ready',
+        audioUrl: 'https://static.prorise.test/preview/fix_section_1.mp3',
+        clipUrl: 'https://static.prorise.test/preview/fix_section_1.mp4',
+      }),
+      createPreviewSection({
+        sectionId: 'section_2',
+        sectionIndex: 1,
+        title: '切线逼近',
+        lectureLines: ['自动修正几何元素的位置与字幕布局。'],
+        visualNotes: ['几何元素重新排版，字幕安全区重新对齐。'],
+        status: 'fixing',
+        audioUrl: 'https://static.prorise.test/preview/fix_section_2.mp3',
+        fixAttempt: 1,
+      }),
+      createPreviewSection({
+        sectionId: 'section_3',
+        sectionIndex: 2,
+        title: '公式收口',
+        lectureLines: ['等待修复完成后继续推进。'],
+        visualNotes: ['等待修复完成后，再把镜头切向导数公式。'],
+        status: 'pending',
+      }),
+    ],
+    3,
+  ),
+  failure: buildPreview(
+    'vtask_mock_preview_failure',
+    'failed',
+    [
+      createPreviewSection({
+        sectionId: 'section_1',
+        sectionIndex: 0,
+        title: '问题引入',
+        status: 'ready',
+        audioUrl: 'https://static.prorise.test/preview/failure_section_1.mp3',
+        clipUrl: 'https://static.prorise.test/preview/failure_section_1.mp4',
+      }),
+      createPreviewSection({
+        sectionId: 'section_2',
+        sectionIndex: 1,
+        title: '渲染失败段',
+        lectureLines: ['本段渲染失败，用于验证 section 级失败不等于整页失败。'],
+        visualNotes: ['该段画面说明保留，但渲染资产未成功输出。'],
+        status: 'failed',
+        errorMessage: '当前段渲染超时，请等待系统自动重试',
+      }),
+      createPreviewSection({
+        sectionId: 'section_3',
+        sectionIndex: 2,
+        title: '后续段落',
+        lectureLines: ['后续段落未执行。'],
+        visualNotes: ['后续画面尚未开始生成。'],
+        status: 'pending',
+      }),
+    ],
+    5,
+  ),
+};
+
 /**
  * 获取视频任务成功结果 mock 数据。
  *
@@ -88,6 +245,34 @@ export function getMockVideoFailure(taskId?: string): VideoFailure {
 }
 
 /**
+ * 获取视频等待页渐进预览 mock 数据。
+ *
+ * @param taskId - 可选的 taskId 覆盖。
+ * @param scenario - 流水线场景。
+ * @returns 视频等待页 preview。
+ */
+export function getMockVideoPreview(
+  taskId?: string,
+  scenario: VideoPipelineMockScenario = 'success',
+): VideoTaskPreview {
+  const preview = previewFixtures[scenario] ?? previewFixtures.success;
+
+  if (!taskId) {
+    return preview;
+  }
+
+  return {
+    ...preview,
+    taskId,
+    sections: preview.sections.map((section) => ({
+      ...section,
+      audioUrl: section.audioUrl?.replace(preview.taskId, taskId) ?? section.audioUrl,
+      clipUrl: section.clipUrl?.replace(preview.taskId, taskId) ?? section.clipUrl,
+    })),
+  };
+}
+
+/**
  * 从 SSE 事件序列的最后一个 completed 事件中提取嵌入的结果。
  *
  * @param scenario - 流水线场景。
@@ -113,6 +298,7 @@ export function getVideoResultFromFlow(
 /** 导出便于外部引用的 fixture 对象。 */
 export const videoPipelineMockFixtures = {
   flows: SSE_FLOW_MAP,
+  preview: previewFixtures,
   result: {
     success: videoResultSuccess,
     failure: videoResultFailure,

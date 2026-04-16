@@ -52,13 +52,71 @@ export const VIDEO_IMAGE_ACCEPTED_TYPES = [
 /** clientRequestId 最大长度。 */
 export const VIDEO_CLIENT_REQUEST_ID_MAX_LENGTH = 128;
 
+/** 渲染质量枚举。 */
+export const VIDEO_RENDER_QUALITY_VALUES = ['l', 'm', 'h'] as const;
+
+/** 渲染质量类型。 */
+export type VideoRenderQuality = (typeof VIDEO_RENDER_QUALITY_VALUES)[number];
+
+/** 布局提示枚举。 */
+export const VIDEO_LAYOUT_HINT_VALUES = ['center_stage', 'two_column'] as const;
+
+/** 布局提示类型。 */
+export type VideoLayoutHint = (typeof VIDEO_LAYOUT_HINT_VALUES)[number];
+
+/** 输入页质量预设枚举。 */
+export const VIDEO_QUALITY_PRESET_VALUES = ['fast', 'balanced', 'cinematic'] as const;
+
+/** 输入页质量预设类型。 */
+export type VideoQualityPreset = (typeof VIDEO_QUALITY_PRESET_VALUES)[number];
+
+/** 视频任务 userProfile 透传参数。 */
+export interface VideoTaskUserProfile {
+  durationMinutes: number;
+  sectionCount: number;
+  sectionConcurrency: number;
+  renderQuality: VideoRenderQuality;
+  layoutHint: VideoLayoutHint;
+}
+
+/** 输入页默认质量预设。 */
+export const VIDEO_DEFAULT_QUALITY_PRESET: VideoQualityPreset = 'balanced';
+
+/** 质量预设对应的推荐参数。 */
+export const VIDEO_QUALITY_PRESET_DEFAULTS: Record<
+  VideoQualityPreset,
+  VideoTaskUserProfile
+> = {
+  fast: {
+    durationMinutes: 2,
+    sectionCount: 3,
+    sectionConcurrency: 3,
+    renderQuality: 'l',
+    layoutHint: 'center_stage',
+  },
+  balanced: {
+    durationMinutes: 3,
+    sectionCount: 4,
+    sectionConcurrency: 2,
+    renderQuality: 'm',
+    layoutHint: 'center_stage',
+  },
+  cinematic: {
+    durationMinutes: 4,
+    sectionCount: 5,
+    sectionConcurrency: 1,
+    renderQuality: 'h',
+    layoutHint: 'center_stage',
+  },
+};
+
 /* ---------- 请求 ---------- */
 
 /** 文本模式视频任务创建请求。 */
 export interface VideoTextTaskCreateRequest {
   inputType: 'text';
   sourcePayload: VideoTextSourcePayload;
-  userProfile?: Record<string, unknown>;
+  userProfile?: Partial<VideoTaskUserProfile> & Record<string, unknown>;
   clientRequestId: string;
 }
 
@@ -66,7 +124,7 @@ export interface VideoTextTaskCreateRequest {
 export interface VideoImageTaskCreateRequest {
   inputType: 'image';
   sourcePayload: VideoImageSourcePayload;
-  userProfile?: Record<string, unknown>;
+  userProfile?: Partial<VideoTaskUserProfile> & Record<string, unknown>;
   clientRequestId: string;
 }
 
@@ -241,6 +299,67 @@ export const VIDEO_PIPELINE_ERROR_CODE_VALUES = [
 
 /** 视频流水线错误码类型。 */
 export type VideoPipelineErrorCode = (typeof VIDEO_PIPELINE_ERROR_CODE_VALUES)[number];
+
+/* ---------- 渐进预览 ---------- */
+
+/** 等待页分段预览状态。 */
+export const VIDEO_PREVIEW_SECTION_STATUS_VALUES = [
+  'pending',
+  'generating',
+  'rendering',
+  'fixing',
+  'ready',
+  'failed',
+] as const;
+
+/** 等待页分段预览状态类型。 */
+export type VideoPreviewSectionStatus =
+  (typeof VIDEO_PREVIEW_SECTION_STATUS_VALUES)[number];
+
+/**
+ * 判断值是否为受支持的 section 预览状态。
+ *
+ * @param value - 待判断值。
+ * @returns 是否为 `VideoPreviewSectionStatus`。
+ */
+export function isVideoPreviewSectionStatus(
+  value: unknown,
+): value is VideoPreviewSectionStatus {
+  return VIDEO_PREVIEW_SECTION_STATUS_VALUES.some((status) => status === value);
+}
+
+/** 单个 section 的渐进预览状态。 */
+export interface VideoPreviewSection {
+  sectionId: string;
+  sectionIndex: number;
+  title: string;
+  lectureLines: string[];
+  visualNotes?: string[];
+  status: VideoPreviewSectionStatus;
+  audioUrl: string | null;
+  clipUrl: string | null;
+  errorMessage: string | null;
+  fixAttempt: number | null;
+  updatedAt: string;
+}
+
+/** 视频等待页渐进预览数据。 */
+export interface VideoTaskPreview {
+  taskId: string;
+  status: 'processing' | 'completed' | 'failed' | 'cancelled';
+  previewAvailable: boolean;
+  previewVersion: number;
+  summary: string;
+  knowledgePoints: string[];
+  totalSections: number;
+  readySections: number;
+  failedSections: number;
+  sections: VideoPreviewSection[];
+  updatedAt: string;
+}
+
+/** 视频等待页渐进预览响应包。 */
+export type VideoTaskPreviewResponseEnvelope = TaskDataEnvelope<VideoTaskPreview>;
 
 /* ---------- 成功结果 ---------- */
 

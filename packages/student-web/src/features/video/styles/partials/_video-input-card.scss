@@ -81,6 +81,82 @@
     }
   }
 
+  &-preset-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 0.95rem 1rem;
+    border-radius: var(--xm-radius-md);
+    border: 1px solid var(--xm-color-border);
+    background:
+      linear-gradient(135deg, rgba(245, 197, 71, 0.12), rgba(245, 197, 71, 0.04)),
+      var(--xm-color-surface);
+  }
+
+  &-preset-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &-preset-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--xm-color-text-primary);
+    letter-spacing: 0.02em;
+  }
+
+  &-preset-hint {
+    font-size: 0.75rem;
+    color: var(--xm-color-text-secondary);
+    line-height: 1.6;
+  }
+
+  &-preset-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &-select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--xm-radius-md);
+    border: 1px solid var(--xm-color-border);
+    background: var(--xm-color-surface);
+    color: var(--xm-color-text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+    &:focus {
+      outline: none;
+      border-color: var(--xm-color-primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--xm-color-primary) 18%, transparent);
+    }
+  }
+
+  &-preset-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &-preset-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--xm-radius-full);
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 80%, transparent);
+    background: rgba(255, 255, 255, 0.65);
+    color: var(--xm-color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
   &-toolbar {
     padding: 0.75rem 1rem;
     border-top: 1px solid var(--xm-color-border);
@@ -192,10 +268,54 @@
   }
 }
 
+.xm-video-input {
+  &__advanced-dialog {
+    max-width: 42rem;
+  }
+
+  &__advanced-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  &__advanced-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    &--full {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
 /* 主题覆盖：视频页使用品牌装饰色体系（稳重暗褐），符合全局 design tokens 约束 */
 .xm-theme-video-header .xm-input-header__gradient {
   background: linear-gradient(to right, var(--xm-color-text-primary), var(--xm-color-text-muted));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .xm-video-input__card {
+    &-preset-head,
+    &-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &-toolbar {
+      gap: 0.75rem;
+    }
+
+    &-tools {
+      justify-content: space-between;
+    }
+  }
+
+  .xm-video-input__advanced-grid {
+    grid-template-columns: 1fr;
+  }
 }

@@ -36,6 +36,8 @@ export type TaskErrorCode = (typeof TASK_ERROR_CODE_VALUES)[number];
 export const TASK_EVENT_NAME_VALUES = [
   "connected",
   "progress",
+  "section_progress",
+  "section_ready",
   "provider_switch",
   "completed",
   "failed",

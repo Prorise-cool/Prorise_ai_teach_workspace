@@ -343,7 +343,81 @@ describe('VideoInputPage', () => {
 
 		await waitFor(() => {
 			expect(createTaskMock).toHaveBeenCalledTimes(1);
+			expect(createTaskMock).toHaveBeenCalledWith(
+				expect.objectContaining({
+					inputType: 'text',
+					sourcePayload: {
+						text: '证明洛必达法则为什么成立，请给出完整推导。',
+					},
+					userProfile: {
+						durationMinutes: 3,
+						sectionCount: 4,
+						sectionConcurrency: 2,
+						layoutHint: 'center_stage',
+						renderQuality: 'm',
+					},
+					clientRequestId: expect.stringMatching(/^video_/),
+				}),
+			);
 			expect(router.state.location.pathname).toBe('/video/vtask_test_001/generating');
+		});
+	});
+
+	it('高级参数会随质量预设与手动调整一起传给创建接口', async () => {
+		const user = userEvent.setup();
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123'
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>
+		);
+
+		await user.type(
+			screen.getByPlaceholderText(/粘贴题目文本/),
+			'请用动画方式讲解导数的几何意义，并强调切线逼近的过程。'
+		);
+		await user.selectOptions(
+			screen.getByLabelText('生成质量预设'),
+			'cinematic',
+		);
+		await user.click(screen.getByRole('button', { name: '高级参数' }));
+		await user.clear(screen.getByLabelText('目标时长（分钟）'));
+		await user.type(screen.getByLabelText('目标时长（分钟）'), '4');
+		await user.clear(screen.getByLabelText('分段数量'));
+		await user.type(screen.getByLabelText('分段数量'), '6');
+		await user.clear(screen.getByLabelText('并发生成数'));
+		await user.type(screen.getByLabelText('并发生成数'), '1');
+		await user.selectOptions(screen.getByLabelText('渲染质量'), 'h');
+		await user.selectOptions(screen.getByLabelText('布局偏好'), 'two_column');
+		await user.click(screen.getByRole('button', { name: '完成设置' }));
+		await user.click(screen.getByRole('button', { name: /生成视频/ }));
+
+		await waitFor(() => {
+			expect(createTaskMock).toHaveBeenCalledTimes(1);
+			expect(createTaskMock).toHaveBeenCalledWith(
+				expect.objectContaining({
+					inputType: 'text',
+					sourcePayload: {
+						text: '请用动画方式讲解导数的几何意义，并强调切线逼近的过程。',
+					},
+					userProfile: {
+						durationMinutes: 4,
+						sectionCount: 6,
+						sectionConcurrency: 1,
+						layoutHint: 'two_column',
+						renderQuality: 'h',
+					},
+					clientRequestId: expect.stringMatching(/^video_/),
+				}),
+			);
 		});
 	});
 

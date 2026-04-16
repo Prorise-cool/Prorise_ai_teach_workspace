@@ -10,6 +10,7 @@ import type { VideoPipelineMockScenario } from '@/types/video';
 
 import {
   getMockVideoFailure,
+  getMockVideoPreview,
   getMockVideoResult,
   getVideoPipelineEventSequence,
 } from '@/services/mock/fixtures/video-pipeline';
@@ -106,6 +107,7 @@ export const videoPipelineHandlers = [
       const taskId = String(params.taskId);
       const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
       const events = getVideoPipelineEventSequence(scenario, taskId);
+      const preview = getMockVideoPreview(taskId, scenario);
 
       // 取最后一个事件作为当前状态快照
       const lastEvent = events[events.length - 1];
@@ -132,6 +134,10 @@ export const videoPipelineHandlers = [
         currentStage: (raw.currentStage as string) ?? null,
         stageLabel: (raw.stageLabel as string) ?? null,
         stageProgress: (raw.stageProgress as number) ?? null,
+        context: {
+          previewAvailable: preview.previewAvailable,
+          previewVersion: preview.previewVersion,
+        },
       };
 
       return HttpResponse.json(
@@ -147,8 +153,28 @@ export const videoPipelineHandlers = [
     }
   }),
 
+  /* ── 视频等待页渐进 preview ── */
+  http.get('*/api/v1/video/tasks/:taskId/preview', ({ params, request }) => {
+    try {
+      const taskId = String(params.taskId);
+      const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));
+      const preview = getMockVideoPreview(taskId, scenario);
+
+      return HttpResponse.json(
+        { code: 200, msg: '获取等待页预览成功', data: preview },
+        { status: 200 },
+      );
+    } catch (err) {
+      console.error('[mock] video preview handler error:', err);
+      return HttpResponse.json(
+        { code: 500, msg: String(err), data: null },
+        { status: 500 },
+      );
+    }
+  }),
+
   /* ── 视频任务结果查询 ── */
-  http.get('*/api/v1/video/tasks/:taskId', ({ params, request }) => {
+  http.get('*/api/v1/video/tasks/:taskId/result', ({ params, request }) => {
     try {
       const taskId = String(params.taskId);
       const scenario = inferPipelineScenario(taskId, readPipelineScenario(request));

@@ -1464,6 +1464,7 @@ class VideoPipelineService:
                 section_index=index,
                 title=str(getattr(section, "title", f"第 {index + 1} 段")),
                 lecture_lines=list(getattr(section, "lecture_lines", []) or []),
+                visual_notes=self._build_preview_visual_notes(section),
             )
             for index, section in enumerate(getattr(agent, "sections", []) or [])
         ]
@@ -1481,6 +1482,27 @@ class VideoPipelineService:
             knowledge_points=knowledge_points,
             sections=sections,
         )
+
+    @staticmethod
+    def _build_preview_visual_notes(section: Any) -> list[str]:
+        """把 agent section 中的画面信息收束成等待页可直接展示的 visual notes。"""
+        notes: list[str] = []
+        candidates = [
+            *list(getattr(section, "animations", []) or []),
+            getattr(section, "layout_line", ""),
+            getattr(section, "start_state", ""),
+            getattr(section, "end_state", ""),
+            getattr(section, "raw_shot", ""),
+            getattr(section, "design_text", ""),
+        ]
+
+        for candidate in candidates:
+            value = str(candidate or "").strip()
+            if not value or value in notes:
+                continue
+            notes.append(value)
+
+        return notes[:4]
 
     def _publish_tts_audio_assets(
         self,

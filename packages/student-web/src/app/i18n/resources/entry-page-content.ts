@@ -123,17 +123,45 @@ export const zhCnEntryPageResources = {
     }
   },
   /** Story 1-6：视频输入页文案。 */
-  videoInput: {
-    badgeLabel: 'Video Engine',
-    titleLine1: '输入或拍题，',
-    titleGradient: '5分钟生成动画讲解',
+	  videoInput: {
+	    badgeLabel: 'Video Engine',
+	    titleLine1: '输入或拍题，',
+	    titleGradient: '5分钟生成动画讲解',
     placeholder:
       '粘贴题目文本，或描述具体题目要求...\n\n例如：\n「求函数 f(x) = x³ - 3x 的极值点并画出变化趋势」',
-    toolUploadImage: '上传图片',
-    toolScreenshot: '截图',
-    submitLabel: '生成视频',
-    suggestionsLabel: 'Try These',
-    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
+	    toolUploadImage: '上传图片',
+	    toolScreenshot: '截图',
+	    submitLabel: '生成视频',
+	    qualityPresetLabel: '生成质量预设',
+	    qualityPresetHint: '先选一个简单入口，再按需打开高级参数微调。',
+	    advancedSettingsLabel: '高级参数',
+	    qualityPresets: {
+	      fast: '快速出片',
+	      balanced: '均衡讲解',
+	      cinematic: '高质细讲',
+	    },
+	    advancedDialogTitle: '高级生成参数',
+	    advancedDialogDescription: '这里对应后端视频任务接口的可调参数，适合想精细控制分段、并发和布局的用户。',
+	    advancedDialogReset: '恢复当前预设',
+	    advancedDialogDone: '完成设置',
+	    advancedFields: {
+	      durationMinutes: '目标时长（分钟）',
+	      sectionCount: '分段数量',
+	      sectionConcurrency: '并发生成数',
+	      renderQuality: '渲染质量',
+	      layoutHint: '布局偏好',
+	    },
+	    renderQualityOptions: {
+	      l: '轻量预览',
+	      m: '标准清晰',
+	      h: '高质精修',
+	    },
+	    layoutHintOptions: {
+	      center_stage: '居中舞台',
+	      two_column: '双栏讲解',
+	    },
+	    suggestionsLabel: 'Try These',
+	    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
     guideCards: [
       {
         title: '没找到合适讲解？',
@@ -768,16 +796,44 @@ export const enUsEntryPageResources = {
     }
   },
   /** Story 1-6: Video input page copy. */
-  videoInput: {
-    badgeLabel: 'Video Engine',
-    titleLine1: 'Enter or snap a problem, ',
-    titleGradient: '5-minute animated explainer',
+	  videoInput: {
+	    badgeLabel: 'Video Engine',
+	    titleLine1: 'Enter or snap a problem, ',
+	    titleGradient: '5-minute animated explainer',
     placeholder:
       'Paste problem text or describe the question...\n\nFor example:\n"Find the extrema of f(x) = x³ - 3x and sketch the trend"',
-    toolUploadImage: 'Upload image',
-    toolScreenshot: 'Screenshot',
-    submitLabel: 'Generate Video',
-    suggestionsLabel: 'Try These',
+	    toolUploadImage: 'Upload image',
+	    toolScreenshot: 'Screenshot',
+	    submitLabel: 'Generate Video',
+	    qualityPresetLabel: 'Quality Preset',
+	    qualityPresetHint: 'Start with a simple preset, then fine-tune advanced parameters only when needed.',
+	    advancedSettingsLabel: 'Advanced Settings',
+	    qualityPresets: {
+	      fast: 'Fast Draft',
+	      balanced: 'Balanced Explainer',
+	      cinematic: 'High Fidelity',
+	    },
+	    advancedDialogTitle: 'Advanced Video Parameters',
+	    advancedDialogDescription: 'These controls map directly to the backend task interface for duration, section count, concurrency, render quality, and layout.',
+	    advancedDialogReset: 'Reset to Preset',
+	    advancedDialogDone: 'Done',
+	    advancedFields: {
+	      durationMinutes: 'Target Duration (min)',
+	      sectionCount: 'Section Count',
+	      sectionConcurrency: 'Concurrency',
+	      renderQuality: 'Render Quality',
+	      layoutHint: 'Layout Preference',
+	    },
+	    renderQualityOptions: {
+	      l: 'Light Preview',
+	      m: 'Balanced',
+	      h: 'High Quality',
+	    },
+	    layoutHintOptions: {
+	      center_stage: 'Center Stage',
+	      two_column: 'Two Columns',
+	    },
+	    suggestionsLabel: 'Try These',
     suggestions: [
       "Prove L'Hôpital's rule",
       'Solve partial differential equations',

@@ -4,8 +4,12 @@
 import { z } from 'zod';
 
 import {
+  VIDEO_DEFAULT_QUALITY_PRESET,
   VIDEO_IMAGE_ACCEPTED_TYPES,
   VIDEO_IMAGE_MAX_SIZE_BYTES,
+  VIDEO_LAYOUT_HINT_VALUES,
+  VIDEO_QUALITY_PRESET_VALUES,
+  VIDEO_RENDER_QUALITY_VALUES,
   VIDEO_TEXT_MAX_LENGTH,
   VIDEO_TEXT_MIN_LENGTH,
 } from '@/types/video';
@@ -18,6 +22,12 @@ export const videoInputFormSchema = z
     inputType: z.enum(['text', 'image']),
     text: z.string(),
     imageFiles: z.array(z.instanceof(File)),
+    qualityPreset: z.enum(VIDEO_QUALITY_PRESET_VALUES),
+    durationMinutes: z.number().int().min(1, '时长需在 1-10 分钟之间').max(10, '时长需在 1-10 分钟之间'),
+    sectionCount: z.number().int().min(1, '分段数需在 1-12 段之间').max(12, '分段数需在 1-12 段之间'),
+    sectionConcurrency: z.number().int().min(1, '并发数需在 1-8 之间').max(8, '并发数需在 1-8 之间'),
+    renderQuality: z.enum(VIDEO_RENDER_QUALITY_VALUES),
+    layoutHint: z.enum(VIDEO_LAYOUT_HINT_VALUES),
   })
   .superRefine((data, ctx) => {
     const trimmedText = data.text.trim();
@@ -72,8 +82,4 @@ export const videoInputFormSchema = z
     }
   });
 
-export type VideoInputFormValues = {
-  inputType: 'text' | 'image';
-  text: string;
-  imageFiles: File[];
-};
+export type VideoInputFormValues = z.infer<typeof videoInputFormSchema>;
