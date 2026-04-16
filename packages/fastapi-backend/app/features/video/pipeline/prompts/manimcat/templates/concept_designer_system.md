@@ -51,6 +51,10 @@
 - If a shot becomes crowded, split it into two shots instead of compressing blindly.
 - Non-core objects should leave soon after finishing their job.
 - Keep the subtitle safe zone empty of essential visual content.
+- Every shot must end on a stable landing frame that can be held briefly before the next section starts.
+- Adjacent shots must share at least one visual anchor (same object, same formula family, or same layout slot) so the cut does not feel like a hard reset.
+- Each `narration_hint` must be a complete spoken unit. Never split one spoken sentence across two shots.
+- If the next shot continues the same idea, start it with a short visual callback instead of assuming the previous narration was unfinished.
 
 ## Protocol Layer
 ### Command Language
@@ -96,3 +100,5 @@
 - Do not put more than 2 complex moving targets in one shot.
 - Do not omit lifecycle decisions for active objects.
 - Do not use unstable names like "this object" or "that text".
+- Do not end a shot while the teacher still sounds mid-sentence.
+- Do not begin the next shot with a totally unrelated first frame if the previous shot has not visually resolved.

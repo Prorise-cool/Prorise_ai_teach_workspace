@@ -80,6 +80,7 @@ logger = logging.getLogger(__name__)
 
 SECTION_LOOP_PROGRESS_START = 26
 SECTION_LOOP_PROGRESS_END = 94
+SECTION_AUDIO_TAIL_HOLD_SECONDS = 0.35
 SECTION_STATUS_RATIOS: dict[VideoPreviewSectionStatus, float] = {
     VideoPreviewSectionStatus.PENDING: 0.0,
     VideoPreviewSectionStatus.GENERATING: 0.25,
@@ -275,20 +276,54 @@ def _compose_section_with_audio(
         shutil.copy2(video_path, output_path)
         return output_path
 
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(video_path),
-        "-i",
-        str(audio_path),
-        "-c:v",
-        "copy",
-        "-c:a",
-        "libvorbis",
-        "-shortest",
-        str(output_path),
-    ]
+    video_duration = _probe_media_duration(video_path)
+    audio_duration = _probe_media_duration(audio_path)
+    tail_padding = max(
+        0.0,
+        audio_duration - video_duration + SECTION_AUDIO_TAIL_HOLD_SECONDS,
+    )
+
+    if tail_padding > 0.05:
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-i",
+            str(audio_path),
+            "-filter_complex",
+            f"[0:v]tpad=stop_mode=clone:stop_duration={tail_padding:.3f}[v]",
+            "-map",
+            "[v]",
+            "-map",
+            "1:a",
+            "-c:v",
+            "libvpx-vp9",
+            "-pix_fmt",
+            "yuva420p",
+            "-auto-alt-ref",
+            "0",
+            "-c:a",
+            "libvorbis",
+            "-shortest",
+            str(output_path),
+        ]
+    else:
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-i",
+            str(audio_path),
+            "-c:v",
+            "copy",
+            "-c:a",
+            "libvorbis",
+            "-shortest",
+            str(output_path),
+        ]
+
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         logger.warning(
@@ -344,8 +379,8 @@ def _extract_cover(video_path: Path, cover_path: Path) -> Path:
     return cover_path
 
 
-def _probe_duration(video_path: Path) -> int:
-    """用 ffprobe 获取视频时长（秒）。"""
+def _probe_media_duration(media_path: Path) -> float:
+    """用 ffprobe 获取媒体时长（秒）。"""
     cmd = [
         "ffprobe",
         "-v",
@@ -354,13 +389,21 @@ def _probe_duration(video_path: Path) -> int:
         "format=duration",
         "-of",
         "default=noprint_wrappers=1:nokey=1",
-        str(video_path),
+        str(media_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     try:
-        return max(1, int(float(result.stdout.strip())))
+        return max(0.0, float(result.stdout.strip()))
     except (ValueError, AttributeError):
+        return 0.0
+
+
+def _probe_duration(video_path: Path) -> int:
+    """用 ffprobe 获取视频时长（秒）。"""
+    duration = _probe_media_duration(video_path)
+    if duration <= 0:
         return 60  # fallback
+    return max(1, int(duration))
 
 
 # ---------------------------------------------------------------------------

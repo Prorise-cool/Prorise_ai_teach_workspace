@@ -34,6 +34,9 @@ Output mode: {{outputMode}}
 - Prefer explicit cleanup over lingering temporary objects.
 - Keep geometry readable before adding extra text.
 - Keep layout stable across adjacent shots.
+- Respect any `transition bridge` note from the storyboard. Recreate the shared anchor first, then continue the explanation.
+- After each section's final key transform, add a brief settle/hold so the cut into the next section does not feel abrupt.
+- Do not let the visual section finish before the corresponding spoken thought has clearly landed.
 
 ## Protocol Layer
 ### Output Rules
@@ -44,6 +47,8 @@ Output mode: {{outputMode}}
 - Use `self.next_section("section_N")` at the start of each section
 - Use `self.clear()` between sections to prevent cross-section occlusion
 - Never set an opaque fullscreen background; the exported WebM must keep transparency
+- When a section ends on an important formula or diagram, leave a short hold on that final frame before the section ends
+- If the next section inherits context, rebuild the shared anchor in the same layout slot before adding new objects
 
 ### Language Rule（强制中文模式）
 - 所有标签、字幕、标题、说明性屏幕文字必须是中文
@@ -59,3 +64,4 @@ Output mode: {{outputMode}}
 - Do not leave temporary objects without cleanup if they are no longer needed.
 - Do not ignore the storyboard's placement and transform intent.
 - Do not place critical content in the subtitle safe zone near the bottom edge.
+- Do not cut away on an unfinished spoken clause or unresolved visual transition.

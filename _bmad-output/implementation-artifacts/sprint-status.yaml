@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-16 12:18:00 +0800
+# last_updated: 2026-04-16 13:27:00 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-16 12:18:00 +0800
+last_updated: 2026-04-16 13:27:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -151,6 +151,9 @@ development_status:
   # 2026-04-16 本地联调补充：
   # - development / test 环境下 Dramatiq worker 默认关闭 Prometheus middleware，避免重复启动时占用默认 9191 指标端口。
   # - `scripts/start-worker.sh` 现会先停止同工作区旧 worker 再启动新 worker，确保 section 预览联调不会出现“旧 worker + 新 worker”并行消费同一队列。
+  # 2026-04-16 分镜承接与旁白尾句补充：
+  # - ManimCat `concept_designer_*` / `code_generation_*` 模板已补齐“尾帧停留、共享视觉锚点、旁白语义闭合”硬约束，降低 section 边界生硬感。
+  # - section 音视频合成现会在音频长于视频时先 clone padding 视频尾帧，再做音频合成，避免 `-shortest` 把旁白句尾硬切到下一段。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

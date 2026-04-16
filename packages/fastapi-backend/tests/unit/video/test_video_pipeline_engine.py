@@ -16,6 +16,7 @@ from app.features.video.pipeline.engine.scene_designer import (
     generate_scene_design,
     generate_unique_seed,
 )
+from app.features.video.pipeline.prompts.manimcat.prompt_loader import load_and_render
 from app.features.video.pipeline.engine.sanitizer import (
     sanitize_render_error,
     infer_error_type,
@@ -120,6 +121,36 @@ def test_generate_scene_design_passes_multimodal_messages_to_api(tmp_path) -> No
     assert payload[0]["role"] == "system"
     assert isinstance(payload[1]["content"], list)
     assert payload[1]["content"][1]["type"] == "image_url"
+
+
+def test_manimcat_prompts_enforce_transition_bridge_and_closed_narration() -> None:
+    concept_prompt = load_and_render(
+        "concept_designer_user.md",
+        {
+            "concept": "定积分",
+            "seed": "seed",
+            "outputMode": "video",
+            "duration": "3",
+            "sectionCount": "4",
+            "sectionDuration": "20",
+            "layoutHint": "center_stage",
+        },
+    )
+    code_prompt = load_and_render(
+        "code_generation_user.md",
+        {
+            "sceneDesign": "<design>demo</design>",
+            "concept": "定积分",
+            "seed": "seed",
+            "outputMode": "video",
+            "isVideo": True,
+        },
+    )
+
+    assert "transition bridge" in concept_prompt
+    assert "不能把一句话拆到下一个 Shot 继续说" in concept_prompt
+    assert "Do not cut away on an unfinished spoken clause" in code_prompt
+    assert "add a brief settle/hold" in code_prompt
 
 
 def test_sanitize_render_error_truncates() -> None:

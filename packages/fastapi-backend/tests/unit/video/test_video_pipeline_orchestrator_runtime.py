@@ -364,3 +364,85 @@ def test_video_pipeline_service_marks_failed_preview_when_all_section_codegen_ab
     assert detail.status == "failed"
     assert detail.failure is not None
     assert detail.failure.error_code == "VIDEO_RENDER_FAILED"
+
+
+def test_compose_section_with_audio_pads_tail_when_audio_longer(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    video_path = tmp_path / "section.webm"
+    audio_path = tmp_path / "section.mp3"
+    output_path = tmp_path / "section_with_audio.webm"
+    video_path.write_bytes(b"video")
+    audio_path.write_bytes(b"audio")
+
+    commands: list[list[str]] = []
+
+    def fake_probe(path: Path) -> float:
+        if path == video_path:
+            return 2.0
+        if path == audio_path:
+            return 3.1
+        return 0.0
+
+    def fake_run(cmd, capture_output=True, text=True, timeout=0):  # noqa: ANN001
+        commands.append(cmd)
+        output_path.write_bytes(b"merged")
+        return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(orchestrator_module, "_probe_media_duration", fake_probe)
+    monkeypatch.setattr(orchestrator_module.subprocess, "run", fake_run)
+
+    result = orchestrator_module._compose_section_with_audio(
+        video_path,
+        audio_path,
+        output_path,
+    )
+
+    assert result == output_path
+    assert output_path.read_bytes() == b"merged"
+    assert len(commands) == 1
+    filter_index = commands[0].index("-filter_complex")
+    assert "tpad=stop_mode=clone" in commands[0][filter_index + 1]
+    assert "libvpx-vp9" in commands[0]
+
+
+def test_compose_section_with_audio_keeps_fast_path_when_video_is_long_enough(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    video_path = tmp_path / "section.webm"
+    audio_path = tmp_path / "section.mp3"
+    output_path = tmp_path / "section_with_audio.webm"
+    video_path.write_bytes(b"video")
+    audio_path.write_bytes(b"audio")
+
+    commands: list[list[str]] = []
+
+    def fake_probe(path: Path) -> float:
+        if path == video_path:
+            return 4.0
+        if path == audio_path:
+            return 2.5
+        return 0.0
+
+    def fake_run(cmd, capture_output=True, text=True, timeout=0):  # noqa: ANN001
+        commands.append(cmd)
+        output_path.write_bytes(b"merged-fast")
+        return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(orchestrator_module, "_probe_media_duration", fake_probe)
+    monkeypatch.setattr(orchestrator_module.subprocess, "run", fake_run)
+
+    result = orchestrator_module._compose_section_with_audio(
+        video_path,
+        audio_path,
+        output_path,
+    )
+
+    assert result == output_path
+    assert output_path.read_bytes() == b"merged-fast"
+    assert len(commands) == 1
+    assert "-filter_complex" not in commands[0]
+    video_codec_index = commands[0].index("-c:v")
+    assert commands[0][video_codec_index + 1] == "copy"
