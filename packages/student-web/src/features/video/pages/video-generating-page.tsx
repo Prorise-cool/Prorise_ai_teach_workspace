@@ -1,8 +1,8 @@
 /**
  * 文件说明：视频任务等待页。
- * 承接视频创建成功后的跳转，同时消费 status / preview / SSE 三路数据，并按设计稿的 6 段式布局组织页面。
+ * 承接视频创建成功后的跳转，同时消费 status / preview / SSE 三路数据，并按压缩后的 3 段式布局组织页面。
  */
-import { ArrowLeft, Leaf, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
+import { ArrowLeft, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -57,23 +57,19 @@ function buildStageTags(
 		return knowledgePoints.slice(0, 3);
 	}
 
-	if (stageKey === 'steps') {
-		return sections.slice(0, 3).map((section) => section.title).filter(Boolean);
-	}
-
 	if (stageKey === 'storyboard') {
-		return [t('video.generating.tagStoryboard'), t('video.generating.tagSections', { count: totalSections })];
+		return [
+			t('video.generating.tagSections', { count: totalSections }),
+			t('video.generating.tagNarrationReady', {
+				count: sections.filter((section) => section.audioUrl).length,
+			}),
+		];
 	}
 
-	if (stageKey === 'assets') {
-		return [t('video.generating.tagAudio'), t('video.generating.tagPreviewReady', { count: readySections })];
-	}
-
-	if (stageKey === 'renderFlow') {
-		return [t('video.generating.tagRealtime'), t('video.generating.tagAutoFix')];
-	}
-
-	return [t('video.generating.tagCompose'), t('video.generating.tagDelivery')];
+	return [
+		t('video.generating.tagPreviewReady', { count: readySections }),
+		t('video.generating.tagRealtime'),
+	];
 }
 
 function buildRuntimeLogs(
@@ -181,15 +177,15 @@ export function VideoGeneratingPage() {
 	}, [degradedToPolling, fixAttempt, previewAvailable, readySections, showPageToast, status, t]);
 
 	const displayTotalSections = Math.max(totalSections, sections.length);
-	const activeStageKey = resolveVideoGeneratingLayoutStage(currentStage, status);
-	const activeStageIndex = VIDEO_GENERATING_LAYOUT_STAGES.findIndex((stage) => stage.key === activeStageKey);
+	const pipelineStageKey = resolveVideoGeneratingLayoutStage(currentStage, status);
+	const pipelineStageIndex = VIDEO_GENERATING_LAYOUT_STAGES.findIndex((stage) => stage.key === pipelineStageKey);
 	const manualStageIndex = manualStageKey ? VIDEO_GENERATING_LAYOUT_STAGES.findIndex((stage) => stage.key === manualStageKey) : -1;
 	useEffect(() => {
-		if (manualStageIndex > activeStageIndex) setManualStageKey(null);
-	}, [activeStageIndex, manualStageIndex]);
+		if (manualStageIndex > pipelineStageIndex) setManualStageKey(null);
+	}, [manualStageIndex, pipelineStageIndex]);
 
-	const displayStageKey = manualStageKey ?? activeStageKey;
-	const displayStageConfig = getLayoutStageConfig(displayStageKey);
+	const displayStageKey = manualStageKey ?? pipelineStageKey;
+	const pipelineStageConfig = getLayoutStageConfig(pipelineStageKey);
 	const selectedSectionId = manualSelectedSectionId && sections.some((section) => section.sectionId === manualSelectedSectionId)
 		? manualSelectedSectionId
 		: (sections.find((section) => section.status === 'ready') ?? sections.find((section) => section.status !== 'pending') ?? sections[0])?.sectionId ?? null;
@@ -210,22 +206,24 @@ export function VideoGeneratingPage() {
 			<div className="xm-generating-ambient-glow" />
 			<div className="xm-generating-bg-grid xm-generating-shell__grid" />
 
-			<header className="xm-generating-shell__header">
-				<button type="button" className="xm-generating-shell__brand" onClick={handleReturn}>
-					<span className="xm-generating-shell__brand-icon"><Leaf className="h-4 w-4" /></span>
-					<span>XiaoMai</span>
-				</button>
+				<header className="xm-generating-shell__header">
+					<button type="button" className="xm-generating-shell__brand" onClick={handleReturn}>
+						<span className="xm-generating-shell__brand-icon">
+							<img src="/entry/logo.png" alt="" className="xm-generating-shell__brand-logo" />
+						</span>
+						<span>{t('video.generating.brandLabel')}</span>
+					</button>
 
-				<nav className="xm-generating-shell__nav" aria-label={t('video.generating.navAriaLabel')}>
-					{VIDEO_GENERATING_LAYOUT_STAGES.map((stage, index) => (
-						<button
-							key={stage.key}
-							type="button"
-							onClick={() => index <= activeStageIndex && setManualStageKey(stage.key)}
-							disabled={index > activeStageIndex}
-							className={cn('xm-generating-shell__nav-btn', displayStageKey === stage.key && 'is-active', index > activeStageIndex && 'is-locked')}
-						>
-							{index + 1}. {t(stage.labelKey)}
+					<nav className="xm-generating-shell__nav" aria-label={t('video.generating.navAriaLabel')}>
+						{VIDEO_GENERATING_LAYOUT_STAGES.map((stage, index) => (
+							<button
+								key={stage.key}
+								type="button"
+								onClick={() => index <= pipelineStageIndex && setManualStageKey(stage.key)}
+								disabled={index > pipelineStageIndex}
+								className={cn('xm-generating-shell__nav-btn', displayStageKey === stage.key && 'is-active', index > pipelineStageIndex && 'is-locked')}
+							>
+								{index + 1}. {t(stage.labelKey)}
 						</button>
 					))}
 				</nav>
@@ -250,16 +248,16 @@ export function VideoGeneratingPage() {
 				<section className="xm-generating-shell__aside">
 					<div className="xm-generating-shell__progress-card">
 						<div className="xm-generating-shell__progress-head">
-							<div className="space-y-2">
-								<div className="xm-generating-shell__status-line">
-									<span className="xm-generating-shell__status-dot" />
-									<span>{t(displayStageConfig.statusKey)}</span>
+								<div className="space-y-2">
+									<div className="xm-generating-shell__status-line">
+										<span className="xm-generating-shell__status-dot" />
+										<span>{t(pipelineStageConfig.statusKey)}</span>
+									</div>
+									<h1 className="xm-generating-shell__title">{titleText}</h1>
+									<p className="xm-generating-shell__subtitle">{t(pipelineStageConfig.subtitleKey)}</p>
 								</div>
-								<h1 className="xm-generating-shell__title">{titleText}</h1>
-								<p className="xm-generating-shell__subtitle">{t(displayStageConfig.subtitleKey)}</p>
-							</div>
-							<div className="space-y-1 text-right">
-								<p className="xm-generating-shell__eta">{etaText}</p>
+								<div className="space-y-1 text-right">
+									<p className="xm-generating-shell__eta">{etaText}</p>
 								<p className="xm-generating-shell__progress-value">{Math.round(progress)}%</p>
 							</div>
 						</div>
@@ -268,10 +266,14 @@ export function VideoGeneratingPage() {
 							<div className="xm-generating-progress-fill xm-generating-shell__progress-bar" style={{ width: `${progress}%` }} />
 						</div>
 
-						<div className="xm-generating-shell__tags">
-							{stageTags.map((tag) => <span key={tag} className="xm-generating-shell__tag">{tag}</span>)}
-							{previewVersion > 0 ? <span className="xm-generating-shell__tag">Preview v{previewVersion}</span> : null}
-						</div>
+							<div className="xm-generating-shell__tags">
+								{stageTags.map((tag) => <span key={tag} className="xm-generating-shell__tag">{tag}</span>)}
+								{previewVersion > 0 ? (
+									<span className="xm-generating-shell__tag">
+										{t('video.generating.previewVersion', { version: previewVersion })}
+									</span>
+								) : null}
+							</div>
 
 						<div className="xm-generating-shell__live-pill">
 							{degradedToPolling ? <WifiOff className="h-4 w-4 text-warning" /> : <Sparkles className="h-4 w-4 text-primary" />}
@@ -299,19 +301,17 @@ export function VideoGeneratingPage() {
 							transition={{ duration: 0.32 }}
 							className="h-full"
 						>
-							<VideoGeneratingStageContent
-								stageKey={displayStageKey}
-								status={status}
-								previewAvailable={previewAvailable}
-								summary={summary}
-								knowledgePoints={knowledgePoints}
-								sections={sections}
-								selectedSectionId={selectedSectionId}
-								onSelectSection={setManualSelectedSectionId}
-								totalSections={displayTotalSections}
-								readySections={readySections}
-								isRefreshing={isPreviewFetching}
-							/>
+								<VideoGeneratingStageContent
+									stageKey={displayStageKey}
+									previewAvailable={previewAvailable}
+									summary={summary}
+									knowledgePoints={knowledgePoints}
+									sections={sections}
+									selectedSectionId={selectedSectionId}
+									onSelectSection={setManualSelectedSectionId}
+									totalSections={displayTotalSections}
+									isRefreshing={isPreviewFetching}
+								/>
 						</motion.div>
 					</AnimatePresence>
 				</section>

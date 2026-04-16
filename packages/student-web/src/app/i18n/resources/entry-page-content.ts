@@ -122,18 +122,21 @@ export const zhCnEntryPageResources = {
       secondaryAction: '查看产品落地页'
     }
   },
-  /** Story 1-6：视频输入页文案。 */
-	  videoInput: {
-	    badgeLabel: 'Video Engine',
-	    titleLine1: '输入或拍题，',
-	    titleGradient: '5分钟生成动画讲解',
+	  /** Story 1-6：视频输入页文案。 */
+		  videoInput: {
+		    badgeLabel: '视频讲解',
+		    titleLine1: '输入或拍题，',
+		    titleGradient: '5分钟生成动画讲解',
     placeholder:
       '粘贴题目文本，或描述具体题目要求...\n\n例如：\n「求函数 f(x) = x³ - 3x 的极值点并画出变化趋势」',
 	    toolUploadImage: '上传图片',
 	    toolScreenshot: '截图',
 	    submitLabel: '生成视频',
+	    submittingLabel: '生成中...',
+	    dragOverlayLabel: '松开鼠标，上传参考图片',
+	    removeImageLabel: '移除图片',
 	    qualityPresetLabel: '生成质量预设',
-	    qualityPresetHint: '先选一个简单入口，再按需打开高级参数微调。',
+	    qualityPresetHint: '让输入框保持干净，预设和细项参数都收在工具栏图标里。',
 	    advancedSettingsLabel: '高级参数',
 	    qualityPresets: {
 	      fast: '快速出片',
@@ -156,11 +159,32 @@ export const zhCnEntryPageResources = {
 	      m: '标准清晰',
 	      h: '高质精修',
 	    },
-	    layoutHintOptions: {
-	      center_stage: '居中舞台',
-	      two_column: '双栏讲解',
-	    },
-	    suggestionsLabel: 'Try These',
+		    layoutHintOptions: {
+		      center_stage: '居中舞台',
+		      two_column: '双栏讲解',
+		    },
+		    summaryUnits: {
+		      duration: '分钟',
+		      section: '段',
+		      concurrency: '并发',
+		    },
+		    validation: {
+		      durationRange: '时长需在 1-10 分钟之间',
+		      sectionCountRange: '分段数需在 1-12 段之间',
+		      sectionConcurrencyRange: '并发数需在 1-8 之间',
+		      textMin: '请输入至少 {{count}} 个字符的题目描述',
+		      textMax: '输入内容不能超过 {{count}} 个字符',
+		      imageRequired: '请上传至少一张图片作为输入',
+		      imageType: '仅支持 JPG、PNG、WebP 格式的图片',
+		      imageSize: '图片大小不能超过 30MB',
+		    },
+		    feedback: {
+		      unsupportedImageTitle: '图片格式不支持',
+		      unsupportedImageDescription: '{{name}} 不是支持的图片格式，请上传 JPG、PNG 或 WebP',
+		      imageTooLargeTitle: '图片过大',
+		      imageTooLargeDescription: '{{name}} 超过 30MB，请压缩后再试',
+		    },
+		    suggestionsLabel: '试试这些题目',
 	    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
     guideCards: [
       {
@@ -795,18 +819,21 @@ export const enUsEntryPageResources = {
       secondaryAction: 'View the landing page'
     }
   },
-  /** Story 1-6: Video input page copy. */
-	  videoInput: {
-	    badgeLabel: 'Video Engine',
-	    titleLine1: 'Enter or snap a problem, ',
-	    titleGradient: '5-minute animated explainer',
+	  /** Story 1-6: Video input page copy. */
+		  videoInput: {
+		    badgeLabel: 'Video Explainer',
+		    titleLine1: 'Enter or snap a problem, ',
+		    titleGradient: '5-minute animated explainer',
     placeholder:
       'Paste problem text or describe the question...\n\nFor example:\n"Find the extrema of f(x) = x³ - 3x and sketch the trend"',
 	    toolUploadImage: 'Upload image',
 	    toolScreenshot: 'Screenshot',
 	    submitLabel: 'Generate Video',
+	    submittingLabel: 'Generating...',
+	    dragOverlayLabel: 'Release to upload reference images',
+	    removeImageLabel: 'Remove image',
 	    qualityPresetLabel: 'Quality Preset',
-	    qualityPresetHint: 'Start with a simple preset, then fine-tune advanced parameters only when needed.',
+	    qualityPresetHint: 'Keep the input clean and open presets or deeper controls only from the toolbar icons.',
 	    advancedSettingsLabel: 'Advanced Settings',
 	    qualityPresets: {
 	      fast: 'Fast Draft',
@@ -829,11 +856,32 @@ export const enUsEntryPageResources = {
 	      m: 'Balanced',
 	      h: 'High Quality',
 	    },
-	    layoutHintOptions: {
-	      center_stage: 'Center Stage',
-	      two_column: 'Two Columns',
-	    },
-	    suggestionsLabel: 'Try These',
+		    layoutHintOptions: {
+		      center_stage: 'Center Stage',
+		      two_column: 'Two Columns',
+		    },
+		    summaryUnits: {
+		      duration: 'min',
+		      section: 'sections',
+		      concurrency: 'Concurrency',
+		    },
+		    validation: {
+		      durationRange: 'Duration must stay between 1 and 10 minutes',
+		      sectionCountRange: 'Section count must stay between 1 and 12',
+		      sectionConcurrencyRange: 'Concurrency must stay between 1 and 8',
+		      textMin: 'Enter at least {{count}} characters for the problem description',
+		      textMax: 'Input cannot exceed {{count}} characters',
+		      imageRequired: 'Upload at least one image as input',
+		      imageType: 'Only JPG, PNG, and WebP images are supported',
+		      imageSize: 'Images must be 30MB or smaller',
+		    },
+		    feedback: {
+		      unsupportedImageTitle: 'Unsupported image format',
+		      unsupportedImageDescription: '{{name}} is not supported. Please upload a JPG, PNG, or WebP image.',
+		      imageTooLargeTitle: 'Image too large',
+		      imageTooLargeDescription: '{{name}} is larger than 30MB. Please compress it and try again.',
+		    },
+		    suggestionsLabel: 'Try These',
     suggestions: [
       "Prove L'Hôpital's rule",
       'Solve partial differential equations',

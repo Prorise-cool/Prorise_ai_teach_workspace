@@ -28,12 +28,15 @@ type TrackEntry = {
   isPlaceholder: boolean;
 };
 
-function createPlaceholderTracks(totalSections: number): TrackEntry[] {
+function createPlaceholderTracks(
+  totalSections: number,
+  buildTitle: (index: number) => string,
+): TrackEntry[] {
   return Array.from({ length: Math.max(totalSections, 4) }, (_, index) => ({
     sectionId: `placeholder_${index + 1}`,
     sectionIndex: index,
     status: 'pending' as const,
-    title: `Section ${index + 1}`,
+    title: buildTitle(index),
     isPlaceholder: true,
   }));
 }
@@ -68,7 +71,9 @@ export function VideoGeneratingPreviewPlayer({
           title: section.title,
           isPlaceholder: false,
         }))
-      : createPlaceholderTracks(totalSections);
+      : createPlaceholderTracks(totalSections, (index) =>
+          t('video.generating.sectionFallbackTitle', { index: index + 1 }),
+        );
 
   const overlayState = selectedSection?.status ?? 'pending';
   const showOverlay = !selectedSection?.clipUrl;

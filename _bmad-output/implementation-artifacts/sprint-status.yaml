@@ -162,6 +162,9 @@ development_status:
   # - 等待页已完成 `/preview` adapter + hook、section 级 zustand 状态机、`section_progress/section_ready` SSE 消费与 Mac 灵动岛风格等待页编排。
   # - mock fixture / handler、输入页与等待页页面编排测试、SSE hook 测试与 preview adapter 测试已对齐；定向回归通过 `pnpm --filter @xiaomai/student-web typecheck`、4 个 Vitest 文件与 `pnpm build`。
   # - 当前 Story 进入 review，等待前端点击验收与最终收口确认。
+  # 2026-04-16 前端体验补充：
+  # - 视频输入页已改为“干净输入框 + 底部 icon 工具栏”，质量预设与高级参数不再占据主输入区。
+  # - 新增的拖拽提示、上传反馈、提交中状态、预设弹层和等待页三段式文案均已接入 i18n，并补齐亮暗色 token 覆盖。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

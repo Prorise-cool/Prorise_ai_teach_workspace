@@ -213,12 +213,12 @@ describe('VideoGeneratingPage', () => {
 
     renderWithApp(<RouterProvider router={router} />);
 
-    await screen.findByText('已有 1 段开放预览');
+    await screen.findByText('已有 1 段可以试看');
     expect(await screen.findByTestId('mock-video-player')).toHaveTextContent('https://static.prorise.test/clip-1.mp4');
 
-    expect(screen.getByRole('button', { name: /5\. 渲染流/ })).toBeInTheDocument();
-    expect(screen.getByText('实时预览')).toBeInTheDocument();
-    expect(screen.getByText('自动修复')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /3\. 分段试看/ })).toBeInTheDocument();
+    expect(screen.getByText('逐段推送')).toBeInTheDocument();
+    expect(screen.getByText('1 段已开放')).toBeInTheDocument();
     expect(screen.getAllByText('1 / 3 段已就绪').length).toBeGreaterThan(0);
   });
 
