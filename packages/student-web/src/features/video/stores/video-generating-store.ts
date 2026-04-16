@@ -1,66 +1,55 @@
 /**
- * 文件说明：视频等待页状态机 store（Story 4.7）。
- * 使用 zustand 管理等待页全部 UI 状态，包括 SSE 驱动的阶段进度、
- * 修复指示器、降级轮询标志和终态信息。
- * 不使用 persist 中间件——状态恢复依赖 SSE snapshot 或 status 查询。
+ * 文件说明：视频等待页状态机 store。
+ * 同时管理全局任务状态与 section 级渐进 preview 状态，支持 snapshot/SSE/preview 三路汇合。
  */
 import { create } from 'zustand';
 
-import { readRecord } from '@/lib/type-guards';
+import {
+  readBooleanProperty,
+  readNumberProperty,
+  readRecord,
+} from '@/lib/type-guards';
 import type { TaskLifecycleStatus, TaskSnapshot } from '@/types/task';
 import {
   isVideoPipelineStage,
   type VideoPipelineStage,
+  type VideoPreviewSection,
+  type VideoTaskPreview,
 } from '@/types/video';
 
-/** 等待页任务错误信息。 */
 export interface VideoGeneratingError {
-  /** 错误码。 */
   errorCode: string | null;
-  /** 用户可读错误消息。 */
   errorMessage: string | null;
-  /** 失败所在阶段。 */
   failedStage: VideoPipelineStage | null;
-  /** 是否可重试。 */
   retryable: boolean;
 }
 
-/** 等待页状态机状态。 */
 export interface VideoGeneratingState {
-  /** 当前任务 ID。 */
   taskId: string | null;
-  /** 当前流水线阶段。 */
   currentStage: VideoPipelineStage | null;
-  /** 当前阶段显示名（i18n key，消费端使用 t(stageLabel) 获取翻译文案）。 */
   stageLabel: string;
-  /** 全局进度（0–100）。 */
   progress: number;
-  /** 任务生命周期状态。 */
   status: TaskLifecycleStatus;
-  /** 是否已经由 snapshot 或事件恢复过运行态。 */
   hasHydratedRuntime: boolean;
-  /** 错误信息（仅 failed 时有值）。 */
   error: VideoGeneratingError | null;
-  /** SSE 是否已连接。 */
   sseConnected: boolean;
-  /** 是否已降级到轮询。 */
   degradedToPolling: boolean;
-  /** 当前修复尝试次数（manim_fix 阶段）。 */
   fixAttempt: number;
-  /** 修复尝试上限。 */
   fixTotal: number;
+  previewAvailable: boolean;
+  previewVersion: number;
+  totalSections: number;
+  summary: string;
+  knowledgePoints: string[];
+  sections: VideoPreviewSection[];
 }
 
-/** 等待页状态机 actions。 */
 export interface VideoGeneratingActions {
-  /** 更新进度和阶段信息。 */
   updateProgress: (payload: {
     progress: number;
     currentStage?: VideoPipelineStage | null;
     stageLabel?: string;
-    message?: string;
   }) => void;
-  /** 更新阶段（含修复上下文）。 */
   updateStage: (payload: {
     currentStage: VideoPipelineStage;
     stageLabel: string;
@@ -68,17 +57,23 @@ export interface VideoGeneratingActions {
     fixAttempt?: number;
     fixTotal?: number;
   }) => void;
-  /** 标记任务失败。 */
   setFailed: (error: VideoGeneratingError) => void;
-  /** 标记任务完成。 */
   setCompleted: () => void;
-  /** 从任务快照恢复当前状态。 */
   restoreSnapshot: (snapshot: TaskSnapshot) => void;
-  /** 标记已降级到轮询。 */
+  setPreview: (preview: VideoTaskPreview) => void;
+  setPreviewSignal: (payload: {
+    previewAvailable?: boolean;
+    previewVersion?: number;
+    totalSections?: number;
+  }) => void;
+  upsertSection: (section: Partial<VideoPreviewSection> & {
+    sectionId: string;
+    sectionIndex?: number;
+    status?: VideoPreviewSection['status'];
+    totalSections?: number;
+  }) => void;
   setDegradedPolling: (degraded: boolean) => void;
-  /** 标记 SSE 连接状态。 */
   setSseConnected: (connected: boolean) => void;
-  /** 重置为初始状态。 */
   resetState: (taskId?: string) => void;
 }
 
@@ -94,111 +89,172 @@ const INITIAL_STATE: VideoGeneratingState = {
   degradedToPolling: false,
   fixAttempt: 0,
   fixTotal: 2,
+  previewAvailable: false,
+  previewVersion: 0,
+  totalSections: 0,
+  summary: '',
+  knowledgePoints: [],
+  sections: [],
 };
 
-/** 视频等待页状态机 store。 */
-export const useVideoGeneratingStore = create<
-  VideoGeneratingState & VideoGeneratingActions
->()((set) => ({
-  ...INITIAL_STATE,
+function mergeSection(
+  current: VideoPreviewSection | undefined,
+  incoming: Partial<VideoPreviewSection> & { sectionId: string; sectionIndex?: number },
+): VideoPreviewSection {
+  return {
+    sectionId: incoming.sectionId,
+    sectionIndex: incoming.sectionIndex ?? current?.sectionIndex ?? 0,
+    title: incoming.title ?? current?.title ?? '',
+    lectureLines: incoming.lectureLines ?? current?.lectureLines ?? [],
+    visualNotes: incoming.visualNotes ?? current?.visualNotes ?? [],
+    status: incoming.status ?? current?.status ?? 'pending',
+    audioUrl: incoming.audioUrl ?? current?.audioUrl ?? null,
+    clipUrl: incoming.clipUrl ?? current?.clipUrl ?? null,
+    errorMessage: incoming.errorMessage ?? current?.errorMessage ?? null,
+    fixAttempt: incoming.fixAttempt ?? current?.fixAttempt ?? null,
+    updatedAt: incoming.updatedAt ?? current?.updatedAt ?? new Date().toISOString(),
+  };
+}
 
-  updateProgress: (payload) =>
-    set((state) => ({
-      status: 'processing',
-      progress: payload.progress,
-      currentStage: payload.currentStage ?? state.currentStage,
-      stageLabel: payload.stageLabel ?? state.stageLabel,
-      hasHydratedRuntime: true,
-    })),
+function mergeSectionList(
+  sections: VideoPreviewSection[],
+  incoming: Partial<VideoPreviewSection> & { sectionId: string; sectionIndex?: number },
+): VideoPreviewSection[] {
+  const next = [...sections];
+  const currentIndex = next.findIndex((section) => section.sectionId === incoming.sectionId);
 
-  updateStage: (payload) =>
-    set({
-      status: 'processing',
-      currentStage: payload.currentStage,
-      stageLabel: payload.stageLabel,
-      progress: payload.progress,
-      hasHydratedRuntime: true,
-      fixAttempt: payload.fixAttempt ?? 0,
-      fixTotal: payload.fixTotal ?? 2,
-    }),
+  if (currentIndex >= 0) {
+    next[currentIndex] = mergeSection(next[currentIndex], incoming);
+  } else {
+    next.push(mergeSection(undefined, incoming));
+  }
 
-  setFailed: (error) =>
-    set({
-      status: 'failed',
-      hasHydratedRuntime: true,
-      error,
-    }),
+  return next.sort((left, right) => left.sectionIndex - right.sectionIndex);
+}
 
-  setCompleted: () =>
-    set({
-      status: 'completed',
-      progress: 100,
-      stageLabel: 'video.generating.completed',
-      hasHydratedRuntime: true,
-      error: null,
-    }),
+function readPreviewSignal(snapshot: TaskSnapshot) {
+  const context = readRecord(snapshot.context) ?? null;
 
-  restoreSnapshot: (snapshot) =>
-    set(() => {
-      const snapshotStageValue = snapshot.currentStage ?? snapshot.stage;
-      const snapshotStage = isVideoPipelineStage(snapshotStageValue)
-        ? snapshotStageValue
-        : null;
-      const snapshotStageLabel =
-        snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? undefined;
-      const snapshotContext = readRecord(snapshot.context) ?? null;
-      const baseState = {
-        ...INITIAL_STATE,
-        taskId: snapshot.taskId,
+  return {
+    previewAvailable: context ? readBooleanProperty(context, 'previewAvailable') : undefined,
+    previewVersion: context ? readNumberProperty(context, 'previewVersion') : undefined,
+  };
+}
+
+export const useVideoGeneratingStore = create<VideoGeneratingState & VideoGeneratingActions>()(
+  (set) => ({
+    ...INITIAL_STATE,
+
+    updateProgress: ({ progress, currentStage, stageLabel }) =>
+      set((state) => ({
+        status: 'processing',
+        progress,
+        currentStage: currentStage ?? state.currentStage,
+        stageLabel: stageLabel ?? state.stageLabel,
         hasHydratedRuntime: true,
-        fixAttempt:
-          typeof snapshotContext?.attemptNo === 'number' ? snapshotContext.attemptNo : 0,
-        fixTotal:
-          typeof snapshotContext?.fixTotal === 'number' ? snapshotContext.fixTotal : 2,
-      };
+      })),
 
-      if (snapshot.status === 'completed') {
-        return {
-          ...baseState,
-          status: 'completed' as const,
-          progress: 100,
-          currentStage: snapshotStage ?? null,
-          stageLabel: snapshotStageLabel ?? 'video.generating.completed',
-        };
-      }
+    updateStage: ({ currentStage, stageLabel, progress, fixAttempt, fixTotal }) =>
+      set((state) => ({
+        status: 'processing',
+        currentStage,
+        stageLabel,
+        progress,
+        hasHydratedRuntime: true,
+        fixAttempt: fixAttempt ?? state.fixAttempt,
+        fixTotal: fixTotal ?? state.fixTotal,
+      })),
 
-      if (snapshot.status === 'failed' || snapshot.status === 'cancelled') {
-        return {
-          ...baseState,
-          status: snapshot.status,
-          progress: snapshot.progress,
-          currentStage: snapshotStage ?? null,
-          stageLabel: snapshotStageLabel ?? 'video.generating.preparing',
-          error: {
-            errorCode: snapshot.errorCode ?? null,
-            errorMessage: snapshot.message ?? null,
-            failedStage: snapshotStage ?? null,
-            retryable: false,
-          },
-        };
-      }
+    setFailed: (error) => set({ status: 'failed', hasHydratedRuntime: true, error }),
 
-      return {
-        ...baseState,
-        status: snapshot.status === 'pending' ? 'pending' : 'processing',
-        progress: snapshot.progress,
-        currentStage: snapshotStage ?? null,
-        stageLabel: snapshotStageLabel ?? 'video.generating.preparing',
+    setCompleted: () =>
+      set({
+        status: 'completed',
+        progress: 100,
+        stageLabel: 'video.generating.completed',
+        hasHydratedRuntime: true,
         error: null,
-      };
-    }),
+      }),
 
-  setDegradedPolling: (degraded) =>
-    set({ degradedToPolling: degraded }),
+    restoreSnapshot: (snapshot) =>
+      set((state) => {
+        const snapshotStageValue = snapshot.currentStage ?? snapshot.stage;
+        const snapshotStage = isVideoPipelineStage(snapshotStageValue)
+          ? snapshotStageValue
+          : null;
+        const snapshotStageLabel =
+          snapshot.stageLabel ?? snapshot.currentStage ?? snapshot.stage ?? 'video.generating.preparing';
+        const previewSignal = readPreviewSignal(snapshot);
+        const sameTask = state.taskId === null || state.taskId === snapshot.taskId;
+        const preservedPreview = sameTask
+          ? {
+              previewAvailable: state.previewAvailable,
+              previewVersion: state.previewVersion,
+              totalSections: state.totalSections,
+              summary: state.summary,
+              knowledgePoints: state.knowledgePoints,
+              sections: state.sections,
+            }
+          : {
+              previewAvailable: false,
+              previewVersion: 0,
+              totalSections: 0,
+              summary: '',
+              knowledgePoints: [],
+              sections: [],
+            };
 
-  setSseConnected: (connected) =>
-    set({ sseConnected: connected }),
+        return {
+          ...INITIAL_STATE,
+          ...preservedPreview,
+          taskId: snapshot.taskId,
+          status: snapshot.status === 'pending' ? 'pending' : snapshot.status,
+          progress: snapshot.status === 'completed' ? 100 : snapshot.progress,
+          currentStage: snapshotStage,
+          stageLabel: snapshot.status === 'completed' ? 'video.generating.completed' : snapshotStageLabel,
+          hasHydratedRuntime: true,
+          error:
+            snapshot.status === 'failed' || snapshot.status === 'cancelled'
+              ? {
+                  errorCode: snapshot.errorCode ?? null,
+                  errorMessage: snapshot.message ?? null,
+                  failedStage: snapshotStage,
+                  retryable: false,
+                }
+              : null,
+          previewAvailable: previewSignal.previewAvailable ?? preservedPreview.previewAvailable,
+          previewVersion: Math.max(
+            preservedPreview.previewVersion,
+            previewSignal.previewVersion ?? 0,
+          ),
+        };
+      }),
 
-  resetState: (taskId) =>
-    set({ ...INITIAL_STATE, taskId: taskId ?? null }),
-}));
+    setPreview: (preview) =>
+      set({
+        previewAvailable: preview.previewAvailable,
+        previewVersion: preview.previewVersion,
+        totalSections: preview.totalSections,
+        summary: preview.summary,
+        knowledgePoints: preview.knowledgePoints,
+        sections: preview.sections,
+      }),
+
+    setPreviewSignal: ({ previewAvailable, previewVersion, totalSections }) =>
+      set((state) => ({
+        previewAvailable: previewAvailable ?? state.previewAvailable,
+        previewVersion: Math.max(state.previewVersion, previewVersion ?? 0),
+        totalSections: Math.max(state.totalSections, totalSections ?? 0),
+      })),
+
+    upsertSection: ({ totalSections, ...section }) =>
+      set((state) => ({
+        totalSections: Math.max(state.totalSections, totalSections ?? 0),
+        sections: mergeSectionList(state.sections, section),
+      })),
+
+    setDegradedPolling: (degraded) => set({ degradedToPolling: degraded }),
+    setSseConnected: (connected) => set({ sseConnected: connected }),
+    resetState: (taskId) => set({ ...INITIAL_STATE, taskId: taskId ?? null }),
+  }),
+);

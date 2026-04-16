@@ -1,301 +1,321 @@
 /**
- * 文件说明：视频任务等待页（Story 4.7 重构）。
- * 承接视频创建成功后的跳转，通过 SSE 消费 8 阶段进度事件。
- * 支持 SSE 断线恢复、status 降级轮询、修复态展示、失败态展示。
+ * 文件说明：视频任务等待页。
+ * 承接视频创建成功后的跳转，同时消费 status / preview / SSE 三路数据，并按设计稿的 6 段式布局组织页面。
  */
-import { useCallback, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Leaf, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, Loader2, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import '@/features/video/components/task-generating-view.scss';
+import { cn } from '@/lib/utils';
+import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import type { TaskLifecycleStatus } from '@/types/task';
+import type { VideoPreviewSection } from '@/types/video';
 
-import { FixAttemptIndicator } from '../components/fix-attempt-indicator';
 import { GeneratingFailureCard } from '../components/generating-failure-card';
-import { LogItemRow } from '../components/log-item-row';
-import { StageProgressBar } from '../components/stage-progress-bar';
+import { LogItemRow, type LogItem } from '../components/log-item-row';
+import { VideoGeneratingStageContent } from '../components/video-generating-stage-content';
+import {
+	getLayoutStageConfig,
+	resolveVideoGeneratingLayoutStage,
+	VIDEO_GENERATING_LAYOUT_STAGES,
+	type VideoGeneratingLayoutStageKey,
+} from '../config/video-generating-layout';
 import { buildStageLog, estimateEtaText } from '../config/video-stages';
-import { useTipRotation } from '../hooks/use-tip-rotation';
+import { useVideoTaskPreview } from '../hooks/use-video-task-preview';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
 
-/** 完成后跳转结果页的延迟（毫秒）。 */
 const COMPLETED_REDIRECT_DELAY_MS = 2000;
+const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
 
-/**
- * 渲染视频生成等待页。
- *
- * @returns 视频等待页。
- */
+function readDraftTitle(taskId: string | undefined, fallback: string) {
+	if (!taskId) {
+		return fallback;
+	}
+
+	try {
+		return window.sessionStorage.getItem(`${VIDEO_TASK_DRAFT_CACHE_PREFIX}${taskId}`) || fallback;
+	} catch {
+		return fallback;
+	}
+}
+
+function buildStageTags(
+	stageKey: VideoGeneratingLayoutStageKey,
+	knowledgePoints: string[],
+	sections: VideoPreviewSection[],
+	readySections: number,
+	totalSections: number,
+	t: (key: string, options?: Record<string, unknown>) => string,
+) {
+	if (stageKey === 'summary') {
+		return knowledgePoints.slice(0, 3);
+	}
+
+	if (stageKey === 'steps') {
+		return sections.slice(0, 3).map((section) => section.title).filter(Boolean);
+	}
+
+	if (stageKey === 'storyboard') {
+		return [t('video.generating.tagStoryboard'), t('video.generating.tagSections', { count: totalSections })];
+	}
+
+	if (stageKey === 'assets') {
+		return [t('video.generating.tagAudio'), t('video.generating.tagPreviewReady', { count: readySections })];
+	}
+
+	if (stageKey === 'renderFlow') {
+		return [t('video.generating.tagRealtime'), t('video.generating.tagAutoFix')];
+	}
+
+	return [t('video.generating.tagCompose'), t('video.generating.tagDelivery')];
+}
+
+function buildRuntimeLogs(
+	currentStage: string | null,
+	progress: number,
+	sections: VideoPreviewSection[],
+	t: (key: string, options?: Record<string, unknown>) => string,
+): LogItem[] {
+	const stageLogs = buildStageLog(currentStage, progress, (label, completed) =>
+		completed ? t('video.log.stageCompleted', { stage: t(label) }) : t('video.log.stageInProgress', { stage: t(label) }),
+	);
+	const sectionLogs = [...sections]
+		.sort((left, right) => left.sectionIndex - right.sectionIndex)
+		.map<LogItem>((section) => ({
+			id: `section-${section.sectionId}`,
+			status:
+				section.status === 'ready'
+					? 'success'
+					: section.status === 'fixing'
+						? 'warning'
+						: section.status === 'failed'
+							? 'error'
+							: 'pending',
+			tag: t('video.generating.sectionFallbackTitle', { index: section.sectionIndex + 1 }),
+			text: t(`video.generating.logBySection.${section.status}`, { title: section.title }),
+		}));
+
+	return [...stageLogs, ...sectionLogs].slice(-12);
+}
+
 export function VideoGeneratingPage() {
-  const { id: taskId } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { themeMode, toggleThemeMode } = useThemeMode();
-  const { t } = useAppTranslation();
+	const { id: taskId } = useParams<{ id: string }>();
+	const navigate = useNavigate();
+	const { themeMode, toggleThemeMode } = useThemeMode();
+	const { t } = useAppTranslation();
+	const [manualSelectedSectionId, setManualSelectedSectionId] = useState<string | null>(null);
+	const [manualStageKey, setManualStageKey] = useState<VideoGeneratingLayoutStageKey | null>(null);
+	const [pageToast, setPageToast] = useState<{ id: number; text: string } | null>(null);
+	const toastTimerRef = useRef<number | null>(null);
+	const prevSignalsRef = useRef({ previewAvailable: false, readySections: 0, fixAttempt: 0, degradedToPolling: false, status: 'pending' as TaskLifecycleStatus });
 
-  /* -- 1. zustand store 状态（shallow selector） -- */
-  const {
-    status, progress, currentStage, stageLabel, error,
-    degradedToPolling, fixAttempt, fixTotal,
-  } = useVideoGeneratingStore(useShallow((s) => ({
-    status: s.status,
-    progress: s.progress,
-    currentStage: s.currentStage,
-    stageLabel: s.stageLabel,
-    error: s.error,
-    degradedToPolling: s.degradedToPolling,
-    fixAttempt: s.fixAttempt,
-    fixTotal: s.fixTotal,
-  })));
+	const { status, progress, currentStage, stageLabel, error, degradedToPolling, fixAttempt, previewAvailable, previewVersion, totalSections, summary, knowledgePoints, sections } =
+		useVideoGeneratingStore(useShallow((state) => ({
+			status: state.status,
+			progress: state.progress,
+			currentStage: state.currentStage,
+			stageLabel: state.stageLabel,
+			error: state.error,
+			degradedToPolling: state.degradedToPolling,
+			fixAttempt: state.fixAttempt,
+			previewAvailable: state.previewAvailable,
+			previewVersion: state.previewVersion,
+			totalSections: state.totalSections,
+			summary: state.summary,
+			knowledgePoints: state.knowledgePoints,
+			sections: state.sections,
+		})));
 
-  /* -- 2. 查询任务快照，恢复上下文 -- */
-  const {
-    snapshot,
-    isLoading: isSnapshotLoading,
-    isNotFound,
-  } = useVideoTaskStatus(taskId);
+	const { snapshot, isLoading: isSnapshotLoading, isNotFound } = useVideoTaskStatus(taskId);
+	const { preview, isFetching: isPreviewFetching, refetch: refetchPreview } = useVideoTaskPreview(taskId, { enabled: !isSnapshotLoading && !isNotFound });
 
-  /* -- 3. 从 snapshot 恢复 store 状态 -- */
-  useEffect(() => {
-    if (!snapshot || isSnapshotLoading || isNotFound) {
-      return;
-    }
+	useEffect(() => {
+		if (!snapshot || isSnapshotLoading || isNotFound) return;
+		const store = useVideoGeneratingStore.getState();
+		if (store.taskId !== snapshot.taskId || !store.hasHydratedRuntime) store.restoreSnapshot(snapshot);
+	}, [snapshot, isSnapshotLoading, isNotFound]);
 
-    const store = useVideoGeneratingStore.getState();
-    const shouldRestore =
-      store.taskId !== snapshot.taskId ||
-      !store.hasHydratedRuntime;
+	useEffect(() => {
+		if (preview && preview.previewVersion >= useVideoGeneratingStore.getState().previewVersion) {
+			useVideoGeneratingStore.getState().setPreview(preview);
+		}
+	}, [preview]);
 
-    if (shouldRestore) {
-      store.restoreSnapshot(snapshot);
-    }
-  }, [snapshot, isSnapshotLoading, isNotFound]);
+	useEffect(() => {
+		if (taskId && previewVersion > 0 && preview?.previewVersion !== previewVersion) void refetchPreview();
+	}, [taskId, previewVersion, preview?.previewVersion, refetchPreview]);
 
-  /* -- 4. SSE 事件流 -- */
-  const sseEnabled =
-    !isSnapshotLoading &&
-    !isNotFound &&
-    status !== 'completed' &&
-    status !== 'failed' &&
-    status !== 'cancelled';
+	useVideoTaskSse(taskId, { enabled: !isSnapshotLoading && !isNotFound && !['completed', 'failed', 'cancelled'].includes(status) });
 
-  useVideoTaskSse(taskId, { enabled: sseEnabled });
+	useEffect(() => {
+		if (status !== 'completed' || !taskId) return;
+		const timer = window.setTimeout(() => void navigate(`/video/${taskId}`, { replace: true }), COMPLETED_REDIRECT_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [status, taskId, navigate]);
 
-  // 注意：降级轮询已内置于 services/sse 层的 fallback 机制，
-  // 页面层不再重复启动额外 status 轮询，避免双重状态写入冲突。
+	const showPageToast = useCallback((text: string) => {
+		if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+		setPageToast({ id: Date.now(), text });
+		toastTimerRef.current = window.setTimeout(() => setPageToast(null), 3200);
+	}, []);
 
-  /* -- 5. 终态跳转 -- */
-  useEffect(() => {
-    if (status !== 'completed' || !taskId) {
-      return;
-    }
+	useEffect(() => () => {
+		if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+	}, []);
 
-    const timer = window.setTimeout(() => {
-      void navigate(`/video/${taskId}`, { replace: true });
-    }, COMPLETED_REDIRECT_DELAY_MS);
+	const readySections = sections.filter((section) => section.status === 'ready').length;
+	useEffect(() => {
+		const prev = prevSignalsRef.current;
+		if (!prev.previewAvailable && previewAvailable) showPageToast(t('video.generating.toast.previewReady'));
+		if (readySections > prev.readySections) showPageToast(t('video.generating.toast.sectionReady', { count: readySections }));
+		if (fixAttempt > prev.fixAttempt && fixAttempt > 0) showPageToast(t('video.generating.toast.fixing'));
+		if (degradedToPolling && !prev.degradedToPolling) showPageToast(t('video.generating.toast.polling'));
+		if (status === 'completed' && prev.status !== 'completed') showPageToast(t('video.generating.toast.completed'));
+		prevSignalsRef.current = { previewAvailable, readySections, fixAttempt, degradedToPolling, status };
+	}, [degradedToPolling, fixAttempt, previewAvailable, readySections, showPageToast, status, t]);
 
-    return () => clearTimeout(timer);
-  }, [status, taskId, navigate]);
+	const displayTotalSections = Math.max(totalSections, sections.length);
+	const activeStageKey = resolveVideoGeneratingLayoutStage(currentStage, status);
+	const activeStageIndex = VIDEO_GENERATING_LAYOUT_STAGES.findIndex((stage) => stage.key === activeStageKey);
+	const manualStageIndex = manualStageKey ? VIDEO_GENERATING_LAYOUT_STAGES.findIndex((stage) => stage.key === manualStageKey) : -1;
+	useEffect(() => {
+		if (manualStageIndex > activeStageIndex) setManualStageKey(null);
+	}, [activeStageIndex, manualStageIndex]);
 
-  /* -- 7. Tips 轮播 -- */
-  const tips = t('video.generating.tips', { returnObjects: true }) as string[];
-  const currentTipIndex = useTipRotation(tips.length);
+	const displayStageKey = manualStageKey ?? activeStageKey;
+	const displayStageConfig = getLayoutStageConfig(displayStageKey);
+	const selectedSectionId = manualSelectedSectionId && sections.some((section) => section.sectionId === manualSelectedSectionId)
+		? manualSelectedSectionId
+		: (sections.find((section) => section.status === 'ready') ?? sections.find((section) => section.status !== 'pending') ?? sections[0])?.sectionId ?? null;
+	const etaText = t(estimateEtaText(progress));
+	const logs = useMemo(() => buildRuntimeLogs(currentStage, progress, sections, t), [currentStage, progress, sections, t]);
+	const titleText = readDraftTitle(taskId, summary || t('video.generating.defaultTitle'));
+	const stageTags = buildStageTags(displayStageKey, knowledgePoints, sections, readySections, displayTotalSections, t);
 
-  /* -- 8. 操作回调 -- */
-  const handleRetry = useCallback(() => {
-    void navigate('/video/input?retry=1', { replace: true });
-  }, [navigate]);
+	const handleReturn = useCallback(() => void navigate('/video/input'), [navigate]);
+	const handleRetry = useCallback(() => void navigate('/video/input?retry=1', { replace: true }), [navigate]);
 
-  const handleReturn = useCallback(() => {
-    void navigate('/video/input');
-  }, [navigate]);
+	if (isSnapshotLoading) return <div className="xm-generating-loading"><Sparkles className="h-8 w-8 animate-pulse text-primary" /><p>{t('video.generating.loadingSubtitle')}</p></div>;
+	if (isNotFound) return <div className="xm-generating-loading"><h2>{t('video.generating.notFoundTitle')}</h2><p>{t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}</p><button onClick={handleReturn}>{t('video.common.returnToInput')}</button></div>;
+	if (status === 'failed' || status === 'cancelled') return <div className="min-h-screen flex items-center justify-center bg-background px-6"><GeneratingFailureCard errorCode={error?.errorCode ?? null} errorMessage={error?.errorMessage ?? null} failedStage={error?.failedStage ?? null} retryable={error?.retryable ?? false} onRetry={handleRetry} onReturn={handleReturn} /></div>;
 
-  /* -- 9. 派生状态 -- */
-  const isFixing = currentStage === 'manim_fix' && fixAttempt > 0;
-  const etaText = t(estimateEtaText(progress));
-  const logs = buildStageLog(currentStage, progress, (label, completed) =>
-    completed
-      ? t('video.log.stageCompleted', { stage: t(label) })
-      : t('video.log.stageInProgress', { stage: t(label) }),
-  );
+	return (
+		<div className="xm-generating-shell">
+			<div className="xm-generating-ambient-glow" />
+			<div className="xm-generating-bg-grid xm-generating-shell__grid" />
 
-  /* -- 10. 渲染 -- */
+			<header className="xm-generating-shell__header">
+				<button type="button" className="xm-generating-shell__brand" onClick={handleReturn}>
+					<span className="xm-generating-shell__brand-icon"><Leaf className="h-4 w-4" /></span>
+					<span>XiaoMai</span>
+				</button>
 
-  // 加载中
-  if (isSnapshotLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="mt-4 text-sm text-muted-foreground">
-          {t('video.generating.loadingSubtitle')}
-        </p>
-      </div>
-    );
-  }
+				<nav className="xm-generating-shell__nav" aria-label={t('video.generating.navAriaLabel')}>
+					{VIDEO_GENERATING_LAYOUT_STAGES.map((stage, index) => (
+						<button
+							key={stage.key}
+							type="button"
+							onClick={() => index <= activeStageIndex && setManualStageKey(stage.key)}
+							disabled={index > activeStageIndex}
+							className={cn('xm-generating-shell__nav-btn', displayStageKey === stage.key && 'is-active', index > activeStageIndex && 'is-locked')}
+						>
+							{index + 1}. {t(stage.labelKey)}
+						</button>
+					))}
+				</nav>
 
-  // 无效 taskId（404）
-  if (isNotFound) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 gap-4">
-        <h2 className="text-lg font-semibold text-foreground">
-          {t('video.generating.notFoundTitle')}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}
-        </p>
-        <button
-          onClick={handleReturn}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          {t('video.common.returnToInput')}
-        </button>
-      </div>
-    );
-  }
+				<div className="xm-generating-shell__actions">
+					<button type="button" className="xm-generating-shell__cta" onClick={handleReturn}>
+						<ArrowLeft className="h-4 w-4" />
+						<span>{t('video.common.returnToInput')}</span>
+					</button>
+					<button type="button" className="xm-generating-shell__theme" onClick={toggleThemeMode} aria-label={t('video.generating.toggleTheme')}>
+						{themeMode === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+					</button>
+				</div>
+			</header>
 
-  // 失败态
-  if (status === 'failed' || status === 'cancelled') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
-        <GeneratingFailureCard
-          errorCode={error?.errorCode ?? null}
-          errorMessage={error?.errorMessage ?? null}
-          failedStage={error?.failedStage ?? null}
-          retryable={error?.retryable ?? false}
-          onRetry={handleRetry}
-          onReturn={handleReturn}
-        />
-      </div>
-    );
-  }
+			<div className={cn('xm-generating-toast', pageToast && 'is-visible')}>
+				<div className="xm-generating-toast__icon"><Sparkles className="h-4 w-4" /></div>
+				<span>{pageToast?.text}</span>
+			</div>
 
-  // 正常进度态（pending / processing / completed 过渡）
-  return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-background">
-      {/* 环境层 */}
-      <div className="xm-generating-ambient-glow" />
-      <div className="fixed inset-0 xm-generating-bg-grid pointer-events-none z-0" />
+			<main className="xm-generating-shell__layout">
+				<section className="xm-generating-shell__aside">
+					<div className="xm-generating-shell__progress-card">
+						<div className="xm-generating-shell__progress-head">
+							<div className="space-y-2">
+								<div className="xm-generating-shell__status-line">
+									<span className="xm-generating-shell__status-dot" />
+									<span>{t(displayStageConfig.statusKey)}</span>
+								</div>
+								<h1 className="xm-generating-shell__title">{titleText}</h1>
+								<p className="xm-generating-shell__subtitle">{t(displayStageConfig.subtitleKey)}</p>
+							</div>
+							<div className="space-y-1 text-right">
+								<p className="xm-generating-shell__eta">{etaText}</p>
+								<p className="xm-generating-shell__progress-value">{Math.round(progress)}%</p>
+							</div>
+						</div>
 
-      {/* 顶部导航 */}
-      <header className="w-full px-6 py-6 flex items-center justify-between relative z-20">
-        <button
-          onClick={handleReturn}
-          className="group flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <div className="w-8 h-8 rounded-full border border-border flex items-center justify-center group-hover:bg-border/50 transition-colors backdrop-blur-md">
-            <ArrowLeft className="h-4 w-4" />
-          </div>
-          {t('video.common.returnToWorkbench')}
-        </button>
+						<div className="xm-generating-shell__progress-track">
+							<div className="xm-generating-progress-fill xm-generating-shell__progress-bar" style={{ width: `${progress}%` }} />
+						</div>
 
-        <div className="flex items-center gap-6">
-          {/* 连接状态指示器 */}
-          <div className="flex items-center gap-2">
-            {degradedToPolling ? (
-              <>
-                <WifiOff className="h-3.5 w-3.5 text-warning" />
-                <span className="text-xs font-semibold text-warning tracking-widest uppercase opacity-80">
-                  {t('video.generating.connectionPolling')}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                </span>
-                <span className="text-xs font-semibold text-muted-foreground tracking-widest uppercase opacity-80">
-                  {t('video.generating.connectionActive')}
-                </span>
-              </>
-            )}
-          </div>
+						<div className="xm-generating-shell__tags">
+							{stageTags.map((tag) => <span key={tag} className="xm-generating-shell__tag">{tag}</span>)}
+							{previewVersion > 0 ? <span className="xm-generating-shell__tag">Preview v{previewVersion}</span> : null}
+						</div>
 
-          <button
-            onClick={toggleThemeMode}
-            className="w-8 h-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-border/50 transition-colors backdrop-blur-md"
-            aria-label={t('video.generating.toggleTheme')}
-          >
-            {themeMode === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-        </div>
-      </header>
+						<div className="xm-generating-shell__live-pill">
+							{degradedToPolling ? <WifiOff className="h-4 w-4 text-warning" /> : <Sparkles className="h-4 w-4 text-primary" />}
+							<span>{degradedToPolling ? t('video.generating.connectionPolling') : t(stageLabel)}</span>
+						</div>
+					</div>
 
-      {/* 主体 */}
-      <main className="flex-1 flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-6 relative z-10 -mt-8">
-        {/* GENERATING 文字动画 */}
-        <div className="mb-14 md:scale-105">
-          <div className="xm-generating-loader-wrapper" aria-label="Generating">
-            {'GENERATING'.split('').map((char, index) => (
-              <span key={index} className="xm-generating-loader-letter">
-                {char}
-              </span>
-            ))}
-            <div className="xm-generating-loader" />
-          </div>
-        </div>
+					<div className="xm-generating-glass-panel xm-generating-shell__log-card">
+						<div className="xm-generating-shell__log-head">{t('video.generating.logTitle')}</div>
+						<div className="xm-generating-log-container xm-generating-shell__log-scroll">
+							<div className="xm-generating-shell__log-list">
+								<AnimatePresence initial={false}>{logs.map((log) => <LogItemRow key={log.id} item={log} />)}</AnimatePresence>
+							</div>
+						</div>
+					</div>
+				</section>
 
-        {/* 阶段进度条 */}
-        <StageProgressBar
-          stageLabel={t(stageLabel)}
-          progress={progress}
-          etaText={etaText}
-          isWarning={isFixing}
-          isError={false}
-        />
-
-        {/* 修复指示器 */}
-        {isFixing && (
-          <div className="w-full max-w-2xl mb-4">
-            <FixAttemptIndicator attempt={fixAttempt} total={fixTotal} />
-          </div>
-        )}
-
-        {/* 降级轮询提示 */}
-        {degradedToPolling && (
-          <div className="w-full max-w-2xl mb-4 flex items-center gap-2 text-xs text-muted-foreground/60">
-            <WifiOff className="w-3 h-3" />
-            <span>{t('video.generating.degradedPollingHint')}</span>
-          </div>
-        )}
-
-        {/* 玻璃态日志面板 */}
-        <div className="w-full max-w-2xl h-36 xm-generating-glass-panel rounded-[1rem] relative font-mono text-[13px] shadow-sm">
-          <div className="xm-generating-log-container h-full w-full">
-            <div className="xm-generating-log-scroll h-full overflow-y-auto px-6 pb-6 pt-8 space-y-4 relative flex flex-col justify-end">
-              <div className="space-y-4 w-full">
-                <AnimatePresence initial={false}>
-                  {logs.map((log) => (
-                    <LogItemRow key={log.id} item={log} />
-                  ))}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tips */}
-        <div className="mt-10 flex items-center justify-center gap-2.5 text-sm text-muted-foreground/80 font-medium h-6">
-          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-          <AnimatePresence mode="wait">
-            {tips.length > 0 && (
-              <motion.div
-                key={currentTipIndex}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.5 }}
-              >
-                {tips[currentTipIndex]}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
-  );
+				<section className="xm-generating-shell__panel">
+					<AnimatePresence mode="wait">
+						<motion.div
+							key={displayStageKey}
+							initial={{ opacity: 0, y: 12 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -12 }}
+							transition={{ duration: 0.32 }}
+							className="h-full"
+						>
+							<VideoGeneratingStageContent
+								stageKey={displayStageKey}
+								status={status}
+								previewAvailable={previewAvailable}
+								summary={summary}
+								knowledgePoints={knowledgePoints}
+								sections={sections}
+								selectedSectionId={selectedSectionId}
+								onSelectSection={setManualSelectedSectionId}
+								totalSections={displayTotalSections}
+								readySections={readySections}
+								isRefreshing={isPreviewFetching}
+							/>
+						</motion.div>
+					</AnimatePresence>
+				</section>
+			</main>
+		</div>
+	);
 }
