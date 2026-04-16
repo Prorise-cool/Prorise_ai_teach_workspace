@@ -20,6 +20,7 @@
 - [4-3-manimcat-review-compat-fix-20260415.md](./implementation-artifacts/4-3-manimcat-review-compat-fix-20260415.md) - Story 4.3 基于 `references/ManimCat-main` 的审查与兼容修复记录，收口测试导入断裂、preview 完成态覆盖、旧 façade 缺失问题，并在 2026-04-16 补齐死代码清理、现架构测试对齐与 `.webm` 输出统一
 - [4-11-视频等待页渐进式产物展示与分段预览.md](./implementation-artifacts/4-11-视频等待页渐进式产物展示与分段预览.md) - 等待页“先展示分镜与已完成片段、最终结果页仍只认整片”的渐进体验方案 Story，并补充 2026-04-16 本地 Dramatiq worker 启动稳定性、分镜承接与旁白尾句收口约束
 - [4-11-fastapi-渐进预览后端实现说明-20260413.md](./implementation-artifacts/4-11-fastapi-渐进预览后端实现说明-20260413.md) - Story 4.11 的 FastAPI 后端重构收口，记录 per-section streaming、preview endpoint 与 section SSE 事件
+- [4-11-视频等待页渐进预览前端接入需求说明-20260416.md](./implementation-artifacts/4-11-视频等待页渐进预览前端接入需求说明-20260416.md) - Story 4.11 的前端接入需求说明，明确等待页三段式能力、preview/status/SSE/result 边界与 student-web 归属点
 - [4-8-视频结果页result-detail运行态回退修复-20260412.md](./implementation-artifacts/4-8-视频结果页result-detail运行态回退修复-20260412.md) - 视频结果页“视频不可用”热修记录，补齐 `result_detail` 回退、超时失败语义与 `2026-04-12` 实机全流程验证
 - [4-2-4-3-plan-d-编排与契约收口-20260410.md](./implementation-artifacts/4-2-4-3-plan-d-编排与契约收口-20260410.md) - Plan D 剩余编排绕路、前端契约和 SQL 迁移的 2026-04-10 收口记录
 - [4-3-manim-429-重试风暴热修复-20260410.md](./implementation-artifacts/4-3-manim-429-重试风暴热修复-20260410.md) - 视频管道 429 重试风暴、健康缓存与 fallback 热修记录，补充 DeepSeek 并发 smoke test 与 auth proxy 阻塞说明
