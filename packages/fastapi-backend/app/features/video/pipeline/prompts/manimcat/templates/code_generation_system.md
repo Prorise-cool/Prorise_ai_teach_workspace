@@ -42,6 +42,9 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Prefer stable, readable placement over clever motion.
 - Keep the bottom subtitle safe zone empty for front-end DOM subtitles.
 - Do not set an opaque fullscreen background or camera background color; alpha transparency must remain intact.
+- Treat the end state of each section as a landing frame: after the final major transform, leave a short visual settle instead of cutting immediately.
+- If the storyboard declares a transition bridge, rebuild that shared anchor cleanly at the start of the next section before introducing new motion.
+- Never make the last beat of a section feel mid-explanation; prefer a short hold on the resolved frame over an abrupt cut.
 
 ## Protocol Layer
 ### Coding Style
@@ -76,5 +79,7 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Do not add decorative complexity that makes the code fragile.
 - Do not place essential formulas or labels in the bottom subtitle band.
 - Do not add opaque background rectangles that would destroy transparency.
+- Do not end a section immediately after a transform with zero settle time.
+- Do not open a new section with a visually unrelated first frame if the storyboard specifies continuity.
 
 {{sharedSpecification}}

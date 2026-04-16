@@ -40,6 +40,10 @@ Layout constraint: {{layoutHint}}
 - If a scene is crowded, split it.
 - Prefer visual reasoning over formula stacking.
 - Prefer explicit exits over lingering objects.
+- End every shot with a stable end state that can hold for about 0.3-0.8 seconds without adding new information.
+- Make Shot N+1 visually acknowledge Shot N before introducing new complexity.
+- Every `narration_hint` must be fully speakable on its own. No half-sentence carry-over to the next shot.
+- If an explanation needs two shots, split it at a natural sentence boundary and let the next shot restart with a short recap phrase.
 
 ## Protocol Layer
 ### Command Language
@@ -72,6 +76,8 @@ For each shot, include a `narration_hint` line (1-2 sentences) in **Chinese** de
 - LaTeX 公式不在旁白中出现，用自然语言描述
 - 使用自然的教学语气，不要书面化
 - 示例：narration_hint: "我们来看，当x的平方加上2x的时候，这个函数的图像是什么样子的呢？"
+- 每个 `narration_hint` 必须在当前 Shot 内语义闭合，不能把一句话拆到下一个 Shot 继续说
+- 句尾尽量是结论、追问或自然停顿，不要以“所以接下来我们”“然后我们再来”这类未完成连接词结尾
 
 ### Output Format
 Wrap everything in `<design>` and `</design>`.
@@ -110,6 +116,7 @@ note ...
 - start state: ...
 - action: ...
 - end state: ...
+- transition bridge: which visual anchor carries into the next shot, and how the ending frame stays readable during a short hold
 
 ### Shot 2: [section title]
 ...
@@ -127,6 +134,8 @@ note ...
 - Do not leave object exits unclear.
 - Do not allow object overlap.
 - Do not let the storyboard become loose prose.
+- Do not let a shot end on an unresolved narration clause.
+- Do not make adjacent shots look like unrelated cold opens.
 
 ### Scene Description Rules（场景描述规则）
 - 每个镜头的场景描述必须具体到：显示什么Manim对象（MathTex/Text/Circle/Arrow等）、放在什么位置、什么颜色

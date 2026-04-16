@@ -15,6 +15,7 @@
 - `2026-04-13` 同日已完成 `Story 4.11` 的 FastAPI 后端重构收口，新增 `/api/v1/video/tasks/{task_id}/preview` 与 `section_progress / section_ready`，但前端等待页仍待接入，因此 Story 维持 `in-progress`。
 - `2026-04-16` 已对 `Story 4.3` 补齐 LLM 请求层防御：当 message payload 超过阈值时不再 `stream first`，而是 direct non-stream，优先规避 CDN 建连阶段的 `524`。
 - `2026-04-16` 同日已完成 `Story 4.3` review cleanup 补充收口：删除过期字幕 helper / sandbox 测试假设、统一 `.webm` 输出常量，并把 `tests/unit/video` 对齐到当前本地 `manim` 架构，回归结果 `105 passed`；该补充与 `524` 请求层热修解耦。
+- `2026-04-16` 已补充 `Story 4.11` 的体验收口：模板 prompt 现在强制“旁白闭句 + 共享视觉锚点 + 尾帧停留”，同时 section 合成在音频长于视频时会自动补视频尾帧，避免半句话被切进下一段。
 - 本索引仅收录已纳入版本管理的文档；本地未跟踪草稿不纳入仓库导航入口。
 
 ## 里程碑主线
