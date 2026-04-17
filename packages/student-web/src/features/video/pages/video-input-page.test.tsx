@@ -384,9 +384,8 @@ describe('VideoInputPage', () => {
 			screen.getByPlaceholderText(/粘贴题目文本/),
 			'请用动画方式讲解导数的几何意义，并强调切线逼近的过程。'
 		);
-		await user.click(screen.getByRole('button', { name: '生成质量预设' }));
+		await user.click(screen.getByLabelText('高级参数'));
 		await user.click(screen.getByRole('option', { name: /高质细讲/ }));
-		await user.click(screen.getByRole('button', { name: '高级参数' }));
 		await user.clear(screen.getByLabelText('目标时长（分钟）'));
 		await user.type(screen.getByLabelText('目标时长（分钟）'), '4');
 		await user.clear(screen.getByLabelText('分段数量'));

@@ -138,6 +138,7 @@ export const zhCnEntryPageResources = {
 	    qualityPresetLabel: '生成质量预设',
 	    qualityPresetHint: '让输入框保持干净，预设和细项参数都收在工具栏图标里。',
 	    advancedSettingsLabel: '高级参数',
+	    recordingLabel: '录音中',
 	    qualityPresets: {
 	      fast: '快速出片',
 	      balanced: '均衡讲解',
@@ -835,6 +836,7 @@ export const enUsEntryPageResources = {
 	    qualityPresetLabel: 'Quality Preset',
 	    qualityPresetHint: 'Keep the input clean and open presets or deeper controls only from the toolbar icons.',
 	    advancedSettingsLabel: 'Advanced Settings',
+	    recordingLabel: 'Recording',
 	    qualityPresets: {
 	      fast: 'Fast Draft',
 	      balanced: 'Balanced Explainer',
