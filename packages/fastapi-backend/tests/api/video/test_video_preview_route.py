@@ -9,7 +9,7 @@ from app.features.video.pipeline.models import (
     VideoTaskPreview,
 )
 from app.features.video.routes import get_video_service
-from tests.conftest import override_auth
+from tests.helpers.app import create_authed_app
 
 
 class _StubVideoService:
@@ -40,8 +40,7 @@ class _StubVideoService:
 
 
 def test_video_preview_route_returns_progressive_preview_payload() -> None:
-    app = create_app()
-    override_auth(app)
+    app = create_authed_app()
     app.dependency_overrides[get_video_service] = lambda: _StubVideoService()
 
     with TestClient(app) as client:
