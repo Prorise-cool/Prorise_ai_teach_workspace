@@ -9,6 +9,10 @@ from app.features.video.pipeline.engine.agent import (
     required_render_successes,
     RunConfig,
 )
+from app.features.video.pipeline.prompts.manimcat.api_codebook import (
+    SHARED_SPECIFICATION,
+    build_api_index_module,
+)
 from app.features.video.pipeline.engine.c2v_utils import topic_to_safe_name
 from app.features.video.pipeline.engine.scene_designer import (
     build_vision_user_message,
@@ -151,6 +155,15 @@ def test_manimcat_prompts_enforce_transition_bridge_and_closed_narration() -> No
     assert "不能把一句话拆到下一个 Shot 继续说" in concept_prompt
     assert "Do not cut away on an unfinished spoken clause" in code_prompt
     assert "add a brief settle/hold" in code_prompt
+
+
+def test_api_index_module_uses_buff_keyword_not_buf_alias() -> None:
+    api_index = build_api_index_module()
+
+    assert "buff: buff" in api_index
+    assert "nx(mob, dir, buff)" in api_index
+    assert "nx(mob, dir, buf)" not in api_index
+    assert "use the real keyword `buff`; never invent or abbreviate it as `buf`" in SHARED_SPECIFICATION
 
 
 def test_sanitize_render_error_truncates() -> None:

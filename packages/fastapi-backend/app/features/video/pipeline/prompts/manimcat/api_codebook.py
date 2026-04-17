@@ -45,7 +45,7 @@ method_param_codebook = {
   target: tgt,
   mob: mob,
   dir: dir,
-  buff: buf,
+  buff: buff,
   factor: fac,
   angle: ang,
   animations: anims,
@@ -62,13 +62,13 @@ method_param_codebook = {
   family: fam
 }
 method_index = {
-  Mobject_methods: [sh(vecs), mv(tgt), nx(mob, dir, buf), sc(fac), rt(ang), bc(tgt), ar(dir, buf), aig(rows, cols, buf), tc(cnr, buf), te(edg, buf), at(mob, dir), stc(col), sto(op), stf(col, op), sts(col, s_w), swi(wid), shi(hgt), svs(), rst(), fl(dir), cen()],
+  Mobject_methods: [sh(vecs), mv(tgt), nx(mob, dir, buff), sc(fac), rt(ang), bc(tgt), ar(dir, buff), aig(rows, cols, buff), tc(cnr, buff), te(edg, buff), at(mob, dir), stc(col), sto(op), stf(col, op), sts(col, s_w), swi(wid), shi(hgt), svs(), rst(), fl(dir), cen()],
   Scene_methods: [pl(anims, run_t), wt(dur), ad(mobs), rm(mobs)]
 }
 
 ### Args Codebook
 args_codebook = {
-  angle: ang, buff: buf, mobjects: mobs, background_image: bg_i,
+  angle: ang, buff: buff, mobjects: mobs, background_image: bg_i,
   fill_color: f_c, fill_opacity: f_o, joint_type: j_t, shade_in_3d: sh3,
   sheen_direction: sh_d, sheen_factor: sh_f, stroke_color: s_c,
   stroke_opacity: s_o, stroke_width: s_w, line1: l1, line2: l2,
@@ -173,11 +173,11 @@ unique_args_index = {
     Square: [sd_l],
     Star: [n, o_rad, i_rad, dns, s_ang],
     Union: [vms],
-    Arrow: [st, ed, buf, s_w, tip_l],
-    DoubleArrow: [st, ed, buf, s_w, tip_l],
+    Arrow: [st, ed, buff, s_w, tip_l],
+    DoubleArrow: [st, ed, buff, s_w, tip_l],
     Vector: [dir],
-    Brace: [mobj, dir, buf, shrp],
-    SurroundingRectangle: [mobj, buf, c_rad, s_w],
+    Brace: [mobj, dir, buff, shrp],
+    SurroundingRectangle: [mobj, buff, c_rad, s_w],
     DashedLine: [st, ed, n_d],
     VGroup: [mobs],
     Group: [mobs]
@@ -201,7 +201,7 @@ unique_args_index = {
     ThreeDVMobject: [@VMobject]
   },
   text_formula: {
-    BulletedList: [items, buf, d_scf, tex_env],
+    BulletedList: [items, buff, d_scf, tex_env],
     Code: [c_file, c_str, lang, fmt_style, tab_w, aln, lnf, bg, bg_cfg, p_cfg],
     MarkupText: [text, fs, ls, font, slant, wgt, just, grad, tab_w, hgt, wid, sh_ctr, dis_lig, wmf],
     MathTex: [texs, arg_sep, s2i, t2cm, tex_env],
@@ -313,6 +313,7 @@ SHARED_SPECIFICATION = """## Shared Specification
 - **Blacklist mechanism**: anything not mentioned in the index is forbidden by default
 - **No imagination**: do not infer, guess, or invent API usages outside the index
 - **Strict ownership**: `Scene` may use only methods listed under `Scene_methods`, and `ThreeDScene` may use only methods listed under `ThreeDScene_methods`. Do not mix them
+- **Keyword exactness**: use the real keyword `buff`; never invent or abbreviate it as `buf`
 
 ### Technical Principles
 - **Dynamic updates**: for processes involving changing values, prefer `ValueTracker` together with `always_redraw`

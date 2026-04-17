@@ -16,6 +16,7 @@ export const zhCnVideoResources = {
       duration: '时长',
       knowledgePoints: '知识点',
       continueLearning: '继续学习',
+      goToResult: '前往结果页',
     },
 	    generating: {
 	      brandLabel: '小麦',
@@ -25,7 +26,7 @@ export const zhCnVideoResources = {
 	      notFoundMessage: '任务 {{taskId}} 不存在或已过期，请返回重新创建',
 	      preparing: '准备生成视频',
 	      completed: '生成完毕',
-	      redirecting: '正在跳转到结果页...',
+	      redirecting: '结果页已可打开',
 	      navAriaLabel: '视频生成阶段导航',
 	      defaultTitle: 'AI 正在为你生成专属教学视频',
 	      logTitle: '执行日志',
@@ -82,11 +83,11 @@ export const zhCnVideoResources = {
 	        },
 	        storyboard: {
 	          title: '分段讲解信息',
-	          description: '每一段的标题、旁白和试听会逐步出现，方便你先检查内容是否对路。',
+	          description: '只保留每段真正有帮助的讲解重点和试听，不再展示技术性脚本字段。',
 	        },
 	      },
 	      scriptLabels: {
-	        narration: '旁白',
+	        narration: '讲解内容',
 	        visual: '画面',
 	        audio: '试听',
 	      },
@@ -106,7 +107,7 @@ export const zhCnVideoResources = {
 	        sectionReady: '已有 {{count}} 段可以试看',
 	        fixing: '检测到排版细节，系统正在自动修复',
 	        polling: '网络波动，已切换轮询同步',
-	        completed: '成片已完成，马上进入结果页',
+	        completed: '成片已完成，可前往结果页查看',
 	      },
 	      sectionStatus: {
 	        pending: '排队中',
@@ -251,6 +252,7 @@ export const enUsVideoResources = {
       duration: 'Duration',
       knowledgePoints: 'Knowledge Points',
       continueLearning: 'Continue Learning',
+      goToResult: 'Go to Result',
     },
 	    generating: {
 	      brandLabel: 'XiaoMai',
@@ -260,7 +262,7 @@ export const enUsVideoResources = {
 	      notFoundMessage: 'Task {{taskId}} does not exist or has expired.',
 	      preparing: 'Preparing video generation',
 	      completed: 'Generation complete',
-	      redirecting: 'Redirecting to results...',
+	      redirecting: 'Result page is ready',
 	      navAriaLabel: 'Video generation stage navigation',
 	      defaultTitle: 'AI is generating a personalized teaching video for you',
 	      logTitle: 'Execution Log',
@@ -330,7 +332,7 @@ export const enUsVideoResources = {
 	        },
 	        storyboard: {
 	          title: 'Section Explainer Details',
-	          description: 'Review each section title, narration, and audio preview before the full video is done.',
+	          description: 'Keep only the learner-facing explanation and audio preview, without technical render fields.',
 	        },
 	        assets: {
 	          title: 'Assets & Warmup',
@@ -348,9 +350,9 @@ export const enUsVideoResources = {
 	        },
 	      },
 	      scriptLabels: {
-	        narration: 'Narration',
+	        narration: 'Explanation',
 	        visual: 'Visual',
-	        audio: 'Audio',
+	        audio: 'Audio Preview',
 	      },
 	      visualPending: 'Visual notes are still syncing and will appear as soon as the preview payload is updated.',
 	      player: {
@@ -368,7 +370,7 @@ export const enUsVideoResources = {
 	        sectionReady: '{{count}} sections are now previewable',
 	        fixing: 'A layout issue was detected and is being auto-fixed',
 	        polling: 'Network is unstable, switched to polling',
-	        completed: 'The full video is ready. Redirecting now',
+	        completed: 'The full video is ready. You can open the result page now.',
 	      },
 	      sectionStatus: {
 	        pending: 'Queued',

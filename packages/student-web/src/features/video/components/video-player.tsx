@@ -69,8 +69,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
 
       const player = videojs(videoElement, {
         controls: !hideControls,
-        responsive: !hideControls,
-        fluid: !hideControls,
+        responsive: true,
+        fluid: false,
+        fill: true,
         playbackRates: PLAYBACK_RATES,
         poster: posterUrl,
         sources: [

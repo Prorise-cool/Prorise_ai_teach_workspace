@@ -158,6 +158,7 @@
 
 ### Story 4.3: Manim 代码生成与自动修复链
 - [文档](./4-3-manim-代码生成与自动修复链.md)
+- [`buf` 关键词与失败链路收口记录](./4-3-manim-buf-关键词与失败链路收口-20260417.md)
 - [429 热修记录](./4-3-manim-429-重试风暴热修复-20260410.md)
 - [Plan D 收口记录](./4-2-4-3-plan-d-编排与契约收口-20260410.md)
 - [Bulk render 收口记录](./4-3-manimcat-bulk-render-save-sections-收口-20260414.md)
@@ -174,6 +175,7 @@
 - **最新审查摘要**: 2026-04-15 中午已修复 video unit test 的导入层断裂、preview 完成态回写旧 snapshot、以及旧 helper/脚本模板缺失，`tests/unit/video` 与 `api/video + openapi contracts` 已重新全绿
 - **最新修复摘要**: 2026-04-16 已在 `gpt_request/openai_stream` 补齐“大 payload 跳过 stream、直接 non-stream”策略，默认阈值 `12000` 字符，避免 code generation 在 CDN 建连阶段直接命中 `524`
 - **最新清理摘要**: 2026-04-16 已删除未使用字幕 helper、移除旧 sandbox 专属模型、统一 `.webm` 输出常量并把 unit tests 对齐到当前本地 `manim` 架构，`python -m pytest tests/unit/video/ -q` 结果为 `105 passed`
+- **最新边界收口摘要**: 2026-04-17 已撤回 `agent.py` 中基于 `buf` 报错字符串的运行时硬修复；`buf` 兼容问题改由 `api_codebook + SHARED_SPECIFICATION + patch retry` 源头约束解决，同时 `RenderFailureStore` 已兼容 sync/async Redis，不再用 telemetry 异常掩盖真实 render failure；回归通过 `python -m pytest packages/fastapi-backend/tests/unit/video -q`，结果 `117 passed`
 
 ### Story 4.4: Manim 沙箱执行与资源限制
 - [文档](./4-4-manim-沙箱执行与资源限制.md)
@@ -222,8 +224,12 @@
 - [文档](./4-11-视频等待页渐进式产物展示与分段预览.md)
 - [后端实现说明](./4-11-fastapi-渐进预览后端实现说明-20260413.md)
 - [前端接入需求说明](./4-11-视频等待页渐进预览前端接入需求说明-20260416.md)
+- [摘要后端接入与完成态交互修补](./4-11-等待页摘要后端接入与完成态交互修补-20260417.md)
+- [理解摘要 JSON 约束与解析加固](./4-11-理解摘要-json-约束与解析加固-20260417.md)
+- [摘要口吻与预览文风优化](./4-11-等待页摘要口吻与预览文风优化-20260417.md)
+- [等待页暗色主题与输入页对齐](./4-11-等待页暗色主题与输入页对齐-20260417.md)
 - **状态**: review
-- **说明**: 等待页渐进展示真实 storyboard 与已完成 section clip；`2026-04-13` 已落地 FastAPI 后端 per-section streaming、preview runtime / endpoint 与 section SSE 事件；`2026-04-16` 已完成 student-web 前端接入、section 级状态机扩展、Mac 灵动岛风格等待页编排，以及 preview/SSE/adapter 定向测试收口
+- **说明**: 等待页渐进展示真实 storyboard 与已完成 section clip；`2026-04-13` 已落地 FastAPI 后端 per-section streaming、preview runtime / endpoint 与 section SSE 事件；`2026-04-16` 已完成 student-web 前端接入、section 级状态机扩展、Mac 灵动岛风格等待页编排，以及 preview/SSE/adapter 定向测试收口；`2026-04-17` 已继续补齐理解阶段预览摘要前推、老师式讲题口吻、语义校验/二次修复/分镜回填兜底、等待页播放器容器填充/防挤压修复、暗色主题对齐输入页，并解掉 system Python `dramatiq 2.1.x` 下的 `Prometheus` 导入阻塞
 
 ## 快速导航
 

@@ -20,9 +20,9 @@ import { VideoInputCard } from '@/features/video/components/video-input-card';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
 import {
+	type VideoInputFormValues,
 	type VideoInputValidationMessages,
 	createVideoInputFormSchema,
-	type VideoInputFormValues,
 } from '@/features/video/schemas/video-input-schema';
 import { useFeedback } from '@/shared/feedback';
 import {

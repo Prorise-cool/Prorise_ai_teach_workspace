@@ -217,11 +217,119 @@ def test_understanding_service_parses_json_and_persists_runtime() -> None:
         service.execute(source_payload={"text": "已知一次函数图像，求解析式。"}, user_profile={"grade": "junior"})
     )
 
-    assert result.topic_summary == "一次函数图像"
+    assert "先别急着只记结论" in result.topic_summary
+    assert "先读出截距" in result.topic_summary
     assert result.knowledge_points == ["斜率", "截距"]
     persisted = runtime.load_model("understanding", UnderstandingResult)
     assert persisted is not None
-    assert persisted.topic_summary == "一次函数图像"
+    assert persisted.topic_summary == result.topic_summary
+    prompt = service.failover_service.generate_calls[0]["prompt"]
+    assert "请严格返回一个 JSON 对象" in prompt
+    assert "你的目标不是写学术摘要" in prompt
+    assert "4-6 句老师式快速讲解" in prompt
+    assert "不要写成论文摘要、证明提纲" in prompt
+    assert "Markdown 或 LaTeX 公式" in prompt
+
+
+def test_understanding_service_parses_fenced_json_payload() -> None:
+    runtime = _build_runtime("video_understanding_fenced_case")
+    service = UnderstandingService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        "下面是结构化结果：\n```json\n"
+                        '{"topicSummary":"先把 y 看成常数，对 x 积分。","knowledgePoints":["偏导数","积分常数"],'
+                        '"solutionSteps":[{"stepId":"step_1","title":"固定变量","explanation":"看到对 x 的偏导时，就把 y 先当成常数处理。"}],'
+                        '"difficulty":"medium","subject":"math"}\n```'
+                    ),
+                )
+            ]
+        ),
+        runtime=runtime,
+    )
+
+    result = asyncio.run(
+        service.execute(
+            source_payload={"text": "求解偏导数方程，如何求解"},
+            user_profile={"grade": "college"},
+        )
+    )
+
+    assert "先别急着只记结论" in result.topic_summary
+    assert "把 y 先当成常数处理" in result.topic_summary
+    assert result.knowledge_points == ["偏导数", "积分常数"]
+    assert [step.title for step in result.solution_steps] == ["固定变量"]
+
+
+def test_understanding_service_builds_local_summary_from_steps_when_summary_is_missing() -> None:
+    runtime = _build_runtime("video_understanding_local_summary_case")
+    service = UnderstandingService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        '{"topicSummary":"","knowledgePoints":[],"solutionSteps":['
+                        '{"stepId":"step_1","title":"先看分子分母怎么一起变化","explanation":"先别急着套洛必达，先观察分子和分母是不是都在往 0 靠。"},'
+                        '{"stepId":"step_2","title":"再用中值定理把比值连起来","explanation":"把两个量的变化率联系起来以后，后面极限为什么能转成导数比值就更容易理解了。"}'
+                        '],"difficulty":"medium","subject":"math"}'
+                    ),
+                )
+            ]
+        ),
+        runtime=runtime,
+    )
+
+    result = asyncio.run(
+        service.execute(
+            source_payload={"text": "证明一下洛必达法则的由来"},
+            user_profile={"grade": "college"},
+        )
+    )
+
+    assert len(service.failover_service.generate_calls) == 1
+    assert "先别急着只记结论" in result.topic_summary
+    assert result.knowledge_points == ["先看分子分母怎么一起变化", "再用中值定理把比值连起来"]
+
+
+def test_understanding_service_repairs_title_echo_with_second_pass() -> None:
+    runtime = _build_runtime("video_understanding_repair_case")
+    service = UnderstandingService(
+        providers=[SimpleNamespace(provider_id="stub-llm")],
+        failover_service=FakeFailoverService(
+            generate_results=[
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        '{"topicSummary":"证明一下洛必达法则的由来","knowledgePoints":[],"solutionSteps":[],"difficulty":"medium","subject":"math"}'
+                    ),
+                ),
+                SimpleNamespace(
+                    provider="stub-llm",
+                    content=(
+                        '{"topicSummary":"这题不是让你硬背洛必达法则，而是想说明这个结论为什么看起来合理。你可以先把主线理解成：当分子和分母都逼近 0 时，我们真正关心的是它们变化快慢的比值。接下来要做的，就是把这种变化快慢用一个更稳定的工具连起来，也就是中值定理。很多同学会直接把结论当公式记住，却不知道它背后的桥梁在哪里，这恰恰是这道题要补上的地方。先把这条逻辑线看明白，后面的证明就不会只剩符号推演。","knowledgePoints":["柯西中值定理","变化率比值","0/0 型极限"],"solutionSteps":[{"stepId":"step_1","title":"先看为什么会出现 0/0","explanation":"先确认分子和分母都在趋近 0，这样你才知道题目为什么会去研究它们的变化率。"},{"stepId":"step_2","title":"再把变化率和导数连起来","explanation":"借助中值定理把区间上的平均变化率和某一点的瞬时变化率接起来，洛必达法则的来路就清楚了。"}],"difficulty":"medium","subject":"math"}'
+                    ),
+                ),
+            ]
+        ),
+        runtime=runtime,
+    )
+
+    result = asyncio.run(
+        service.execute(
+            source_payload={"text": "证明一下洛必达法则的由来"},
+            user_profile={"grade": "college"},
+        )
+    )
+
+    assert len(service.failover_service.generate_calls) == 2
+    assert "需要修复的问题" in service.failover_service.generate_calls[1]["prompt"]
+    assert result.topic_summary.startswith("这题不是让你硬背洛必达法则")
+    assert result.knowledge_points == ["柯西中值定理", "变化率比值", "0/0 型极限"]
 
 
 def test_understanding_service_normalizes_solution_step_aliases() -> None:

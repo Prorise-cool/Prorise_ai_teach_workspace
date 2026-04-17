@@ -6,6 +6,8 @@
 @import "tw-animate-css";
 @import "./theme.css";
 
+@source "../../node_modules/streamdown/dist/*.js";
+
 @theme inline {
   --color-background: var(--xm-color-background);
   --color-foreground: var(--xm-color-text-primary);
