@@ -20,11 +20,14 @@ import {
 const mockAuthService = createAuthService(createMockAuthAdapter());
 
 const createTaskMock = vi.fn();
+const cancelTaskMock = vi.fn();
 const preprocessImageMock = vi.fn();
+const useVideoWorkspaceTasksMock = vi.fn();
 
 vi.mock('@/services/api/adapters/video-task-adapter', () => ({
 	resolveVideoTaskAdapter: () => ({
 		createTask: createTaskMock,
+		cancelTask: cancelTaskMock,
 	}),
 }));
 
@@ -36,6 +39,10 @@ vi.mock('@/services/api/adapters/video-preprocess-adapter', () => ({
 
 vi.mock('@/features/video/hooks/use-public-videos', () => ({
 	usePublicVideos: vi.fn(),
+}));
+
+vi.mock('@/features/video/hooks/use-video-workspace-tasks', () => ({
+	useVideoWorkspaceTasks: () => useVideoWorkspaceTasksMock(),
 }));
 
 const usePublicVideosMock = vi.mocked(usePublicVideos);
@@ -78,19 +85,44 @@ function createPublicVideosQueryResult(
 	} as ReturnType<typeof usePublicVideos>;
 }
 
+function createWorkspaceTasksQueryResult(
+	overrides: Record<string, unknown> = {},
+) {
+	return {
+		data: undefined,
+		isLoading: false,
+		isFetching: false,
+		isError: false,
+		refetch: vi.fn(),
+		...overrides,
+	};
+}
+
 describe('VideoInputPage', () => {
 	beforeEach(() => {
 		resetAuthSessionStore();
 		window.localStorage.clear();
 		window.sessionStorage.clear();
 		createTaskMock.mockReset();
+		cancelTaskMock.mockReset();
 		preprocessImageMock.mockReset();
 		usePublicVideosMock.mockReset();
+		useVideoWorkspaceTasksMock.mockReset();
 		createTaskMock.mockResolvedValue({
 			taskId: 'vtask_test_001',
 			taskType: 'video',
 			status: 'pending',
 			createdAt: '2026-04-06T12:00:00Z'
+		});
+		cancelTaskMock.mockResolvedValue({
+			taskId: 'vtask_processing_002',
+			requestId: 'req_cancel_001',
+			taskType: 'video',
+			status: 'cancelled',
+			progress: 12,
+			message: '任务已取消',
+			timestamp: '2026-04-17T12:00:00Z',
+			errorCode: 'TASK_CANCELLED',
 		});
 		preprocessImageMock.mockResolvedValue({
 			imageRef: 'local://20260406/test-image.png',
@@ -103,6 +135,7 @@ describe('VideoInputPage', () => {
 			errorCode: null
 		});
 		usePublicVideosMock.mockReturnValue(createPublicVideosQueryResult());
+		useVideoWorkspaceTasksMock.mockReturnValue(createWorkspaceTasksQueryResult());
 	});
 
 	it('renders the header with badge and gradient title', async () => {
@@ -529,6 +562,84 @@ describe('VideoInputPage', () => {
 
 		await waitFor(() => {
 			expect(router.state.location.pathname).toBe('/video/video_public_lhopital');
+		});
+	});
+
+	it('有活跃任务时会在顶栏渲染任务中心并支持进入与取消', async () => {
+		const user = userEvent.setup();
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useVideoWorkspaceTasksMock.mockReturnValue(
+			createWorkspaceTasksQueryResult({
+				data: {
+					total: 2,
+					items: [
+						{
+							taskId: 'vtask_processing_002',
+							title: '积分题讲解',
+							lifecycleStatus: 'processing',
+							progress: 58,
+							stageLabel: 'video.stages.render',
+							currentStage: 'render',
+							message: '渲染第 2 段中',
+							updatedAt: '2026-04-17 10:05:00',
+						},
+						{
+							taskId: 'vtask_pending_001',
+							title: '导数题讲解',
+							lifecycleStatus: 'pending',
+							progress: 0,
+							stageLabel: null,
+							currentStage: null,
+							message: '等待进入队列',
+							updatedAt: '2026-04-17 10:00:00',
+						},
+					],
+				},
+			}),
+		);
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(screen.getByText('输入或拍题，')).toBeInTheDocument();
+		expect(
+			screen.queryByText('进行中的任务'),
+		).not.toBeInTheDocument();
+
+		await user.click(
+			screen.getByRole('button', { name: '查看进行中的任务' }),
+		);
+
+		expect(screen.getByText('进行中的任务')).toBeInTheDocument();
+		expect(screen.getByText('积分题讲解')).toBeInTheDocument();
+		expect(screen.getByText('导数题讲解')).toBeInTheDocument();
+		expect(screen.getByText('渲染中')).toBeInTheDocument();
+		expect(screen.getByText('排队中')).toBeInTheDocument();
+		expect(screen.getByText('58%')).toBeInTheDocument();
+
+		await user.click(
+			screen.getByRole('button', { name: '取消任务 导数题讲解' }),
+		);
+
+		await waitFor(() => {
+			expect(cancelTaskMock).toHaveBeenCalledWith('vtask_pending_001');
+		});
+
+		await user.click(
+			screen.getByRole('button', { name: '进入任务 积分题讲解' }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe('/video/vtask_processing_002/generating');
 		});
 	});
 });

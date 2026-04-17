@@ -45,6 +45,9 @@ from app.features.video.schemas import (
     VideoTaskMetadataSnapshot,
 )
 from app.features.video.service import VideoService
+from app.features.video.service.cancel_task import (
+    cancel_video_task as cancel_video_task_service,
+)
 from app.features.video.service.create_task import (
     create_video_task,
     ensure_video_task_create_permission,
@@ -250,6 +253,31 @@ async def get_video_task(
     if snapshot is None:
         raise HTTPException(status_code=404, detail="Video task not found")
     return snapshot
+
+
+@router.post(
+    "/tasks/{task_id}/cancel",
+    response_model=TaskSnapshotResponseEnvelope,
+    responses={
+        403: {"model": ErrorResponseEnvelope, "description": "仅任务创建者可取消"},
+        404: {"model": ErrorResponseEnvelope, "description": "任务不存在"},
+        409: {"model": ErrorResponseEnvelope, "description": "任务已处于终态"},
+    },
+)
+async def cancel_video_task_endpoint(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    """取消视频任务并返回最新任务快照。"""
+    payload = await cancel_video_task_service(
+        task_id,
+        runtime_store=request.app.state.runtime_store,
+        access_context=access_context,
+        service=service,
+    )
+    return build_success_envelope(payload, msg="任务已取消")
 
 
 @router.get("/tasks/{task_id}/result", response_model=VideoResultDetailResponseEnvelope)

@@ -18,8 +18,18 @@ from app.features.video.pipeline.orchestration import (
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.orchestration.orchestrator import VideoPipelineService
 from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
+from app.features.video.tasks import video_task_actor as video_task_actor_module
+from app.features.video.tasks.video_task_actor import VideoTask
 from app.infra.redis_client import RuntimeStore
 from app.shared.cos_client import CosClient
+from app.shared.task_framework.base import TaskResult
+from app.shared.task_framework.context import TaskContext
+from app.shared.task_framework.scheduler import TaskScheduler
+from app.shared.task_framework.status import (
+    TaskErrorCode,
+    TaskInternalStatus,
+    TaskStatus,
+)
 
 
 class _FakeAssembly:
@@ -129,6 +139,21 @@ class _RecordingTask:
 
     async def emit_runtime_snapshot(self, **payload) -> None:  # noqa: ANN003
         self.snapshots.append(payload)
+
+
+class _RecordingMetadataService:
+    def __init__(self) -> None:
+        self.requests: list[object] = []
+
+    async def persist_task(
+        self,
+        request,
+        *,
+        access_context=None,
+        request_auth=None,
+    ):  # noqa: ANN001
+        self.requests.append(request)
+        return request
 
 
 def _build_service(
@@ -457,6 +482,246 @@ def test_video_pipeline_service_marks_failed_preview_when_all_section_codegen_ab
     assert detail.status == "failed"
     assert detail.failure is not None
     assert detail.failure.error_code == "VIDEO_RENDER_FAILED"
+
+
+def test_video_pipeline_service_returns_cancelled_before_finalize_when_runtime_cancel_requested(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    service, runtime_store = _build_service(tmp_path)
+    fake_agent = _FakeSectionAgent(tmp_path)
+    _patch_pipeline_dependencies(monkeypatch, service, tmp_path, fake_agent)
+
+    upload_calls: list[str] = []
+
+    class _TrackingUploadService:
+        def __init__(self, **kwargs) -> None:  # noqa: ANN003
+            pass
+
+        async def execute(self, task_id, compose_result):  # noqa: ANN001
+            upload_calls.append(task_id)
+            return SimpleNamespace(
+                video_url="https://assets.test.local/video/final.webm",
+                cover_url="https://assets.test.local/video/final.jpg",
+            )
+
+    monkeypatch.setattr(orchestrator_module, "UploadService", _TrackingUploadService)
+
+    task = _RecordingTask(task_id="video_orchestrator_cancel_before_finalize_case")
+    runtime = VideoRuntimeStateStore(runtime_store, task.context.task_id)
+    original_run_render_stage = service._run_render_stage
+
+    async def wrapped_run_render_stage(*args, **kwargs):  # noqa: ANN002, ANN003
+        render_result = await original_run_render_stage(*args, **kwargs)
+        runtime.save_cancel_request(
+            {
+                "requestedAt": "2026-04-17T12:00:00Z",
+                "requestedBy": "user_1",
+            }
+        )
+        return render_result
+
+    monkeypatch.setattr(service, "_run_render_stage", wrapped_run_render_stage)
+
+    result = asyncio.run(service.run(task))
+    preview = runtime.load_preview()
+
+    assert result.status == TaskStatus.CANCELLED
+    assert result.error_code == TaskErrorCode.CANCELLED
+    assert result.message == "任务已取消"
+    assert result.context["cancelRequested"] is True
+    assert upload_calls == []
+    assert preview is not None
+    assert preview.status == "cancelled"
+
+
+def test_video_pipeline_service_returns_cancelled_inside_render_loop(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    service, runtime_store = _build_service(tmp_path)
+    fake_agent = _FakeSectionAgent(tmp_path)
+    _patch_pipeline_dependencies(monkeypatch, service, tmp_path, fake_agent)
+
+    upload_calls: list[str] = []
+
+    class _TrackingUploadService:
+        def __init__(self, **kwargs) -> None:  # noqa: ANN003
+            pass
+
+        async def execute(self, task_id, compose_result):  # noqa: ANN001
+            upload_calls.append(task_id)
+            return SimpleNamespace(
+                video_url="https://assets.test.local/video/final.webm",
+                cover_url="https://assets.test.local/video/final.jpg",
+            )
+
+    monkeypatch.setattr(orchestrator_module, "UploadService", _TrackingUploadService)
+
+    task = _RecordingTask(task_id="video_orchestrator_cancel_mid_render_case")
+    runtime = VideoRuntimeStateStore(runtime_store, task.context.task_id)
+    original_render_section = fake_agent.render_section
+
+    def render_then_cancel(section):  # noqa: ANN001
+        output = original_render_section(section)
+        if section.id == "section_1":
+            runtime.save_cancel_request(
+                {
+                    "requestedAt": "2026-04-17T12:10:00Z",
+                    "requestedBy": "user_1",
+                }
+            )
+        return output
+
+    fake_agent.render_section = render_then_cancel
+
+    result = asyncio.run(service.run(task))
+    preview = runtime.load_preview()
+
+    assert result.status == TaskStatus.CANCELLED
+    assert result.error_code == TaskErrorCode.CANCELLED
+    assert result.context["cancelRequested"] is True
+    assert fake_agent.render_calls == ["section_1"]
+    assert upload_calls == []
+    assert preview is not None
+    assert preview.status == "cancelled"
+    assert preview.sections[0].status == VideoPreviewSectionStatus.READY
+    assert all(snapshot["event"] != "completed" for snapshot in task.snapshots)
+
+
+def test_video_task_prepare_short_circuits_cancelled_queue_before_running_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_store = RuntimeStore(
+        backend="memory-runtime-store",
+        redis_url="redis://memory",
+    )
+    metadata_service = _RecordingMetadataService()
+    context = TaskContext(
+        task_id="video_prepare_cancelled_case",
+        task_type="video",
+        user_id="user_1",
+        request_id="req_video_prepare_cancelled_case",
+        source_module="video",
+    )
+    runtime_store.set_task_state(
+        task_id=context.task_id,
+        task_type=context.task_type,
+        internal_status=TaskInternalStatus.CANCELLING,
+        message="任务已取消",
+        progress=0,
+        request_id=context.request_id,
+        user_id=context.user_id,
+        error_code=TaskErrorCode.CANCELLED,
+        source="video.cancel_task",
+        context={"cancelRequested": True},
+    )
+    VideoRuntimeStateStore(runtime_store, context.task_id).save_cancel_request(
+        {
+            "requestedAt": "2026-04-17T12:20:00Z",
+            "requestedBy": context.user_id,
+        }
+    )
+
+    class _UnexpectedPipelineService:
+        async def run(self, task):  # noqa: ANN001
+            raise AssertionError("pipeline should not run for cancelled task")
+
+    monkeypatch.setattr(
+        video_task_actor_module,
+        "get_video_pipeline_service",
+        lambda runtime_store, metadata_service: _UnexpectedPipelineService(),
+    )
+    monkeypatch.setattr(
+        video_task_actor_module,
+        "load_video_runtime_auth",
+        lambda runtime_store, task_id: None,
+    )
+
+    scheduler = TaskScheduler(runtime_store=runtime_store)
+    task = VideoTask(
+        context,
+        runtime_store=runtime_store,
+        metadata_service=metadata_service,
+    )
+
+    result = asyncio.run(scheduler.dispatch(task))
+    events = runtime_store.get_task_events(context.task_id)
+    snapshot = runtime_store.get_task_state(context.task_id)
+
+    assert result.status == TaskStatus.CANCELLED
+    assert result.error_code == TaskErrorCode.CANCELLED
+    assert [event.event for event in events] == ["cancelled"]
+    assert snapshot is not None
+    assert snapshot["internalStatus"] == TaskInternalStatus.CANCELLED.value
+    assert snapshot["status"] == TaskStatus.CANCELLED.value
+    assert metadata_service.requests[0].status == TaskStatus.CANCELLED
+
+
+def test_video_task_finalize_keeps_cancelled_runtime_terminal_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_store = RuntimeStore(
+        backend="memory-runtime-store",
+        redis_url="redis://memory",
+    )
+    metadata_service = _RecordingMetadataService()
+    context = TaskContext(
+        task_id="video_finalize_cancelled_case",
+        task_type="video",
+        user_id="user_1",
+        request_id="req_video_finalize_cancelled_case",
+        source_module="video",
+    )
+    runtime_store.set_task_state(
+        task_id=context.task_id,
+        task_type=context.task_type,
+        internal_status=TaskInternalStatus.CANCELLING,
+        message="任务已取消",
+        progress=42,
+        request_id=context.request_id,
+        user_id=context.user_id,
+        error_code=TaskErrorCode.CANCELLED,
+        source="video.cancel_task",
+        context={"currentStage": "render", "cancelRequested": True},
+    )
+    VideoRuntimeStateStore(runtime_store, context.task_id).save_cancel_request(
+        {
+            "requestedAt": "2026-04-17T12:30:00Z",
+            "requestedBy": context.user_id,
+        }
+    )
+
+    monkeypatch.setattr(
+        video_task_actor_module,
+        "load_video_runtime_auth",
+        lambda runtime_store, task_id: None,
+    )
+
+    task = VideoTask(
+        context,
+        runtime_store=runtime_store,
+        metadata_service=metadata_service,
+    )
+
+    result = asyncio.run(
+        task.finalize(
+            TaskResult.completed(
+                "视频生成完成",
+                progress=100,
+                context={"stage": "completed"},
+            )
+        )
+    )
+
+    assert result.status == TaskStatus.CANCELLED
+    assert result.error_code == TaskErrorCode.CANCELLED
+    assert result.message == "任务已取消"
+    assert result.progress == 42
+    assert result.context["cancelRequested"] is True
+    assert metadata_service.requests[0].status == TaskStatus.CANCELLED
+    assert metadata_service.requests[0].summary == "任务已取消"
+    assert metadata_service.requests[0].error_summary is None
 
 
 def test_compose_section_with_audio_pads_tail_when_audio_longer(

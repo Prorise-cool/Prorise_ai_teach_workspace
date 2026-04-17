@@ -30,6 +30,7 @@ export function GlobalTopNavDesktop({
   links,
   variant = 'surface',
   workspaceRoutes,
+  workspaceUtilitySlot,
   showBrandIcon = false,
   showAuthAction = false,
   showLocaleToggle = false,
@@ -164,6 +165,8 @@ export function GlobalTopNavDesktop({
       )}
 
       <div className="flex items-center gap-2 md:gap-3">
+        {workspaceUtilitySlot}
+
         {showLocaleToggle ? (
           <Button
             type="button"

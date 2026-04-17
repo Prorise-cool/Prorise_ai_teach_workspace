@@ -2,13 +2,14 @@
  * 文件说明：视频任务等待页。
  * 承接视频创建成功后的跳转，同时消费 status / preview / SSE 三路数据，并按压缩后的 3 段式布局组织页面。
  */
-import { ArrowRight, Moon, Sparkles, SunMedium, WifiOff } from 'lucide-react';
+import { ArrowRight, Moon, PanelLeftClose, Sparkles, SunMedium, WifiOff, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { Button } from '@/components/ui/button';
 import '@/features/video/components/task-generating-view.scss';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';
@@ -26,6 +27,7 @@ import {
 	type VideoGeneratingLayoutStageKey,
 } from '../config/video-generating-layout';
 import { buildStageLog, estimateEtaText } from '../config/video-stages';
+import { useCancelVideoTask } from '../hooks/use-cancel-video-task';
 import { useVideoTaskPreview } from '../hooks/use-video-task-preview';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
@@ -109,6 +111,11 @@ export function VideoGeneratingPage() {
 	const [manualSelectedSectionId, setManualSelectedSectionId] = useState<string | null>(null);
 	const [manualStageKey, setManualStageKey] = useState<VideoGeneratingLayoutStageKey | null>(null);
 	const prevSignalsRef = useRef({ previewAvailable: false, readySections: 0, fixAttempt: 0, degradedToPolling: false, status: 'pending' as TaskLifecycleStatus });
+	const { cancelTask, isCancelling } = useCancelVideoTask(taskId, {
+		navigateOnSuccess: true,
+		returnTo: '/video/input',
+		replace: true,
+	});
 
 	const { status, progress, currentStage, stageLabel, error, degradedToPolling, fixAttempt, previewAvailable, previewVersion, totalSections, summary, knowledgePoints, sections } =
 		useVideoGeneratingStore(useShallow((state) => ({
@@ -191,6 +198,7 @@ export function VideoGeneratingPage() {
 	const isResultReady = status === 'completed' && Boolean(taskId);
 
 	const handleReturn = useCallback(() => void navigate('/video/input'), [navigate]);
+	const handleCancelTask = useCallback(() => cancelTask(), [cancelTask]);
 	const handleGoToResult = useCallback(() => {
 		if (!taskId || status !== 'completed') return;
 		void navigate(`/video/${taskId}`);
@@ -229,15 +237,39 @@ export function VideoGeneratingPage() {
 				</nav>
 
 				<div className="xm-generating-shell__actions">
-					<button
+					<Button
 						type="button"
-						className={cn('xm-generating-shell__cta', isResultReady && 'is-ready')}
-						onClick={handleGoToResult}
-						disabled={!isResultReady}
+						variant="surface"
+						size="sm"
+						className="h-10 gap-2 px-4 text-[0.78rem] font-bold"
+						onClick={handleReturn}
 					>
-						<ArrowRight className="h-4 w-4" />
-						<span>{t('video.common.goToResult')}</span>
-					</button>
+						<PanelLeftClose className="h-4 w-4" />
+						<span>{t('video.common.returnToWorkspace')}</span>
+					</Button>
+					{isResultReady ? (
+						<button
+							type="button"
+							className={cn('xm-generating-shell__cta', isResultReady && 'is-ready')}
+							onClick={handleGoToResult}
+							disabled={!isResultReady}
+						>
+							<ArrowRight className="h-4 w-4" />
+							<span>{t('video.common.goToResult')}</span>
+						</button>
+					) : (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="h-10 gap-2 border-destructive/25 bg-destructive/10 px-4 text-[0.78rem] font-bold text-destructive shadow-none hover:bg-destructive/15 hover:text-destructive"
+							onClick={handleCancelTask}
+							disabled={!taskId || isCancelling}
+						>
+							<XCircle className="h-4 w-4" />
+							<span>{t('video.common.cancelTask')}</span>
+						</Button>
+					)}
 					<button type="button" className="xm-generating-shell__theme" onClick={toggleThemeMode} aria-label={t('video.generating.toggleTheme')}>
 						{themeMode === 'dark' ? <SunMedium className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
 					</button>
