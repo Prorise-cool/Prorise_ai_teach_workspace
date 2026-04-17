@@ -35,13 +35,17 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-17 15:49:01 +0800
+last_updated: 2026-04-17 16:28:00 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
 story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
+  # 2026-04-17 QA / Test Governance:
+  # - `Issue #167` 已完成 `packages/fastapi-backend` 测试体系规范化，统一 pytest 配置、目录自动 marker、公共 helper、本地脚本与 GitHub Actions。
+  # - 已删除 `test_llm_minimal.py`、`tests/e2e/video-transparent-test.html` 以及两组 Epic 10 资产测试，避免跨仓库低价值检查继续污染 FastAPI 主回归。
+  # - 当前基线已从 `313 collected / 6 failed` 收敛为 `306 passed`，`pnpm test:fastapi-backend:ci` 与 `pnpm test:fastapi-backend:coverage` 均通过，coverage 为 `80%`。
   epic-0: done
   0-1-monorepo-基础目录与工程骨架冻结: done
   0-2-契约资产目录命名规则与版本规则冻结: done

@@ -49,6 +49,7 @@ packages/fastapi-backend/
 ├── tests/
 │   ├── api/
 │   ├── contracts/
+│   ├── helpers/
 │   ├── integration/
 │   ├── unit/
 │   └── conftest.py
@@ -97,9 +98,18 @@ packages/fastapi-backend/.venv/bin/python -m pytest packages/fastapi-backend/tes
 
 ```bash
 pnpm test:fastapi-backend:api
+pnpm test:fastapi-backend:contracts
 pnpm test:fastapi-backend:integration
 pnpm test:fastapi-backend:unit
+pnpm test:fastapi-backend:coverage
+pnpm test:fastapi-backend:ci
 ```
+
+约束：
+
+- `tests/e2e/` 只保留真正可执行的自动化测试，静态样例或人工验收素材不再放进测试层目录。
+- FastAPI 测试不再承接跨仓库文档 / SQL 资产存在性断言，这类约束由对应模块仓库或业务文档自检负责。
+- CI 与本地统一复用 `pnpm test:fastapi-backend:ci` 和 `pnpm test:fastapi-backend:coverage`，不要长期维护另一套隐藏命令。
 
 ## 环境变量
 
