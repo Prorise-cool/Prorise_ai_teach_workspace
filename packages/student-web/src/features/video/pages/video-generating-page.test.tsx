@@ -2,7 +2,7 @@
  * 文件说明：验证视频等待页对任务快照、zustand store 状态、失败态与终态跳转的编排行为。
  * Story 4.7 重构：状态由 zustand store 驱动，SSE hook 不再返回状态。
  */
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +13,7 @@ import type { VideoTaskStatusResult } from '@/features/video/hooks/use-video-tas
 import { useVideoTaskStatus } from '@/features/video/hooks/use-video-task-status';
 import { VideoGeneratingPage } from '@/features/video/pages/video-generating-page';
 import { useVideoGeneratingStore } from '@/features/video/stores/video-generating-store';
+import { useFeedback } from '@/shared/feedback';
 import { renderWithApp } from '@/test/utils/render-app';
 import type { TaskSnapshot } from '@/types/task';
 import type { VideoTaskPreview } from '@/types/video';
@@ -29,6 +30,15 @@ vi.mock('@/features/video/hooks/use-video-task-sse', () => ({
   useVideoTaskSse: vi.fn(),
 }));
 
+vi.mock('@/shared/feedback', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/feedback')>();
+
+  return {
+    ...actual,
+    useFeedback: vi.fn(),
+  };
+});
+
 vi.mock('@/features/video/components/video-player', () => ({
   VideoPlayer: ({ videoUrl }: { videoUrl: string }) => <div data-testid="mock-video-player">{videoUrl}</div>,
 }));
@@ -36,6 +46,8 @@ vi.mock('@/features/video/components/video-player', () => ({
 const useVideoTaskPreviewMock = vi.mocked(useVideoTaskPreview);
 const useVideoTaskStatusMock = vi.mocked(useVideoTaskStatus);
 const useVideoTaskSseMock = vi.mocked(useVideoTaskSse);
+const useFeedbackMock = vi.mocked(useFeedback);
+const notifyMock = vi.fn();
 
 function createSnapshot(overrides: Partial<TaskSnapshot> = {}): TaskSnapshot {
   return {
@@ -73,7 +85,7 @@ function createPreview(overrides: Partial<VideoTaskPreview> = {}): VideoTaskPrev
     status: 'processing',
     previewAvailable: true,
     previewVersion: 2,
-    summary: '先建立导数直觉，再过渡到切线斜率与导数定义。',
+    summary: '先建立 **导数直觉**，再看公式：$$f\'(x)=\\lim_{h \\to 0}\\frac{f(x+h)-f(x)}{h}$$',
     knowledgePoints: ['平均变化率', '切线斜率'],
     totalSections: 3,
     readySections: 1,
@@ -152,8 +164,17 @@ describe('VideoGeneratingPage', () => {
     useVideoTaskPreviewMock.mockReset();
     useVideoTaskStatusMock.mockReset();
     useVideoTaskSseMock.mockReset();
+    notifyMock.mockReset();
     useVideoTaskStatusMock.mockReturnValue(createStatusResult());
     useVideoTaskPreviewMock.mockReturnValue(createPreviewResult());
+    useFeedbackMock.mockReturnValue({
+      notify: notifyMock,
+      dismissNotice: vi.fn(),
+      showSpotlight: vi.fn(),
+      hideSpotlight: vi.fn(),
+      showLoadingBar: vi.fn(),
+      hideLoadingBar: vi.fn(),
+    });
     useVideoGeneratingStore.getState().resetState('vtask_mock_text_001');
   });
 
@@ -203,7 +224,7 @@ describe('VideoGeneratingPage', () => {
     expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
   });
 
-  it('在 preview 数据就绪且进入渲染流阶段时展示播放器、轨道与分段详情', async () => {
+  it('在 preview 数据就绪后默认停留摘要，并在用户切换后展示播放器与分段详情', async () => {
     useVideoTaskPreviewMock.mockReturnValue(
       createPreviewResult({
         preview: createPreview(),
@@ -211,15 +232,26 @@ describe('VideoGeneratingPage', () => {
     );
     const router = createGeneratingRouter();
 
-    renderWithApp(<RouterProvider router={router} />);
+    const { container } = renderWithApp(<RouterProvider router={router} />);
 
-    await screen.findByText('已有 1 段可以试看');
+    await screen.findByText('快速讲解摘要');
+    expect(screen.queryByTestId('mock-video-player')).not.toBeInTheDocument();
+    expect(screen.getByText('导数直觉')).toBeInTheDocument();
+    expect(container.querySelector('.xm-generating-rich-content math')).not.toBeNull();
+    await waitFor(() => {
+      expect(notifyMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: '摘要和分段讲解已经可查看' }),
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /3\. 分段试看/ }));
     expect(await screen.findByTestId('mock-video-player')).toHaveTextContent('https://static.prorise.test/clip-1.mp4');
 
     expect(screen.getByRole('button', { name: /3\. 分段试看/ })).toBeInTheDocument();
     expect(screen.getByText('逐段推送')).toBeInTheDocument();
     expect(screen.getByText('1 段已开放')).toBeInTheDocument();
     expect(screen.getAllByText('1 / 3 段已就绪').length).toBeGreaterThan(0);
+    expect(screen.queryByText('画面')).not.toBeInTheDocument();
   });
 
   it('在失败态展示可读错误信息和操作按钮', () => {
@@ -269,8 +301,17 @@ describe('VideoGeneratingPage', () => {
     expect(screen.getByText('任务不存在')).toBeInTheDocument();
   });
 
-  it('在完成态延迟跳转到结果页', async () => {
-    vi.useFakeTimers();
+  it('在未完成时顶部结果按钮保持禁用，完成后允许用户手动前往结果页', async () => {
+    const processingRouter = createGeneratingRouter();
+
+    const processingView = renderWithApp(
+      <RouterProvider router={processingRouter} />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /前往结果页|Go to Result/ }),
+    ).toBeDisabled();
+    processingView.unmount();
 
     // 通过 store 设置完成状态
     act(() => {
@@ -290,11 +331,16 @@ describe('VideoGeneratingPage', () => {
 
     renderWithApp(<RouterProvider router={router} />);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000);
+    const resultButton = screen.getByRole('button', {
+      name: /前往结果页|Go to Result/,
     });
+    expect(resultButton).toBeEnabled();
 
-    expect(router.state.location.pathname).toBe('/video/vtask_mock_text_001');
+    fireEvent.click(resultButton);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/video/vtask_mock_text_001');
+    });
   });
 
   it('zustand store 的 updateStage 正确更新状态', () => {

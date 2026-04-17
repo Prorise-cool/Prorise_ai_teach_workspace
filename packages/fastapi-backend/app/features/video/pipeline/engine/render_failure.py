@@ -6,9 +6,10 @@ GAP-2: Persist render failures to Redis for analysis and doom loop detection.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -56,6 +57,16 @@ class RenderFailureStore:
     def _get_key(self, task_id: str, section_id: str) -> str:
         return f"{REDIS_KEY_PREFIX}{task_id}:{section_id}"
 
+    async def _call_redis(self, method_name: str, *args) -> Any:
+        """Support both sync redis-py clients and async Redis-like clients."""
+        if self._redis is None:
+            return None
+        method = getattr(self._redis, method_name)
+        result = method(*args)
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
     async def record_failure(
         self,
         *,
@@ -83,11 +94,11 @@ class RenderFailureStore:
         if self._redis:
             key = self._get_key(task_id, section_id)
             try:
-                # Append to list, trim to max
-                await self._redis.rpush(key, json.dumps(record.to_dict()))
-                await self._redis.ltrim(key, -MAX_HISTORY_PER_SECTION, -1)
-                await self._redis.expire(key, 86400)  # 24h TTL
-            except (OSError, ConnectionError, AttributeError):
+                # Best-effort persistence: never let telemetry mask the render error itself.
+                await self._call_redis("rpush", key, json.dumps(record.to_dict()))
+                await self._call_redis("ltrim", key, -MAX_HISTORY_PER_SECTION, -1)
+                await self._call_redis("expire", key, 86400)  # 24h TTL
+            except Exception:
                 logger.warning("Failed to persist render failure to Redis", exc_info=True)
         else:
             logger.debug("No Redis client, skipping failure persistence")
@@ -107,11 +118,13 @@ class RenderFailureStore:
 
         key = self._get_key(task_id, section_id)
         try:
-            raw_list = await self._redis.lrange(key, 0, -1)
+            raw_list = await self._call_redis("lrange", key, 0, -1) or []
             return [
-                RenderFailureRecord.from_dict(json.loads(item))
+                RenderFailureRecord.from_dict(
+                    json.loads(item.decode("utf-8") if isinstance(item, (bytes, bytearray)) else item)
+                )
                 for item in raw_list
             ]
-        except (OSError, ConnectionError, AttributeError, json.JSONDecodeError):
+        except Exception:
             logger.warning("Failed to read failure history from Redis", exc_info=True)
             return []

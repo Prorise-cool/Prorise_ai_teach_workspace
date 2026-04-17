@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from app.core.config import Settings
-from app.infra.redis_client import create_dramatiq_broker
+from app.infra.redis_client import (
+    DRAMATIQ_PROMETHEUS_AVAILABLE,
+    create_dramatiq_broker,
+)
 
 
 def test_create_dramatiq_broker_excludes_prometheus_when_disabled() -> None:
@@ -17,7 +20,7 @@ def test_create_dramatiq_broker_excludes_prometheus_when_disabled() -> None:
     assert "Prometheus" not in middleware_names
 
 
-def test_create_dramatiq_broker_keeps_prometheus_when_enabled() -> None:
+def test_create_dramatiq_broker_handles_prometheus_when_enabled() -> None:
     settings = Settings(
         _env_file=(),
         dramatiq_broker_backend="stub",
@@ -27,4 +30,7 @@ def test_create_dramatiq_broker_keeps_prometheus_when_enabled() -> None:
     broker = create_dramatiq_broker(settings)
     middleware_names = [type(middleware).__name__ for middleware in broker.middleware]
 
-    assert "Prometheus" in middleware_names
+    if DRAMATIQ_PROMETHEUS_AVAILABLE:
+        assert "Prometheus" in middleware_names
+    else:
+        assert "Prometheus" not in middleware_names

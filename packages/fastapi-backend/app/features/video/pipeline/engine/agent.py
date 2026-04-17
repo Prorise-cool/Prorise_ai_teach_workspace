@@ -559,10 +559,14 @@ class TeachingVideoAgent:
                 extract_error_message(last_error),
             )
 
-        raise ValueError(
+        error = ValueError(
             f"Bulk render failed after {self.patch_retry_max_retries + 1} attempts: "
             f"{extract_error_message(last_error)}"
         )
+        setattr(error, "code", current_code)
+        setattr(error, "stderr", last_error)
+        setattr(error, "stdout", "")
+        raise error
 
     def render_section(self, section: Section) -> str:
         """Render a single section and return its transparent video path."""
@@ -592,6 +596,7 @@ class TeachingVideoAgent:
             return str(rendered_path)
 
         last_error = stderr or "Unknown section render failure"
+
         for attempt in range(1, self.patch_retry_max_retries + 1):
             self._notify_section_status(
                 section_id=section.id,
@@ -642,10 +647,14 @@ class TeachingVideoAgent:
 
             last_error = stderr or last_error
 
-        raise ValueError(
+        error = ValueError(
             f"Section render failed after {self.patch_retry_max_retries + 1} attempts: "
             f"{extract_error_message(last_error)}"
         )
+        setattr(error, "code", current_code)
+        setattr(error, "stderr", last_error)
+        setattr(error, "stdout", "")
+        raise error
 
     def _normalize_code_for_scene(self, code: str, scene_name: str) -> str:
         normalized = extract_code_from_response(code)

@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import re
 import shutil
 import subprocess
 import time
@@ -44,6 +45,7 @@ from app.features.video.pipeline.engine.sanitizer import sanitize_render_error
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
     ComposeResult,
+    UnderstandingResult,
     VideoPreviewSection,
     VideoPreviewSectionStatus,
     VideoResult,
@@ -52,6 +54,7 @@ from app.features.video.pipeline.models import (
     get_stage_profile,
     resolve_stage_progress,
 )
+from app.features.video.pipeline.services import UnderstandingService
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.orchestration.runtime import (
     VideoRuntimeStateStore,
@@ -81,6 +84,8 @@ logger = logging.getLogger(__name__)
 SECTION_LOOP_PROGRESS_START = 26
 SECTION_LOOP_PROGRESS_END = 94
 SECTION_AUDIO_TAIL_HOLD_SECONDS = 0.35
+PREVIEW_SUMMARY_MAX_STEPS = 4
+PREVIEW_SUMMARY_MAX_CHARS = 1200
 SECTION_STATUS_RATIOS: dict[VideoPreviewSectionStatus, float] = {
     VideoPreviewSectionStatus.PENDING: 0.0,
     VideoPreviewSectionStatus.GENERATING: 0.25,
@@ -110,6 +115,14 @@ _C2V_STAGE_MAP: dict[str, tuple[VideoStage, float, float]] = {
 
 def _utc_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+
+def _normalize_preview_compare(text: str) -> str:
+    return re.sub(r"[\W_]+", "", text, flags=re.UNICODE).casefold()
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +157,7 @@ class _DesignResult:
 
     design_text: str
     sections: list[Any]
+    understanding: UnderstandingResult
     preview_state: Any = None
 
 
@@ -657,8 +671,28 @@ class VideoPipelineService:
             task,
             VideoStage.UNDERSTANDING,
             0.1,
-            "生成教学大纲...",
+            "生成解题摘要...",
             progress_override=3,
+        )
+        understanding = await self._run_understanding_stage(
+            task,
+            ctx,
+            setup,
+            runtime,
+        )
+        preview_state = self._build_initial_preview_state(
+            task_id=ctx.task_id,
+            understanding=understanding,
+            fallback_summary=ctx.knowledge_point,
+        )
+        runtime.save_preview(preview_state)
+        await self._emit(
+            task,
+            VideoStage.UNDERSTANDING,
+            1.0,
+            "解题摘要生成完成",
+            progress_override=10,
+            extra_context=self._preview_signal(preview_state),
         )
 
         duration_minutes = metadata.get(
@@ -671,13 +705,6 @@ class VideoPipelineService:
             duration_minutes,
         )
         logger.info("ManimCat design generated: %d sections", len(sections))
-        await self._emit(
-            task,
-            VideoStage.UNDERSTANDING,
-            1.0,
-            "教学大纲生成完成",
-            progress_override=10,
-        )
 
         await self._emit(
             task,
@@ -688,8 +715,9 @@ class VideoPipelineService:
         )
         preview_state = self._build_preview_from_agent(
             ctx.task_id,
-            ctx.knowledge_point,
+            preview_state,
             setup.agent,
+            ctx.knowledge_point,
         )
         runtime.save_preview(preview_state)
         await self._emit(
@@ -703,6 +731,15 @@ class VideoPipelineService:
         return _DesignResult(
             design_text=design_text,
             sections=sections,
+            understanding=understanding
+            or UnderstandingResult(
+                topic_summary=preview_state.summary,
+                knowledge_points=preview_state.knowledge_points,
+                solution_steps=[],
+                difficulty="unknown",
+                subject="general",
+                provider_used="fallback",
+            ),
             preview_state=preview_state,
         )
 
@@ -1068,8 +1105,10 @@ class VideoPipelineService:
             video_url=upload_result.video_url,
             cover_url=upload_result.cover_url,
             duration=max(1, duration),
-            summary=ctx.knowledge_point[:100],
-            knowledge_points=knowledge_points or [ctx.knowledge_point[:50]],
+            summary=preview_state.summary or ctx.knowledge_point[:100],
+            knowledge_points=preview_state.knowledge_points
+            or knowledge_points
+            or [ctx.knowledge_point[:50]],
             result_id=f"vr-{ctx.task_id}",
             completed_at=_utc_iso(),
             title=ctx.knowledge_point[:60],
@@ -1355,10 +1394,13 @@ class VideoPipelineService:
         render_error: Exception,
     ) -> Any:
         """Sanitize render error, persist failure, check doom loop."""
+        stderr_text = str(getattr(render_error, "stderr", "") or render_error)
+        stdout_text = str(getattr(render_error, "stdout", "") or "")
+        code_text = str(getattr(render_error, "code", "") or "")
         sanitized = sanitize_render_error(
-            stderr=str(render_error),
-            stdout="",
-            code=str(getattr(render_error, "code", "")),
+            stderr=stderr_text,
+            stdout=stdout_text,
+            code=code_text,
         )
 
         await failure_store.record_failure(
@@ -1455,8 +1497,9 @@ class VideoPipelineService:
     def _build_preview_from_agent(
         self,
         task_id: str,
-        summary: str,
+        preview_seed,
         agent: TeachingVideoAgent,
+        source_text: str,
     ):
         sections = [
             VideoPreviewSection(
@@ -1468,7 +1511,7 @@ class VideoPipelineService:
             )
             for index, section in enumerate(getattr(agent, "sections", []) or [])
         ]
-        knowledge_points = [
+        outline_points = [
             item.get("title", "")
             for item in (getattr(getattr(agent, "outline", None), "sections", []) or [])
             if isinstance(item, dict) and item.get("title")
@@ -1477,11 +1520,222 @@ class VideoPipelineService:
             task_id=task_id,
             status="processing",
             preview_available=True,
-            preview_version=1,
-            summary=summary[:100],
-            knowledge_points=knowledge_points,
+            preview_version=(getattr(preview_seed, "preview_version", 0) or 0) + 1,
+            summary=self._resolve_preview_summary_from_agent(
+                preview_seed=preview_seed,
+                sections=sections,
+                fallback=source_text,
+            ),
+            knowledge_points=self._resolve_preview_knowledge_points(
+                preview_seed=getattr(preview_seed, "knowledge_points", None) or [],
+                sections=sections,
+                outline_points=outline_points,
+                source_text=source_text,
+            ),
             sections=sections,
         )
+
+    @staticmethod
+    def _looks_like_preview_fallback(summary: str, *, fallback: str) -> bool:
+        cleaned_summary = summary.strip()
+        if len(cleaned_summary) < 24:
+            return True
+
+        normalized_summary = _normalize_preview_compare(cleaned_summary)
+        normalized_fallback = _normalize_preview_compare(fallback)
+        if normalized_summary and normalized_fallback:
+            if normalized_summary == normalized_fallback:
+                return True
+            if normalized_fallback in normalized_summary and len(normalized_summary) <= len(normalized_fallback) + 16:
+                return True
+
+        return _contains_cjk(fallback) and not _contains_cjk(cleaned_summary)
+
+    @staticmethod
+    def _filter_preview_points(points: list[str], *, source_text: str) -> list[str]:
+        prefers_cjk = _contains_cjk(source_text)
+        cleaned: list[str] = []
+        seen: set[str] = set()
+
+        for raw_point in points:
+            point = str(raw_point or "").strip()
+            if not point or len(point) > 32:
+                continue
+            if prefers_cjk and not _contains_cjk(point):
+                continue
+            fingerprint = _normalize_preview_compare(point)
+            if not fingerprint or fingerprint in seen:
+                continue
+            seen.add(fingerprint)
+            cleaned.append(point)
+
+        return cleaned[:4]
+
+    @staticmethod
+    def _build_preview_summary_from_sections(
+        sections: list[VideoPreviewSection],
+        *,
+        fallback: str,
+    ) -> str:
+        step_lines: list[str] = []
+        for section in sections[:PREVIEW_SUMMARY_MAX_STEPS]:
+            lecture_lines = [
+                line.strip()
+                for line in section.lecture_lines
+                if isinstance(line, str) and line.strip()
+            ]
+            explanation = lecture_lines[0] if lecture_lines else section.title.strip()
+            title = section.title.strip()
+            if not explanation:
+                continue
+            if title and title not in explanation:
+                step_lines.append(f"- {title}：{explanation}")
+            else:
+                step_lines.append(f"- {explanation}")
+
+        if not step_lines:
+            return fallback.strip()
+
+        if _contains_cjk(fallback):
+            return (
+                "先别急着只看题面，可以先按这条讲解主线理解：\n\n"
+                + "\n".join(step_lines)
+                + "\n\n先把这几步顺下来，后面的视频会更容易看懂。"
+            )[:PREVIEW_SUMMARY_MAX_CHARS]
+
+        return (
+            "You can follow this explanation thread first:\n\n"
+            + "\n".join(step_lines)
+            + "\n\nOnce this flow is clear, the later video will be easier to follow."
+        )[:PREVIEW_SUMMARY_MAX_CHARS]
+
+    def _resolve_preview_summary_from_agent(
+        self,
+        *,
+        preview_seed,
+        sections: list[VideoPreviewSection],
+        fallback: str,
+    ) -> str:
+        existing_summary = str(getattr(preview_seed, "summary", "") or "").strip()
+        if existing_summary and not self._looks_like_preview_fallback(existing_summary, fallback=fallback):
+            return existing_summary[:PREVIEW_SUMMARY_MAX_CHARS]
+        return self._build_preview_summary_from_sections(sections, fallback=fallback)
+
+    def _resolve_preview_knowledge_points(
+        self,
+        *,
+        preview_seed: list[str],
+        sections: list[VideoPreviewSection],
+        outline_points: list[str],
+        source_text: str,
+    ) -> list[str]:
+        existing_points = self._filter_preview_points(list(preview_seed), source_text=source_text)
+        if existing_points:
+            return existing_points
+
+        section_titles = self._filter_preview_points(
+            [section.title for section in sections],
+            source_text=source_text,
+        )
+        if section_titles:
+            return section_titles
+
+        return self._filter_preview_points(outline_points, source_text=source_text)
+
+    @staticmethod
+    def _build_preview_summary(
+        understanding: UnderstandingResult | None,
+        *,
+        fallback: str,
+    ) -> str:
+        """把理解阶段产物收束成等待页与结果页可共用的摘要 Markdown。"""
+        blocks: list[str] = []
+
+        if understanding is not None:
+            topic_summary = understanding.topic_summary.strip()
+            if topic_summary:
+                blocks.append(topic_summary)
+
+            step_lines: list[str] = []
+            for index, step in enumerate(
+                understanding.solution_steps[:PREVIEW_SUMMARY_MAX_STEPS],
+                start=1,
+            ):
+                explanation = step.explanation.strip()
+                title = step.title.strip()
+                if not explanation:
+                    continue
+                if title and title not in explanation:
+                    step_lines.append(f"- {title}：{explanation}")
+                else:
+                    step_lines.append(f"- {explanation}")
+
+            if step_lines:
+                blocks.append("\n".join(step_lines))
+
+        if not blocks and fallback.strip():
+            blocks.append(fallback.strip())
+
+        return "\n\n".join(blocks).strip()[:PREVIEW_SUMMARY_MAX_CHARS]
+
+    def _build_initial_preview_state(
+        self,
+        *,
+        task_id: str,
+        understanding: UnderstandingResult | None,
+        fallback_summary: str,
+    ):
+        """在 storyboard 生成前先发布可读摘要，避免等待页只能空等。"""
+        knowledge_points = understanding.knowledge_points if understanding is not None else []
+        return build_preview_state(
+            task_id=task_id,
+            status="processing",
+            preview_available=True,
+            preview_version=1,
+            summary=self._build_preview_summary(
+                understanding,
+                fallback=fallback_summary,
+            ),
+            knowledge_points=knowledge_points,
+            sections=[],
+        )
+
+    async def _run_understanding_stage(
+        self,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        runtime: VideoRuntimeStateStore,
+    ) -> UnderstandingResult | None:
+        """调用理解阶段 LLM，为等待页尽早产出解题摘要。"""
+        metadata = task.context.metadata or {}
+        providers = getattr(setup.assembly, "llm_for", lambda _stage: ())(
+            "understanding"
+        )
+        if not providers:
+            logger.warning(
+                "No understanding providers configured; fallback to raw prompt summary"
+            )
+            return None
+
+        try:
+            service = UnderstandingService(
+                providers=providers,
+                failover_service=ProviderFailoverService(
+                    ProviderHealthStore(self._runtime_store)
+                ),
+                runtime=runtime,
+            )
+            return await service.execute(
+                source_payload=metadata.get("sourcePayload", {}),
+                user_profile=metadata.get("userProfile", {}),
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Understanding stage failed, fallback to raw prompt summary task_id=%s",
+                ctx.task_id,
+            )
+            return None
 
     @staticmethod
     def _build_preview_visual_notes(section: Any) -> list[str]:

@@ -20,10 +20,17 @@ from threading import Lock
 
 from dramatiq.brokers.redis import RedisBroker
 from dramatiq.brokers.stub import StubBroker
-from dramatiq.middleware import Prometheus, default_middleware
+from dramatiq.middleware import default_middleware
 from redis import Redis
 
 from app.core.config import Settings, get_settings
+
+try:
+    from dramatiq.middleware import Prometheus
+except ImportError:  # dramatiq>=2.0 移除了该导出，默认 middleware 中也不再包含它
+    Prometheus = None
+
+DRAMATIQ_PROMETHEUS_AVAILABLE = Prometheus is not None
 
 # Re-export mixin 中的公共符号，保持 ``from app.infra.redis_client import X`` 兼容
 from app.infra.redis_provider_store import ProviderHealthStoreMixin  # noqa: F401
@@ -294,10 +301,16 @@ def create_dramatiq_broker(settings: Settings | None = None) -> RedisBroker | St
     """
     active_settings = settings or get_settings()
     broker_config = create_dramatiq_broker_config(active_settings)
+    middleware_classes = list(default_middleware)
+    if not active_settings.dramatiq_prometheus_enabled and DRAMATIQ_PROMETHEUS_AVAILABLE:
+        middleware_classes = [
+            middleware_cls
+            for middleware_cls in middleware_classes
+            if middleware_cls is not Prometheus
+        ]
     middleware = [
         middleware_cls()
-        for middleware_cls in default_middleware
-        if active_settings.dramatiq_prometheus_enabled or middleware_cls is not Prometheus
+        for middleware_cls in middleware_classes
     ]
     if broker_config.backend == "stub":
         broker = StubBroker(middleware=middleware)

@@ -5,16 +5,16 @@
 import { create } from 'zustand';
 
 import {
-  readBooleanProperty,
-  readNumberProperty,
-  readRecord,
+	readBooleanProperty,
+	readNumberProperty,
+	readRecord,
 } from '@/lib/type-guards';
 import type { TaskLifecycleStatus, TaskSnapshot } from '@/types/task';
 import {
-  isVideoPipelineStage,
-  type VideoPipelineStage,
-  type VideoPreviewSection,
-  type VideoTaskPreview,
+	isVideoPipelineStage,
+	type VideoPipelineStage,
+	type VideoPreviewSection,
+	type VideoTaskPreview,
 } from '@/types/video';
 
 export interface VideoGeneratingError {

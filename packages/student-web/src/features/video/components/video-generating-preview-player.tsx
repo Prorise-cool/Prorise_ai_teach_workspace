@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { VideoPreviewSection } from '@/types/video';
 
 import { VideoPlayer } from './video-player';
+import { VideoGeneratingRichContent } from './video-generating-rich-content';
 import { VideoPreviewSectionBadge } from './video-preview-section-badge';
 
 export interface VideoGeneratingPreviewPlayerProps {
@@ -56,6 +57,11 @@ export function VideoGeneratingPreviewPlayer({
   isRefreshing,
 }: VideoGeneratingPreviewPlayerProps) {
   const { t } = useAppTranslation();
+  const resolveSectionExplanation = (section: VideoPreviewSection | null) =>
+    section?.lectureLines
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n\n') ?? '';
   const selectedSection =
     sections.find((section) => section.sectionId === selectedSectionId) ??
     sections.find((section) => section.status === 'ready') ??
@@ -84,7 +90,6 @@ export function VideoGeneratingPreviewPlayer({
         {selectedSection?.clipUrl ? (
           <VideoPlayer
             videoUrl={selectedSection.clipUrl}
-            hideControls
             className="xm-generating-player__video"
           />
         ) : (
@@ -186,23 +191,11 @@ export function VideoGeneratingPreviewPlayer({
             <span className="xm-generating-player__detail-label">
               {t('video.generating.scriptLabels.narration')}
             </span>
-            <div className="xm-generating-player__quote-box">
-              {selectedSection?.lectureLines[0] || t('video.generating.player.waitingNarration')}
-            </div>
-          </div>
-
-          <div className="xm-generating-player__detail-row">
-            <span className="xm-generating-player__detail-label">
-              {t('video.generating.scriptLabels.visual')}
-            </span>
-            <div className="xm-generating-player__visual-list">
-              {(selectedSection?.visualNotes?.length ? selectedSection.visualNotes : []).map((note) => (
-                <p key={note}>{note}</p>
-              ))}
-              {!selectedSection?.visualNotes?.length && (
-                <p>{t('video.generating.visualPending')}</p>
-              )}
-            </div>
+            <VideoGeneratingRichContent
+              className="xm-generating-player__quote-box"
+              content={resolveSectionExplanation(selectedSection)}
+              placeholder={t('video.generating.player.waitingNarration')}
+            />
           </div>
 
           {selectedSection?.audioUrl ? (

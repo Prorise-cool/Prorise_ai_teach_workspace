@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 from app.features.video.pipeline.models import (
+    SolutionStep,
+    UnderstandingResult,
     VideoPreviewSectionStatus,
     VideoResultDetail,
 )
@@ -227,6 +229,97 @@ def _patch_pipeline_dependencies(
             },
         ),
     )
+
+
+def test_video_pipeline_service_builds_preview_summary_from_understanding(
+    tmp_path: Path,
+) -> None:
+    service, _ = _build_service(tmp_path)
+    understanding = UnderstandingResult(
+        topic_summary=(
+            "这题先别急着代公式，先看这个一元二次方程到底有没有实数解。"
+            "主线其实很简单：先看判别式，再决定后面怎么求根。"
+            "很多同学容易跳过第一步，结果把本来无解的题也硬算下去。"
+        ),
+        knowledge_points=["判别式", "求根公式"],
+        solution_steps=[
+            SolutionStep(
+                step_id="step_1",
+                title="判断根的情况",
+                explanation="先算 b²-4ac，确认这道题到底有没有实数解，这一步能帮你少走很多弯路。",
+            ),
+            SolutionStep(
+                step_id="step_2",
+                title="代入公式",
+                explanation="确定有实数解以后，再把 a、b、c 代入求根公式，算完记得回头检查正负号。",
+            ),
+        ],
+        difficulty="medium",
+        subject="math",
+        provider_used="stub-llm",
+    )
+
+    initial_preview = service._build_initial_preview_state(
+        task_id="video_preview_summary_case",
+        understanding=understanding,
+        fallback_summary="原始题目",
+    )
+    section_preview = service._build_preview_from_agent(
+        "video_preview_summary_case",
+        initial_preview,
+        _FakeSectionAgent(tmp_path),
+        "一元二次方程求根",
+    )
+
+    assert initial_preview.preview_version == 1
+    assert "这题先别急着代公式" in initial_preview.summary
+    assert "- 判断根的情况：" in initial_preview.summary
+    assert "**判断根的情况**" not in initial_preview.summary
+    assert initial_preview.knowledge_points == ["判别式", "求根公式"]
+    assert section_preview.preview_version == 2
+    assert section_preview.summary == initial_preview.summary
+    assert section_preview.knowledge_points == ["判别式", "求根公式"]
+
+
+def test_video_pipeline_service_backfills_summary_from_sections_when_understanding_is_weak(
+    tmp_path: Path,
+) -> None:
+    service, _ = _build_service(tmp_path)
+    weak_preview = SimpleNamespace(
+        preview_version=1,
+        summary="证明一下洛必达法则的由来",
+        knowledge_points=[],
+    )
+    agent = _FakeSectionAgent(tmp_path)
+    agent.sections = [
+        SimpleNamespace(
+            id="section_1",
+            title="先看为什么会出现 0/0",
+            lecture_lines=["先确认分子和分母是不是都在一起逼近 0。"],
+        ),
+        SimpleNamespace(
+            id="section_2",
+            title="再看变化率怎么接上",
+            lecture_lines=["把平均变化率和瞬时变化率连起来以后，洛必达法则的来路就清楚了。"],
+        ),
+    ]
+    agent.outline = SimpleNamespace(
+        sections=[
+            {"title": "The 0/0 Problem"},
+            {"title": "Zooming in (Linearization)"},
+        ]
+    )
+
+    preview = service._build_preview_from_agent(
+        "video_preview_backfill_case",
+        weak_preview,
+        agent,
+        "证明一下洛必达法则的由来",
+    )
+
+    assert "先别急着只看题面" in preview.summary
+    assert "先看为什么会出现 0/0" in preview.summary
+    assert preview.knowledge_points == ["先看为什么会出现 0/0", "再看变化率怎么接上"]
 
 
 def test_video_pipeline_service_streams_sections_and_persists_preview_runtime(

@@ -16,6 +16,7 @@ import type { VideoGeneratingLayoutStageKey } from '../config/video-generating-l
 
 import { VideoGeneratingPreviewPlayer } from './video-generating-preview-player';
 import { VideoPreviewSectionBadge } from './video-preview-section-badge';
+import { VideoGeneratingRichContent } from './video-generating-rich-content';
 
 const STAGE_ICON_MAP = {
   summary: Sparkles,
@@ -54,6 +55,11 @@ export function VideoGeneratingStageContent({
 }: VideoGeneratingStageContentProps) {
   const { t } = useAppTranslation();
   const StageIcon = STAGE_ICON_MAP[stageKey];
+  const resolveSectionExplanation = (section: VideoPreviewSection) =>
+    section.lectureLines
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n\n');
 
   if (stageKey === 'renderFlow') {
     return (
@@ -92,9 +98,11 @@ export function VideoGeneratingStageContent({
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span>{t('video.generating.stageCards.summary.heroTitle')}</span>
               </div>
-              <p className="xm-generating-stage-card__copy">
-                {summary || t('video.generating.previewUnavailable')}
-              </p>
+              <VideoGeneratingRichContent
+                className="xm-generating-stage-card__copy"
+                content={summary}
+                placeholder={t('video.generating.previewUnavailable')}
+              />
             </article>
             <article className="xm-generating-stage-card">
               <div className="xm-generating-stage-card__subhead">
@@ -144,9 +152,11 @@ export function VideoGeneratingStageContent({
                     <span className="xm-generating-storyboard-card__label">
                       {t('video.generating.scriptLabels.narration')}
                     </span>
-                    <p className="xm-generating-storyboard-card__quote">
-                      {section.lectureLines[0] || t('video.generating.previewUnavailable')}
-                    </p>
+                    <VideoGeneratingRichContent
+                      className="xm-generating-storyboard-card__quote"
+                      content={resolveSectionExplanation(section)}
+                      placeholder={t('video.generating.previewUnavailable')}
+                    />
                   </div>
 
                   {section.audioUrl ? (
@@ -162,19 +172,6 @@ export function VideoGeneratingStageContent({
                       >
                         {t('video.generating.audioPreview')}
                       </audio>
-                    </div>
-                  ) : null}
-
-                  {section.visualNotes?.length ? (
-                    <div className="xm-generating-storyboard-card__row">
-                      <span className="xm-generating-storyboard-card__label">
-                        {t('video.generating.scriptLabels.visual')}
-                      </span>
-                      <div className="xm-generating-storyboard-card__notes">
-                        {section.visualNotes.map((note) => (
-                          <p key={note}>{note}</p>
-                        ))}
-                      </div>
                     </div>
                   ) : null}
                 </article>

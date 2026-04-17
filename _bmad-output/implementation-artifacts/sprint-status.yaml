@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-16 15:13:11 +0800
+# last_updated: 2026-04-17 14:06:34 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-16 15:13:11 +0800
+last_updated: 2026-04-17 15:49:01 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -111,6 +111,11 @@ development_status:
   # - `services.py` 已删除未使用字幕 helper，`models.py` 已移除 `ResourceLimits/ExecutionResult`，bulk render / preview / upload 输出统一改走 `VIDEO_OUTPUT_FORMAT`。
   # - `test_video_pipeline_models.py`、`test_video_pipeline_services.py` 已删除过期的 DockerSandboxExecutor/LocalSandboxExecutor 假设，改为对齐当前“本地 manim + 静态安全扫描”实现。
   # - 回归通过：`python -m pytest tests/unit/video/ -q` => `105 passed in 2.01s`。
+  # 2026-04-17 晚间 Story 4.3 边界收口：
+  # - `api_codebook.py` 已统一改正 `buff` 关键词，并在 `SHARED_SPECIFICATION` 中显式禁止把它缩写成 `buf`。
+  # - `agent.py` 已撤回基于报错字符串触发的运行时代码硬改，render agent 重新只负责 patch retry 与错误透传。
+  # - `render_failure.py` 已兼容 sync/async Redis，失败落库不再用 `await int` 这类 telemetry 异常掩盖真实 render failure。
+  # - 回归通过：`python -m pytest packages/fastapi-backend/tests/unit/video -q` => `117 passed`。
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
@@ -165,6 +170,34 @@ development_status:
   # 2026-04-16 前端体验补充：
   # - 视频输入页已改为“干净输入框 + 底部 icon 工具栏”，质量预设与高级参数不再占据主输入区。
   # - 新增的拖拽提示、上传反馈、提交中状态、预设弹层和等待页三段式文案均已接入 i18n，并补齐亮暗色 token 覆盖。
+  # 2026-04-17 等待页修补：
+  # - 摘要区已支持 Markdown + 常见 LaTeX 公式渲染，并在 summary 可用后默认停留摘要，不再被流水线自动带离。
+  # - 分段讲解 / 分段试看已移除 `visualNotes` 等技术性字段，只保留学生可消费的讲解内容与试听。
+  # - 等待页手写 toast 已切回 shared/feedback + sonner，全局反馈与播放器容器尺寸一并收口；定向回归继续通过 `pnpm --filter @xiaomai/student-web typecheck` 与 `video-generating-page.test.tsx`。
+  # 2026-04-17 下午补充：
+  # - FastAPI orchestrator 已在 understanding 阶段先生成 preview 摘要，并把 `topic_summary + solution_steps` 提前写入 `/preview`；结果页 summary 也改为复用该摘要。
+  # - student-web 等待页已取消完成后自动跳转，顶部 CTA 改为灰色“前往结果页”，返回输入页只保留左上品牌图标入口。
+  # - 前端定向回归继续通过；backend pytest 受当前 dramatiq 环境缺少 `Prometheus` middleware 导出阻塞，仅完成 `py_compile` 级校验。
+  # 2026-04-17 晚些时候补充：
+  # - `UnderstandingService` 已补强 JSON-only prompt，不再只把 sourcePayload/userProfile 裸传给模型。
+  # - `services._parse_jsonish()` 现支持 fenced JSON、前缀解释文本与 raw_decode 扫描，减少 Gemini 类模型返回“说明 + JSON”时的理解阶段失败。
+  # - 已补对应 unit test 用例，但当前 pytest 仍受 dramatiq 环境依赖阻塞，只完成语法校验与代码级 review 收口。
+  # 2026-04-17 下午补充：
+  # - understanding prompt 已改为“老师讲题”口吻，明确要求先讲题意、主线、为什么这样做，以及至少一个易错点，避免论文摘要/证明提纲文风。
+  # - preview summary 不再把 solution steps 渲染成编号粗体列表，统一改为轻量 bullet，降低等待页的“标准答案提纲感”。
+  # 2026-04-17 晚间收口：
+  # - `UnderstandingService` 现已追加语义校验、second-pass repair、本地 summary/knowledgePoints 兜底；即使模型给出“结构合法但内容很弱”的 JSON，也不会直接把题目标签透给等待页。
+  # - orchestrator 现会在 understanding 摘要仍像题面回声时，使用 storyboard section lecture lines 回填 `preview.summary`，避免中文题掉回英文 outline 标签。
+  # - `app/infra/redis_client.py` 已兼容 `dramatiq 1.x / 2.x` 的 `Prometheus` middleware 差异，system Python 3.13 下的 backend pytest 已恢复可跑。
+  # - 回归通过：`python -m pytest tests/unit/video -q` => `115 passed`；`python -m pytest tests/api/video/test_video_preview_route.py -q` => `1 passed`。
+  # 2026-04-17 前端播放器补充：
+  # - `video-player.tsx` 已从 `fluid` 切换到 `fill` 容器模式，避免 Video.js 自带的流体 padding-top 与等待页外层 16:9 容器重复计算，导致画面只显示一个角或看不到播放键。
+  # - `task-generating-view.scss` 已对齐设计稿 HTML：补回 `.xm-generating-player` 的 `min-height: 0`、`__screen/__tracks` 的 `flex-shrink: 0`，并把 `__details` 改回 `flex: 1; min-height: 0; overflow-y: auto`，避免详情区把上方播放器挤塌。
+  # - 前端定向回归通过：`pnpm --filter @xiaomai/student-web test -- src/features/video/components/video-player.test.tsx src/features/video/pages/video-generating-page.test.tsx` => `34 files / 192 tests passed`；`pnpm --filter @xiaomai/student-web typecheck` => `0 errors`。
+  # 2026-04-17 等待页暗色主题收口：
+  # - `task-generating-view.scss` 已将等待页局部暗色切换从失效的 `.dark` 选择器改为 `:root[data-theme='dark']`，与输入页 `_video-input-card.scss` 的主题机制保持一致。
+  # - 顶部品牌图标、阶段胶囊外层、进度轨道、状态标签、日志头、详情区、卡片区与分段引用框已改走 `--xm-generating-card-surface/soft-surface/pill-surface` 局部 token，不再在暗色下漏出白色半透明底。
+  # - 回归通过：`pnpm --filter @xiaomai/student-web test -- src/features/video/pages/video-generating-page.test.tsx` => `34 files / 192 tests passed`；`pnpm --filter @xiaomai/student-web typecheck` => `0 errors`。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

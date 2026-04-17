@@ -63,10 +63,299 @@ def _get_provider_settings(provider: Any) -> dict[str, Any]:
 
 
 def _parse_jsonish(text: str) -> dict[str, Any]:
+    normalized = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE).strip()
+    decoder = json.JSONDecoder()
+
+    candidates: list[str] = []
+    if normalized:
+        candidates.append(normalized)
+
+    fenced_match = re.search(
+        r"```(?:json|javascript|js|python|txt|text)?\s*\n?([\s\S]*?)```",
+        normalized,
+        re.IGNORECASE,
+    )
+    if fenced_match:
+        fenced_payload = fenced_match.group(1).strip()
+        if fenced_payload:
+            candidates.append(fenced_payload)
+
+    extracted_payload = extract_code_from_response(normalized)
+    if extracted_payload and extracted_payload not in candidates:
+        candidates.append(extracted_payload)
+
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed
+
+        for index, char in enumerate(candidate):
+            if char not in "{[":
+                continue
+            try:
+                parsed, _ = decoder.raw_decode(candidate[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                return parsed
+
     try:
-        return json.loads(text)
+        return json.loads(normalized)
     except json.JSONDecodeError:
-        return json.loads(extract_code_from_response(text))
+        return json.loads(extract_code_from_response(normalized))
+
+
+def _try_parse_jsonish(text: str) -> dict[str, Any] | None:
+    try:
+        return _parse_jsonish(text)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_understanding_prompt(
+    *,
+    source_payload: dict[str, Any],
+    user_profile: dict[str, Any],
+) -> str:
+    return "\n".join(
+        [
+            "你是学生在等待教学视频生成时，最先看到的讲题老师。",
+            "你的目标不是写学术摘要，而是先把题目讲明白，让学生马上知道这题在问什么、主线怎么走、哪些地方最容易卡住。",
+            "请严格返回一个 JSON 对象，不要输出任何额外解释、Markdown、代码块标题或前后缀。",
+            "写作风格要求：",
+            "- 像老师在学生身边讲题，语气自然、耐心、有人味。",
+            "- 先解释这题到底在干什么，再解释为什么这样做，不要只罗列结论。",
+            "- 可以使用必要的 Markdown 或 LaTeX 公式，但公式后要顺手用白话解释，不要只扔符号。",
+            "- 不要写成论文摘要、证明提纲、竞赛讲义、分镜脚本或流水账。",
+            "- 避免生硬表达，比如“本题探讨……”“构造辅助条件”“应用某定理即可”“取极限完成证明”；如果必须提术语，要立刻补一句白话解释。",
+            "字段要求：",
+            '- topicSummary: 用与题目相同的语言给出 4-6 句老师式快速讲解，中文题目默认输出简体中文。第一句直接说这题在问什么或先抓什么，后面说明主线思路、为什么这样做，并至少提醒一个常见易错点；必要时可包含少量 Markdown/LaTeX 公式。',
+            '- knowledgePoints: 2-5 个真正面向学生的知识点短语，禁止技术术语堆砌、英文占位或空泛标签。',
+            '- solutionSteps: 2-4 个步骤，每步包含 stepId/title/explanation。title 用简短行动标签并跟随题目语言；explanation 用 1-3 句口语化讲解，说明这一步为什么先做、怎么想、要避免什么误区，不要只写口号。',
+            '- difficulty: easy | medium | hard。',
+            '- subject: math | physics | chemistry | biology | general。',
+            "返回示例：",
+            '{"topicSummary":"这题先别急着套公式，先看它到底想让我们从图像里读出什么信息。你可以把主线理解成：先把斜率和截距找准，再把解析式拼出来。这样做的原因是图像已经把最关键的数据给出来了，后面的式子只是把它写完整。很多同学会一上来代点计算，结果把正负号或者截距看错，所以第一步一定要把图读准。只要前面这层意思抓住，后面计算其实不会很长。","knowledgePoints":["斜率","截距","图像读值"],"solutionSteps":[{"stepId":"step_1","title":"先把图像信息读准","explanation":"先别急着写公式，先把图上能直接看到的截距、变化趋势和关键点读出来。信息读准了，后面代数计算才不会一开始就跑偏。"},{"stepId":"step_2","title":"再把解析式拼出来","explanation":"把读到的斜率和截距代回一次函数表达式，或者先用两点求斜率再化简。这里最容易错的是符号，所以写完后最好再拿原图核对一遍。"}],"difficulty":"easy","subject":"math"}',
+            "输入数据如下：",
+            json.dumps(
+                {
+                    "sourcePayload": source_payload,
+                    "userProfile": user_profile,
+                },
+                ensure_ascii=False,
+            ),
+        ]
+    )
+
+
+def _build_understanding_repair_prompt(
+    *,
+    source_payload: dict[str, Any],
+    user_profile: dict[str, Any],
+    previous_output: str,
+    issues: list[str],
+) -> str:
+    return "\n".join(
+        [
+            "你上一轮返回的理解摘要不合格，需要重新输出。",
+            "这次仍然只能返回一个 JSON 对象，不要输出任何解释、Markdown 标题、代码块或前后缀。",
+            "需要修复的问题：",
+            *[f"- {issue}" for issue in issues],
+            "补充要求：",
+            "- topicSummary 不能只是重复题面，必须先把题目在问什么、主线怎么走、为什么这样做讲明白。",
+            "- 如果 knowledgePoints 或 solutionSteps 之前为空，这次必须补出真正能给学生看的内容。",
+            "- 不要出现英文占位、分镜标题、脚本术语或流水线术语。",
+            "输入数据如下：",
+            json.dumps(
+                {
+                    "sourcePayload": source_payload,
+                    "userProfile": user_profile,
+                },
+                ensure_ascii=False,
+            ),
+            "上一轮模型输出如下：",
+            previous_output.strip() or "(empty)",
+        ]
+    )
+
+
+def _contains_cjk(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+
+def _normalize_compare_text(text: str) -> str:
+    return re.sub(r"[\W_]+", "", text, flags=re.UNICODE).casefold()
+
+
+def _clean_text(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _extract_source_text(source_payload: dict[str, Any]) -> str:
+    priority_keys = (
+        "text",
+        "question",
+        "prompt",
+        "title",
+        "content",
+        "ocrText",
+        "ocr_text",
+        "query",
+    )
+    for key in priority_keys:
+        value = source_payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    fallback_candidates = [
+        value.strip()
+        for value in source_payload.values()
+        if isinstance(value, str) and value.strip()
+    ]
+    return max(fallback_candidates, key=len, default="")
+
+
+def _looks_like_source_echo(text: str, source_text: str) -> bool:
+    normalized_text = _normalize_compare_text(text)
+    normalized_source = _normalize_compare_text(source_text)
+    if not normalized_text or not normalized_source:
+        return False
+    if normalized_text == normalized_source:
+        return True
+    return normalized_source in normalized_text and len(normalized_text) <= len(normalized_source) + 16
+
+
+def _sanitize_knowledge_points(points: Sequence[Any], *, source_text: str) -> list[str]:
+    prefers_cjk = _contains_cjk(source_text)
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for raw_point in points:
+        point = _clean_text(raw_point)
+        if not point or len(point) > 32:
+            continue
+        if _looks_like_source_echo(point, source_text):
+            continue
+        if prefers_cjk and not _contains_cjk(point):
+            continue
+        fingerprint = _normalize_compare_text(point)
+        if not fingerprint or fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        cleaned.append(point)
+
+    return cleaned[:5]
+
+
+def _sanitize_solution_steps(steps: Sequence[SolutionStep], *, source_text: str) -> list[SolutionStep]:
+    prefers_cjk = _contains_cjk(source_text)
+    cleaned: list[SolutionStep] = []
+
+    for index, step in enumerate(steps, start=1):
+        title = _clean_text(step.title) or f"步骤 {index}"
+        explanation = _clean_text(step.explanation)
+        if not explanation:
+            continue
+        if _looks_like_source_echo(explanation, source_text) and len(explanation) < 40:
+            continue
+        if prefers_cjk and not (_contains_cjk(title) or _contains_cjk(explanation)):
+            continue
+        cleaned.append(
+            SolutionStep(
+                step_id=step.step_id or f"step_{index}",
+                title=title,
+                explanation=explanation,
+            )
+        )
+
+    return cleaned[:4]
+
+
+def _build_summary_from_solution_steps(steps: Sequence[SolutionStep], *, source_text: str) -> str:
+    snippets = [
+        _clean_text(step.explanation).rstrip("。；;.!? ")
+        for step in steps[:2]
+        if _clean_text(step.explanation)
+    ]
+    if not snippets:
+        return ""
+
+    if _contains_cjk(source_text):
+        return (
+            "先别急着只记结论，可以先按这条主线理解："
+            + "；".join(snippets)
+            + "。先把这层思路抓住，后面的视频会更容易看懂。"
+        )
+
+    return (
+        "Before memorizing the final result, follow this thread first: "
+        + "; ".join(snippets)
+        + ". Once this flow is clear, the later video will be easier to follow."
+    )
+
+
+def _summary_is_usable(summary: str, *, source_text: str) -> bool:
+    cleaned = _clean_text(summary)
+    if len(cleaned) < 24:
+        return False
+    if _looks_like_source_echo(cleaned, source_text):
+        return False
+    if _contains_cjk(source_text) and not _contains_cjk(cleaned):
+        return False
+    return True
+
+
+def _build_understanding_result(
+    payload: dict[str, Any],
+    *,
+    provider_used: str,
+    source_text: str,
+) -> UnderstandingResult:
+    raw_steps = [
+        _normalize_solution_step(step, index)
+        for index, step in enumerate(
+            payload.get("solutionSteps") or payload.get("solution_steps") or [],
+            start=1,
+        )
+    ]
+    solution_steps = _sanitize_solution_steps(raw_steps, source_text=source_text)
+    knowledge_points = _sanitize_knowledge_points(
+        payload.get("knowledgePoints") or payload.get("knowledge_points") or [],
+        source_text=source_text,
+    )
+    if not knowledge_points:
+        knowledge_points = _sanitize_knowledge_points(
+            [step.title for step in solution_steps],
+            source_text=source_text,
+        )
+
+    topic_summary = _clean_text(payload.get("topicSummary") or payload.get("topic_summary") or "")
+    if not _summary_is_usable(topic_summary, source_text=source_text):
+        topic_summary = _build_summary_from_solution_steps(solution_steps, source_text=source_text)
+
+    return UnderstandingResult(
+        topic_summary=topic_summary,
+        knowledge_points=knowledge_points,
+        solution_steps=solution_steps,
+        difficulty=str(payload.get("difficulty") or "medium"),
+        subject=str(payload.get("subject") or "general"),
+        provider_used=provider_used,
+    )
+
+
+def _collect_understanding_issues(result: UnderstandingResult, *, source_text: str) -> list[str]:
+    issues: list[str] = []
+    summary_ok = _summary_is_usable(result.topic_summary, source_text=source_text)
+    if not summary_ok:
+        issues.append("topicSummary 为空、过短，或只是重复题面。")
+    if not summary_ok and not result.knowledge_points:
+        issues.append("knowledgePoints 为空，或者掉成了题目语言不匹配的占位词。")
+    if not summary_ok and not result.solution_steps:
+        issues.append("solutionSteps 为空，无法支撑后续讲解。")
+    return issues
 
 
 def _normalize_solution_step(raw: Any, index: int) -> SolutionStep:
@@ -183,17 +472,62 @@ class UnderstandingService:
     runtime: VideoRuntimeStateStore
 
     async def execute(self, *, source_payload: dict[str, Any], user_profile: dict[str, Any]) -> UnderstandingResult:
-        prompt = json.dumps({"sourcePayload": source_payload, "userProfile": user_profile}, ensure_ascii=False)
-        response = await self.failover_service.generate(self.providers, prompt)
-        payload = _parse_jsonish(_get_text(response))
-        result = UnderstandingResult(
-            topic_summary=str(payload.get("topicSummary") or payload.get("topic_summary") or ""),
-            knowledge_points=[str(item) for item in payload.get("knowledgePoints") or payload.get("knowledge_points") or []],
-            solution_steps=[_normalize_solution_step(step, index) for index, step in enumerate(payload.get("solutionSteps") or payload.get("solution_steps") or [], start=1)],
-            difficulty=str(payload.get("difficulty") or "medium"),
-            subject=str(payload.get("subject") or "general"),
-            provider_used=str(getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""),
+        source_text = _extract_source_text(source_payload)
+        prompt = _build_understanding_prompt(
+            source_payload=source_payload,
+            user_profile=user_profile,
         )
+        response = await self.failover_service.generate(self.providers, prompt)
+        provider_used = str(
+            getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""
+        )
+        raw_output = _get_text(response)
+        payload = _try_parse_jsonish(raw_output)
+        result = (
+            _build_understanding_result(
+                payload,
+                provider_used=provider_used,
+                source_text=source_text,
+            )
+            if payload is not None
+            else UnderstandingResult(
+                topic_summary="",
+                knowledge_points=[],
+                solution_steps=[],
+                difficulty="medium",
+                subject="general",
+                provider_used=provider_used,
+            )
+        )
+
+        issues = ["返回内容不是合法 JSON 对象。"] if payload is None else _collect_understanding_issues(
+            result,
+            source_text=source_text,
+        )
+        if issues:
+            repair_prompt = _build_understanding_repair_prompt(
+                source_payload=source_payload,
+                user_profile=user_profile,
+                previous_output=raw_output,
+                issues=issues,
+            )
+            repair_response = await self.failover_service.generate(
+                self.providers,
+                repair_prompt,
+                ignore_cached_unhealthy=True,
+            )
+            repair_provider_used = str(
+                getattr(repair_response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""
+            )
+            repair_payload = _try_parse_jsonish(_get_text(repair_response))
+            if repair_payload is None:
+                raise ValueError("understanding repair response is not valid JSON")
+            result = _build_understanding_result(
+                repair_payload,
+                provider_used=repair_provider_used,
+                source_text=source_text,
+            )
+
         self.runtime.save_model("understanding", result)
         return result
 
