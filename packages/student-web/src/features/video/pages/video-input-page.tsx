@@ -106,6 +106,7 @@ export function VideoInputPage() {
 	const qualityPresetLabel = t('videoInput.qualityPresetLabel');
 	const qualityPresetHint = t('videoInput.qualityPresetHint');
 	const advancedSettingsLabel = t('videoInput.advancedSettingsLabel');
+	const recordingLabel = t('videoInput.recordingLabel');
 	const presetQuick = t('videoInput.qualityPresets.fast');
 	const presetBalanced = t('videoInput.qualityPresets.balanced');
 	const presetCinematic = t('videoInput.qualityPresets.cinematic');
@@ -237,6 +238,7 @@ export function VideoInputPage() {
 						qualityPresetLabel,
 						qualityPresetHint,
 						advancedSettingsLabel,
+						recordingLabel,
 						presetQuick,
 						presetBalanced,
 						presetCinematic,

@@ -32,7 +32,7 @@ import java.util.Set;
  * @since 3.3.0
  */
 @Slf4j
-public class PlusWebInvokeTimeInterceptor implements HandlerInterceptor {
+public class ßPlusWebInvokeTimeInterceptor implements HandlerInterceptor {
 
     private final static ThreadLocal<StopWatch> KEY_CACHE = new ThreadLocal<>();
 

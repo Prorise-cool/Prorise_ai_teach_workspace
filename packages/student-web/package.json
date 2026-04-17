@@ -50,6 +50,7 @@
     "embla-carousel-react": "^8.6.0",
     "eventsource-parser": "^3.0.6",
     "file-saver": "^2.0.5",
+    "framer-motion": "^12.38.0",
     "geist": "^1.7.0",
     "i18next": "^26.0.1",
     "immer": "^11.1.3",
