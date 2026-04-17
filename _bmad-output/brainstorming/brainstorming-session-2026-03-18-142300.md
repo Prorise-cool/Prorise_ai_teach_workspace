@@ -13,6 +13,8 @@ techniques_used:
 ideas_generated: []
 context_file: ''
 exploration_scope: '综合探索（产品定义 + 技术架构 + 全流程规划）'
+session_continued: true
+continuation_date: '2026-04-17'
 ---
 
 # Brainstorming Session Results
@@ -287,6 +289,101 @@ OpenMAIC-FastAPI (Python, 8090)
 ### 7.2 ToB 扩展预留
 
 > 赛后扩展 ToB 时，可引入：Java 开发（RuoYi 后端）、前端管理端开发
+
+---
+
+## 八、视频暂停问答与 section 精准解释规划（2026-04-17 续接）
+
+### 8.1 当前问题本质
+
+现阶段视频生成主链路已打通，但如果结果只停留在 FastAPI / Redis 运行态，就无法稳定支撑以下能力：
+
+- 用户在视频播放页暂停后针对当前内容追问
+- 学习中心回看问答历史
+- Companion 在不反向依赖视频流水线内部实现的前提下做上下文解释
+
+### 8.2 最佳规划结论
+
+不要把“精确到某一帧”作为第一性真值来设计持久化，而应采用：
+
+- **`timestamp` 锚点**：用户暂停时记录当前播放秒点
+- **`scene/section` 语义片段**：把秒点映射到对应 scene / section
+- **`SessionArtifactGraph`**：持久化 scene、旁白、知识点、解题步骤等结构化上下文
+
+这样前端交互可以表现为“问这一秒”，但后端检索与解释实际围绕“当前 section / scene + 当前时间点”进行。用户体验足够精准，工程复杂度也可控。
+
+### 8.3 推荐的数据分层
+
+- **Redis**：只保留任务运行态、SSE 事件、短期上下文窗口
+- **RuoYi / MySQL**：持久化视频任务元数据、`SessionArtifactGraph`、Companion 问答记录、白板动作日志、学习信号
+- **COS**：最终视频文件、必要的白板渲染产物
+
+### 8.4 推荐的对象模型
+
+**视频结果主体**
+- `video_task`
+- `video_result`
+- `public_result_meta`（如后续公开复用）
+
+**可解释上下文层**
+- `session_id = task_id`
+- `session_type = video`
+- `artifact_graph`
+  - `timeline.scenes[{ sceneId, startTime, endTime, title }]`
+  - `storyboard`
+  - `narration.segments[{ sceneId, text, startTime, endTime }]`
+  - `knowledge_points`
+  - `solution_steps`
+
+**问答承接层**
+- `companion_turn`
+  - `anchor_type = timestamp`
+  - `anchor_value = 当前秒点`
+  - `resolved_scene_id`
+  - `question`
+  - `answer_summary`
+  - `source_refs`
+  - `status`
+- `whiteboard_action_log`
+
+### 8.5 交互建议
+
+播放器侧最自然的触发文案不是“问这一帧为什么这样”，而是：
+
+- “问这一秒”
+- “解释这一段”
+- “继续讲这一步”
+
+用户暂停时默认带上当前 `timestamp`；后端先用 `timeline` 找到所属 `scene/section`，再取该片段的旁白、分镜、知识点、步骤作为上下文。回答优先解释当前上下文，再视情况补充证据来源或白板解释。
+
+### 8.6 实施优先级
+
+**P0：先补持久化真值**
+- 视频完成后把 `VideoArtifactGraph` 回写到 RuoYi
+- 结果元数据写入长期存储
+- 若回写失败，不阻断视频播放，但显式标记 `artifactWritebackFailed`
+
+**P1：再补 Companion 视频页问答**
+- 前端暂停后传 `timestamp`
+- 后端解析 `timestamp -> scene/section`
+- 返回 `answer_text + whiteboard_actions + source_refs + followups`
+- 问答记录回写 `xm_companion_turn`
+
+**P2：最后再做更细粒度增强**
+- section 内公式/步骤级命中
+- 基于当前镜头元素的更细提示
+- 真正“接近帧级”的高亮与可视解释
+
+### 8.7 为什么不建议先做帧级真值
+
+- Manim 渲染产物天然更适合按 scene / section 组织，不适合先为每一帧建立解释索引
+- 帧级索引会显著放大存储、检索和回写复杂度
+- 用户真正要的不是“像素级帧定位”，而是“当前这一步在讲什么、为什么这么推”
+- 现有产品规范已经把视频 Companion 定义为“基于当前锚点 + 会话产物图”的承接方式
+
+### 8.8 收口判断
+
+如果当前环境里你感知到“FastAPI 没有产出持久化数据、RuoYi 也没有存视频长期数据”，那本质上不是产品还没想清楚，而是**既有架构方向已经明确，但实现接线还没有完全落到当前主运行链路上**。下一步最应该收口的是：先让 `VideoArtifactGraph + CompanionTurn` 真正进入长期存储，再去打磨“问这一秒”的前端体验。
 
 ---
 

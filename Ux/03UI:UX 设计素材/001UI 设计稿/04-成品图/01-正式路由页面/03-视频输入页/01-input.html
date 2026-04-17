@@ -92,6 +92,24 @@
 			scrollbar-width: none;
 		}
 
+		/* 专门定制的局部小滚动条 (用于任务中心下拉框) */
+		.chat-scroll::-webkit-scrollbar {
+			width: 4px;
+		}
+
+		.chat-scroll::-webkit-scrollbar-track {
+			background: transparent;
+		}
+
+		.chat-scroll::-webkit-scrollbar-thumb {
+			background: rgba(107, 68, 33, 0.2);
+			border-radius: 4px;
+		}
+
+		html.dark .chat-scroll::-webkit-scrollbar-thumb {
+			background: rgba(168, 159, 145, 0.2);
+		}
+
 		/* ================= 核心动画体系 ================= */
 		.jelly-transition {
 			transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -99,23 +117,6 @@
 
 		.fade-transition {
 			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		}
-
-		/* 弹窗面板 */
-		.dynamic-panel-hidden {
-			opacity: 0;
-			transform: scale(0.95) translateY(10px);
-			pointer-events: none;
-			position: absolute;
-			z-index: 50;
-		}
-
-		.dynamic-panel-visible {
-			opacity: 1;
-			transform: scale(1) translateY(0);
-			pointer-events: auto;
-			position: absolute;
-			z-index: 50;
 		}
 
 		@keyframes fadeSlideUp {
@@ -143,6 +144,48 @@
 			border-color: var(--tw-border-opacity);
 			box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
 			transform: translateY(-2px);
+		}
+
+		/* ================= 进行中任务队列 (Dropdown 内置样式) ================= */
+		.task-queue-item {
+			/* 完善过渡动画：增加 overflow-hidden 确保折叠时不溢出 */
+			transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+			max-height: 150px;
+			overflow: hidden;
+			opacity: 1;
+			transform: scale(1) translateX(0);
+			margin-top: 0.25rem;
+			margin-bottom: 0.25rem;
+		}
+
+		.task-queue-item.is-removing {
+			opacity: 0 !important;
+			transform: scale(0.95) translateX(20px) !important;
+			max-height: 0 !important;
+			margin-top: 0 !important;
+			margin-bottom: 0 !important;
+			padding-top: 0 !important;
+			padding-bottom: 0 !important;
+			border-width: 0 !important;
+		}
+
+		.task-queue-progress {
+			height: 6px;
+			border-radius: 999px;
+			background: rgba(59, 23, 1, 0.08);
+			overflow: hidden;
+		}
+
+		html.dark .task-queue-progress {
+			background: rgba(255, 255, 255, 0.08);
+		}
+
+		.task-queue-progress__bar {
+			height: 100%;
+			border-radius: inherit;
+			background: linear-gradient(90deg, rgba(245, 197, 71, 0.88), rgba(255, 140, 0, 0.92));
+			box-shadow: 0 0 18px rgba(245, 197, 71, 0.28);
+			transition: width 0.35s ease;
 		}
 
 		/* 语音波形动画 */
@@ -203,6 +246,13 @@
 			display: inline-block;
 			width: 100%;
 		}
+
+		/* 任务中心下拉动画类 */
+		.dropdown-open {
+			opacity: 1 !important;
+			transform: scale(1) translateY(0) !important;
+			pointer-events: auto !important;
+		}
 	</style>
 </head>
 
@@ -227,11 +277,63 @@
 			</div>
 			<span class="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block">XiaoMai</span>
 		</a>
-		<button id="themeToggle"
-			class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark fade-transition">
-			<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
-			<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
-		</button>
+
+		<div class="flex items-center gap-3">
+			<!-- 【新设计】微交互：任务中心 Dropdown -->
+			<div class="relative" id="taskCenterWrapper">
+				<button id="taskCenterBtn" onclick="toggleTaskDropdown(event)"
+					class="relative p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark fade-transition flex items-center justify-center bg-surface-light dark:bg-surface-dark shadow-sm">
+					<i data-lucide="bell" class="w-4 h-4"></i>
+
+					<!-- 呼吸灯红点 (修复显示不明显的问题，采用绝对定位和 hidden 切换) -->
+					<span id="taskBadge" class="absolute top-0 right-0 flex h-3 w-3 -mt-0.5 -mr-0.5 hidden z-10">
+						<span
+							class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+						<span
+							class="relative inline-flex rounded-full h-3 w-3 bg-error border-[2px] border-surface-light dark:border-surface-dark"></span>
+					</span>
+				</button>
+
+				<!-- 悬浮弹窗 (Task Dropdown) -->
+				<div id="taskDropdown"
+					class="absolute right-0 top-full mt-3 w-[320px] sm:w-[380px] bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-3xl shadow-xl transform scale-95 -translate-y-2 opacity-0 pointer-events-none transition-all duration-300 origin-top-right z-50 overflow-hidden flex flex-col">
+					<!-- Dropdown Header -->
+					<div
+						class="px-5 py-3.5 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/40 dark:bg-[#1a1614]/40 flex justify-between items-center shrink-0 z-10 relative">
+						<div class="flex items-center gap-2 text-text-primary dark:text-text-primary-dark">
+							<i data-lucide="list-video" class="w-4 h-4 text-brand-dark dark:text-brand"></i>
+							<span class="text-[14px] font-black tracking-tight">进行中的任务</span>
+						</div>
+						<span id="taskCountText"
+							class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark bg-surface-light dark:bg-surface-dark px-2 py-0.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">0
+							项</span>
+					</div>
+
+					<!-- Dropdown List -->
+					<div id="taskDropdownList"
+						class="max-h-[50vh] overflow-y-auto chat-scroll flex flex-col p-2 space-y-0">
+						<!-- JS 动态渲染区 -->
+					</div>
+
+					<!-- Dropdown Footer (当任务过多时显示) -->
+					<div id="taskDropdownFooter"
+						class="px-5 py-3 border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/20 dark:bg-[#1a1614]/20 hidden justify-center shrink-0 z-10 relative">
+						<button
+							class="text-[12px] font-bold text-text-secondary hover:text-brand-dark dark:hover:text-brand transition-colors w-full flex items-center justify-center gap-1.5">
+							<span id="viewAllTasksText">查看全部任务</span>
+							<i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- 主题切换 -->
+			<button id="themeToggle"
+				class="p-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:bg-surface-light dark:hover:bg-surface-dark fade-transition flex items-center justify-center bg-surface-light dark:bg-surface-dark shadow-sm">
+				<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+				<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+			</button>
+		</div>
 	</header>
 
 	<main
@@ -253,7 +355,7 @@
 		<!-- ================= 核心输入结构 ================= -->
 		<div class="w-full max-w-[800px] flex flex-col card-enter" style="animation-delay: 0.1s;">
 
-			<!-- 异形耳朵 (天然 Flex 布局，精确对齐卡片内部 p-6 的 24px 左边距) -->
+			<!-- 异形耳朵 -->
 			<div class="flex ml-6 w-full relative z-30">
 				<button onclick="openParamModal()"
 					class="group flex items-center gap-2 px-5 pt-3 pb-2.5 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark border-b-0 rounded-t-2xl fade-transition -mb-[1px]">
@@ -334,11 +436,9 @@
 									class="text-[11px] md:text-[12px] font-bold text-brand-dark ml-1 whitespace-nowrap">聆听中...</span>
 							</div>
 						</button>
-
-						<!-- 去除了原本底部多余的预设按钮、高级参数按钮及其弹出的菜单，全部收归至顶部异形标签 -->
 					</div>
 
-					<!-- 生成视频大按钮：缩减体积，修改为精致的胶囊型，替换 Icon 为单纯的向右箭头 -->
+					<!-- 生成视频大按钮 -->
 					<button
 						class="flex items-center gap-2 px-5 h-9 rounded-full bg-text-primary dark:bg-text-primary-dark text-bg-light dark:text-bg-dark font-bold shadow-[0_4px_12px_rgba(59,23,1,0.15)] fade-transition hover:scale-105 active:scale-95 text-[13px] shrink-0">
 						<span>生成视频</span>
@@ -349,7 +449,7 @@
 		</div>
 
 		<!-- 灵感快捷指令 -->
-		<div class="flex flex-wrap justify-center items-center gap-3 mt-8 card-enter" style="animation-delay: 0.2s;">
+		<div class="flex flex-wrap justify-center items-center gap-3 mt-8 card-enter" style="animation-delay: 0.16s;">
 			<span
 				class="text-[11px] font-black uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mr-1">Try
 				These</span>
@@ -402,9 +502,7 @@
 							onclick="applyPresetToModal(this, '电影级', 5, 10, '4K')">电影级</button>
 					</div>
 				</div>
-
 				<div class="w-full h-px bg-bordercolor-light/50 dark:bg-bordercolor-dark/50"></div>
-
 				<!-- 手动参数区域 -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="flex flex-col gap-1.5">
@@ -450,7 +548,7 @@
 	</div>
 
 	<!-- 瀑布流社区案例 -->
-	<section class="w-full max-w-6xl mx-auto px-6 pb-24 relative z-10 card-enter" style="animation-delay: 0.3s;">
+	<section class="w-full max-w-6xl mx-auto px-6 pb-24 relative z-10 card-enter" style="animation-delay: 0.25s;">
 		<div
 			class="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-bordercolor-light dark:border-bordercolor-dark pb-4">
 			<div>
@@ -489,9 +587,8 @@
 
 		function toggleVoice() {
 			isRecording = !isRecording;
-			// 响应式判断宽度
 			const isMobile = window.innerWidth < 640;
-			const expandedWidth = isMobile ? 'w-24' : 'w-[104px]'; // 展开时稍微长一点点给文字留空间
+			const expandedWidth = isMobile ? 'w-24' : 'w-[104px]';
 			const baseWidth = isMobile ? 'w-9' : 'w-10';
 
 			if (isRecording) {
@@ -519,9 +616,7 @@
 			}
 		}
 
-		// 移除了多余的浮层预设 (Preset Panel) 相关逻辑
-
-		// ================= 弹窗：一体化参数 Modal (果冻展开) =================
+		// ================= 弹窗：一体化参数 Modal =================
 		const paramModal = document.getElementById('paramModal');
 		const paramModalContent = document.getElementById('paramModalContent');
 		let currentModalQuality = '1080P';
@@ -529,7 +624,6 @@
 
 		function openParamModal() {
 			paramModal.classList.remove('opacity-0', 'pointer-events-none');
-			// 给弹窗内容应用优雅的恢复缩放
 			paramModalContent.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
 			paramModalContent.classList.remove('scale-95', 'translate-y-4');
 		}
@@ -544,35 +638,23 @@
 			if (e.target === paramModal) closeParamModal();
 		});
 
-		// 联动更新数值
 		function applyPresetToModal(btn, name, time, section, quality) {
 			currentPresetName = name;
 			document.getElementById('modalTime').value = time;
 			document.getElementById('modalSection').value = section;
-
-			// 切换预设按钮样式
 			const siblings = btn.parentElement.querySelectorAll('button');
-			siblings.forEach(b => {
-				b.className = 'py-2 rounded-lg text-[12px] font-bold text-text-secondary hover:text-text-primary fade-transition';
-			});
+			siblings.forEach(b => b.className = 'py-2 rounded-lg text-[12px] font-bold text-text-secondary hover:text-text-primary fade-transition');
 			btn.className = 'py-2 rounded-lg bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark shadow-sm border border-bordercolor-light/50 dark:border-bordercolor-dark/50';
 
-			// 联动切换质量按钮样式
 			const qualityContainer = document.querySelectorAll('.col-span-2 .flex.gap-2 button');
-			qualityContainer.forEach(b => {
-				if (b.innerText === quality) {
-					selectModalQuality(b, quality);
-				}
-			});
+			qualityContainer.forEach(b => { if (b.innerText === quality) selectModalQuality(b, quality); });
 		}
 
 		function selectModalQuality(btn, quality) {
 			currentModalQuality = quality;
-			currentPresetName = '自定义'; // 一旦手动改了质量，预设名变为自定义
+			currentPresetName = '自定义';
 			const siblings = btn.parentElement.querySelectorAll('button');
-			siblings.forEach(b => {
-				b.className = 'flex-1 py-1.5 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-[12px] font-bold text-text-secondary hover:text-text-primary fade-transition';
-			});
+			siblings.forEach(b => b.className = 'flex-1 py-1.5 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-[12px] font-bold text-text-secondary hover:text-text-primary fade-transition');
 			btn.className = 'flex-1 py-1.5 rounded-lg border border-brand/50 bg-brand/10 text-[12px] font-bold text-text-primary dark:text-text-primary-dark shadow-sm';
 		}
 
@@ -596,6 +678,152 @@
 			mainInput.parentElement.classList.add('bg-brand/5');
 			setTimeout(() => { mainInput.parentElement.classList.remove('bg-brand/5'); }, 300);
 		}
+
+		// ================= [新] 下拉悬浮任务中心 =================
+		const TASK_QUEUE_STORAGE_KEY = 'xm-video-task-demo-v1';
+		const taskDropdownList = document.getElementById('taskDropdownList');
+		const taskBadge = document.getElementById('taskBadge');
+		const taskCountText = document.getElementById('taskCountText');
+		const taskDropdown = document.getElementById('taskDropdown');
+		const taskCenterBtn = document.getElementById('taskCenterBtn');
+		const taskDropdownFooter = document.getElementById('taskDropdownFooter');
+		let isDropdownOpen = false;
+
+		// 模拟直接生成 30 个任务，用于测试海量任务的滚动效果
+		const DEFAULT_TASK_QUEUE = Array.from({ length: 30 }).map((_, i) => ({
+			id: `V-2026-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+			title: i === 0 ? '第二次工业革命的标志性发明与影响' : i === 1 ? '量子纠缠为什么看起来像“超距作用”？' : `批量生成的测试视频任务 ${i + 1}`,
+			status: i % 3 === 0 ? '处理中' : '渲染中',
+			stage: i % 3 === 0 ? `当前执行：第 ${i % 5 + 1} / 10 段 · 画面合成中` : '正在等待 GPU 分配计算槽位',
+			progress: Math.floor(Math.random() * 80) + 10,
+			eta: `剩余 ${Math.floor(Math.random() * 10) + 1} 分钟`,
+		}));
+
+		function loadTaskQueue() {
+			try {
+				const raw = window.sessionStorage.getItem(TASK_QUEUE_STORAGE_KEY);
+				if (!raw) {
+					window.sessionStorage.setItem(TASK_QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_TASK_QUEUE));
+					return [...DEFAULT_TASK_QUEUE];
+				}
+				const parsed = JSON.parse(raw);
+				return Array.isArray(parsed) ? parsed : [...DEFAULT_TASK_QUEUE];
+			} catch {
+				return [...DEFAULT_TASK_QUEUE];
+			}
+		}
+
+		function saveTaskQueue(tasks) {
+			try { window.sessionStorage.setItem(TASK_QUEUE_STORAGE_KEY, JSON.stringify(tasks)); } catch { }
+		}
+
+		function renderTaskDropdown() {
+			const tasks = loadTaskQueue();
+
+			// 更新红点和数字
+			taskCountText.innerText = `${tasks.length} 项`;
+			if (tasks.length > 0) {
+				taskBadge.classList.remove('hidden');
+			} else {
+				taskBadge.classList.add('hidden');
+			}
+
+			// 【优化】如果有 30 个任务，最多展示 5 个，避免 DOM 臃肿和下拉框过长
+			const maxDisplay = 5;
+			const displayTasks = tasks.slice(0, maxDisplay);
+
+			// 控制底部的“查看全部”常驻入口是否显示
+			if (tasks.length > maxDisplay) {
+				taskDropdownFooter.classList.remove('hidden');
+				taskDropdownFooter.classList.add('flex');
+				document.getElementById('viewAllTasksText').innerText = `查看全部 ${tasks.length} 个任务`;
+			} else {
+				taskDropdownFooter.classList.add('hidden');
+				taskDropdownFooter.classList.remove('flex');
+			}
+
+			// 渲染列表
+			if (tasks.length === 0) {
+				taskDropdownList.innerHTML = `
+                    <div class="px-4 py-10 text-center text-[12px] font-medium text-text-secondary dark:text-text-secondary-dark flex flex-col items-center gap-3">
+                        <i data-lucide="check-circle" class="w-8 h-8 opacity-20"></i>
+                        <span>暂无进行中的任务</span>
+                    </div>`;
+			} else {
+				taskDropdownList.innerHTML = displayTasks.map((task) => `
+                    <div class="task-queue-item p-3 mx-1 my-1 rounded-2xl border border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/20 dark:bg-[#1a1614]/50 hover:bg-secondary/60 dark:hover:bg-[#1a1614] transition-colors shadow-sm group" data-task-id="${task.id}">
+                        <div class="flex justify-between items-start mb-2 gap-2">
+                            <h4 class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark line-clamp-1 flex-1 leading-tight">${task.title}</h4>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${task.status === '排队中' ? 'bg-secondary dark:bg-[#1a1614] text-text-secondary border border-bordercolor-light' : 'bg-brand/15 text-brand-dark dark:text-brand border border-brand/20'} shrink-0">${task.status}</span>
+                        </div>
+                        <p class="text-[11px] text-text-secondary dark:text-text-secondary-dark mb-2.5 truncate font-medium">${task.stage}</p>
+                        
+                        <div class="space-y-1.5 mb-3">
+                            <div class="flex items-center justify-between text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark">
+                                <span>${task.eta}</span>
+                                <span>${task.progress}%</span>
+                            </div>
+                            <div class="task-queue-progress h-1.5">
+                                <div class="task-queue-progress__bar" style="width:${task.progress}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 pt-2 border-t border-bordercolor-light/30 dark:border-bordercolor-dark/30">
+                            <button onclick="cancelTaskFromWorkspace('${task.id}')" class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-error dark:text-error-dark hover:bg-error/10 transition-colors">取消</button>
+                            <button class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-text-primary dark:text-text-primary-dark bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark shadow-sm hover:border-brand transition-colors mac-jelly">进入工作区</button>
+                        </div>
+                    </div>
+                `).join('');
+			}
+			lucide.createIcons();
+		}
+
+		// Toggle 下拉框
+		function toggleTaskDropdown(event) {
+			event.stopPropagation();
+			isDropdownOpen = !isDropdownOpen;
+			if (isDropdownOpen) {
+				taskDropdown.classList.add('dropdown-open');
+				taskCenterBtn.classList.add('bg-surface-light', 'dark:bg-surface-dark', 'shadow-sm', 'border-brand/30');
+			} else {
+				taskDropdown.classList.remove('dropdown-open');
+				taskCenterBtn.classList.remove('bg-surface-light', 'dark:bg-surface-dark', 'shadow-sm', 'border-brand/30');
+			}
+		}
+
+		// 点击外部关闭下拉框
+		document.addEventListener('click', (event) => {
+			const taskCenterWrapper = document.getElementById('taskCenterWrapper');
+			if (isDropdownOpen && !taskCenterWrapper.contains(event.target)) {
+				isDropdownOpen = false;
+				taskDropdown.classList.remove('dropdown-open');
+				taskCenterBtn.classList.remove('bg-surface-light', 'dark:bg-surface-dark', 'shadow-sm', 'border-brand/30');
+			}
+		});
+
+		// 阻止下拉框内点击事件冒泡到 document
+		taskDropdown.addEventListener('click', (event) => {
+			event.stopPropagation();
+		});
+
+		// 取消任务
+		window.cancelTaskFromWorkspace = function (taskId) {
+			const card = taskDropdownList.querySelector(`[data-task-id="${taskId}"]`);
+			if (card) {
+				// 触发向右滑出并高度折叠的复合动画
+				card.classList.add('is-removing');
+			}
+
+			// 延迟 350ms (严格对应 CSS 中 transition 的 0.35s)
+			window.setTimeout(() => {
+				const tasks = loadTaskQueue().filter((task) => task.id !== taskId);
+				saveTaskQueue(tasks);
+				renderTaskDropdown();
+			}, 350);
+		}
+
+		// 初始化渲染任务中心
+		renderTaskDropdown();
 
 		// ================= 瀑布流渲染 =================
 		const feedContainer = document.getElementById('feedContainer');
