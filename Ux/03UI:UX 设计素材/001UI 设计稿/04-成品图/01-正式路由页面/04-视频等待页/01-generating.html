@@ -245,18 +245,20 @@
 			cursor: not-allowed;
 		}
 
-		.xm-generating-shell__actions {
-			display: flex;
-			align-items: center;
-			gap: 0.75rem;
-		}
+			.xm-generating-shell__actions {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+			}
 
-		.xm-generating-shell__cta,
-		.xm-generating-shell__theme {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			border: 1px solid var(--xm-generating-border);
+			.xm-generating-shell__cta,
+			.xm-generating-shell__secondary,
+			.xm-generating-shell__danger,
+			.xm-generating-shell__theme {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				border: 1px solid var(--xm-generating-border);
 			cursor: pointer;
 			transition: all 0.24s ease;
 		}
@@ -267,15 +269,42 @@
 			border-radius: 999px;
 			background: var(--xm-generating-text);
 			color: var(--xm-generating-bg);
-			font-size: 0.8rem;
-			font-weight: 700;
-		}
+				font-size: 0.8rem;
+				font-weight: 700;
+			}
 
-		.xm-generating-shell__theme {
-			width: 2.5rem;
-			height: 2.5rem;
-			border-radius: 999px;
-			background: transparent;
+			.xm-generating-shell__secondary,
+			.xm-generating-shell__danger {
+				padding: 0.8rem 1rem;
+				gap: 0.45rem;
+				border-radius: 999px;
+				font-size: 0.78rem;
+				font-weight: 700;
+				background: rgba(255, 255, 255, 0.52);
+				color: var(--xm-generating-text);
+			}
+
+			.dark .xm-generating-shell__secondary,
+			.dark .xm-generating-shell__danger {
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.xm-generating-shell__danger {
+				color: #b42318;
+				border-color: rgba(248, 40, 52, 0.22);
+				background: rgba(248, 40, 52, 0.08);
+			}
+
+			.dark .xm-generating-shell__danger {
+				color: #ff8b95;
+				background: rgba(248, 40, 52, 0.14);
+			}
+
+			.xm-generating-shell__theme {
+				width: 2.5rem;
+				height: 2.5rem;
+				border-radius: 999px;
+				background: transparent;
 			color: var(--xm-generating-muted);
 		}
 
@@ -441,9 +470,45 @@
 			background: rgba(255, 255, 255, 0.04);
 		}
 
-		.xm-generating-shell__live-pill {
-			width: fit-content;
-		}
+			.xm-generating-shell__live-pill {
+				width: fit-content;
+			}
+
+			.xm-generating-shell__task-note {
+				display: flex;
+				align-items: flex-start;
+				gap: 0.8rem;
+				padding: 0.95rem 1rem;
+				border-radius: 1.1rem;
+				border: 1px solid var(--xm-generating-border);
+				background: rgba(255, 255, 255, 0.5);
+			}
+
+			.dark .xm-generating-shell__task-note {
+				background: rgba(255, 255, 255, 0.04);
+			}
+
+			.xm-generating-shell__task-note-icon {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 2rem;
+				height: 2rem;
+				border-radius: 999px;
+				flex-shrink: 0;
+				background: rgba(245, 197, 71, 0.12);
+				color: var(--xm-color-brand-700);
+			}
+
+			.dark .xm-generating-shell__task-note-icon {
+				color: var(--xm-color-brand-500);
+			}
+
+			.xm-generating-shell__task-note-copy {
+				font-size: 0.78rem;
+				line-height: 1.7;
+				color: var(--xm-generating-muted);
+			}
 
 		/* Log Card */
 		.xm-generating-glass-panel {
@@ -1077,12 +1142,12 @@
 
 		<!-- 顶部导航 -->
 		<header class="xm-generating-shell__header">
-			<button type="button" class="xm-generating-shell__brand">
-				<span class="xm-generating-shell__brand-icon">
-					<i data-lucide="leaf" class="w-5 h-5 text-current"></i>
-				</span>
-				<span>XiaoMai</span>
-			</button>
+				<button type="button" class="xm-generating-shell__brand" onclick="returnToWorkspace()">
+					<span class="xm-generating-shell__brand-icon">
+						<i data-lucide="leaf" class="w-5 h-5 text-current"></i>
+					</span>
+					<span>XiaoMai</span>
+				</button>
 
 			<nav class="xm-generating-shell__nav">
 				<button type="button" class="xm-generating-shell__nav-btn is-active" onclick="switchTab('summary')">1.
@@ -1091,16 +1156,20 @@
 					分段讲解</button>
 				<button type="button" class="xm-generating-shell__nav-btn" onclick="switchTab('renderFlow')">3.
 					分段试看</button>
-			</nav>
+				</nav>
 
-			<div class="xm-generating-shell__actions">
-				<button type="button" class="xm-generating-shell__cta">
-					<i data-lucide="arrow-left" class="w-4 h-4"></i>
-					<span>返回输入页</span>
-				</button>
-				<button type="button" class="xm-generating-shell__theme" id="themeToggle">
-					<i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
-					<i data-lucide="sun-medium" class="w-4 h-4 hidden dark:block"></i>
+				<div class="xm-generating-shell__actions">
+					<button type="button" class="xm-generating-shell__secondary" onclick="returnToWorkspace()">
+						<i data-lucide="panel-left-close" class="w-4 h-4"></i>
+						<span>返回工作区</span>
+					</button>
+					<button type="button" class="xm-generating-shell__danger" onclick="cancelCurrentTask()">
+						<i data-lucide="x-circle" class="w-4 h-4"></i>
+						<span>取消任务</span>
+					</button>
+					<button type="button" class="xm-generating-shell__theme" id="themeToggle">
+						<i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+						<i data-lucide="sun-medium" class="w-4 h-4 hidden dark:block"></i>
 				</button>
 			</div>
 		</header>
@@ -1116,20 +1185,20 @@
 			<section class="xm-generating-shell__aside">
 				<!-- 进度卡片 -->
 				<div class="xm-generating-shell__progress-card">
-					<div class="xm-generating-shell__progress-head">
-						<div class="space-y-2">
-							<div class="xm-generating-shell__status-line">
-								<span class="xm-generating-shell__status-dot"></span>
-								<span id="currentStatusText">正在渲染片段</span>
+						<div class="xm-generating-shell__progress-head">
+							<div class="space-y-2">
+								<div class="xm-generating-shell__status-line">
+									<span class="xm-generating-shell__status-dot"></span>
+									<span id="currentStatusText">正在渲染片段</span>
+								</div>
+								<h1 class="xm-generating-shell__title" id="taskTitleText">第二次工业革命的标志性发明与影响</h1>
+								<p class="xm-generating-shell__subtitle" id="taskSubtitleText">可以先点开已完成的片段，剩余内容会继续逐段推送给你</p>
 							</div>
-							<h1 class="xm-generating-shell__title">第二次工业革命的标志性发明与影响</h1>
-							<p class="xm-generating-shell__subtitle">可以先点开已完成的片段，剩余内容会继续逐段推送给你</p>
+							<div class="space-y-1 text-right">
+								<p class="xm-generating-shell__eta" id="etaText">预计还需要 2 分钟</p>
+								<p class="xm-generating-shell__progress-value"><span id="progressText">68</span>%</p>
+							</div>
 						</div>
-						<div class="space-y-1 text-right">
-							<p class="xm-generating-shell__eta">预计还需要 2 分钟</p>
-							<p class="xm-generating-shell__progress-value"><span id="progressText">68</span>%</p>
-						</div>
-					</div>
 
 					<div class="xm-generating-shell__progress-track">
 						<div class="xm-generating-progress-fill xm-generating-shell__progress-bar" id="progressBar"
@@ -1142,11 +1211,20 @@
 						<span class="xm-generating-shell__tag">预览 v2</span>
 					</div>
 
-					<div class="xm-generating-shell__live-pill">
-						<i data-lucide="sparkles" class="h-4 w-4 text-primary"></i>
-						<span>实时连接</span>
+						<div class="xm-generating-shell__live-pill">
+							<i data-lucide="sparkles" class="h-4 w-4 text-primary"></i>
+							<span>实时连接</span>
+						</div>
+
+						<div class="xm-generating-shell__task-note">
+							<div class="xm-generating-shell__task-note-icon">
+								<i data-lucide="folder-clock" class="h-4 w-4"></i>
+							</div>
+							<div class="xm-generating-shell__task-note-copy" id="workspaceTaskNote">
+								离开等待页后，当前任务会回到视频工作区的“进行中的视频任务”列表中，你可以稍后继续查看，或直接从那里取消。
+							</div>
+						</div>
 					</div>
-				</div>
 
 				<!-- 日志卡片 -->
 				<div class="xm-generating-glass-panel xm-generating-shell__log-card">
@@ -1396,8 +1474,84 @@
 		</main>
 	</div>
 
-	<script>
-		lucide.createIcons();
+		<script>
+			const TASK_QUEUE_STORAGE_KEY = 'xm-video-task-demo-v1';
+			const DEFAULT_GENERATING_TASKS = [
+				{
+					id: 'video_20260417_a13f',
+					title: '第二次工业革命的标志性发明与影响',
+					statusLine: '正在渲染片段',
+					subtitle: '可以先点开已完成的片段，剩余内容会继续逐段推送给你',
+					progress: 68,
+					eta: '预计还需要 2 分钟',
+				},
+				{
+					id: 'video_20260417_b27k',
+					title: '量子纠缠为什么看起来像“超距作用”？',
+					statusLine: '正在编排分镜',
+					subtitle: '讲解结构和旁白还在拼装中，你现在离开也不会丢失任务状态。',
+					progress: 41,
+					eta: '预计还需要 4 分钟',
+				},
+				{
+					id: 'video_20260417_c91m',
+					title: '二分查找算法为何是 O(log n)',
+					statusLine: '等待资源调度',
+					subtitle: '任务已经入队，系统拿到渲染槽位后会自动继续，不需要你一直停留在等待页。',
+					progress: 12,
+					eta: '预计还需要 6 分钟',
+				}
+			];
+			const generatingParams = new URLSearchParams(window.location.search);
+
+			function loadGeneratingTasks() {
+				try {
+					const raw = window.sessionStorage.getItem(TASK_QUEUE_STORAGE_KEY);
+					if (!raw) {
+						window.sessionStorage.setItem(TASK_QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_GENERATING_TASKS));
+						return [...DEFAULT_GENERATING_TASKS];
+					}
+					const parsed = JSON.parse(raw);
+					return Array.isArray(parsed) ? parsed : [...DEFAULT_GENERATING_TASKS];
+				} catch {
+					return [...DEFAULT_GENERATING_TASKS];
+				}
+			}
+
+			function saveGeneratingTasks(tasks) {
+				try {
+					window.sessionStorage.setItem(TASK_QUEUE_STORAGE_KEY, JSON.stringify(tasks));
+				} catch { }
+			}
+
+			const availableGeneratingTasks = loadGeneratingTasks();
+			const activeGeneratingTask = availableGeneratingTasks.find((task) => task.id === generatingParams.get('taskId')) || availableGeneratingTasks[0] || DEFAULT_GENERATING_TASKS[0];
+
+			function hydrateGeneratingTask(task) {
+				if (!task) return;
+				document.getElementById('currentStatusText').innerText = task.statusLine;
+				document.getElementById('taskTitleText').innerText = task.title;
+				document.getElementById('taskSubtitleText').innerText = task.subtitle;
+				document.getElementById('etaText').innerText = task.eta;
+				document.getElementById('progressText').innerText = task.progress;
+				document.getElementById('progressBar').style.width = `${task.progress}%`;
+				document.getElementById('workspaceTaskNote').innerText = `当前任务 ${task.id} 会在你返回工作区后继续保留在任务列表中，可稍后继续查看或直接取消。`;
+			}
+
+			window.returnToWorkspace = function () {
+				if (!activeGeneratingTask?.id) return;
+				window.location.href = `../03-视频输入页/01-input.html?focusTask=${encodeURIComponent(activeGeneratingTask.id)}&toast=returned`;
+			}
+
+			window.cancelCurrentTask = function () {
+				if (!activeGeneratingTask?.id) return;
+				const nextTasks = loadGeneratingTasks().filter((task) => task.id !== activeGeneratingTask.id);
+				saveGeneratingTasks(nextTasks);
+				window.location.href = `../03-视频输入页/01-input.html?toast=cancelled&taskId=${encodeURIComponent(activeGeneratingTask.id)}`;
+			}
+
+			hydrateGeneratingTask(activeGeneratingTask);
+			lucide.createIcons();
 
 		const themeToggle = document.getElementById('themeToggle');
 		const html = document.documentElement;

@@ -4,65 +4,42 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>小麦 XiaoMai - 视频结果页 (Apple Dock 无界画布版)</title>
+	<title>小麦 XiaoMai - 视频结果页与 Pro 侧边栏融合版</title>
 
 	<!-- 引入 Google Fonts -->
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
 		rel="stylesheet">
 
-	<!-- 引入 Tailwind CSS -->
+	<!-- 引入 Tailwind CSS & Lucide 图标库 -->
 	<script src="https://cdn.tailwindcss.com"></script>
-	<!-- 引入 Lucide 图标库 -->
 	<script src="https://unpkg.com/lucide@latest"></script>
 
-	<!-- XiaoMai Design System V4 Tokens (Strictly Applied) -->
+	<!-- XiaoMai Design System V4 Tokens -->
 	<script>
 		tailwind.config = {
 			darkMode: "class",
 			theme: {
 				extend: {
 					colors: {
-						brand: {
-							DEFAULT: '#f5c547',
-							dark: '#e6b841',
-						},
-						secondary: {
-							DEFAULT: '#f5ede1',
-							dark: '#2a2420',
-						},
+						brand: { DEFAULT: '#f5c547', dark: '#e6b841' },
+						secondary: { DEFAULT: '#f5ede1', dark: '#2a2420' },
 						decorative: '#3b1701',
-						bg: {
-							light: '#f5ede1',
-							dark: '#1a1614', /* 规范色: 暗色背景 */
-						},
-						surface: {
-							light: '#ffffff',
-							dark: '#2a2420', /* 规范色: 暗色表面/卡片 */
-						},
-						text: {
-							primary: '#3b1701',
-							'primary-dark': '#f5ede1',
-							secondary: '#6b4421',
-							'secondary-dark': '#c4b8a8', /* 规范色: 暗色次要文字 */
-						},
-						bordercolor: {
-							light: '#e6dcc8',
-							dark: '#3d3630', /* 规范色: 暗色边框 */
-						},
-						agent: {
-							efficient: '#6D5DF4',
-							humorous: '#FFB020',
-							patient: '#00C48C',
-							serious: '#0091FF',
-						},
+						bg: { light: '#f5ede1', dark: '#1a1614' },
+						surface: { light: '#ffffff', dark: '#2a2420' },
+						text: { primary: '#3b1701', 'primary-dark': '#f5ede1', secondary: '#6b4421', 'secondary-dark': '#c4b8a8' },
+						bordercolor: { light: '#e6dcc8', dark: '#3d3630' },
+						agent: { efficient: '#6D5DF4', humorous: '#FFB020', patient: '#00C48C', serious: '#0091FF' },
 						success: { DEFAULT: '#52c41a', dark: '#51d712' },
 						warning: { DEFAULT: '#ff6700', dark: '#f34700' },
 						error: { DEFAULT: '#f82834', dark: '#bf0004' }
 					},
-					fontFamily: { sans: ['Inter', 'Noto Sans SC', 'sans-serif'] },
+					fontFamily: {
+						sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+						mono: ['Fira Code', 'monospace']
+					},
 					borderRadius: { 'sm': '4px', 'md': '8px', 'lg': '16px', 'xl': '24px', 'full': '9999px' },
 					boxShadow: {
 						'sm': '0 2px 8px #0000001A',
@@ -76,38 +53,39 @@
 	</script>
 
 	<style>
-		/* ================= 基础主题与平滑过渡 ================= */
+		/* ================= 基础主题与全局变量映射 ================= */
+		:root {
+			--xm-bg: #f5ede1;
+			--xm-surface: #ffffff;
+			--xm-text: #3b1701;
+			--xm-text-sec: #6b4421;
+			--xm-border: #e6dcc8;
+			--xm-brand: #f5c547;
+			--xm-code-bg: #f5ede1;
+		}
+
 		html.light {
-			background-color: #f5ede1;
-			color: #3b1701;
+			background-color: var(--xm-bg);
+			color: var(--xm-text);
 		}
 
 		html.dark {
-			background-color: #1a1614;
-			color: #f5ede1;
+			--xm-bg: #1a1614;
+			--xm-surface: #2a2420;
+			--xm-text: #f5ede1;
+			--xm-text-sec: #c4b8a8;
+			--xm-border: #3d3630;
+			--xm-brand: #e6b841;
+			--xm-code-bg: #1a1614;
+			background-color: var(--xm-bg);
+			color: var(--xm-text);
 		}
 
 		body {
 			transition: background-color 0.4s ease, color 0.4s ease;
 		}
 
-		/* ================= 高级背景修饰 ================= */
-		.bg-grid-pattern {
-			background-image:
-				linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
-				linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
-			background-size: 32px 32px;
-			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
-			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
-		}
-
-		html.dark .bg-grid-pattern {
-			background-image:
-				linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
-				linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
-		}
-
-		/* 隐藏滚动条但保留功能 */
+		/* ================= 滚动条与隐藏 ================= */
 		.no-scrollbar::-webkit-scrollbar {
 			display: none;
 		}
@@ -126,26 +104,25 @@
 		}
 
 		.chat-scroll::-webkit-scrollbar-thumb {
-			background: #e6dcc8;
-			border-radius: 4px;
+			background: var(--xm-border);
+			border-radius: 9999px;
 		}
 
-		html.dark .chat-scroll::-webkit-scrollbar-thumb {
-			background: #3d3630;
+		/* ================= 高级背景修饰 (主画布) ================= */
+		.bg-grid-pattern {
+			background-image: linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+			background-size: 32px 32px;
+			mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+			-webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
 		}
 
-		/* 气泡专属倒角 */
-		.bubble-user {
-			border-radius: 20px 20px 4px 20px;
+		html.dark .bg-grid-pattern {
+			background-image: linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
 		}
 
-		.bubble-ai {
-			border-radius: 4px 20px 20px 20px;
-		}
-
-		/* ================= 全局 Mac 果冻动画 (Jelly Animation) ================= */
+		/* ================= Mac 果冻动画 & 抽屉过渡 ================= */
 		.mac-jelly {
-			transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+			transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 		}
 
 		.mac-jelly:hover {
@@ -156,14 +133,11 @@
 			transform: scale(0.95);
 		}
 
-		/* 侧边栏及抽屉的丝滑展开 */
 		.drawer-slide {
-			transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-				width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-				margin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+			transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), border 0.5s;
 		}
 
-		/* 进度条节点果冻弹窗 (调整为向下弹出，避免遮挡标题) */
+		/* ================= 左侧进度条与果冻弹窗 ================= */
 		.marker-tooltip-container {
 			transform-origin: top center;
 			opacity: 0;
@@ -192,91 +166,191 @@
 			box-shadow: 0 0 0 4px rgba(230, 184, 65, 0.25);
 		}
 
-		/* 聊天消息气泡进入动画 */
-		@keyframes messageSlideIn {
-			from {
-				opacity: 0;
-				transform: translateY(12px) scale(0.98);
-			}
-
-			to {
-				opacity: 1;
-				transform: translateY(0) scale(1);
-			}
+		/* ================= 侧栏气泡排版与重塑 (Pro版本) ================= */
+		.bubble-user {
+			background-color: var(--xm-brand);
+			color: #3b1701;
+			border-radius: 16px 16px 4px 16px;
+			box-shadow: 0 2px 8px rgba(245, 197, 71, 0.2);
+			padding: 8px 14px;
 		}
 
-		.msg-enter {
-			animation: messageSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+		.bubble-ai {
+			background-color: var(--xm-surface);
+			color: var(--xm-text);
+			border: 1px solid var(--xm-border);
+			border-radius: 4px 16px 16px 16px;
+			box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+			padding: 12px 16px;
+			width: 100%;
 		}
 
-		/* 白板展开动画 */
-		@keyframes whiteboardReveal {
-			from {
-				opacity: 0;
-				max-height: 0;
-				transform: translateY(-10px);
-				margin-top: 0;
-				border-width: 0;
-			}
-
-			to {
-				opacity: 1;
-				max-height: 300px;
-				transform: translateY(0);
-				margin-top: 1rem;
-				border-width: 1px;
-			}
+		/* 优雅 Markdown 排版 */
+		.xm-markdown p {
+			margin-bottom: 0.6rem;
+			line-height: 1.6;
 		}
 
-		.whiteboard-reveal {
-			animation: whiteboardReveal 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-			overflow: hidden;
+		.xm-markdown p:last-child {
+			margin-bottom: 0;
 		}
 
-		/* AI 打字机 Loading */
-		.typing-dot {
-			width: 5px;
-			height: 5px;
-			border-radius: 50%;
-			background-color: currentColor;
-			animation: typingBounce 1.4s infinite ease-in-out both;
+		.xm-markdown strong {
+			font-weight: 600;
+			color: var(--xm-text);
 		}
 
-		.typing-dot:nth-child(1) {
-			animation-delay: -0.32s;
+		.xm-markdown blockquote {
+			margin: 0.4rem 0 0.4rem 0;
+			padding: 6px 12px;
+			border-left: 3px solid var(--xm-brand);
+			color: var(--xm-text-sec);
+			font-size: 0.95em;
+			border-radius: 0 6px 6px 0;
+			background: linear-gradient(90deg, rgba(245, 197, 71, 0.08) 0%, transparent 100%);
 		}
 
-		.typing-dot:nth-child(2) {
-			animation-delay: -0.16s;
+		.xm-markdown code:not(pre code) {
+			font-family: 'Fira Code', monospace;
+			color: var(--xm-text);
+			background-color: rgba(107, 68, 33, 0.06);
+			padding: 0.1rem 0.3rem;
+			border-radius: 4px;
+			font-size: 0.85em;
 		}
 
-		@keyframes typingBounce {
-
-			0%,
-			80%,
-			100% {
-				transform: scale(0);
-				opacity: 0.3;
-			}
-
-			40% {
-				transform: scale(1);
-				opacity: 1;
-			}
+		html.dark .xm-markdown code:not(pre code) {
+			background-color: rgba(245, 237, 225, 0.08);
 		}
 
-		/* 白板内部网格 */
-		.blueprint-grid {
-			background-image:
-				linear-gradient(to right, rgba(0, 145, 255, 0.1) 1px, transparent 1px),
-				linear-gradient(to bottom, rgba(0, 145, 255, 0.1) 1px, transparent 1px);
+		.xm-markdown pre {
+			background-color: var(--xm-code-bg);
+			border: 1px solid var(--xm-border);
+			border-radius: 8px;
+			padding: 10px 12px;
+			margin: 0.6rem 0;
+			overflow-x: auto;
+		}
+
+		.xm-markdown pre code {
+			font-family: 'Fira Code', monospace;
+			font-size: 0.85em;
+			color: var(--xm-text);
+		}
+
+		.xm-math-block {
+			display: block;
+			text-align: center;
+			padding: 0.5rem 0;
+			font-family: 'Times New Roman', serif;
+			font-size: 1.1em;
+			overflow-x: auto;
+		}
+
+		/* ================= Openmaic 动态画板 ================= */
+		.bg-blueprint {
+			background-color: var(--xm-surface);
 			background-size: 20px 20px;
+			background-image: linear-gradient(rgba(245, 197, 71, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(245, 197, 71, 0.15) 1px, transparent 1px);
 		}
 
-		html.dark .blueprint-grid {
-			background-image:
-				linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-				linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+		html.dark .bg-blueprint {
+			background-image: linear-gradient(rgba(230, 184, 65, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(230, 184, 65, 0.1) 1px, transparent 1px);
+		}
+
+		.math-anim-text {
+			display: inline-block;
+			opacity: 0;
+			transform: translateY(10px);
+			animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+		}
+
+		.math-anim-arrow {
+			display: inline-block;
+			width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			animation: stretchArrow 1s ease forwards;
+			animation-delay: 0.8s;
+			color: var(--xm-brand);
+			font-weight: bold;
+		}
+
+		/* ================= 动画特效 ================= */
+		@keyframes slideUpFade {
+			from {
+				opacity: 0;
+				transform: translateY(10px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		.animate-enter {
+			animation: slideUpFade 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+		}
+
+		@keyframes popIn {
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		@keyframes stretchArrow {
+			to {
+				width: 40px;
+			}
+		}
+
+		.skeleton-shimmer {
+			background: linear-gradient(90deg, var(--xm-bg) 0%, var(--xm-border) 50%, var(--xm-bg) 100%);
+			background-size: 200% 100%;
+			animation: shimmer 1.5s infinite linear;
+			border-radius: 4px;
+		}
+
+		@keyframes shimmer {
+			0% {
+				background-position: -200% 0;
+			}
+
+			100% {
+				background-position: 200% 0;
+			}
+		}
+
+		.cursor-blink {
+			display: inline-block;
+			width: 6px;
+			height: 1.1em;
+			background-color: var(--xm-brand);
+			vertical-align: text-bottom;
+			margin-left: 2px;
+			animation: blink 1s step-end infinite;
+			border-radius: 1px;
+		}
+
+		@keyframes blink {
+			50% {
+				opacity: 0;
+			}
+		}
+
+		.action-bar-enter {
+			opacity: 0;
+			transform: translateY(-5px);
+			animation: fadeInDown 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+		}
+
+		@keyframes fadeInDown {
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
 		}
 	</style>
 </head>
@@ -286,7 +360,6 @@
 
 	<!-- ==================== 左侧：无界课件画布 ==================== -->
 	<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden drawer-slide">
-
 		<!-- 全局极简网格与微弱光晕 -->
 		<div class="absolute inset-0 z-0 pointer-events-none">
 			<div class="absolute inset-0 bg-grid-pattern opacity-100"></div>
@@ -299,11 +372,10 @@
 		<header class="h-[72px] flex items-center justify-between px-10 shrink-0 z-20 relative">
 			<div class="flex items-center gap-4">
 				<a href="#"
-					class="text-text-primary dark:text-text-primary-dark hover:text-text-secondary dark:hover:text-text-secondary-dark mac-jelly inline-block">
+					class="text-text-primary dark:text-text-primary-dark hover:text-brand mac-jelly inline-block">
 					<i data-lucide="chevron-left" class="w-6 h-6"></i>
 				</a>
-				<h1 class="font-bold text-[20px] text-text-primary dark:text-text-primary-dark tracking-tight truncate">
-					微积分的积分概念</h1>
+				<h1 class="font-bold text-[20px] tracking-tight truncate">微积分的积分概念</h1>
 			</div>
 
 			<div class="flex items-center gap-3">
@@ -311,32 +383,16 @@
 					class="hidden xl:flex items-center gap-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/40 dark:bg-secondary-dark/60 px-2 py-1.5 shadow-sm">
 					<span
 						class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-light dark:bg-surface-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark">
-						<i data-lucide="shield" class="w-3.5 h-3.5"></i>
-						当前私有
+						<i data-lucide="shield" class="w-3.5 h-3.5"></i> 当前私有
 					</span>
 					<button
-						class="px-3 py-1.5 rounded-full bg-text-primary dark:bg-text-primary-dark text-[12px] font-bold text-surface-light dark:text-bg-dark hover:opacity-90 mac-jelly">
-						公开发布
-					</button>
+						class="px-3 py-1.5 rounded-full bg-text-primary dark:bg-text-primary-dark text-[12px] font-bold text-surface-light dark:text-bg-dark hover:opacity-90 mac-jelly">公开发布</button>
 					<button
-						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-bordercolor-dark mac-jelly">
-						复用题目
-					</button>
+						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-bordercolor-dark mac-jelly">复用题目</button>
 				</div>
-				<button
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
-					title="设置">
-					<i data-lucide="settings" class="w-5 h-5"></i>
-				</button>
-				<button id="themeToggle"
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
-					title="切换亮暗色">
-					<i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
-					<i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
-				</button>
 				<!-- 侧边栏收展开关 -->
 				<button onclick="toggleSidebar()"
-					class="text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"
+					class="text-text-secondary dark:text-text-secondary-dark hover:text-brand mac-jelly ml-2"
 					title="展开/收起助手">
 					<i data-lucide="panel-right-close" class="w-5 h-5 sidebar-icon-close"></i>
 					<i data-lucide="panel-right-open" class="w-5 h-5 sidebar-icon-open hidden"></i>
@@ -344,12 +400,10 @@
 			</div>
 		</header>
 
-		<!-- ==================== 进度条区域 (包含向下展示的果冻弹窗) ==================== -->
+		<!-- 进度条区域 (包含向下展示的果冻弹窗) -->
 		<div class="w-full px-10 z-40 relative -mt-1 mb-2">
 			<div
 				class="h-[4px] w-full bg-bordercolor-light dark:bg-bordercolor-dark rounded-full relative cursor-pointer group/bar">
-
-				<!-- 已播放进度条 -->
 				<div
 					class="absolute inset-y-0 left-0 bg-brand w-[45%] rounded-full relative transition-all duration-200">
 					<div
@@ -357,27 +411,23 @@
 					</div>
 				</div>
 
-				<!-- 节点 1：前置概念 -->
+				<!-- 节点 1 -->
 				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 15%;">
 					<div
 						class="w-2.5 h-2.5 bg-surface-light dark:bg-surface-dark border-2 border-brand rounded-full marker-dot">
 					</div>
-					<!-- 向下的果冻弹窗 (更优雅的毛玻璃气泡) -->
 					<div class="marker-tooltip-container absolute top-full left-1/2 pt-4 w-64 z-50 pointer-events-none">
 						<div
 							class="bg-surface-light/85 dark:bg-surface-dark/85 backdrop-blur-2xl border border-white/60 dark:border-white/5 rounded-2xl p-4 shadow-[0_16px_40px_-8px_rgba(0,0,0,0.15)] relative">
-							<!-- 优雅圆润小箭头 -->
 							<div
 								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
 							</div>
-
 							<div class="flex items-center gap-2 mb-2 relative z-10">
 								<div
 									class="w-6 h-6 rounded-full bg-brand/15 dark:bg-brand/10 flex items-center justify-center shrink-0">
 									<i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i>
 								</div>
-								<span
-									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">极限概念引入</span>
+								<span class="text-[13px] font-bold tracking-wide">极限概念引入</span>
 							</div>
 							<p
 								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
@@ -387,8 +437,7 @@
 						</div>
 					</div>
 				</div>
-
-				<!-- 节点 2：核心定义 -->
+				<!-- 节点 2 -->
 				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 45%;">
 					<div
 						class="w-2.5 h-2.5 bg-brand border-2 border-surface-light dark:border-surface-dark rounded-full marker-dot shadow-[0_0_0_1px_#f5c547]">
@@ -399,14 +448,12 @@
 							<div
 								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
 							</div>
-
 							<div class="flex items-center gap-2 mb-2 relative z-10">
 								<div
 									class="w-6 h-6 rounded-full bg-brand/15 dark:bg-brand/10 flex items-center justify-center shrink-0">
 									<i data-lucide="target" class="w-3.5 h-3.5 text-brand-dark dark:text-brand"></i>
 								</div>
-								<span
-									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">黎曼和定义</span>
+								<span class="text-[13px] font-bold tracking-wide">黎曼和定义</span>
 							</div>
 							<p
 								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
@@ -416,8 +463,7 @@
 						</div>
 					</div>
 				</div>
-
-				<!-- 节点 3：延伸考点 -->
+				<!-- 节点 3 -->
 				<div class="absolute top-1/2 -translate-y-1/2 z-40 marker-group" style="left: 82%;">
 					<div
 						class="w-2.5 h-2.5 bg-surface-light dark:bg-surface-dark border-2 border-bordercolor-light dark:border-bordercolor-dark rounded-full marker-dot">
@@ -428,15 +474,13 @@
 							<div
 								class="absolute -top-[6px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-surface-light/85 dark:bg-surface-dark/85 border-l border-t border-white/60 dark:border-white/5 rotate-45 rounded-tl-[3px]">
 							</div>
-
 							<div class="flex items-center gap-2 mb-2 relative z-10">
 								<div
 									class="w-6 h-6 rounded-full bg-secondary/80 dark:bg-secondary-dark/80 border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0">
 									<i data-lucide="book-open"
 										class="w-3.5 h-3.5 text-text-secondary dark:text-text-secondary-dark"></i>
 								</div>
-								<span
-									class="text-[13px] font-bold text-text-primary dark:text-text-primary-dark tracking-wide">微积分基本定理</span>
+								<span class="text-[13px] font-bold tracking-wide">微积分基本定理</span>
 							</div>
 							<p
 								class="text-[12px] text-text-secondary dark:text-text-secondary-dark leading-relaxed relative z-10">
@@ -446,7 +490,6 @@
 						</div>
 					</div>
 				</div>
-
 			</div>
 		</div>
 
@@ -472,31 +515,24 @@
 				</div>
 				<div class="flex flex-wrap items-center gap-2 lg:justify-end">
 					<button
-						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-secondary-dark mac-jelly">
-						复制公开链接
-					</button>
+						class="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold hover:bg-secondary dark:hover:bg-secondary-dark mac-jelly">复制公开链接</button>
 					<button
-						class="px-3 py-1.5 rounded-full border border-error/20 dark:border-error-dark/30 bg-error/5 dark:bg-error-dark/10 text-[12px] font-bold text-error dark:text-error-dark hover:bg-error hover:text-white dark:hover:bg-error-dark dark:hover:text-white mac-jelly">
-						取消公开
-					</button>
+						class="px-3 py-1.5 rounded-full border border-error/20 dark:border-error-dark/30 bg-error/5 dark:bg-error-dark/10 text-[12px] font-bold text-error dark:text-error-dark hover:bg-error hover:text-white dark:hover:bg-error-dark dark:hover:text-white mac-jelly">取消公开</button>
 				</div>
 			</div>
 		</div>
 
 		<!-- 画布核心内容 -->
 		<div class="flex-1 relative flex flex-col items-center justify-center p-6 z-10 w-full h-full">
-
 			<div class="absolute top-6 left-12 flex items-center">
 				<div
 					class="px-6 py-3 rounded-lg border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/80 dark:bg-secondary-dark/80 text-[15px] font-medium shadow-sm backdrop-blur-sm">
 					积分的核心概念：累加和极限
 				</div>
 			</div>
-
 			<!-- 中心板书区域 -->
 			<div class="max-w-[600px] w-full transform -translate-y-12 flex flex-col items-center pb-12">
 				<h2 class="text-[24px] font-medium mb-6 tracking-wide">理解积分：累积与面积</h2>
-
 				<div
 					class="w-full max-w-sm bg-secondary/70 dark:bg-secondary-dark/70 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 mb-8 text-center flex flex-col items-center justify-center shadow-sm backdrop-blur-sm mac-jelly">
 					<div class="flex items-center gap-1.5 text-[14px] text-brand dark:text-brand mb-1.5">
@@ -504,26 +540,22 @@
 					</div>
 					<div class="text-[13px] text-text-secondary dark:text-text-secondary-dark">积分是“求和”过程的数学形式</div>
 				</div>
-
 				<div class="w-full max-w-sm text-left">
 					<p class="text-[13px] text-text-secondary dark:text-text-secondary-dark mb-3">积分的作用：</p>
 					<ul class="space-y-3 text-[13px]">
-						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
-							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
-							<span>计算曲线下方区域的面积</span>
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;"><i
+								data-lucide="star"
+								class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i><span>计算曲线下方区域的面积</span></li>
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;"><i
+								data-lucide="star"
+								class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i><span>累加一个函数在区间内的总量</span>
 						</li>
-						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
-							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
-							<span>累加一个函数在区间内的总量</span>
-						</li>
-						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;">
-							<i data-lucide="star" class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i>
-							<span>微分的反向运算（逆导数）</span>
-						</li>
+						<li class="flex items-start gap-2.5 mac-jelly" style="transform-origin: left center;"><i
+								data-lucide="star"
+								class="w-4 h-4 text-brand fill-brand shrink-0 mt-0.5"></i><span>微分的反向运算（逆导数）</span></li>
 					</ul>
 				</div>
 			</div>
-
 			<div
 				class="absolute bottom-[110px] left-1/2 -translate-x-1/2 bg-text-primary/85 dark:bg-surface-dark/95 backdrop-blur-md text-surface-light dark:text-text-primary-dark px-6 py-2.5 rounded-lg text-[15px] tracking-wide font-medium max-w-[90%] md:max-w-3xl text-center shadow-md z-20 pointer-events-none border border-transparent dark:border-bordercolor-dark">
 				积分可以看作是无限小部分的累加，解决我们无法用简单几何公式计算的问题。
@@ -541,105 +573,121 @@
 				<div
 					class="flex items-center gap-1 px-3 border-l border-bordercolor-light/60 dark:border-bordercolor-dark ml-2">
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark font-bold text-[14px] mac-jelly">
-						1x
-					</button>
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark font-bold text-[14px] mac-jelly">1x</button>
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark relative group mac-jelly">
-						<i data-lucide="volume-2" class="w-4.5 h-4.5"></i>
-					</button>
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark relative group mac-jelly"><i
+							data-lucide="volume-2" class="w-4.5 h-4.5"></i></button>
 					<button
-						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly">
-						<i data-lucide="maximize" class="w-4.5 h-4.5"></i>
-					</button>
+						class="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary/80 dark:hover:bg-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark mac-jelly"><i
+							data-lucide="maximize" class="w-4.5 h-4.5"></i></button>
 				</div>
 			</div>
 		</div>
 	</main>
 
-	<!-- ==================== 右侧：Companion 智能侧栏 ==================== -->
+	<!-- ==================== 右侧：Companion 智能侧栏 (集成版) ==================== -->
 	<aside id="companion-sidebar"
-		class="w-[380px] md:w-[420px] shrink-0 border-l border-bordercolor-light dark:border-bordercolor-dark bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-3xl drawer-slide overflow-hidden flex flex-col relative h-full z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.03)] dark:shadow-none">
+		class="w-[380px] md:w-[420px] h-full flex flex-col shrink-0 relative z-30 border-l border-bordercolor-light dark:border-bordercolor-dark bg-bg-light/85 dark:bg-bg-dark/85 backdrop-blur-3xl drawer-slide shadow-[-10px_0_30px_rgba(0,0,0,0.03)] dark:shadow-none">
 
 		<div class="w-[380px] md:w-[420px] h-full flex flex-col shrink-0 relative">
-
-			<div
-				class="px-5 py-4 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 flex justify-between items-center bg-transparent shrink-0">
+			<!-- Header -->
+			<header
+				class="px-5 py-3.5 flex justify-between items-center shrink-0 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50">
 				<div class="flex items-center gap-2.5">
 					<div
-						class="w-8 h-8 rounded-full bg-secondary dark:bg-secondary-dark flex items-center justify-center">
-						<i data-lucide="bot" class="w-4 h-4 text-text-primary dark:text-text-primary-dark"></i>
+						class="w-7 h-7 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm">
+						<i data-lucide="bot" class="w-4 h-4 text-brand-dark dark:text-brand"></i>
 					</div>
 					<div class="flex flex-col">
-						<span class="font-extrabold text-[15px] leading-tight">Companion 会话</span>
 						<span
-							class="text-[10px] font-medium text-text-secondary dark:text-text-secondary-dark">随课智能答疑</span>
+							class="font-bold text-[15px] text-text-primary dark:text-text-primary-dark leading-tight">XiaoMai
+							AI</span>
+						<span
+							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark">随课智能答疑与画板</span>
 					</div>
 				</div>
 
-				<div class="flex items-center space-x-1">
-					<button onclick="toggleEvidenceDrawer()"
-						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-secondary-dark hover:text-text-primary mac-jelly"
-						title="查看依据">
-						<i data-lucide="paperclip" class="w-4 h-4"></i>
+				<div class="flex items-center gap-1">
+					<button id="themeToggleBtn"
+						class="w-8 h-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-text-secondary dark:text-text-secondary-dark mac-jelly transition-colors"
+						title="切换主题">
+						<i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+						<i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
 					</button>
-					<button onclick="toggleHistory()"
-						class="p-2 rounded-lg text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-secondary-dark hover:text-text-primary mac-jelly"
-						title="历史记录">
-						<i data-lucide="clock" class="w-4 h-4"></i>
-					</button>
-				</div>
-			</div>
 
+					<!-- 拓展的“更多”悬浮菜单 (融合旧抽屉触发逻辑) -->
+					<div class="relative group">
+						<button
+							class="w-8 h-8 rounded-full hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center text-text-secondary dark:text-text-secondary-dark mac-jelly transition-colors">
+							<i data-lucide="more-horizontal" class="w-5 h-5"></i>
+						</button>
+						<div
+							class="absolute right-0 top-full mt-1 w-44 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-1.5 flex flex-col origin-top-right scale-95 group-hover:scale-100">
+							<!-- 触发原有的证据抽屉 -->
+							<button onclick="toggleEvidenceDrawer()"
+								class="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-text-primary dark:text-text-primary-dark hover:bg-black/5 dark:hover:bg-white/5 w-full text-left">
+								<i data-lucide="paperclip" class="w-4 h-4 opacity-70"></i> 依据与来源
+							</button>
+							<!-- 触发原有的历史抽屉 -->
+							<button onclick="toggleHistory()"
+								class="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-text-primary dark:text-text-primary-dark hover:bg-black/5 dark:hover:bg-white/5 w-full text-left">
+								<i data-lucide="clock" class="w-4 h-4 opacity-70"></i> 历史问答记录
+							</button>
+							<button
+								class="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-text-primary dark:text-text-primary-dark hover:bg-black/5 dark:hover:bg-white/5 w-full text-left">
+								<i data-lucide="download" class="w-4 h-4 opacity-70"></i> 导出完整板书
+							</button>
+							<div class="h-px bg-bordercolor-light/50 dark:bg-bordercolor-dark/50 my-1 mx-2"></div>
+							<button
+								class="flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium text-error dark:text-error-dark hover:bg-error/10 dark:hover:bg-error-dark/10 w-full text-left">
+								<i data-lucide="trash-2" class="w-4 h-4 opacity-70"></i> 清空历史对话
+							</button>
+						</div>
+					</div>
+				</div>
+			</header>
+
+			<!-- 关联锚点栏 -->
 			<div
 				class="bg-secondary/40 dark:bg-secondary-dark/40 px-4 py-2 text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark flex items-center gap-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 shrink-0">
 				<i data-lucide="link" class="w-3.5 h-3.5 shrink-0"></i>
 				<span class="truncate">已关联画面：T=02:15 / Scene-02 / 积分概念</span>
-				<button class="ml-auto opacity-70 hover:opacity-100 hover:text-text-primary mac-jelly"><i
-						data-lucide="x" class="w-3 h-3"></i></button>
+				<button class="ml-auto opacity-70 hover:opacity-100 hover:text-brand mac-jelly"><i data-lucide="x"
+						class="w-3 h-3"></i></button>
 			</div>
 
-			<div class="flex-1 overflow-y-auto chat-scroll p-5 space-y-6 bg-bg-light/50 dark:bg-bg-dark/50"
-				id="chat-container">
-
-				<div class="flex flex-col items-end msg-enter">
-					<div
-						class="bg-secondary dark:bg-secondary-dark text-[14px] px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
-						这块没听懂，积分为什么能等于面积？
-					</div>
+			<!-- 对话流滚动区 -->
+			<div class="flex-1 overflow-y-auto chat-scroll px-4 py-5 space-y-6" id="chat-container">
+				<div class="flex flex-col items-end w-full animate-enter">
+					<div class="text-[14px] bubble-user">这块没听懂，积分为什么能等于面积？</div>
 				</div>
 
-				<div class="flex flex-col items-start w-full msg-enter" style="animation-delay: 0.1s;">
-					<div class="flex items-center gap-2 mb-1.5 ml-1">
+				<div class="flex flex-col items-start w-full animate-enter" style="animation-delay: 0.1s;">
+					<div class="flex items-center gap-2 mb-1 ml-1">
 						<div
-							class="w-5 h-5 rounded-full bg-agent-serious text-surface-light flex items-center justify-center text-[10px] font-bold shadow-sm">
-							严</div>
+							class="w-5 h-5 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm shrink-0">
+							<i data-lucide="sparkles" class="w-3 h-3 text-brand-dark dark:text-brand"></i>
+						</div>
 						<span
-							class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
+							class="text-[11px] font-semibold text-text-secondary dark:text-text-secondary-dark">XiaoMai</span>
 					</div>
 
-					<div
-						class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] px-4 py-3.5 max-w-[90%] leading-relaxed bubble-ai shadow-md">
-						好问题！这正是微积分的魅力。
-						<br><br>
-						你可以把不规则的面积想象成无数个<strong>“极细的矩形”</strong>拼成的：<br>
-						1. 每个矩形的宽度是无限小的 <code
-							class="bg-secondary dark:bg-secondary-dark px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">dx</code>。<br>
-						2. 每个矩形的高度是函数在该点的值 <code
-							class="bg-secondary dark:bg-secondary-dark px-1 py-0.5 rounded text-xs font-mono border border-bordercolor-light dark:border-bordercolor-dark">f(x)</code>。<br>
-						<br>
-						当把所有矩形的面积加起来，取极限，就变成了这条曲线下的精确面积。
+					<div class="text-[14px] max-w-[96%] bubble-ai xm-markdown">
+						<p>好问题！这正是微积分的魅力。</p>
+						<p>你可以把不规则的面积想象成无数个<strong>“极细的矩形”</strong>拼成的：</p>
+						<ul>
+							<li>每个矩形的宽度是无限小的 <code>dx</code>。</li>
+							<li>每个矩形的高度是函数在该点的值 <code>f(x)</code>。</li>
+						</ul>
+						<p>当把所有矩形的面积加起来，取极限，就变成了这条曲线下的精确面积。你可以在底部提问让我进行更详细的动态推演。</p>
 					</div>
 				</div>
-
-				<div id="chat-bottom" class="h-1"></div>
 			</div>
 
 			<!-- 底部输入区 -->
 			<div
-				class="p-4 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 relative z-20 shrink-0">
-
-				<div class="flex space-x-2 mb-3 overflow-x-auto no-scrollbar pb-1">
+				class="p-3 shrink-0 bg-surface-light/60 dark:bg-surface-dark/60 backdrop-blur-xl border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 relative z-20">
+				<div class="flex space-x-2 mb-3 overflow-x-auto no-scrollbar pb-1 px-1">
 					<button
 						class="text-[11px] font-bold bg-secondary/80 dark:bg-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark flex items-center gap-1 mac-jelly"><i
 							data-lucide="help-circle" class="w-3 h-3"></i> 没听懂</button>
@@ -648,31 +696,36 @@
 							data-lucide="alert-circle" class="w-3 h-3"></i> 举个例子</button>
 					<button
 						class="text-[11px] font-bold bg-secondary/80 dark:bg-secondary-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-1.5 rounded-full whitespace-nowrap hover:border-brand text-text-secondary dark:text-text-secondary-dark flex items-center gap-1 mac-jelly"><i
-							data-lucide="rocket" class="w-3 h-3"></i> 考点延伸</button>
+							data-lucide="rocket" class="w-3 h-3"></i> 画板演示</button>
 				</div>
 
 				<div
-					class="bg-secondary/40 dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
+					class="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl focus-within:ring-2 focus-within:ring-brand/40 focus-within:border-brand transition-all relative shadow-sm flex flex-col p-1.5">
 					<textarea id="chat-input"
-						class="w-full resize-none bg-transparent outline-none p-3 text-[14px] placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed"
-						rows="2" placeholder="问问AI，或要求在白板上演示..."></textarea>
-					<div class="flex justify-between items-center px-3 pb-2 pt-1">
+						class="w-full resize-none bg-transparent outline-none px-2 py-1 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed max-h-[120px]"
+						rows="1" placeholder="输入公式问题或要求推演..."></textarea>
+
+					<div class="flex justify-between items-center mt-1 px-2 pb-0.5">
 						<div class="flex items-center space-x-3">
 							<button
-								class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark hover:text-text-primary mac-jelly">清空</button>
+								class="p-1 hover:text-brand hover:bg-brand/10 rounded-md transition-colors text-text-secondary/60 dark:text-text-secondary-dark/60"
+								title="插入图片/截图"><i data-lucide="image" class="w-4 h-4"></i></button>
+							<button
+								class="p-1 hover:text-brand hover:bg-brand/10 rounded-md transition-colors text-text-secondary/60 dark:text-text-secondary-dark/60"
+								title="上传文件"><i data-lucide="paperclip" class="w-4 h-4"></i></button>
 							<div class="w-1 h-1 rounded-full bg-bordercolor-light dark:bg-bordercolor-dark"></div>
 							<span
-								class="text-[11px] font-medium text-text-secondary/50 dark:text-text-secondary-dark/50 font-mono">0
-								/ 300</span>
+								class="text-[11px] font-medium text-text-secondary/50 dark:text-text-secondary-dark/50 font-mono">0/300</span>
 						</div>
 						<button id="send-btn"
-							class="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-bg-dark flex items-center justify-center hover:bg-brand shadow-md mac-jelly">
-							<i data-lucide="arrow-up" class="w-4 h-4"></i>
+							class="w-7 h-7 rounded-full bg-brand hover:bg-brand-dark text-[#3b1701] flex items-center justify-center shadow-sm mac-jelly transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+							<i data-lucide="arrow-up" class="w-4 h-4 stroke-[2.5]"></i>
 						</button>
 					</div>
 				</div>
 			</div>
 
+			<!-- ================= 原有抽屉逻辑 ================= -->
 			<!-- 侧滑抽屉 1: 历史记录 -->
 			<div id="history-panel"
 				class="absolute inset-0 bg-surface-light/98 dark:bg-surface-dark/98 backdrop-blur-2xl transform translate-x-full drawer-slide z-30 flex flex-col">
@@ -725,12 +778,10 @@
 						</div>
 						<div
 							class="text-[11px] font-medium text-text-secondary dark:text-text-secondary-dark mb-2 px-2 py-1 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded inline-block">
-							命中：定积分的概念
-						</div>
+							命中：定积分的概念</div>
 						<p
 							class="text-[13px] opacity-80 leading-relaxed border-l-2 border-bordercolor-light dark:border-bordercolor-dark pl-2 ml-1">
-							曲边梯形的面积，可以通过无限分割、求和、取极限的方法求得。
-						</p>
+							曲边梯形的面积，可以通过无限分割、求和、取极限的方法求得。</p>
 					</div>
 				</div>
 			</div>
@@ -741,18 +792,19 @@
 	<script>
 		lucide.createIcons();
 
-		// 亮暗色切换
-		const themeToggle = document.getElementById('themeToggle');
+		// 亮暗色切换统一逻辑
+		const themeToggles = [document.getElementById('themeToggle'), document.getElementById('themeToggleBtn')];
 		const html = document.documentElement;
 		function applyTheme(theme) {
 			html.classList.toggle('dark', theme === 'dark');
 			html.classList.toggle('light', theme !== 'dark');
 			localStorage.setItem('xiaomai-theme', theme);
 		}
-
 		applyTheme(localStorage.getItem('xiaomai-theme') || 'light');
-		themeToggle.addEventListener('click', () => {
-			applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+		themeToggles.forEach(btn => {
+			if (btn) btn.addEventListener('click', () => {
+				applyTheme(html.classList.contains('dark') ? 'light' : 'dark');
+			});
 		});
 
 		// 侧边栏及抽屉控制
@@ -764,13 +816,13 @@
 			if (sidebar.classList.contains('w-0')) {
 				sidebar.classList.remove('w-0', 'border-l-0');
 				sidebar.classList.add('w-[380px]', 'md:w-[420px]');
-				iconClose.classList.remove('hidden');
-				iconOpen.classList.add('hidden');
+				if (iconClose) iconClose.classList.remove('hidden');
+				if (iconOpen) iconOpen.classList.add('hidden');
 			} else {
 				sidebar.classList.add('w-0', 'border-l-0');
 				sidebar.classList.remove('w-[380px]', 'md:w-[420px]');
-				iconClose.classList.add('hidden');
-				iconOpen.classList.remove('hidden');
+				if (iconClose) iconClose.classList.add('hidden');
+				if (iconOpen) iconOpen.classList.remove('hidden');
 			}
 		}
 
@@ -783,101 +835,141 @@
 			document.getElementById('history-panel').classList.add('translate-x-full');
 		}
 
+		// 自动调整 Textarea 高度
+		const chatInput = document.getElementById('chat-input');
+		chatInput.addEventListener('input', function () {
+			this.style.height = 'auto';
+			this.style.height = (this.scrollHeight < 120 ? this.scrollHeight : 120) + 'px';
+		});
+
+		const sendBtn = document.getElementById('send-btn');
+		const chatContainer = document.getElementById('chat-container');
+
 		function scrollToBottom() {
-			const bottomNode = document.getElementById('chat-bottom');
-			bottomNode.scrollIntoView({ behavior: 'smooth' });
+			chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
 		}
 		window.onload = scrollToBottom;
 
-		// 聊天互动逻辑
-		const chatInput = document.getElementById('chat-input');
-		const sendBtn = document.getElementById('send-btn');
-		const chatBottom = document.getElementById('chat-bottom');
+		// ================= 核心：流式对话与 Openmaic 事件 =================
+		const markdownPart1 = `好的，结合你当前观看的视频时间点（**T=02:15**），我们直接在画板中将公式动态拆解：`;
+		const openmaicCanvasHTML = `
+            <div class="my-3 border border-brand/40 rounded-xl overflow-hidden bg-surface-light dark:bg-[#1f1b18] shadow-[0_4px_20px_rgba(245,197,71,0.08)] relative w-full group">
+                <div class="bg-brand/10 dark:bg-brand/5 px-3 py-2 flex justify-between items-center border-b border-brand/20">
+                    <span class="text-[11px] font-bold text-brand-dark dark:text-brand flex items-center gap-1.5">
+                        <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Openmaic 动态推演引擎
+                    </span>
+                    <span class="text-[10px] font-mono text-text-secondary/70 flex items-center gap-1">
+                        <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span></span>
+                        T=02:15 锚定
+                    </span>
+                </div>
+                <div class="bg-blueprint p-6 flex flex-col items-center justify-center min-h-[140px] relative">
+                    <div class="text-[18px] font-serif tracking-widest text-text-primary dark:text-text-primary-dark font-bold flex items-center">
+                        <span class="math-anim-text" style="animation-delay: 0.2s">∫<sub>a</sub><sup>b</sup> f(x)dx</span>
+                        <span class="math-anim-arrow mx-2 flex items-center justify-center">━━━━▶</span>
+                        <span class="math-anim-text" style="animation-delay: 1.5s">F(b) - F(a)</span>
+                    </div>
+                    <div class="absolute bottom-2 right-2 text-[9px] text-brand/50 font-bold tracking-wider">OPENMAIC ENGINE</div>
+                </div>
+                <button class="absolute top-10 right-2 w-7 h-7 rounded-md bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur shadow border border-bordercolor-light flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity mac-jelly" title="全屏查看画板">
+                    <i data-lucide="maximize" class="w-3.5 h-3.5 text-text-secondary"></i>
+                </button>
+            </div>
+        `;
+		const markdownPart2 = `通过上面的推演可以看出，**积分其实就是原函数在两端点的差值**。
+> 注意：这里的 $F(x)$ 必须是 $f(x)$ 的任意一个原函数。`;
 
-		function handleSend() {
+		async function handleSend() {
 			const text = chatInput.value.trim();
 			if (!text) return;
 
-			const userMsgHTML = `
-                <div class="flex flex-col items-end msg-enter mt-4">
-                    <div class="bg-secondary dark:bg-secondary-dark text-[14px] px-4 py-3 max-w-[85%] leading-relaxed bubble-user shadow-sm">
-                        ${text.replace(/\n/g, '<br>')}
-                    </div>
-                </div>
-            `;
-			chatBottom.insertAdjacentHTML('beforebegin', userMsgHTML);
-			chatInput.value = '';
+			// 1. 用户气泡
+			const userHTML = `
+                <div class="flex flex-col items-end w-full animate-enter">
+                    <div class="text-[14px] bubble-user">${text.replace(/\n/g, '<br>')}</div>
+                </div>`;
+			chatContainer.insertAdjacentHTML('beforeend', userHTML);
+			chatInput.value = ''; chatInput.style.height = 'auto';
 			scrollToBottom();
 
-			const typingId = 'typing-' + Date.now();
-			const typingHTML = `
-                <div id="${typingId}" class="flex flex-col items-start w-full msg-enter mt-4">
-                    <div class="flex items-center gap-2 mb-1.5 ml-1">
-                        <div class="w-5 h-5 rounded-full bg-agent-serious text-surface-light flex items-center justify-center text-[10px] font-bold shadow-sm">严</div>
-                        <span class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
+			// 2. 思考中骨架屏
+			const loadingId = 'loading-' + Date.now();
+			const loadingHTML = `
+                <div id="${loadingId}" class="flex flex-col items-start w-full animate-enter mt-1">
+                    <div class="flex items-center gap-2 mb-1 ml-1">
+                        <div class="w-5 h-5 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm shrink-0"><i data-lucide="sparkles" class="w-3 h-3 text-brand-dark dark:text-brand"></i></div>
+                        <span class="text-[11px] font-semibold text-text-secondary dark:text-text-secondary-dark">XiaoMai</span>
                     </div>
-                    <div class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark px-5 py-4 max-w-[90%] bubble-ai shadow-sm flex items-center gap-1.5 text-agent-serious">
-                        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+                    <div class="bubble-ai flex flex-col gap-2 max-w-[80%]">
+                        <div class="h-3 w-full skeleton-shimmer"></div>
+                        <div class="h-3 w-5/6 skeleton-shimmer"></div>
                     </div>
-                </div>
-            `;
-			chatBottom.insertAdjacentHTML('beforebegin', typingHTML);
+                </div>`;
+			chatContainer.insertAdjacentHTML('beforeend', loadingHTML);
+			lucide.createIcons();
 			scrollToBottom();
 
-			setTimeout(() => {
-				const typingNode = document.getElementById(typingId);
-				if (typingNode) typingNode.remove();
+			await new Promise(r => setTimeout(r, 1000));
+			document.getElementById(loadingId).remove();
 
-				const aiResponseHTML = `
-                    <div class="flex flex-col items-start w-full msg-enter mt-4">
-                        <div class="flex items-center gap-2 mb-1.5 ml-1">
-                            <div class="w-5 h-5 rounded-full bg-agent-serious text-surface-light flex items-center justify-center text-[10px] font-bold shadow-sm">严</div>
-                            <span class="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">严谨教授</span>
-                        </div>
-                        
-                        <div class="bg-surface-light dark:bg-surface-dark border-t-2 border-t-agent-serious border border-bordercolor-light dark:border-bordercolor-dark text-[14px] px-4 py-3.5 max-w-[90%] w-full leading-relaxed bubble-ai shadow-md">
-                            收到你的提问。为了让你更直观地理解，我在白板上为你生成了一段在线推导图谱，请看：
-                            
-                            <div class="whiteboard-reveal border border-bordercolor-light dark:border-bordercolor-dark rounded-xl bg-surface-light dark:bg-bg-dark shadow-inner mt-4">
-                                <div class="px-3 py-2 border-b border-bordercolor-light/50 dark:border-bordercolor-dark/50 bg-secondary/50 dark:bg-secondary-dark/50 flex items-center justify-between">
-                                    <div class="flex items-center gap-1.5">
-                                        <i data-lucide="monitor-play" class="w-3.5 h-3.5 text-agent-serious"></i>
-                                        <span class="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-wider">Live Whiteboard</span>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 bg-surface-light dark:bg-surface-dark px-2 py-0.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark">
-                                        <span class="relative flex h-1.5 w-1.5">
-                                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                                          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
-                                        </span>
-                                        <span class="text-[9px] font-bold text-text-secondary dark:text-text-secondary-dark">Syncing</span>
-                                    </div>
-                                </div>
-                                <div class="p-5 blueprint-grid min-h-[140px] flex flex-col items-center justify-center relative">
-                                    <div class="bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur border border-brand/30 px-4 py-2 rounded-lg shadow-sm text-center animate-pulse">
-                                        <i data-lucide="pen-tool" class="w-5 h-5 text-brand mx-auto mb-1"></i>
-                                        <span class="text-[12px] font-bold font-mono">正在绘制动态解析图...</span>
-                                    </div>
-                                </div>
-                            </div>
+			// 3. 流式输出准备
+			const aiMsgId = 'ai-' + Date.now();
+			const aiHTML = `
+                <div id="${aiMsgId}-wrapper" class="flex flex-col items-start w-full animate-enter mt-1">
+                    <div class="flex items-center gap-2 mb-1 ml-1">
+                        <div class="w-5 h-5 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm shrink-0"><i data-lucide="sparkles" class="w-3 h-3 text-brand-dark dark:text-brand"></i></div>
+                        <span class="text-[11px] font-semibold text-text-secondary dark:text-text-secondary-dark">XiaoMai</span>
+                    </div>
+                    <div class="text-[14px] max-w-[96%] bubble-ai xm-markdown relative group">
+                        <div id="${aiMsgId}-content" class="inline"></div>
+                        <span id="${aiMsgId}-cursor" class="cursor-blink"></span>
+                        <div id="${aiMsgId}-actions" class="hidden mt-3 pt-2.5 border-t border-bordercolor-light/40 dark:border-bordercolor-dark/40 flex items-center gap-4 text-text-secondary dark:text-text-secondary-dark">
+                            <button class="flex items-center gap-1.5 hover:text-brand transition-colors text-[11px] font-medium mac-jelly" title="复制"><i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制</button>
+                            <button class="flex items-center gap-1.5 hover:text-brand transition-colors text-[11px] font-medium mac-jelly" title="重新生成"><i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> 重试</button>
+                            <div class="flex-1"></div>
+                            <button class="flex items-center gap-1.5 hover:text-brand transition-colors text-[11px] font-medium mac-jelly" title="一键插入为笔记"><i data-lucide="book-plus" class="w-3.5 h-3.5"></i> 记笔记</button>
                         </div>
                     </div>
-                `;
-				chatBottom.insertAdjacentHTML('beforebegin', aiResponseHTML);
-				lucide.createIcons();
+                </div>`;
+			chatContainer.insertAdjacentHTML('beforeend', aiHTML);
+			lucide.createIcons();
 
-				setTimeout(scrollToBottom, 100);
-				setTimeout(scrollToBottom, 600);
-			}, 1500);
+			const contentBox = document.getElementById(`${aiMsgId}-content`);
+			const cursor = document.getElementById(`${aiMsgId}-cursor`);
+			const actions = document.getElementById(`${aiMsgId}-actions`);
+
+			// 3.1 文本片段 1
+			let currentHTML = "";
+			const chunks1 = markdownPart1.match(/[^]{1,3}/g) || [];
+			for (let i = 0; i < chunks1.length; i++) {
+				currentHTML += chunks1[i]; contentBox.innerHTML = currentHTML; scrollToBottom();
+				await new Promise(r => setTimeout(r, 15 + Math.random() * 20));
+			}
+
+			// 3.2 插入画板
+			cursor.style.display = 'none';
+			await new Promise(r => setTimeout(r, 300));
+			currentHTML += openmaicCanvasHTML; contentBox.innerHTML = currentHTML; lucide.createIcons(); scrollToBottom();
+			await new Promise(r => setTimeout(r, 1800));
+
+			// 3.3 文本片段 2
+			cursor.style.display = 'inline-block';
+			const chunks2 = markdownPart2.match(/[^]{1,3}/g) || [];
+			for (let i = 0; i < chunks2.length; i++) {
+				currentHTML += chunks2[i]; contentBox.innerHTML = currentHTML; scrollToBottom();
+				await new Promise(r => setTimeout(r, 15 + Math.random() * 20));
+			}
+
+			// 4. 完成
+			cursor.style.display = 'none';
+			actions.classList.remove('hidden'); actions.classList.add('action-bar-enter');
+			scrollToBottom();
 		}
 
 		sendBtn.addEventListener('click', handleSend);
 		chatInput.addEventListener('keydown', (e) => {
-			if (e.key === 'Enter' && !e.shiftKey) {
-				e.preventDefault();
-				handleSend();
-			}
+			if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
 		});
-
 	</script>
 </body>
 
