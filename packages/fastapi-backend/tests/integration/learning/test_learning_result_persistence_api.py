@@ -6,14 +6,13 @@ from fastapi.testclient import TestClient
 
 from app.features.learning.routes import get_learning_service
 from app.features.learning.service import LearningService
-from app.main import create_app
 
-from tests.conftest import build_mock_client_factory, override_auth
+from tests.conftest import build_mock_client_factory
+from tests.helpers.app import create_authed_app
 
 
 def _create_client(handler) -> TestClient:
-    app = create_app()
-    override_auth(app)
+    app = create_authed_app()
     app.dependency_overrides[get_learning_service] = lambda: LearningService(client_factory=build_mock_client_factory(handler))
     return TestClient(app)
 

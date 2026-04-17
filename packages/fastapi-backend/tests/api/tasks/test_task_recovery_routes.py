@@ -6,16 +6,13 @@ from fastapi.testclient import TestClient
 from app.core.security import AccessContext
 from app.core.sse import TaskProgressEvent
 from app.infra.redis_client import RuntimeStore
-from app.main import create_app
 from app.shared.task_framework.status import TaskErrorCode, TaskInternalStatus
 
-from tests.conftest import override_auth
+from tests.helpers.app import create_authed_app
 
 
 def _create_test_app(ctx: AccessContext | None = None):
-    app = create_app()
-    override_auth(app, ctx)
-    return app
+    return create_authed_app(ctx)
 
 
 class FakeStreamingRequest:

@@ -15,6 +15,7 @@
 ### implementation-artifacts/
 
 - [index.md](./implementation-artifacts/index.md) - 实施产物总索引与 Story 执行文档入口
+- [../docs/01开发人员手册/009-里程碑与进度/0030-fastapi-测试体系规范化-20260417.md](../docs/01开发人员手册/009-里程碑与进度/0030-fastapi-测试体系规范化-20260417.md) - FastAPI 后端测试体系规范化收口记录，包含 pytest 契约、CI 对齐与低价值测试清理
 - [4-3-manim-buf-关键词与失败链路收口-20260417.md](./implementation-artifacts/4-3-manim-buf-关键词与失败链路收口-20260417.md) - Story 4.3 收口 `buf` 关键词误用与 render failure 遮蔽问题，明确该类修复必须停留在 prompt/codebook 与失败链路层，不能塞进 `agent.py` 运行时硬改
 - [4-3-manimcat-large-prompt-stream-524修复-20260416.md](./implementation-artifacts/4-3-manimcat-large-prompt-stream-524修复-20260416.md) - Story 4.3 针对大 payload `stream first` 导致的 `524` 风险修复，新增输入大小阈值与 direct non-stream 策略
 - [4-3-manimcat-bulk-render-save-sections-收口-20260414.md](./implementation-artifacts/4-3-manimcat-bulk-render-save-sections-收口-20260414.md) - Story 4.3 的 ManimCat 真正 bulk-render 收口与实机复验，固定 `MainScene + --save_sections` 路径、记录 full-code 失败样本，并在 2026-04-15 补齐 fatal failure / errorCode / SSE 收口后追加真实 token 复验（`5m24s` 失败、preview `failedSections=10`、无 section 风暴）

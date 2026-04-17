@@ -231,6 +231,13 @@
 - **状态**: review
 - **说明**: 等待页渐进展示真实 storyboard 与已完成 section clip；`2026-04-13` 已落地 FastAPI 后端 per-section streaming、preview runtime / endpoint 与 section SSE 事件；`2026-04-16` 已完成 student-web 前端接入、section 级状态机扩展、Mac 灵动岛风格等待页编排，以及 preview/SSE/adapter 定向测试收口；`2026-04-17` 已继续补齐理解阶段预览摘要前推、老师式讲题口吻、语义校验/二次修复/分镜回填兜底、等待页播放器容器填充/防挤压修复、暗色主题对齐输入页，并解掉 system Python `dramatiq 2.1.x` 下的 `Prometheus` 导入阻塞
 
+## QA / Test Governance
+
+### 2026-04-17: FastAPI 测试体系规范化
+- [里程碑记录](../../../docs/01开发人员手册/009-里程碑与进度/0030-fastapi-测试体系规范化-20260417.md)
+- **状态**: done
+- **说明**: `Issue #167` 已完成 FastAPI 测试治理收口，统一 `pytest.ini`、目录自动 marker、`tests/helpers`、根目录标准脚本与 GitHub Actions，并删除不属于 FastAPI 可维护边界的伪测试和跨仓库资产测试；最终基线为 `306 passed`，覆盖率 `80%`
+
 ## 快速导航
 
 - [Epic 1 执行清单](../../../docs/01开发人员手册/0000-AI快速导航索引/epic-1-execution-checklist.md)
