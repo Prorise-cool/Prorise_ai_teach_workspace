@@ -7,6 +7,7 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { VideoTaskPreviewResult } from '@/features/video/hooks/use-video-task-preview';
+import { useCancelVideoTask } from '@/features/video/hooks/use-cancel-video-task';
 import { useVideoTaskPreview } from '@/features/video/hooks/use-video-task-preview';
 import { useVideoTaskSse } from '@/features/video/hooks/use-video-task-sse';
 import type { VideoTaskStatusResult } from '@/features/video/hooks/use-video-task-status';
@@ -30,6 +31,10 @@ vi.mock('@/features/video/hooks/use-video-task-sse', () => ({
   useVideoTaskSse: vi.fn(),
 }));
 
+vi.mock('@/features/video/hooks/use-cancel-video-task', () => ({
+  useCancelVideoTask: vi.fn(),
+}));
+
 vi.mock('@/shared/feedback', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/shared/feedback')>();
 
@@ -44,10 +49,12 @@ vi.mock('@/features/video/components/video-player', () => ({
 }));
 
 const useVideoTaskPreviewMock = vi.mocked(useVideoTaskPreview);
+const useCancelVideoTaskMock = vi.mocked(useCancelVideoTask);
 const useVideoTaskStatusMock = vi.mocked(useVideoTaskStatus);
 const useVideoTaskSseMock = vi.mocked(useVideoTaskSse);
 const useFeedbackMock = vi.mocked(useFeedback);
 const notifyMock = vi.fn();
+const cancelTaskMock = vi.fn();
 
 function createSnapshot(overrides: Partial<TaskSnapshot> = {}): TaskSnapshot {
   return {
@@ -159,14 +166,28 @@ function createGeneratingRouter(
   );
 }
 
+function createCancelTaskResult(
+  overrides: Partial<ReturnType<typeof useCancelVideoTask>> = {},
+) {
+  return {
+    cancelTask: cancelTaskMock,
+    cancelTaskAsync: vi.fn(),
+    isCancelling: false,
+    ...overrides,
+  };
+}
+
 describe('VideoGeneratingPage', () => {
   beforeEach(() => {
+    useCancelVideoTaskMock.mockReset();
     useVideoTaskPreviewMock.mockReset();
     useVideoTaskStatusMock.mockReset();
     useVideoTaskSseMock.mockReset();
+    cancelTaskMock.mockReset();
     notifyMock.mockReset();
     useVideoTaskStatusMock.mockReturnValue(createStatusResult());
     useVideoTaskPreviewMock.mockReturnValue(createPreviewResult());
+    useCancelVideoTaskMock.mockReturnValue(createCancelTaskResult());
     useFeedbackMock.mockReturnValue({
       notify: notifyMock,
       dismissNotice: vi.fn(),
@@ -203,6 +224,50 @@ describe('VideoGeneratingPage', () => {
         progress: 42,
         hasHydratedRuntime: true,
       });
+    });
+  });
+
+  it('活跃态显示返回工作区与取消任务动作，并允许用户主动取消', () => {
+    const router = createGeneratingRouter();
+
+    renderWithApp(<RouterProvider router={router} />);
+
+    expect(
+      screen.getByRole('button', { name: /返回工作区|Back to Workspace/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /取消任务|Cancel Task/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /前往结果页|Go to Result/ }),
+    ).not.toBeInTheDocument();
+    expect(useCancelVideoTaskMock).toHaveBeenCalledWith(
+      'vtask_mock_text_001',
+      expect.objectContaining({
+        navigateOnSuccess: true,
+        returnTo: '/video/input',
+        replace: true,
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /取消任务|Cancel Task/ }),
+    );
+
+    expect(cancelTaskMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('点击返回工作区后回到视频输入页', async () => {
+    const router = createGeneratingRouter();
+
+    renderWithApp(<RouterProvider router={router} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /返回工作区|Back to Workspace/ }),
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/video/input');
     });
   });
 
@@ -309,8 +374,11 @@ describe('VideoGeneratingPage', () => {
     );
 
     expect(
-      screen.getByRole('button', { name: /前往结果页|Go to Result/ }),
-    ).toBeDisabled();
+      screen.queryByRole('button', { name: /前往结果页|Go to Result/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /取消任务|Cancel Task/ }),
+    ).toBeInTheDocument();
     processingView.unmount();
 
     // 通过 store 设置完成状态
@@ -331,6 +399,12 @@ describe('VideoGeneratingPage', () => {
 
     renderWithApp(<RouterProvider router={router} />);
 
+    expect(
+      screen.getByRole('button', { name: /返回工作区|Back to Workspace/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /取消任务|Cancel Task/ }),
+    ).not.toBeInTheDocument();
     const resultButton = screen.getByRole('button', {
       name: /前往结果页|Go to Result/,
     });

@@ -1,6 +1,7 @@
 /**
  * 文件说明：全局顶栏导航共享类型与工具函数。
  */
+import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { BookOpen, LayoutTemplate, Video } from 'lucide-react';
 
@@ -21,6 +22,7 @@ export type GlobalTopNavProps = {
   links: GlobalTopNavLink[];
   variant?: 'home' | 'surface' | 'workspace';
   workspaceRoutes?: WorkspaceRoute[];
+  workspaceUtilitySlot?: ReactNode;
   showBrandIcon?: boolean;
   showAuthAction?: boolean;
   showLocaleToggle?: boolean;

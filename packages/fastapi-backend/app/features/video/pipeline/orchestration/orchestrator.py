@@ -77,7 +77,11 @@ from app.providers.runtime_config_service import (
     VideoProviderRuntimeAssembly,
 )
 from app.shared.task_framework.base import BaseTask, TaskResult
-from app.shared.task_framework.status import TaskInternalStatus
+from app.shared.task_framework.status import (
+    TaskErrorCode,
+    TaskInternalStatus,
+    TaskStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +98,14 @@ SECTION_STATUS_RATIOS: dict[VideoPreviewSectionStatus, float] = {
     VideoPreviewSectionStatus.READY: 1.0,
     VideoPreviewSectionStatus.FAILED: 1.0,
 }
+
+
+class _VideoPipelineCancelled(RuntimeError):
+    """流水线内的协作式取消短路。"""
+
+    def __init__(self, result: TaskResult) -> None:
+        super().__init__(result.message)
+        self.result = result
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +521,58 @@ class VideoPipelineService:
             },
         )()
 
+    def _get_cancelled_result(
+        self,
+        runtime: VideoRuntimeStateStore,
+        preview_state: Any = None,
+    ) -> TaskResult | None:
+        """在不污染失败语义的前提下构造取消结果。"""
+        if not runtime.is_cancel_requested():
+            return None
+
+        current_state = self._runtime_store.get_task_state(runtime.task_id) or {}
+        raw_context = current_state.get("context")
+        context = dict(raw_context) if isinstance(raw_context, dict) else {}
+        context["cancelRequested"] = True
+
+        cancel_request = runtime.load_cancel_request()
+        message = "任务已取消" if cancel_request is not None else str(
+            current_state.get("message") or "任务已取消"
+        )
+        latest_preview = runtime.load_preview() or preview_state
+        if latest_preview is not None and latest_preview.status != "cancelled":
+            runtime.save_preview(mark_preview_status(latest_preview, status="cancelled"))
+
+        return TaskResult(
+            status=TaskStatus.CANCELLED,
+            message=message,
+            progress=max(
+                self._max_emitted_progress,
+                int(current_state.get("progress") or 0),
+            ),
+            error_code=str(current_state.get("errorCode") or TaskErrorCode.CANCELLED),
+            context=context,
+        )
+
+    def _raise_if_cancelled(
+        self,
+        runtime: VideoRuntimeStateStore,
+        preview_state: Any = None,
+    ) -> None:
+        """若检测到取消请求则立即短路流水线。"""
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            raise _VideoPipelineCancelled(cancelled_result)
+
+    @staticmethod
+    def _cancel_pending_codegen(
+        pending_codegen: dict[str, asyncio.Future[str]],
+    ) -> None:
+        """尽量取消尚未开始的后台 codegen 任务。"""
+        for future in pending_codegen.values():
+            future.cancel()
+        pending_codegen.clear()
+
     async def run(self, task: BaseTask) -> TaskResult:
         """Execute full video generation pipeline (thin coordinator)."""
         self._max_emitted_progress = 0
@@ -517,12 +581,32 @@ class VideoPipelineService:
 
         try:
             ctx = self._init_pipeline(task)
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             setup = await self._setup_agent(task, ctx, runtime)
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             design = await self._run_design_stage(task, ctx, setup, runtime)
             preview_state = design.preview_state
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             tts = await self._run_tts_stage(task, ctx, setup, design, runtime)
             preview_state = tts.preview_state
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             codegen = await self._run_codegen_stage(task, ctx, setup, design)
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             render = await self._run_render_stage(
                 task,
                 ctx,
@@ -531,6 +615,11 @@ class VideoPipelineService:
                 codegen,
                 runtime,
             )
+            preview_state = runtime.load_preview() or preview_state
+            cancelled_result = self._get_cancelled_result(runtime, preview_state)
+            if cancelled_result is not None:
+                return cancelled_result
+
             return await self._run_finalize(
                 task,
                 ctx,
@@ -540,6 +629,8 @@ class VideoPipelineService:
                 runtime,
             )
 
+        except _VideoPipelineCancelled as exc:
+            return exc.result
         except VideoPipelineError as exc:
             self._persist_failure_runtime(runtime, preview_state, exc)
             raise
@@ -842,6 +933,7 @@ class VideoPipelineService:
     ) -> _RenderResult:
         """Generate / render sections progressively with per-section failure isolation."""
         preview_state = tts.preview_state
+        self._raise_if_cancelled(runtime, preview_state)
         sections = list(getattr(setup.agent, "sections", []) or [])
         total_sections = len(sections)
         if total_sections == 0:
@@ -883,8 +975,17 @@ class VideoPipelineService:
                 design_text=codegen.design_text,
                 executor=codegen_executor,
             )
+            if runtime.is_cancel_requested():
+                self._cancel_pending_codegen(pending_codegen)
+                self._raise_if_cancelled(runtime, runtime.load_preview() or preview_state)
 
             for index, section in enumerate(sections):
+                if runtime.is_cancel_requested():
+                    self._cancel_pending_codegen(pending_codegen)
+                    self._raise_if_cancelled(
+                        runtime, runtime.load_preview() or preview_state
+                    )
+
                 preview_state = runtime.load_preview() or preview_state
                 codegen_future = pending_codegen.pop(section.id, None)
                 if codegen_future is None:
@@ -902,6 +1003,14 @@ class VideoPipelineService:
                         section,
                         codegen.design_text,
                     )
+
+                cancelled_result = self._get_cancelled_result(
+                    runtime, runtime.load_preview() or preview_state
+                )
+                if cancelled_result is not None:
+                    codegen_future.cancel()
+                    self._cancel_pending_codegen(pending_codegen)
+                    raise _VideoPipelineCancelled(cancelled_result)
 
                 try:
                     await codegen_future
@@ -947,6 +1056,13 @@ class VideoPipelineService:
                     design_text=codegen.design_text,
                         executor=codegen_executor,
                     )
+
+                cancelled_result = self._get_cancelled_result(
+                    runtime, runtime.load_preview() or preview_state
+                )
+                if cancelled_result is not None:
+                    self._cancel_pending_codegen(pending_codegen)
+                    raise _VideoPipelineCancelled(cancelled_result)
 
                 preview_state = await self._mark_section_rendering(
                     task=task,
@@ -1036,6 +1152,10 @@ class VideoPipelineService:
         """Compose final video, upload, and return TaskResult."""
         # Prefer the latest persisted preview so render-stage READY/FAILED state survives finalization.
         preview_state = runtime.load_preview() or tts.preview_state
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
+
         render_successes = render.render_summary["successfulSections"]
         render_total = render.render_summary["totalSections"]
 
@@ -1047,6 +1167,10 @@ class VideoPipelineService:
             progress_override=95,
             extra_context=self._preview_signal(preview_state),
         )
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
+
         composed_video, cover_path = self._concatenate_section_clips(
             render.ordered_clips,
             work_dir=ctx.work_dir,
@@ -1060,6 +1184,9 @@ class VideoPipelineService:
             duration=max(1, duration),
             file_size=max(1, file_size),
         )
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
 
         await self._emit(
             task,
@@ -1069,6 +1196,10 @@ class VideoPipelineService:
             progress_override=98,
             extra_context=self._preview_signal(preview_state),
         )
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
+
         asset_store = LocalAssetStore.from_settings(self._settings)
         upload_svc = UploadService(
             asset_store=asset_store,
@@ -1079,6 +1210,9 @@ class VideoPipelineService:
             task_id=ctx.task_id,
             compose_result=compose_result,
         )
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
 
         knowledge_points = [
             section.get("title", "")
@@ -1166,6 +1300,8 @@ class VideoPipelineService:
         """预填充 section codegen 队列，允许后续 section 在后台生成。"""
         max_workers = max(1, getattr(self, "_section_codegen_concurrency", 1))
         while section_cursor < len(sections) and len(pending_codegen) < max_workers:
+            if runtime.is_cancel_requested():
+                break
             section = sections[section_cursor]
             if section.id in pending_codegen:
                 section_cursor += 1

@@ -79,6 +79,8 @@ type WorkspaceInputShellProps = {
 	feedCategories: string[];
 	/** 社区卡片列表。 */
 	feedCards: CommunityWorkCard[];
+	/** 顶栏右侧功能插槽。 */
+	workspaceUtilitySlot?: ReactNode;
 	/** 加载更多文案。 */
 	feedLoadMoreLabel?: string;
 	/** 加载中文案。 */
@@ -131,6 +133,7 @@ export function WorkspaceInputShell({
 	feedDescription,
 	feedCategories,
 	feedCards,
+	workspaceUtilitySlot,
 	feedLoadMoreLabel,
 	feedLoadingLabel,
 	feedSlot,
@@ -182,6 +185,7 @@ export function WorkspaceInputShell({
 				links={navLinks}
 				variant="workspace"
 				workspaceRoutes={workspaceRoutes}
+				workspaceUtilitySlot={workspaceUtilitySlot}
 				showAuthAction
 				showBrandIcon
 				showLocaleToggle

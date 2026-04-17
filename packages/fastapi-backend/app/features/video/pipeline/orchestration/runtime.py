@@ -18,7 +18,11 @@ from app.features.video.pipeline.models import (
 )
 from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.key_builder import TASK_RUNTIME_TTL_SECONDS
-from app.shared.task_framework.status import is_retryable_error
+from app.shared.task_framework.status import (
+    TaskInternalStatus,
+    TaskStatus,
+    is_retryable_error,
+)
 
 ModelT = TypeVar("ModelT", bound=BaseModel)
 
@@ -111,6 +115,31 @@ class VideoRuntimeStateStore:
     def load_preview(self) -> VideoTaskPreview | None:
         """读取渐进预览运行态。"""
         return self.load_model("preview", VideoTaskPreview)
+
+    def save_cancel_request(self, payload: dict[str, object]) -> None:
+        """保存取消请求运行态。"""
+        self.save_value("cancel_request", dict(payload))
+
+    def load_cancel_request(self) -> dict[str, object] | None:
+        """读取取消请求运行态。"""
+        raw_value = self.load_value("cancel_request")
+        return dict(raw_value) if isinstance(raw_value, dict) else None
+
+    def is_cancel_requested(self) -> bool:
+        """判断当前任务是否已进入取消流程。"""
+        if self.load_cancel_request() is not None:
+            return True
+
+        current_state = self.runtime_store.get_task_state(self.task_id)
+        if not isinstance(current_state, dict):
+            return False
+
+        status = str(current_state.get("status") or "").strip().lower()
+        internal_status = str(current_state.get("internalStatus") or "").strip().lower()
+        return status == TaskStatus.CANCELLED.value or internal_status in {
+            TaskInternalStatus.CANCELLING.value,
+            TaskInternalStatus.CANCELLED.value,
+        }
 
 
 def build_preview_state(

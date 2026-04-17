@@ -8,6 +8,7 @@ export const zhCnVideoResources = {
     common: {
       returnToInput: '返回输入页',
       returnToWorkbench: '返回工作台',
+      returnToWorkspace: '返回工作区',
       returnLabel: '返回',
       createNew: '返回创建新视频',
       retry: '重试',
@@ -17,6 +18,7 @@ export const zhCnVideoResources = {
       knowledgePoints: '知识点',
       continueLearning: '继续学习',
       goToResult: '前往结果页',
+      cancelTask: '取消任务',
     },
 	    generating: {
 	      brandLabel: '小麦',
@@ -50,6 +52,9 @@ export const zhCnVideoResources = {
 	      degradedPollingHint: '网络恢复中，已切换到轮询模式',
 	      fixAttemptLabel: '正在尝试修复…第 {{attempt}}/{{total}} 次',
 	      toggleTheme: '切换亮暗色',
+	      cancelTaskSuccess: '任务已取消',
+	      cancelTaskFailed: '取消任务失败，请稍后重试',
+	      cancelTaskMissing: '任务信息缺失，暂时无法取消',
 	      tagStoryboard: '分段讲解',
 	      tagSections: '{{count}} 段',
 	      tagAudio: '旁白资源',
@@ -244,6 +249,7 @@ export const enUsVideoResources = {
     common: {
       returnToInput: 'Back to Input',
       returnToWorkbench: 'Back to Workbench',
+      returnToWorkspace: 'Back to Workspace',
       returnLabel: 'Back',
       createNew: 'Create New Video',
       retry: 'Retry',
@@ -253,6 +259,7 @@ export const enUsVideoResources = {
       knowledgePoints: 'Knowledge Points',
       continueLearning: 'Continue Learning',
       goToResult: 'Go to Result',
+      cancelTask: 'Cancel Task',
     },
 	    generating: {
 	      brandLabel: 'XiaoMai',
@@ -286,6 +293,9 @@ export const enUsVideoResources = {
 	      degradedPollingHint: 'Reconnecting, switched to polling mode',
 	      fixAttemptLabel: 'Attempting fix... {{attempt}}/{{total}}',
 	      toggleTheme: 'Toggle Theme',
+	      cancelTaskSuccess: 'Task cancelled',
+	      cancelTaskFailed: 'Failed to cancel task. Please try again later.',
+	      cancelTaskMissing: 'Task information is missing, so cancellation is unavailable right now.',
 	      tagStoryboard: 'Storyboard',
 	      tagSections: '{{count}} scenes',
 	      tagAudio: 'Narration',

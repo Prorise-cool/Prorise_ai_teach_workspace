@@ -90,7 +90,38 @@ export const zhCnEntryPageResources = {
     backHome: '返回首页',
     openLanding: '查看落地页',
     themeToggle: '切换亮暗色',
-    localeToggle: 'EN'
+    localeToggle: 'EN',
+    taskCenter: {
+      openLabel: '查看进行中的任务',
+      title: '进行中的任务',
+      empty: '暂无进行中的任务',
+      count: '{{count}} 项',
+      viewAll: '查看全部任务',
+      viewAllCount: '查看全部 {{count}} 个任务',
+      cancel: '取消',
+      enter: '进入工作区',
+      statusPending: '排队中',
+      statusProcessing: '处理中',
+      statusCompleted: '已完成',
+      statusFailed: '失败',
+      statusCancelled: '已取消',
+      stage: {
+        understanding: '理解中',
+        solve: '解题中',
+        storyboard: '分镜中',
+        manim_gen: '脚本生成中',
+        manim_fix: '脚本修复中',
+        render: '渲染中',
+        render_verify: '验证中',
+        tts: '旁白生成中',
+        compose: '合成中',
+        upload: '上传中'
+      },
+      fallbackTitle: '视频讲解任务',
+      fallbackMessage: '任务处理中',
+      cancelTaskAria: '取消任务 {{title}}',
+      enterTaskAria: '进入任务 {{title}}'
+    }
   },
   entryHome: {
     titleLine1: 'XMAI',
@@ -788,7 +819,38 @@ export const enUsEntryPageResources = {
     backHome: 'Back home',
     openLanding: 'Open landing page',
     themeToggle: 'Toggle light and dark mode',
-    localeToggle: '中'
+    localeToggle: '中',
+    taskCenter: {
+      openLabel: 'View active tasks',
+      title: 'Active tasks',
+      empty: 'No active tasks',
+      count: '{{count}} items',
+      viewAll: 'View all tasks',
+      viewAllCount: 'View all {{count}} tasks',
+      cancel: 'Cancel',
+      enter: 'Open workspace',
+      statusPending: 'Queued',
+      statusProcessing: 'Processing',
+      statusCompleted: 'Completed',
+      statusFailed: 'Failed',
+      statusCancelled: 'Cancelled',
+      stage: {
+        understanding: 'Understanding',
+        solve: 'Solving',
+        storyboard: 'Storyboarding',
+        manim_gen: 'Generating script',
+        manim_fix: 'Fixing script',
+        render: 'Rendering',
+        render_verify: 'Verifying',
+        tts: 'Generating voiceover',
+        compose: 'Compositing',
+        upload: 'Uploading'
+      },
+      fallbackTitle: 'Video explainer task',
+      fallbackMessage: 'Task is in progress',
+      cancelTaskAria: 'Cancel task {{title}}',
+      enterTaskAria: 'Enter task {{title}}'
+    }
   },
   entryHome: {
     titleLine1: 'XMAI',

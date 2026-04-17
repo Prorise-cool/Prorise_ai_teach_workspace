@@ -12,6 +12,7 @@ import {
   getVideoTaskFixtureError,
   throwVideoTaskFixtureError,
 } from '@/services/mock/fixtures/video-task';
+import type { TaskDataEnvelope, TaskSnapshot } from '@/types/task';
 import type {
   VideoTaskCreateRequest,
   VideoTaskCreateResult,
@@ -40,6 +41,10 @@ type VideoTaskCreateOptions = {
   signal?: AbortSignal;
 };
 
+type VideoTaskCancelOptions = {
+  signal?: AbortSignal;
+};
+
 type ResolveVideoTaskAdapterOptions = {
   client?: ApiClient;
   useMock?: boolean;
@@ -56,6 +61,11 @@ export interface VideoTaskAdapter {
     request: VideoTaskCreateRequest,
     options?: VideoTaskCreateOptions,
   ): Promise<VideoTaskCreateResult>;
+  /** 取消视频任务，返回取消后的任务快照。 */
+  cancelTask(
+    taskId: string,
+    options?: VideoTaskCancelOptions,
+  ): Promise<TaskSnapshot>;
 }
 
 /* ---------- 辅助函数 ---------- */
@@ -189,6 +199,19 @@ export function createRealVideoTaskAdapter(
         throw mapVideoTaskApiClientError(error);
       }
     },
+    async cancelTask(taskId, options) {
+      try {
+        const response = await client.request<TaskDataEnvelope<TaskSnapshot>>({
+          url: `/api/v1/video/tasks/${taskId}/cancel`,
+          method: 'post',
+          signal: options?.signal,
+        });
+
+        return response.data.data;
+      } catch (error) {
+        throw mapVideoTaskApiClientError(error);
+      }
+    },
   };
 }
 
@@ -230,6 +253,20 @@ export function createMockVideoTaskAdapter(): VideoTaskAdapter {
 
         return envelope.data;
       });
+    },
+    cancelTask(taskId) {
+      return runMockVideoTaskOperation(() => ({
+        taskId,
+        requestId: `req_cancel_${taskId}`,
+        taskType: 'video',
+        status: 'cancelled',
+        progress: 0,
+        message: '任务已取消',
+        timestamp: new Date().toISOString(),
+        currentStage: null,
+        stageLabel: null,
+        errorCode: 'TASK_CANCELLED',
+      }));
     },
   };
 }
