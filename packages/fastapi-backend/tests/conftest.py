@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 import httpx
+import pytest
 from fastapi import FastAPI
 
 from app.core.security import AccessContext, get_access_context
@@ -55,3 +57,28 @@ def build_mock_client_factory(
         )
 
     return factory
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """按目录层级为测试自动打主 marker。"""
+
+    del config
+    root = Path(__file__).resolve().parent
+    marker_map = {
+        "unit": pytest.mark.unit,
+        "api": pytest.mark.api,
+        "integration": pytest.mark.integration,
+        "contracts": pytest.mark.contract,
+        "e2e": pytest.mark.e2e,
+    }
+
+    for item in items:
+        try:
+            relative = Path(str(item.fspath)).resolve().relative_to(root)
+        except ValueError:
+            continue
+
+        top_level = relative.parts[0] if relative.parts else ""
+        marker = marker_map.get(top_level)
+        if marker is not None:
+            item.add_marker(marker)
