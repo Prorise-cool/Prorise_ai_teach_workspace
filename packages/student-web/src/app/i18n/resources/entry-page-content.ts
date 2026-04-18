@@ -134,7 +134,12 @@ export const zhCnEntryPageResources = {
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
     workspaceHint: 'ENTER WORKSPACE',
-    imageAlt: '小麦虚拟课堂角色形象'
+    imageAlt: '小麦虚拟课堂角色形象',
+    activeTask: {
+      title: '当前视频任务',
+      subtitle: '不用回输入页，首页也能继续查看或取消',
+      note: '视频还会继续在后台生成；你可以直接继续查看，也可以在右上角任务中心管理更多任务。'
+    }
   },
   entryRoutes: {
     classroom: {
@@ -215,6 +220,23 @@ export const zhCnEntryPageResources = {
 		      unsupportedImageDescription: '{{name}} 不是支持的图片格式，请上传 JPG、PNG 或 WebP',
 		      imageTooLargeTitle: '图片过大',
 		      imageTooLargeDescription: '{{name}} 超过 30MB，请压缩后再试',
+		    },
+		    activeTask: {
+		      title: '当前任务',
+		      subtitle: '返回工作区后也能继续查看或取消',
+		      queueCount: '{{count}} 项',
+		      progressLabel: '当前进度',
+		      stageLabel: '当前阶段：{{stage}}',
+		      moreTasksHint: '还有 {{count}} 个任务',
+		      continueAction: '继续查看',
+		      continueTaskAria: '继续查看任务 {{title}}',
+		      defaultInlineNote: '任务会继续保留在右上角的进行中列表里，你可以稍后回来继续查看，或直接在这里取消。',
+		      returnedInlineNote: '你刚刚离开等待页，当前任务仍在继续生成，可以随时回来继续查看。',
+		      cancelledInlineNote: '刚才的任务已经取消完成；如果你还有别的任务，它们会继续保留在这里。',
+		      returnedToastTitle: '已返回视频工作区',
+		      returnedToastDescription: '当前任务仍在继续生成，你可以在输入页随时继续查看或取消。',
+		      cancelledToastTitle: '任务已取消',
+		      cancelledToastDescription: '你可以继续编辑题目后重新发起视频生成。',
 		    },
 		    suggestionsLabel: '试试这些题目',
 	    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
@@ -863,7 +885,12 @@ export const enUsEntryPageResources = {
       'Discover an exclusive learning experience. Enter a topic to get a complete virtual classroom or upload a question for a 5-minute animated explanation.',
     primaryAction: 'Start Learning',
     workspaceHint: 'ENTER WORKSPACE',
-    imageAlt: 'XiaoMai virtual classroom mascot'
+    imageAlt: 'XiaoMai virtual classroom mascot',
+    activeTask: {
+      title: 'Current Video Task',
+      subtitle: 'You can resume or cancel it right from the home page',
+      note: 'The video keeps generating in the background. Resume it here or manage the rest from the task center in the top right.'
+    }
   },
   entryRoutes: {
     classroom: {
@@ -944,6 +971,23 @@ export const enUsEntryPageResources = {
 		      unsupportedImageDescription: '{{name}} is not supported. Please upload a JPG, PNG, or WebP image.',
 		      imageTooLargeTitle: 'Image too large',
 		      imageTooLargeDescription: '{{name}} is larger than 30MB. Please compress it and try again.',
+		    },
+		    activeTask: {
+		      title: 'Current Task',
+		      subtitle: 'You can keep watching or cancel it after returning to the workspace',
+		      queueCount: '{{count}} items',
+		      progressLabel: 'Current progress',
+		      stageLabel: 'Current stage: {{stage}}',
+		      moreTasksHint: '{{count}} more in queue',
+		      continueAction: 'Resume task',
+		      continueTaskAria: 'Resume task {{title}}',
+		      defaultInlineNote: 'The task stays in the active-task list at the top right, so you can come back later or cancel it here.',
+		      returnedInlineNote: 'You just left the generating page. The task is still running and ready to resume anytime.',
+		      cancelledInlineNote: 'The last task has been cancelled. Any remaining active tasks will stay available here.',
+		      returnedToastTitle: 'Back in the video workspace',
+		      returnedToastDescription: 'Your current task is still running. You can resume or cancel it from the input page.',
+		      cancelledToastTitle: 'Task cancelled',
+		      cancelledToastDescription: 'You can refine the prompt and start a new video whenever you are ready.',
 		    },
 		    suggestionsLabel: 'Try These',
     suggestions: [

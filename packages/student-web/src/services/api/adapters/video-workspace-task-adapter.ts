@@ -64,6 +64,15 @@ function isActiveTaskStatus(status: TaskLifecycleStatus) {
   return ACTIVE_VIDEO_TASK_STATUSES.some((activeStatus) => activeStatus === status);
 }
 
+function isTaskSnapshotNotFoundError(error: unknown) {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    'status' in error &&
+    Number((error as { status: unknown }).status) === 404
+  );
+}
+
 function mapWorkspaceTaskItem(
   row: VideoTaskListRow,
   snapshot: TaskSnapshot,
@@ -101,12 +110,23 @@ export function createRealVideoWorkspaceTaskAdapter(
         .filter((row) => isActiveTaskStatus(row.status))
         .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
       const taskAdapter = resolveTaskAdapter({ module: 'video' });
-      const items = await Promise.all(
+      const itemResults = await Promise.all(
         activeRows.map(async (row) => {
-          const snapshot = await taskAdapter.getTaskSnapshot(row.task_id);
+          try {
+            const snapshot = await taskAdapter.getTaskSnapshot(row.task_id);
 
-          return mapWorkspaceTaskItem(row, snapshot);
+            return mapWorkspaceTaskItem(row, snapshot);
+          } catch (error) {
+            if (isTaskSnapshotNotFoundError(error)) {
+              return null;
+            }
+
+            throw error;
+          }
         }),
+      );
+      const items = itemResults.filter(
+        (item): item is VideoWorkspaceTaskItem => item !== null,
       );
 
       return {

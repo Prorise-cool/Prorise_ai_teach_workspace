@@ -52,7 +52,7 @@ const usePublicVideosMock = vi.mocked(usePublicVideos);
  *
  * @returns 内存路由实例。
  */
-function createVideoRouter() {
+function createVideoRouter(initialEntries: string[] = ['/video/input']) {
 	return createMemoryRouter(
 		[
 			{
@@ -69,7 +69,7 @@ function createVideoRouter() {
 			},
 		],
 		{
-			initialEntries: ['/video/input']
+			initialEntries
 		}
 	);
 }
@@ -620,11 +620,11 @@ describe('VideoInputPage', () => {
 		);
 
 		expect(screen.getByText('进行中的任务')).toBeInTheDocument();
-		expect(screen.getByText('积分题讲解')).toBeInTheDocument();
-		expect(screen.getByText('导数题讲解')).toBeInTheDocument();
-		expect(screen.getByText('渲染中')).toBeInTheDocument();
+		expect(screen.getAllByText('积分题讲解').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('导数题讲解').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('渲染中').length).toBeGreaterThan(0);
 		expect(screen.getByText('排队中')).toBeInTheDocument();
-		expect(screen.getByText('58%')).toBeInTheDocument();
+		expect(screen.getAllByText('58%').length).toBeGreaterThan(0);
 
 		await user.click(
 			screen.getByRole('button', { name: '取消任务 导数题讲解' }),
@@ -636,6 +636,105 @@ describe('VideoInputPage', () => {
 
 		await user.click(
 			screen.getByRole('button', { name: '进入任务 积分题讲解' }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe('/video/vtask_processing_002/generating');
+		});
+	});
+
+	it('没有活跃任务时 bell 不显示红点，但仍可打开空态任务中心', async () => {
+		const user = userEvent.setup();
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(
+			screen.queryByTestId('video-task-center-indicator'),
+		).not.toBeInTheDocument();
+
+		await user.click(
+			screen.getByRole('button', { name: '查看进行中的任务' }),
+		);
+
+		expect(screen.getByText('暂无进行中的任务')).toBeInTheDocument();
+	});
+
+	it('返回输入页后会在主体中展示当前任务状态卡，并支持继续查看或取消', async () => {
+		const user = userEvent.setup();
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useVideoWorkspaceTasksMock.mockReturnValue(
+			createWorkspaceTasksQueryResult({
+				data: {
+					total: 2,
+					items: [
+						{
+							taskId: 'vtask_processing_002',
+							title: '积分题讲解',
+							lifecycleStatus: 'processing',
+							progress: 58,
+							stageLabel: 'video.stages.render',
+							currentStage: 'render',
+							message: '渲染第 2 段中',
+							updatedAt: '2026-04-17 10:05:00',
+						},
+						{
+							taskId: 'vtask_pending_001',
+							title: '导数题讲解',
+							lifecycleStatus: 'pending',
+							progress: 0,
+							stageLabel: null,
+							currentStage: null,
+							message: '等待进入队列',
+							updatedAt: '2026-04-17 10:00:00',
+						},
+					],
+				},
+			}),
+		);
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter([
+			'/video/input?focusTask=vtask_processing_002&toast=returned',
+		]);
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(screen.getByText('当前任务')).toBeInTheDocument();
+		expect(screen.getByText('积分题讲解')).toBeInTheDocument();
+		expect(screen.getByText('当前阶段：渲染中')).toBeInTheDocument();
+		expect(
+			screen.getByRole('button', { name: /继续查看任务/ }),
+		).toBeInTheDocument();
+
+		await user.click(
+			screen.getByRole('button', { name: /取消任务/ }),
+		);
+
+		await waitFor(() => {
+			expect(cancelTaskMock).toHaveBeenCalledWith('vtask_processing_002');
+		});
+
+		await user.click(
+			screen.getByRole('button', { name: /继续查看任务/ }),
 		);
 
 		await waitFor(() => {

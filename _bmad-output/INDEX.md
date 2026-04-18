@@ -23,6 +23,9 @@
 - [4-11-视频等待页渐进式产物展示与分段预览.md](./implementation-artifacts/4-11-视频等待页渐进式产物展示与分段预览.md) - 等待页“先展示分镜与已完成片段、最终结果页仍只认整片”的渐进体验方案 Story，并补充 2026-04-16 本地 Dramatiq worker 启动稳定性、分镜承接与旁白尾句收口约束
 - [4-11-fastapi-渐进预览后端实现说明-20260413.md](./implementation-artifacts/4-11-fastapi-渐进预览后端实现说明-20260413.md) - Story 4.11 的 FastAPI 后端重构收口，记录 per-section streaming、preview endpoint 与 section SSE 事件
 - [4-11-视频等待页渐进预览前端接入需求说明-20260416.md](./implementation-artifacts/4-11-视频等待页渐进预览前端接入需求说明-20260416.md) - Story 4.11 的 student-web 前端接入与验收说明，现已完成输入页 icon 化预设/高级参数、全量 i18n/亮暗色补齐、preview/status/SSE 三路接入；并在 2026-04-17 追加等待页摘要富文本、summary 优先停留、分段技术字段下线、播放器容器填充/防挤压修复与全局 feedback 收口，状态进入 review
+- [4-11-输入页当前任务状态卡与返回聚焦补齐-20260418.md](./implementation-artifacts/4-11-输入页当前任务状态卡与返回聚焦补齐-20260418.md) - Story 4.11 追加修补：把等待页返回输入页后的任务承接从“只在 bell dropdown 里可见”补齐为输入页主体显式当前任务卡，并同步接上 `focusTask/toast` 返回参数与输入页取消入口
+- [4-11-首页视频任务承接与任务中心红点修正-20260418.md](./implementation-artifacts/4-11-首页视频任务承接与任务中心红点修正-20260418.md) - Story 4.11 第二轮前端修补：红点改为仅在有活跃任务时显示，并把首页 `/` 也接入当前视频任务状态卡与顶栏任务中心
+- [4-11-视频输入页任务中心404容错修复-20260418.md](./implementation-artifacts/4-11-视频输入页任务中心404容错修复-20260418.md) - Story 4.11 第三轮前端修补：活跃任务聚合层改为跳过单条 `status 404` 的过期任务，避免 bell 和当前任务卡被整批清空
 - [4-11-等待页摘要后端接入与完成态交互修补-20260417.md](./implementation-artifacts/4-11-等待页摘要后端接入与完成态交互修补-20260417.md) - Story 4.11 追加修补：等待页摘要改由后端理解阶段真实产出，preview 提前发布 summary，完成后取消自动跳转并改为用户手动前往结果页；同日已补 system Python 回归验证
 - [4-11-理解摘要-json-约束与解析加固-20260417.md](./implementation-artifacts/4-11-理解摘要-json-约束与解析加固-20260417.md) - Story 4.11 进一步修补：UnderstandingService 增加强 JSON 输出约束，并补上语义校验、二次 repair、分镜回填兜底，以及 `dramatiq` 1.x / 2.x 的 Prometheus 兼容
 - [4-11-等待页摘要口吻与预览文风优化-20260417.md](./implementation-artifacts/4-11-等待页摘要口吻与预览文风优化-20260417.md) - Story 4.11 第二轮修补：把等待页摘要从“证明提纲”风格改成老师讲题口吻，并把 preview 步骤从编号粗体改成轻量 bullet

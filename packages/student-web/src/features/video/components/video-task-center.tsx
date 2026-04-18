@@ -15,28 +15,19 @@ import {
 import { cn } from '@/lib/utils';
 import type { TaskLifecycleStatus } from '@/types/task';
 
-type VideoTaskCenterItem = {
-	taskId: string;
-	title: string;
-	lifecycleStatus: TaskLifecycleStatus;
-	progress: number;
-	stageLabel: string | null;
-	currentStage: string | null;
-	message: string;
-	updatedAt: string;
-};
+import {
+	clampVideoTaskProgress,
+	resolveVideoWorkspaceTaskStatusLabel,
+	type VideoWorkspaceTaskItem,
+} from './video-workspace-task-shared';
 
 type VideoTaskCenterProps = {
-	items: VideoTaskCenterItem[];
+	items: VideoWorkspaceTaskItem[];
 	total: number;
 	isCancellingTaskId?: string | null;
 	onCancel: (taskId: string) => void;
 	onEnterTask: (taskId: string) => void;
 };
-
-function clampProgress(progress: number) {
-	return Math.max(0, Math.min(100, Math.round(progress)));
-}
 
 function resolveLifecycleLabel(
 	status: TaskLifecycleStatus,
@@ -54,26 +45,6 @@ function resolveLifecycleLabel(
 		default:
 			return t('entryNav.taskCenter.statusProcessing');
 	}
-}
-
-function resolveProcessingLabel(
-	currentStage: string | null,
-	stageLabel: string | null,
-	t: (key: string, options?: Record<string, unknown>) => string,
-) {
-	if (currentStage) {
-		const shortStageLabel = t(`entryNav.taskCenter.stage.${currentStage}`);
-
-		if (shortStageLabel !== `entryNav.taskCenter.stage.${currentStage}`) {
-			return shortStageLabel;
-		}
-	}
-
-	if (stageLabel) {
-		return t(stageLabel);
-	}
-
-	return t('entryNav.taskCenter.statusProcessing');
 }
 
 export function VideoTaskCenter({
@@ -106,10 +77,15 @@ export function VideoTaskCenter({
 					className="relative border-border/80 bg-background/70 text-[color:var(--xm-color-text-secondary)] shadow-sm hover:bg-[color:var(--xm-color-surface)]"
 				>
 					<Bell className="h-4 w-4" />
-					<span className="absolute right-0 top-0 flex h-3 w-3 -translate-y-1/4 translate-x-1/4">
-						<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive/70" />
-						<span className="relative inline-flex h-3 w-3 rounded-full border-2 border-background bg-destructive" />
-					</span>
+					{total > 0 ? (
+						<span
+							data-testid="video-task-center-indicator"
+							className="absolute right-0 top-0 flex h-3 w-3 -translate-y-1/4 translate-x-1/4"
+						>
+							<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive/70" />
+							<span className="relative inline-flex h-3 w-3 rounded-full border-2 border-background bg-destructive" />
+						</span>
+					) : null}
 				</Button>
 			</PopoverTrigger>
 
@@ -138,10 +114,11 @@ export function VideoTaskCenter({
 						</div>
 					) : (
 						visibleItems.map((item) => {
-							const progress = clampProgress(item.progress);
+							const progress = clampVideoTaskProgress(item.progress);
 							const statusLabel =
 								item.lifecycleStatus === 'processing'
-									? resolveProcessingLabel(
+									? resolveVideoWorkspaceTaskStatusLabel(
+											item.lifecycleStatus,
 											item.currentStage,
 											item.stageLabel,
 											t,

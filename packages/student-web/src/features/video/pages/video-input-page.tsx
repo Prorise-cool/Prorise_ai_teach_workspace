@@ -5,9 +5,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Sparkles } from 'lucide-react';
-import { type FormEvent, useCallback, useMemo, useRef } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import {
@@ -18,9 +18,14 @@ import {
 	WorkspaceInputShell,
 	useBrowserAsr,
 } from '@/components/input-page';
+import { VideoActiveTaskCard } from '@/features/video/components/video-active-task-card';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
 import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
+import {
+	readDraftVideoTaskTitle,
+	type VideoWorkspaceTaskItem,
+} from '@/features/video/components/video-workspace-task-shared';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
 import { useVideoWorkspaceTasks } from '@/features/video/hooks/use-video-workspace-tasks';
 import {
@@ -41,19 +46,6 @@ import {
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/video/styles/video-input-page.scss';
 
-const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
-
-function readDraftTaskTitle(taskId: string, fallback: string) {
-	try {
-		return (
-			window.sessionStorage.getItem(`${VIDEO_TASK_DRAFT_CACHE_PREFIX}${taskId}`) ||
-			fallback
-		);
-	} catch {
-		return fallback;
-	}
-}
-
 /**
  * 渲染视频讲解输入页。
  *
@@ -63,8 +55,10 @@ export function VideoInputPage() {
 	const { t } = useAppTranslation();
 	const { notify } = useFeedback();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const queryClient = useQueryClient();
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+	const handledWorkspaceToastRef = useRef<string | null>(null);
 	const videoTaskAdapter = useMemo(() => resolveVideoTaskAdapter(), []);
 	const validationMessages = useMemo<VideoInputValidationMessages>(() => ({
 		durationRange: t('videoInput.validation.durationRange'),
@@ -260,26 +254,95 @@ export function VideoInputPage() {
 			setValue,
 		],
 	);
-	const workspaceTaskItems = useMemo(
+	const workspaceTaskItems = useMemo<VideoWorkspaceTaskItem[]>(
 		() =>
 			workspaceTasksQuery.data?.items.map((item) => ({
 				...item,
-				title: readDraftTaskTitle(
+				title: readDraftVideoTaskTitle(
 					item.taskId,
 					item.title || t('entryNav.taskCenter.fallbackTitle'),
 				),
 			})) ?? [],
 		[workspaceTasksQuery.data?.items, t],
 	);
-	const workspaceUtilitySlot = workspaceTasksQuery.data?.total ? (
+	const focusedTaskId = searchParams.get('focusTask') ?? searchParams.get('taskId');
+	const workspaceToast = searchParams.get('toast');
+	const featuredTask = useMemo(
+		() =>
+			workspaceTaskItems.find((item) => item.taskId === focusedTaskId) ??
+			workspaceTaskItems[0] ??
+			null,
+		[focusedTaskId, workspaceTaskItems],
+	);
+	const isFeaturedTaskFocused = Boolean(
+		featuredTask && focusedTaskId && featuredTask.taskId === focusedTaskId,
+	);
+
+	useEffect(() => {
+		if (!workspaceToast) {
+			return;
+		}
+
+		const toastKey = `${workspaceToast}:${searchParams.toString()}`;
+		if (handledWorkspaceToastRef.current === toastKey) {
+			return;
+		}
+
+		handledWorkspaceToastRef.current = toastKey;
+
+		if (workspaceToast === 'returned') {
+			notify({
+				tone: 'success',
+				title: t('videoInput.activeTask.returnedToastTitle'),
+				description: t('videoInput.activeTask.returnedToastDescription'),
+			});
+			return;
+		}
+
+		if (workspaceToast === 'cancelled') {
+			notify({
+				tone: 'success',
+				title: t('videoInput.activeTask.cancelledToastTitle'),
+				description: t('videoInput.activeTask.cancelledToastDescription'),
+			});
+		}
+	}, [notify, searchParams, t, workspaceToast]);
+
+	const workspaceUtilitySlot = (
 		<VideoTaskCenter
 			items={workspaceTaskItems}
-			total={workspaceTasksQuery.data.total}
+			total={workspaceTaskItems.length}
 			isCancellingTaskId={
 				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
 			}
 			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
 			onEnterTask={(taskId) => {
+				void navigate(`/video/${taskId}/generating`);
+			}}
+		/>
+	);
+	const featuredTaskNote =
+		workspaceToast === 'cancelled'
+			? t('videoInput.activeTask.cancelledInlineNote')
+			: t('videoInput.activeTask.defaultInlineNote');
+	const featuredTaskCard = featuredTask ? (
+		<VideoActiveTaskCard
+			task={featuredTask}
+			queueCount={workspaceTaskItems.length}
+			headerTitle={t('videoInput.activeTask.title')}
+			headerSubtitle={t('videoInput.activeTask.subtitle')}
+			note={featuredTaskNote}
+			isFocused={isFeaturedTaskFocused}
+			isCancelling={cancelTaskMutation.isPending}
+			focusNotice={
+				isFeaturedTaskFocused
+					? workspaceToast === 'returned'
+						? t('videoInput.activeTask.returnedInlineNote')
+						: featuredTaskNote
+					: null
+			}
+			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
+			onContinue={(taskId) => {
 				void navigate(`/video/${taskId}/generating`);
 			}}
 		/>
@@ -303,47 +366,50 @@ export function VideoInputPage() {
 			titleGradient={titleGradient}
 			headerClassName="xm-theme-video-header"
 			card={
-				<VideoInputCard
-					form={form}
-					errors={formState.errors}
-					isSubmitting={createMutation.isPending}
-					isRecording={isRecording}
-					onToggleRecording={toggleRecording}
-					labels={{
-						smartMatchHint,
-						smartMatchDesc,
-						multiAgentHint,
-						placeholder,
-						submitLabel,
-						toolUploadImage,
-						toolVoiceInput,
-						qualityPresetLabel,
-						qualityPresetHint,
-						advancedSettingsLabel,
-						recordingLabel,
-						presetQuick,
-						presetBalanced,
-						presetCinematic,
-						advancedTitle,
-						advancedDescription,
-						advancedReset,
-						advancedDone,
-						durationLabel,
-						sectionCountLabel,
-						concurrencyLabel,
-						renderQualityLabel,
-						layoutHintLabel,
-						renderQuickLabel,
-						renderBalancedLabel,
-						renderHighLabel,
-						layoutCenterLabel,
-						layoutTwoColumnLabel,
-						durationUnit,
-						sectionUnit,
-						concurrencyShortLabel,
-					}}
-					textAreaRef={textareaRef}
-				/>
+				<div className="flex w-full max-w-[800px] flex-col gap-4">
+					<VideoInputCard
+						form={form}
+						errors={formState.errors}
+						isSubmitting={createMutation.isPending}
+						isRecording={isRecording}
+						onToggleRecording={toggleRecording}
+						labels={{
+							smartMatchHint,
+							smartMatchDesc,
+							multiAgentHint,
+							placeholder,
+							submitLabel,
+							toolUploadImage,
+							toolVoiceInput,
+							qualityPresetLabel,
+							qualityPresetHint,
+							advancedSettingsLabel,
+							recordingLabel,
+							presetQuick,
+							presetBalanced,
+							presetCinematic,
+							advancedTitle,
+							advancedDescription,
+							advancedReset,
+							advancedDone,
+							durationLabel,
+							sectionCountLabel,
+							concurrencyLabel,
+							renderQualityLabel,
+							layoutHintLabel,
+							renderQuickLabel,
+							renderBalancedLabel,
+							renderHighLabel,
+							layoutCenterLabel,
+							layoutTwoColumnLabel,
+							durationUnit,
+							sectionUnit,
+							concurrencyShortLabel,
+						}}
+						textAreaRef={textareaRef}
+					/>
+					{featuredTaskCard}
+				</div>
 			}
 			suggestionsLabel={suggestionsLabel}
 			suggestions={suggestions}

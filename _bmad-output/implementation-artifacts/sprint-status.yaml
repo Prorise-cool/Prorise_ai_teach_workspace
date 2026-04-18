@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-17 14:06:34 +0800
+# last_updated: 2026-04-18 20:57:26 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-17 16:28:00 +0800
+last_updated: 2026-04-18 20:57:26 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -202,6 +202,18 @@ development_status:
   # - `task-generating-view.scss` 已将等待页局部暗色切换从失效的 `.dark` 选择器改为 `:root[data-theme='dark']`，与输入页 `_video-input-card.scss` 的主题机制保持一致。
   # - 顶部品牌图标、阶段胶囊外层、进度轨道、状态标签、日志头、详情区、卡片区与分段引用框已改走 `--xm-generating-card-surface/soft-surface/pill-surface` 局部 token，不再在暗色下漏出白色半透明底。
   # - 回归通过：`pnpm --filter @xiaomai/student-web test -- src/features/video/pages/video-generating-page.test.tsx` => `34 files / 192 tests passed`；`pnpm --filter @xiaomai/student-web typecheck` => `0 errors`。
+  # 2026-04-18 输入页当前任务承接补齐：
+  # - `student-web` 已在 `/video/input` 主体补上“当前任务”状态卡，直接展示任务标题、阶段、进度，并提供“继续查看 / 取消任务”动作，不再只依赖右上角 bell dropdown。
+  # - `/video/:id/generating` 返回输入页时现会附带 `focusTask/toast` 参数，输入页据此聚焦当前任务并给出 returned/cancelled 提示，等待页 -> 输入页的承接链路补齐。
+  # - 定向回归通过：`pnpm --filter @xiaomai/student-web typecheck`、`vitest run src/features/video/pages/video-input-page.test.tsx -t '有活跃任务时会在顶栏渲染任务中心并支持进入与取消'`、`vitest run src/features/video/pages/video-input-page.test.tsx -t '返回输入页后会在主体中展示当前任务状态卡，并支持继续查看或取消'`、`vitest run src/features/video/pages/video-generating-page.test.tsx`。
+  # 2026-04-18 首页视频任务承接与红点修正：
+  # - `VideoTaskCenter` 红点已改为仅在存在活跃任务时显示；空队列仍可打开 bell 查看空态。
+  # - 首页 `/` 已接入与 `/video/input` 同源的当前视频任务卡和顶栏任务中心，用户不必退回输入页才能继续查看进行中的视频任务。
+  # - 定向回归通过：`pnpm vitest run src/features/video/pages/video-input-page.test.tsx src/features/home/pages/home-page.test.tsx --reporter=dot` => `2 passed / 23 passed`。
+  # 2026-04-18 晚间补充：视频输入页任务中心 404 容错：
+  # - 已确认 `/api/v1/video/tasks?status=pending|processing` 与 `/api/v1/video/tasks/{id}/status` 分别读取元数据列表与运行态快照，单条 `status 404` 语义为运行态已过期，而非路由写错。
+  # - `video-workspace-task-adapter` 现会跳过单条 404 的旧任务，只保留仍有效的活跃任务；其它错误继续抛出，不吞真实故障。
+  # - 定向回归通过：`pnpm vitest run src/services/api/adapters/video-workspace-task-adapter.test.ts src/features/video/pages/video-input-page.test.tsx src/features/home/pages/home-page.test.tsx --reporter=dot` => `3 files / 25 tests passed`。
   4-8-视频结果页播放器与结果操作: review
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review

@@ -4,18 +4,39 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type RouteObject } from 'react-router-dom';
+import { vi } from 'vitest';
 
 import { AppShell } from '@/app/layouts/app-shell';
 import { RequireAuthRoute } from '@/features/auth/components/require-auth-route';
 import { LoginPage } from '@/features/auth/pages/login-page';
 import { HomePage } from '@/features/home/pages/home-page';
+import { useVideoWorkspaceTasks } from '@/features/video/hooks/use-video-workspace-tasks';
 import { LandingPage } from '@/features/home/pages/landing-page';
 import { createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService } from '@/services/auth';
+import { useAuthSessionStore } from '@/stores/auth-session-store';
 import { renderRouterWithApp } from '@/test/utils/render-app';
-import { resetAppTestState } from '@/test/utils/session';
+import { resetAppTestState, seedCompletedUserProfile } from '@/test/utils/session';
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
+const useVideoWorkspaceTasksMock = vi.fn();
+
+vi.mock('@/features/video/hooks/use-video-workspace-tasks', () => ({
+	useVideoWorkspaceTasks: () => useVideoWorkspaceTasksMock(),
+}));
+
+function createWorkspaceTasksQueryResult(
+	overrides: Record<string, unknown> = {},
+) {
+	return {
+		data: undefined,
+		isLoading: false,
+		isFetching: false,
+		isError: false,
+		refetch: vi.fn(),
+		...overrides,
+	} as unknown as ReturnType<typeof useVideoWorkspaceTasks>;
+}
 
 /**
  * 构造 Story 1.4 的最小路由树，用于验证公开首页与入口跳转链路。
@@ -45,8 +66,16 @@ function createEntryRouter(initialEntries: string[] = ['/']) {
               element: <div>Classroom Input</div>
             },
             {
+              path: 'profile/setup',
+              element: <div>Profile Setup</div>
+            },
+            {
               path: 'video/input',
               element: <div>Video Input</div>
+            },
+            {
+              path: 'video/:id/generating',
+              element: <div>Video Generating</div>
             }
           ]
         },
@@ -66,6 +95,10 @@ function createEntryRouter(initialEntries: string[] = ['/']) {
 describe('HomePage', () => {
   beforeEach(async () => {
     await resetAppTestState({ resetProfile: false });
+    useVideoWorkspaceTasksMock.mockReset();
+    useVideoWorkspaceTasksMock.mockReturnValue(
+      createWorkspaceTasksQueryResult()
+    );
   });
 
   it('renders the public hero CTA and removes the old auth-consistency console copy', () => {
@@ -129,5 +162,49 @@ describe('HomePage', () => {
     expect(screen.getAllByRole('button', { name: '中' })[0]).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(router.state.location.search).toBe('');
+  });
+
+  it('已登录且存在视频任务时，首页会直接展示当前任务状态并支持继续查看', async () => {
+    const user = userEvent.setup();
+    const session = await mockAuthService.login({
+      username: 'admin',
+      password: 'admin123'
+    });
+
+    useAuthSessionStore.getState().setSession(session);
+    seedCompletedUserProfile({ userId: session.user.id });
+    useVideoWorkspaceTasksMock.mockReturnValue(
+      createWorkspaceTasksQueryResult({
+        data: {
+          total: 1,
+          items: [
+            {
+              taskId: 'vtask_processing_002',
+              title: '积分题讲解',
+              lifecycleStatus: 'processing',
+              progress: 58,
+              stageLabel: 'video.stages.render',
+              currentStage: 'render',
+              message: '渲染第 2 段中',
+              updatedAt: '2026-04-17 10:05:00'
+            }
+          ]
+        }
+      })
+    );
+
+    const router = createEntryRouter();
+
+    expect(screen.getByText('当前视频任务')).toBeInTheDocument();
+    expect(screen.getByText('积分题讲解')).toBeInTheDocument();
+    expect(screen.getByText('当前阶段：渲染中')).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: '继续查看任务 积分题讲解' })
+    );
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/video/vtask_processing_002/generating');
+    });
   });
 });
