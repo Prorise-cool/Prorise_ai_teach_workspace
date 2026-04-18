@@ -245,7 +245,7 @@ describe('VideoGeneratingPage', () => {
       'vtask_mock_text_001',
       expect.objectContaining({
         navigateOnSuccess: true,
-        returnTo: '/video/input',
+        returnTo: '/video/input?toast=cancelled&taskId=vtask_mock_text_001',
         replace: true,
       }),
     );
@@ -268,6 +268,9 @@ describe('VideoGeneratingPage', () => {
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/video/input');
+      expect(router.state.location.search).toBe(
+        '?focusTask=vtask_mock_text_001&toast=returned',
+      );
     });
   });
 

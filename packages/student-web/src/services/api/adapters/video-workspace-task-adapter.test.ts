@@ -29,6 +29,84 @@ describe('video-workspace-task-adapter', () => {
     getTaskSnapshotMock.mockReset();
   });
 
+  it('skips stale active rows when a task snapshot returns 404', async () => {
+    async function requestMock<T>(config: ApiRequestConfig): Promise<ApiClientResponse<T>> {
+      if (config.url === '/api/v1/video/tasks?status=pending&pageNum=1&pageSize=10') {
+        return createClientResponse({
+          rows: [
+            {
+              task_id: 'vtask_stale_404',
+              user_id: 'student_001',
+              task_type: 'video',
+              table_name: 'xm_video_task',
+              status: 'pending',
+              summary: '旧任务残留',
+              updated_at: '2026-04-18 10:06:00',
+              created_at: '2026-04-18 10:05:00',
+            },
+          ],
+          total: 1,
+        } as T);
+      }
+
+      if (config.url === '/api/v1/video/tasks?status=processing&pageNum=1&pageSize=10') {
+        return createClientResponse({
+          rows: [
+            {
+              task_id: 'vtask_processing_002',
+              user_id: 'student_001',
+              task_type: 'video',
+              table_name: 'xm_video_task',
+              status: 'processing',
+              summary: '积分题讲解',
+              updated_at: '2026-04-18 10:07:00',
+              created_at: '2026-04-18 10:04:00',
+            },
+          ],
+          total: 1,
+        } as T);
+      }
+
+      throw new Error(`unexpected request: ${config.url}`);
+    }
+    const client: ApiClient = { request: requestMock };
+
+    getTaskSnapshotMock.mockImplementation(async (taskId) => {
+      if (taskId === 'vtask_stale_404') {
+        const notFoundError = Object.assign(new Error('未找到对应任务'), {
+          status: 404,
+          code: '404',
+        });
+
+        throw notFoundError;
+      }
+
+      return {
+        taskId,
+        requestId: 'req_processing_002',
+        taskType: 'video',
+        status: 'processing',
+        progress: 58,
+        message: '渲染第 2 段中',
+        timestamp: '2026-04-18T10:07:30Z',
+        currentStage: 'render',
+        stageLabel: 'video.stages.render',
+      };
+    });
+
+    const adapter = createRealVideoWorkspaceTaskAdapter({ client });
+    const result = await adapter.listActiveTasks();
+
+    expect(result.total).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      taskId: 'vtask_processing_002',
+      title: '积分题讲解',
+      lifecycleStatus: 'processing',
+      progress: 58,
+    });
+  });
+
   it('merges pending and processing video tasks with per-task status snapshots', async () => {
     async function requestMock<T>(config: ApiRequestConfig): Promise<ApiClientResponse<T>> {
       if (config.url === '/api/v1/video/tasks?status=pending&pageNum=1&pageSize=10') {

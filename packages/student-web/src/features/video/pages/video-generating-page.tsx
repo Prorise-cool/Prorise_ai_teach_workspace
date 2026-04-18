@@ -113,7 +113,9 @@ export function VideoGeneratingPage() {
 	const prevSignalsRef = useRef({ previewAvailable: false, readySections: 0, fixAttempt: 0, degradedToPolling: false, status: 'pending' as TaskLifecycleStatus });
 	const { cancelTask, isCancelling } = useCancelVideoTask(taskId, {
 		navigateOnSuccess: true,
-		returnTo: '/video/input',
+		returnTo: taskId
+			? `/video/input?toast=cancelled&taskId=${encodeURIComponent(taskId)}`
+			: '/video/input?toast=cancelled',
 		replace: true,
 	});
 
@@ -196,8 +198,12 @@ export function VideoGeneratingPage() {
 	const titleText = readDraftTitle(taskId, t('video.generating.defaultTitle'));
 	const stageTags = buildStageTags(displayStageKey, knowledgePoints, sections, readySections, displayTotalSections, t);
 	const isResultReady = status === 'completed' && Boolean(taskId);
+	const inputReturnUrl =
+		taskId && status !== 'completed' && status !== 'failed' && status !== 'cancelled'
+			? `/video/input?focusTask=${encodeURIComponent(taskId)}&toast=returned`
+			: '/video/input';
 
-	const handleReturn = useCallback(() => void navigate('/video/input'), [navigate]);
+	const handleReturn = useCallback(() => void navigate(inputReturnUrl), [inputReturnUrl, navigate]);
 	const handleCancelTask = useCallback(() => cancelTask(), [cancelTask]);
 	const handleGoToResult = useCallback(() => {
 		if (!taskId || status !== 'completed') return;

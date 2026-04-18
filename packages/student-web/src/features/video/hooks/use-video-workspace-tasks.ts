@@ -5,13 +5,20 @@ import { useQuery } from '@tanstack/react-query';
 
 import { resolveVideoWorkspaceTaskAdapter } from '@/services/api/adapters/video-workspace-task-adapter';
 
-export function useVideoWorkspaceTasks() {
-  const adapter = resolveVideoWorkspaceTaskAdapter();
+type UseVideoWorkspaceTasksOptions = {
+	enabled?: boolean;
+};
 
-  return useQuery({
-    queryKey: ['video', 'workspace', 'active-tasks'],
-    queryFn: () => adapter.listActiveTasks(),
-    staleTime: 5_000,
-    refetchInterval: 10_000,
-  });
+export function useVideoWorkspaceTasks(
+	options: UseVideoWorkspaceTasksOptions = {},
+) {
+	const adapter = resolveVideoWorkspaceTaskAdapter();
+
+	return useQuery({
+		queryKey: ['video', 'workspace', 'active-tasks'],
+		queryFn: () => adapter.listActiveTasks(),
+		enabled: options.enabled ?? true,
+		staleTime: 5_000,
+		refetchInterval: 10_000,
+	});
 }
