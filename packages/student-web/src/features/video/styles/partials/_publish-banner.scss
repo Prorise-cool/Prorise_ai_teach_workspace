@@ -1,26 +1,30 @@
 /**
- * 文件说明：视频结果页发布状态横幅条样式。
- * 结果公开与复用横幅，含公开状态说明、操作按钮。
+ * 文件说明：视频结果页公开状态卡样式。
+ * 固定放在进度条下、视频舞台上方，属于正常文档流，不覆盖视频主舞台。
  */
 
 .xm-publish-banner {
-  width: 100%;
-  padding: 0 var(--xm-spacing-10, 2.5rem);
-  margin-bottom: var(--xm-spacing-3, 0.75rem);
-  z-index: 20;
   position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0 var(--xm-spacing-5, 1.25rem);
+  margin-bottom: var(--xm-spacing-4, 1rem);
+
+  @media (min-width: 768px) {
+    padding: 0 var(--xm-spacing-10, 2.5rem);
+  }
 
   &__card {
-    border-radius: var(--xm-radius-lg, 16px);
-    border: 1px solid var(--xm-color-border);
-    background: color-mix(in srgb, var(--xm-color-surface) 70%, transparent);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    padding: var(--xm-spacing-3, 0.75rem) var(--xm-spacing-4, 1rem);
     display: flex;
     flex-direction: column;
-    gap: var(--xm-spacing-3, 0.75rem);
-    box-shadow: var(--xm-shadow-sm);
+    gap: var(--xm-spacing-4, 1rem);
+    border-radius: 24px;
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 86%, transparent);
+    background: color-mix(in srgb, var(--xm-color-surface) 88%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: var(--xm-spacing-4, 1rem);
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
 
     @media (min-width: 1024px) {
       flex-direction: row;
@@ -33,94 +37,116 @@
     display: flex;
     align-items: flex-start;
     gap: var(--xm-spacing-3, 0.75rem);
+    min-width: 0;
   }
 
   &__icon-wrap {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--xm-color-primary) 10%, transparent);
-    border: 1px solid color-mix(in srgb, var(--xm-color-primary) 20%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
+    background: color-mix(in srgb, var(--xm-color-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--xm-color-primary) 18%, transparent);
     flex-shrink: 0;
   }
 
   &__text-group {
     display: flex;
     flex-direction: column;
+    gap: 8px;
+    min-width: 0;
   }
 
   &__title-row {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--xm-spacing-2, 0.5rem);
   }
 
   &__title {
-    font-size: 13px;
+    margin: 0;
+    font-size: 14px;
     font-weight: 700;
     color: var(--xm-color-text-primary);
   }
 
   &__tag {
-    padding: var(--xm-spacing-0, 0) var(--xm-spacing-2, 0.5rem);
-    border-radius: var(--xm-radius-full, 9999px);
-    background: var(--xm-color-secondary);
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--xm-color-secondary) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 86%, transparent);
     font-size: 11px;
     font-weight: 700;
     color: var(--xm-color-text-secondary);
-    border: 1px solid var(--xm-color-border);
-    line-height: 1.8;
   }
 
   &__desc {
+    margin: 0;
     font-size: 12px;
-    line-height: 1.6;
+    line-height: 1.55;
     color: var(--xm-color-text-secondary);
-    margin-top: var(--xm-spacing-1, 0.25rem);
   }
 
   &__actions {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
     gap: var(--xm-spacing-2, 0.5rem);
 
     @media (min-width: 1024px) {
       justify-content: flex-end;
+      align-self: stretch;
     }
   }
 
   &__btn {
-    padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-3, 0.75rem);
-    border-radius: var(--xm-radius-full, 9999px);
-    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: all var(--xm-duration-fast) var(--xm-easing-standard);
+    transition:
+      transform var(--xm-duration-fast, 0.15s) var(--xm-easing-standard, ease),
+      background var(--xm-duration-fast, 0.15s) var(--xm-easing-standard, ease),
+      color var(--xm-duration-fast, 0.15s) var(--xm-easing-standard, ease);
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    &--primary {
+      background: var(--xm-color-primary);
+      color: var(--xm-color-primary-foreground);
+    }
 
     &--outline {
-      border: 1px solid var(--xm-color-border);
       background: var(--xm-color-surface);
+      border-color: color-mix(in srgb, var(--xm-color-border) 86%, transparent);
       color: var(--xm-color-text-primary);
-
-      &:hover {
-        background: var(--xm-color-secondary);
-      }
     }
 
     &--danger {
-      border: 1px solid color-mix(in srgb, var(--xm-color-error) 20%, transparent);
-      background: color-mix(in srgb, var(--xm-color-error) 5%, transparent);
+      background: color-mix(in srgb, var(--xm-color-error) 8%, transparent);
+      border-color: color-mix(in srgb, var(--xm-color-error) 18%, transparent);
       color: var(--xm-color-error);
-
-      &:hover {
-        background: var(--xm-color-error);
-        color: white;
-      }
     }
   }
 }
