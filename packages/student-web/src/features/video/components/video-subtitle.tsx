@@ -1,6 +1,6 @@
 /**
  * 文件说明：视频底部字幕浮层组件。
- * 深色半透明背景 + backdrop-blur，居中显示字幕文本。
+ * 深色半透明安全带，居中显示当前 section/TTS 字幕文本。
  */
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ export function VideoSubtitle({ text, className }: VideoSubtitleProps) {
   if (!text) return null;
 
   return (
-    <div className={cn('xm-video-result__subtitle', className)}>
+    <div className={cn('xm-video-result__subtitle', className)} aria-live="polite">
       {text}
     </div>
   );

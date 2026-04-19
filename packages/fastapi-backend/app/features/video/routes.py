@@ -90,6 +90,12 @@ def get_video_voice_catalog_service() -> VideoVoiceCatalogService:
     )
 
 
+def _public_result_url(request: Request, result_id: str) -> str:
+    """生成匿名可读的视频公开详情链接。"""
+
+    return str(request.url_for("get_public_video_result_detail", result_id=result_id))
+
+
 @router.get(
     "/bootstrap",
     response_model=FeatureBootstrapResponseEnvelope,
@@ -293,6 +299,38 @@ async def get_video_task_result(
         runtime_store=request.app.state.runtime_store,
         access_context=access_context,
     )
+    if payload.result is not None:
+        payload = payload.model_copy(
+            update={"public_url": _public_result_url(request, payload.result.result_id)}
+        )
+    return build_success_envelope(payload)
+
+
+@router.get(
+    "/public/{result_id}",
+    response_model=VideoResultDetailResponseEnvelope,
+    responses={
+        404: {
+            "model": ErrorResponseEnvelope,
+            "description": "公开视频不存在或未公开",
+        }
+    },
+)
+async def get_public_video_result_detail(
+    result_id: str,
+    request: Request,
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    """匿名读取公开视频结果详情。"""
+
+    payload = await service.get_public_result_detail(
+        result_id,
+        runtime_store=request.app.state.runtime_store,
+    )
+    if payload.result is not None:
+        payload = payload.model_copy(
+            update={"public_url": _public_result_url(request, payload.result.result_id)}
+        )
     return build_success_envelope(payload)
 
 

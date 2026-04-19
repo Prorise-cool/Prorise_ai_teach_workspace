@@ -7,12 +7,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from app.features.video.pipeline.models import (
+    ArtifactPayload,
+    ArtifactType,
     PublishState,
+    VideoArtifactGraph,
     VideoPreviewSection,
     VideoPreviewSectionStatus,
-    VideoTaskPreview,
     VideoResult,
     VideoResultDetail,
+    VideoTaskPreview,
+    build_video_result_id,
 )
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateStore
@@ -58,7 +62,7 @@ def _build_detail(task_id: str = "video-task-001") -> VideoResultDetail:
             duration=120,
             summary="勾股定理讲解",
             knowledge_points=["直角三角形", "面积法"],
-            result_id="video-result-001",
+            result_id=build_video_result_id(task_id),
             completed_at="2026-04-12T10:00:00Z",
             title="勾股定理完整讲解",
         ),
@@ -83,6 +87,44 @@ def _build_runtime_store(task_id: str, *, detail: VideoResultDetail | None = Non
     return runtime_store
 
 
+def _write_artifact_graph(asset_store: LocalAssetStore, *, task_id: str = "video-task-001") -> None:
+    graph = VideoArtifactGraph(
+        session_id=task_id,
+        artifacts=[
+            ArtifactPayload(
+                artifact_type=ArtifactType.TIMELINE,
+                data={
+                    "scenes": [
+                        {
+                            "sceneId": "section_1",
+                            "title": "认识题目",
+                            "startTime": 0,
+                            "endTime": 18,
+                        }
+                    ]
+                },
+            ),
+            ArtifactPayload(
+                artifact_type=ArtifactType.NARRATION,
+                data={
+                    "segments": [
+                        {
+                            "sceneId": "section_1",
+                            "text": "先看条件，再观察直角三角形关系。",
+                            "startTime": 0,
+                            "endTime": 18,
+                        }
+                    ]
+                },
+            ),
+        ],
+    )
+    asset_store.write_json(
+        f"video/{task_id}/artifact-graph.json",
+        graph.model_dump(mode="json", by_alias=True),
+    )
+
+
 def test_get_result_detail_reads_runtime_result_detail_when_detail_ref_missing(tmp_path: Path) -> None:
     asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
     publication_service = SimpleNamespace(get_publication=AsyncMock(return_value=None))
@@ -93,12 +135,44 @@ def test_get_result_detail_reads_runtime_result_detail_when_detail_ref_missing(t
     service.snapshot = _build_snapshot()
     detail = _build_detail()
     runtime_store = _build_runtime_store("video-task-001", detail=detail)
+    VideoRuntimeStateStore(runtime_store, "video-task-001").save_preview(
+        VideoTaskPreview(
+            task_id="video-task-001",
+            status="completed",
+            preview_available=True,
+            preview_version=1,
+            summary="勾股定理讲解",
+            knowledge_points=["直角三角形"],
+            total_sections=1,
+            ready_sections=1,
+            failed_sections=0,
+            sections=[
+                VideoPreviewSection(
+                    section_id="section_1",
+                    section_index=0,
+                    title="认识题目",
+                    lecture_lines=["先看条件", "再看图形关系"],
+                    status=VideoPreviewSectionStatus.READY,
+                    audio_url="https://cdn.test/audio.mp3",
+                    clip_url="https://cdn.test/clip.webm",
+                )
+            ],
+        )
+    )
+    _write_artifact_graph(asset_store)
 
     result = asyncio.run(service.get_result_detail("video-task-001", runtime_store=runtime_store))
 
     assert result.status == "completed"
     assert result.result is not None
     assert result.result.video_url == "https://cdn.test/video.mp4"
+    assert result.sections[0].title == "认识题目"
+    assert result.sections[0].lecture_lines == ["先看条件", "再看图形关系"]
+    assert result.sections[0].narration_text == "先看条件，再观察直角三角形关系。"
+    assert result.sections[0].clip_url == "https://cdn.test/clip.webm"
+    assert result.timeline[0].start_time == 0
+    assert result.timeline[0].end_time == 18
+    assert result.narration[0].text == "先看条件，再观察直角三角形关系。"
     publication_service.get_publication.assert_awaited_once_with(
         "video-task-001",
         access_context=None,
@@ -198,3 +272,54 @@ def test_get_preview_detail_falls_back_to_minimal_structure_when_preview_missing
     assert result.preview_available is False
     assert result.summary == "勾股定理讲解"
     assert result.sections == []
+
+
+def test_get_public_result_detail_requires_published_state(tmp_path: Path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    publication_service = SimpleNamespace(get_publication=AsyncMock(return_value=None))
+    service = _StubVideoService(
+        asset_store=asset_store,
+        publication_service=publication_service,
+    )
+    detail = _build_detail()
+    asset_store.write_json(
+        "video/video-task-001/result-detail.json",
+        detail.model_dump(mode="json", by_alias=True),
+    )
+
+    try:
+        asyncio.run(service.get_public_result_detail("vr-video-task-001"))
+    except Exception as exc:  # noqa: BLE001
+        assert getattr(exc, "status_code", None) == 404
+    else:  # pragma: no cover - safety guard
+        raise AssertionError("expected public route to reject unpublished detail")
+
+
+def test_get_public_result_detail_reads_persisted_detail(tmp_path: Path) -> None:
+    asset_store = LocalAssetStore(root_dir=tmp_path, cos_client=CosClient("https://cos.test.local"))
+    publication_service = SimpleNamespace(get_publication=AsyncMock(return_value=None))
+    service = _StubVideoService(
+        asset_store=asset_store,
+        publication_service=publication_service,
+    )
+    detail = _build_detail().model_copy(
+        update={
+            "publish_state": PublishState(
+                published=True,
+                published_at="2026-04-12T10:00:00Z",
+                author_name="teacher",
+            )
+        }
+    )
+    asset_store.write_json(
+        "video/video-task-001/result-detail.json",
+        detail.model_dump(mode="json", by_alias=True),
+    )
+    _write_artifact_graph(asset_store)
+
+    result = asyncio.run(service.get_public_result_detail("vr-video-task-001"))
+
+    assert result.publish_state.published is True
+    assert result.result is not None
+    assert result.result.result_id == "vr-video-task-001"
+    assert result.timeline[0].title == "认识题目"

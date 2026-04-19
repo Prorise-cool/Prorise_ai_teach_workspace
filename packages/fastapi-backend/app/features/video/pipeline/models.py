@@ -310,6 +310,38 @@ class VideoResult(VideoCamelModel):
     render_summary: dict[str, Any] = Field(default_factory=dict)
 
 
+class VideoResultSection(VideoCamelModel):
+    """结果页 section 片段详情。"""
+
+    section_id: str
+    section_index: int = Field(ge=0)
+    title: str
+    lecture_lines: list[str] = Field(default_factory=list)
+    narration_text: str = ""
+    audio_url: str | None = None
+    clip_url: str | None = None
+    start_time: int | None = Field(default=None, ge=0)
+    end_time: int | None = Field(default=None, ge=0)
+
+
+class VideoTimelineItem(VideoCamelModel):
+    """结果页章节时间轴节点。"""
+
+    section_id: str
+    title: str
+    start_time: int = Field(ge=0)
+    end_time: int = Field(ge=0)
+
+
+class VideoNarrationSegment(VideoCamelModel):
+    """结果页字幕/旁白片段。"""
+
+    section_id: str
+    text: str
+    start_time: int | None = Field(default=None, ge=0)
+    end_time: int | None = Field(default=None, ge=0)
+
+
 class VideoFailure(VideoCamelModel):
     """视频任务失败详情。"""
     task_id: str
@@ -403,7 +435,11 @@ class VideoResultDetail(VideoCamelModel):
     status: Literal["processing", "completed", "failed"]
     result: VideoResult | None = None
     failure: VideoFailure | None = None
+    sections: list[VideoResultSection] = Field(default_factory=list)
+    timeline: list[VideoTimelineItem] = Field(default_factory=list)
+    narration: list[VideoNarrationSegment] = Field(default_factory=list)
     publish_state: PublishState = Field(default_factory=PublishState)
+    public_url: str | None = None
     artifact_writeback_failed: bool = False
     long_term_writeback_failed: bool = False
     updated_at: str = Field(default_factory=format_trace_timestamp)
@@ -487,6 +523,24 @@ def build_stage_snapshot(stage: VideoStage | str, ratio: float) -> VideoStageSna
         stage_progress=stage_progress,
         progress=absolute_progress,
     )
+
+
+VIDEO_RESULT_ID_PREFIX = "vr-"
+
+
+def build_video_result_id(task_id: str) -> str:
+    """构建稳定的视频结果 ID。"""
+
+    return f"{VIDEO_RESULT_ID_PREFIX}{task_id}"
+
+
+def parse_video_result_id(result_id: str) -> str | None:
+    """从稳定结果 ID 中解析 task_id。"""
+
+    if not result_id.startswith(VIDEO_RESULT_ID_PREFIX):
+        return None
+    task_id = result_id[len(VIDEO_RESULT_ID_PREFIX):].strip()
+    return task_id or None
 
 
 def normalize_storyboard_duration(

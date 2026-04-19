@@ -9,14 +9,19 @@ from app.core.errors import AppError, IntegrationError
 from app.core.logging import get_logger
 from app.core.security import AccessContext
 from app.features.video.pipeline.models import (
-    VideoTaskPreview,
     VideoResultDetail,
+    VideoTaskPreview,
+    parse_video_result_id,
 )
 from app.features.video.pipeline.orchestration.runtime import (
     VideoRuntimeStateStore,
     build_preview_state,
 )
-from app.features.video.service._helpers import resolve_publish_state
+from app.features.video.service._helpers import (
+    hydrate_result_detail,
+    load_result_detail,
+    resolve_publish_state,
+)
 from app.infra.redis_client import RuntimeStore
 
 logger = get_logger("app.features.video.service")
@@ -28,6 +33,13 @@ class ResultServiceMixin:
     # --- 由 VideoService 实例提供的属性（运行时绑定） ---
     _asset_store: object  # LocalAssetStore
     _publication_service: object  # VideoPublicationService
+
+    @staticmethod
+    def _build_processing_detail(task_id: str, status: str) -> VideoResultDetail:
+        return VideoResultDetail(
+            task_id=task_id,
+            status="processing" if status == "pending" else status,
+        )
 
     async def _overlay_publication_state(
         self: "ResultServiceMixin",
@@ -91,32 +103,75 @@ class ResultServiceMixin:
                 task_id=task_id,
             )
 
-        if snapshot.detail_ref and self._asset_store.exists(snapshot.detail_ref):
-            detail = self._asset_store.read_result_detail(snapshot.detail_ref)
-            return await self._overlay_publication_state(
+        detail, _ = load_result_detail(
+            self._asset_store,
+            task_id,
+            detail_ref=snapshot.detail_ref,
+            runtime_store=runtime_store,
+        )
+        if detail is not None:
+            detail = await self._overlay_publication_state(
                 task_id,
                 detail,
                 access_context=access_context,
             )
+            return hydrate_result_detail(
+                task_id,
+                detail,
+                asset_store=self._asset_store,
+                runtime_store=runtime_store,
+                artifact_ref=snapshot.source_artifact_ref,
+            )
 
         if runtime_store is not None:
-            runtime = VideoRuntimeStateStore(runtime_store, task_id)
-            detail = runtime.load_model("result_detail", VideoResultDetail)
-            if detail is not None:
-                return await self._overlay_publication_state(
-                    task_id,
-                    detail,
-                    access_context=access_context,
-                )
             state = runtime_store.get_task_state(task_id)
             if state is not None:
                 status = str(state.get("status") or "processing")
-                return VideoResultDetail(
-                    task_id=task_id,
-                    status="processing" if status == "pending" else status,
-                )
+                return self._build_processing_detail(task_id, status)
 
-        return VideoResultDetail(task_id=task_id, status="processing")
+        return self._build_processing_detail(task_id, "processing")
+
+    async def get_public_result_detail(
+        self: "ResultServiceMixin",
+        result_id: str,
+        *,
+        runtime_store: RuntimeStore | None = None,
+    ) -> VideoResultDetail:
+        """匿名读取已公开的视频结果详情。"""
+
+        task_id = parse_video_result_id(result_id)
+        if task_id is None:
+            raise AppError(
+                code="COMMON_NOT_FOUND",
+                message="公开视频不存在",
+                status_code=404,
+                details={"result_id": result_id},
+            )
+
+        detail, _ = load_result_detail(
+            self._asset_store,
+            task_id,
+            runtime_store=runtime_store,
+        )
+        if (
+            detail is None
+            or detail.result is None
+            or detail.result.result_id != result_id
+            or not detail.publish_state.published
+        ):
+            raise AppError(
+                code="COMMON_NOT_FOUND",
+                message="公开视频不存在",
+                status_code=404,
+                details={"result_id": result_id},
+            )
+
+        return hydrate_result_detail(
+            task_id,
+            detail,
+            asset_store=self._asset_store,
+            runtime_store=runtime_store,
+        )
 
     async def get_preview_detail(
         self: "ResultServiceMixin",

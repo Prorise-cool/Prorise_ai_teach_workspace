@@ -1,7 +1,6 @@
 /**
- * 文件说明：视频结果页布局样式（Apple Dock 无界画布版）。
- * 管理全屏画布 + Companion 侧栏的 flex 行布局，
- * 以及背景装饰层（网格 + 光晕）。
+ * 文件说明：视频结果页布局样式（播放器优先版）。
+ * 维持 main 与 aside 同级 flex，侧栏只通过真实宽度挤压主舞台。
  */
 
 @use 'partials/result-header';
@@ -13,31 +12,43 @@
   display: flex;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
-  font-family: var(--xm-font-family-sans);
   background-color: var(--xm-color-background);
   color: var(--xm-color-text-primary);
-  position: relative;
+  font-family: var(--xm-font-family-sans);
+  overflow: hidden;
 
-  /* -- 左侧画布区 -- */
   &__canvas {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-width: 0;
-    z-index: 10;
     position: relative;
     overflow: hidden;
-    transition: all var(--xm-duration-base, 0.3s) var(--xm-easing-standard, ease);
+    z-index: 10;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* -- 背景装饰层 -- */
+  &__body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 0;
+  }
+
+  &__sidebar {
+    flex-shrink: 0;
+    height: 100%;
+  }
+
   &__ambient {
     position: absolute;
     inset: 0;
-    z-index: 0;
     pointer-events: none;
+    z-index: 0;
   }
 
   &__grid {
@@ -47,142 +58,301 @@
       linear-gradient(to right, color-mix(in srgb, var(--xm-color-text-primary) 4%, transparent) 1px, transparent 1px),
       linear-gradient(to bottom, color-mix(in srgb, var(--xm-color-text-primary) 4%, transparent) 1px, transparent 1px);
     background-size: 32px 32px;
-    mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black 28%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 28%, transparent 100%);
   }
 
   &__glow {
     position: absolute;
-    top: -20%;
+    top: -24%;
     left: 50%;
     transform: translateX(-50%);
-    width: 80vw;
-    max-width: 1200px;
-    height: 400px;
-    border-radius: 100%;
-    background: color-mix(in srgb, var(--xm-color-primary) 15%, transparent);
+    width: min(78vw, 1120px);
+    height: 380px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--xm-color-primary) 14%, transparent);
     filter: blur(100px);
     mix-blend-mode: multiply;
-    transition: background var(--xm-duration-slow, 0.5s) var(--xm-easing-standard);
   }
 
-  /* -- 全屏播放器容器 -- */
-  &__player-fullscreen {
-    flex: 1;
+  &__progress {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--xm-spacing-6, 1.5rem);
-    z-index: 10;
+    z-index: 40;
     width: 100%;
-    min-height: 0;
-  }
-
-  /* -- Video.js 全屏透明模式 -- */
-  &__player-fullscreen .video-player-container {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-
-    .video-js {
-      width: 100% !important;
-      height: 100% !important;
-      background-color: transparent;
-      border-radius: 0;
-
-      .vjs-poster {
-        background-size: contain;
-        background-color: transparent;
-      }
-    }
-  }
-
-  /* -- 字幕层 -- */
-  &__subtitle {
-    position: absolute;
-    bottom: 110px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: color-mix(in srgb, var(--xm-color-text-primary) 85%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: var(--xm-color-surface);
-    padding: var(--xm-spacing-2, 0.5rem) var(--xm-spacing-6, 1.5rem);
-    border-radius: var(--xm-radius-md, 8px);
-    font-size: 15px;
-    letter-spacing: 0.025em;
-    font-weight: 500;
-    max-width: 90%;
-    text-align: center;
-    box-shadow: var(--xm-shadow-md);
-    z-index: 20;
-    pointer-events: none;
+    padding: 0 var(--xm-spacing-5, 1.25rem);
+    margin-top: -4px;
+    margin-bottom: var(--xm-spacing-2, 0.5rem);
 
     @media (min-width: 768px) {
-      max-width: 48rem;
+      padding: 0 var(--xm-spacing-10, 2.5rem);
     }
-  }
-
-  /* -- 进度条 -- */
-  &__progress {
-    width: 100%;
-    padding: 0 var(--xm-spacing-10, 2.5rem);
-    z-index: 20;
-    position: relative;
-    margin-top: calc(var(--xm-spacing-1, 0.25rem) * -1);
-    margin-bottom: var(--xm-spacing-2, 0.5rem);
   }
 
   &__progress-track {
+    position: relative;
     height: 4px;
     width: 100%;
-    background: var(--xm-color-border);
     border-radius: var(--xm-radius-full, 9999px);
-    overflow: hidden;
-    position: relative;
+    background: color-mix(in srgb, var(--xm-color-border) 86%, transparent);
     cursor: pointer;
-
-    &:hover .xm-video-result__progress-handle {
-      opacity: 1;
-    }
+    overflow: visible;
   }
 
   &__progress-fill {
     position: absolute;
-    inset: 0;
-    right: auto;
-    background: var(--xm-color-primary);
-    border-radius: var(--xm-radius-full, 9999px);
-    transition: width 0.2s ease;
+    inset: 0 auto 0 0;
+    min-width: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--xm-color-primary) 82%, white 18%),
+      var(--xm-color-primary)
+    );
   }
 
   &__progress-handle {
     position: absolute;
     right: 0;
     top: 50%;
+    width: 14px;
+    height: 14px;
     transform: translate(50%, -50%);
-    width: 12px;
-    height: 12px;
-    background: var(--xm-color-surface);
     border-radius: 50%;
-    box-shadow: var(--xm-shadow-sm);
     border: 2px solid var(--xm-color-primary);
+    background: var(--xm-color-surface);
+    box-shadow: var(--xm-shadow-sm);
+  }
+
+  &__progress-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+    padding: 0;
+
+    &[data-active='true'] .xm-video-result__progress-marker-dot {
+      background: var(--xm-color-primary);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--xm-color-primary) 16%, transparent);
+    }
+  }
+
+  &__progress-marker-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--xm-color-surface);
+    background: color-mix(in srgb, var(--xm-color-primary) 66%, white 34%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--xm-color-primary) 18%, transparent);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &__progress-marker:hover .xm-video-result__progress-marker-dot,
+  &__progress-marker:focus-visible .xm-video-result__progress-marker-dot {
+    transform: scale(1.5);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--xm-color-primary) 20%, transparent);
+  }
+
+  &__progress-tooltip {
+    position: absolute;
+    top: calc(100% + 16px);
+    transform: translateX(-50%) scale(0.8);
+    width: min(256px, calc(100vw - 48px));
+    padding: var(--xm-spacing-4, 1rem);
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, white 60%, transparent);
+    background: color-mix(in srgb, var(--xm-color-surface) 85%, transparent);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    pointer-events: none;
     opacity: 0;
-    transition: opacity var(--xm-duration-fast, 0.15s) var(--xm-easing-standard);
+    visibility: hidden;
+    transition: opacity 0.2s ease-in,
+      transform 0.2s ease-in,
+      visibility 0.2s;
+    transform-origin: top center;
+  }
+
+  &__progress-marker:hover &__progress-tooltip,
+  &__progress-marker:focus-visible &__progress-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+    transition: opacity 0.3s ease-out,
+      transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &__progress-tooltip-arrow {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 14px;
+    height: 14px;
+    background: color-mix(in srgb, var(--xm-color-surface) 85%, transparent);
+    border-left: 1px solid color-mix(in srgb, white 60%, transparent);
+    border-top: 1px solid color-mix(in srgb, white 60%, transparent);
+    border-top-left-radius: 3px;
+  }
+
+  &__progress-tooltip-icon-wrap {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--xm-color-primary) 15%, transparent);
+    flex-shrink: 0;
+    margin-bottom: var(--xm-spacing-2, 0.5rem);
+  }
+
+  &__progress-tooltip-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--xm-color-text-secondary);
+    margin: 0 0 4px;
+  }
+
+  &__progress-tooltip-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--xm-color-text-primary);
+    margin: 0 0 4px;
+  }
+
+  &__progress-tooltip-summary {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--xm-color-text-secondary);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: stretch;
+    padding: 0 var(--xm-spacing-4, 1rem) var(--xm-spacing-4, 1rem);
+
+    @media (min-width: 768px) {
+      padding: 0 var(--xm-spacing-10, 2.5rem) var(--xm-spacing-6, 1.5rem);
+    }
+  }
+
+  &__player-shell {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0 110px;
+  }
+
+  &__player-frame {
+    position: relative;
+    width: min(100%, 600px);
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--xm-color-border) 76%, transparent);
+    background:
+      radial-gradient(circle at top, color-mix(in srgb, var(--xm-color-primary) 15%, transparent), transparent 56%),
+      color-mix(in srgb, var(--xm-color-surface) 92%, black 8%);
+    box-shadow:
+      0 28px 60px rgba(15, 23, 42, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  &__player {
+    width: 100%;
+    height: 100%;
+
+    .video-player-container,
+    .video-js {
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent;
+    }
+
+    .vjs-tech,
+    .vjs-poster {
+      object-fit: contain;
+      background-color: transparent;
+    }
+  }
+
+  &__subtitle {
+    position: absolute;
+    left: 50%;
+    bottom: 110px;
+    transform: translateX(-50%);
+    max-width: min(720px, calc(100% - 36px));
+    padding: 10px 24px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--xm-color-text-primary) 85%, transparent);
+    color: var(--xm-color-surface);
+    font-size: 15px;
+    line-height: 1.4;
+    text-align: center;
+    letter-spacing: 0.01em;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+    pointer-events: none;
+    z-index: 20;
+    border: 1px solid transparent;
   }
 }
 
-/* -- Dark theme adjustments -- */
 :root[data-theme='dark'] {
   .xm-video-result__glow {
-    background: color-mix(in srgb, var(--xm-color-primary) 5%, transparent);
+    background: color-mix(in srgb, var(--xm-color-primary) 7%, transparent);
     mix-blend-mode: screen;
   }
 
+  .xm-video-result__progress-track {
+    background: color-mix(in srgb, var(--xm-color-border) 40%, transparent);
+  }
+
+  .xm-video-result__progress-tooltip {
+    background: color-mix(in srgb, var(--xm-color-surface) 85%, black 15%);
+    border-color: color-mix(in srgb, white 5%, transparent);
+  }
+
+  .xm-video-result__progress-tooltip-arrow {
+    background: color-mix(in srgb, var(--xm-color-surface) 85%, black 15%);
+    border-color: color-mix(in srgb, white 5%, transparent);
+  }
+
+  .xm-video-result__progress-marker:hover .xm-video-result__progress-marker-dot {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--xm-color-primary) 25%, transparent);
+  }
+
+  .xm-video-result__player-frame {
+    background:
+      radial-gradient(circle at top, color-mix(in srgb, var(--xm-color-primary) 14%, transparent), transparent 58%),
+      color-mix(in srgb, var(--xm-color-surface) 86%, black 14%);
+  }
+
   .xm-video-result__subtitle {
-    background: color-mix(in srgb, var(--xm-color-surface) 95%, transparent);
+    background: color-mix(in srgb, var(--xm-color-surface) 96%, transparent);
     color: var(--xm-color-text-primary);
+    border-color: var(--xm-color-border);
   }
 }
