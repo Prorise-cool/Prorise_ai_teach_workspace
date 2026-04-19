@@ -78,4 +78,28 @@ describe('VideoPlayer', () => {
       }),
     );
   });
+
+  it('maps webm assets to the correct mime type', async () => {
+    renderWithApp(
+      <div style={{ width: 640, height: 360 }}>
+        <VideoPlayer videoUrl="https://static.prorise.test/final-output.webm" hideControls />
+      </div>,
+    );
+
+    await waitFor(() => {
+      expect(videojsMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(videojsMock).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        sources: [
+          expect.objectContaining({
+            src: 'https://static.prorise.test/final-output.webm',
+            type: 'video/webm',
+          }),
+        ],
+      }),
+    );
+  });
 });

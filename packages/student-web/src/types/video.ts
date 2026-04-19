@@ -364,6 +364,21 @@ export type VideoTaskPreviewResponseEnvelope = TaskDataEnvelope<VideoTaskPreview
 /* ---------- 成功结果 ---------- */
 
 /** 视频任务成功结果。 */
+export interface VideoResultSection {
+  sectionId: string;
+  sectionIndex: number;
+  title?: string;
+  summary?: string;
+  subtitleText?: string | null;
+  ttsText?: string | null;
+  narrationText?: string | null;
+  lectureLines?: string[];
+  startSeconds?: number | null;
+  endSeconds?: number | null;
+  durationSeconds?: number | null;
+}
+
+/** 视频任务成功结果。 */
 export interface VideoResult {
   taskId: string;
   taskType: 'video';
@@ -379,6 +394,10 @@ export interface VideoResult {
   providerUsed?: Record<string, string[]>;
   /** 公开发布状态（Story 4.10）。 */
   published?: boolean;
+  /** 真实可分享的公开详情地址。 */
+  publicUrl?: string | null;
+  /** 最终成片对应的 section 级字幕 / 跳点信息。 */
+  sections?: VideoResultSection[];
 }
 
 /* ---------- 失败结果 ---------- */

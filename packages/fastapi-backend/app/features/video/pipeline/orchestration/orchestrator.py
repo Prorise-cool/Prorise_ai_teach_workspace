@@ -51,6 +51,7 @@ from app.features.video.pipeline.models import (
     VideoResult,
     VideoResultDetail,
     VideoStage,
+    build_video_result_id,
     get_stage_profile,
     resolve_stage_progress,
 )
@@ -1243,7 +1244,7 @@ class VideoPipelineService:
             knowledge_points=preview_state.knowledge_points
             or knowledge_points
             or [ctx.knowledge_point[:50]],
-            result_id=f"vr-{ctx.task_id}",
+            result_id=build_video_result_id(ctx.task_id),
             completed_at=_utc_iso(),
             title=ctx.knowledge_point[:60],
             provider_used=setup.assembly.provider_summary(),

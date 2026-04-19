@@ -216,14 +216,42 @@ const previewFixtures: Record<VideoPipelineMockScenario, VideoTaskPreview> = {
  * @returns 成功结果。
  */
 export function getMockVideoResult(taskId?: string): VideoResult {
+  const resolvedTaskId = taskId ?? videoResultSuccess.taskId;
+  const resolvedResultId = taskId
+    ? `video_result_${resolvedTaskId}`
+    : videoResultSuccess.resultId;
+  const preview = getMockVideoPreview(resolvedTaskId, 'success');
+  const sectionDuration =
+    videoResultSuccess.duration > 0 && preview.sections.length > 0
+      ? videoResultSuccess.duration / preview.sections.length
+      : 0;
+
+  const normalizedSections = preview.sections.map((section) => ({
+    sectionId: section.sectionId,
+    sectionIndex: section.sectionIndex,
+    title: section.title,
+    summary: section.lectureLines[0] ?? '',
+    narrationText: section.lectureLines.join(' '),
+    lectureLines: section.lectureLines,
+    startSeconds: section.sectionIndex * sectionDuration,
+    endSeconds: (section.sectionIndex + 1) * sectionDuration,
+    durationSeconds: sectionDuration,
+  }));
+
   if (!taskId) {
-    return videoResultSuccess;
+    return {
+      ...videoResultSuccess,
+      publicUrl: `https://app.prorise.test/video/public/${resolvedResultId}`,
+      sections: normalizedSections,
+    };
   }
 
   return {
     ...videoResultSuccess,
-    taskId,
-    resultId: `video_result_${taskId}`,
+    taskId: resolvedTaskId,
+    resultId: resolvedResultId,
+    publicUrl: `https://app.prorise.test/video/public/${resolvedResultId}`,
+    sections: normalizedSections,
   };
 }
 

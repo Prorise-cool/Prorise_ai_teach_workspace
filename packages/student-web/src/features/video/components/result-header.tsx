@@ -1,16 +1,13 @@
 /**
  * 文件说明：视频结果页顶部 Header 组件。
- * 含返回箭头、标题、发布状态胶囊、设置、侧栏控制。
+ * 含返回箭头、标题、发布状态胶囊、侧栏控制（对齐设计稿）。
  */
 import {
   ChevronLeft,
   Loader2,
-  Moon,
   PanelRightClose,
   PanelRightOpen,
-  Settings,
   Shield,
-  Sun,
 } from 'lucide-react';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +32,10 @@ export interface ResultHeaderProps {
   onToggleSidebar: () => void;
   /** 额外 className。 */
   className?: string;
+  /** 是否只读公开视图。 */
+  readOnly?: boolean;
+  /** 返回目标路径；不传则走 history.back()。 */
+  backTo?: string | null;
 }
 
 /**
@@ -52,25 +53,26 @@ export function ResultHeader({
   sidebarOpen,
   onToggleSidebar,
   className,
+  readOnly = false,
+  backTo = '/video/input',
 }: ResultHeaderProps) {
   const { t } = useAppTranslation();
   const navigate = useNavigate();
 
   const handleReturn = useCallback(() => {
-    void navigate('/video/input');
-  }, [navigate]);
+    if (backTo) {
+      void navigate(backTo);
+      return;
+    }
+
+    void navigate(-1);
+  }, [backTo, navigate]);
 
   const handleReuse = useCallback(() => {
     if (taskId) {
       void navigate(`/video/input?reuseTaskId=${taskId}`);
     }
   }, [navigate, taskId]);
-
-  const handleToggleTheme = useCallback(() => {
-    const root = document.documentElement;
-    const current = root.getAttribute('data-theme');
-    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-  }, []);
 
   return (
     <header className={cn('xm-result-header', className)}>
@@ -96,7 +98,7 @@ export function ResultHeader({
               ? t('video.result.statusPublished')
               : t('video.result.statusPrivate')}
           </span>
-          {!published && (
+          {!readOnly && !published && (
             <button
               className="xm-result-header__action-btn xm-result-header__action-btn--primary"
               onClick={onPublish}
@@ -106,29 +108,15 @@ export function ResultHeader({
               {t('video.result.publishAction')}
             </button>
           )}
-          <button
-            className="xm-result-header__action-btn xm-result-header__action-btn--outline"
-            onClick={handleReuse}
-          >
-            {t('video.result.reuseAction')}
-          </button>
+          {!readOnly ? (
+            <button
+              className="xm-result-header__action-btn xm-result-header__action-btn--outline"
+              onClick={handleReuse}
+            >
+              {t('video.result.reuseAction')}
+            </button>
+          ) : null}
         </div>
-
-        <button
-          className="xm-result-header__icon-btn"
-          title={t('video.result.settings')}
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-
-        <button
-          className="xm-result-header__icon-btn"
-          onClick={handleToggleTheme}
-          title="Toggle Theme"
-        >
-          <Sun className="w-5 h-5 hidden dark:block" />
-          <Moon className="w-5 h-5 block dark:hidden" />
-        </button>
 
         <button
           className="xm-result-header__icon-btn"

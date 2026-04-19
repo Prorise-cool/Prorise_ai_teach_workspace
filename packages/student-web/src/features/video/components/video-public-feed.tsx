@@ -30,8 +30,10 @@ type VideoPublicFeedProps = {
  * @returns 通用社区卡片。
  */
 function mapVideoCardToCommunityCard(card: VideoPublicCard): CommunityWorkCard {
+  const routeId = card.resultId ?? card.videoId;
+
   return {
-    id: card.videoId,
+    id: routeId,
     title: card.title,
     description: card.summary,
     coverUrl: card.thumbnail ?? undefined,
@@ -41,7 +43,7 @@ function mapVideoCardToCommunityCard(card: VideoPublicCard): CommunityWorkCard {
     authorAvatar: card.authorAvatar,
     durationLabel: card.duration,
     sourceText: card.sourceText,
-    routeTo: `/video/${card.videoId}`,
+    routeTo: `/video/public/${routeId}`,
   };
 }
 
@@ -94,9 +96,11 @@ export function VideoPublicFeed({
         </div>
       ) : undefined}
       renderCardActions={(card) => {
-        const sourceCard = sourceCards.find((item) => item.videoId === card.id);
+        const sourceCard = sourceCards.find(
+          (item) => (item.resultId ?? item.videoId) === card.id || item.videoId === card.id,
+        );
         const sourceText = card.sourceText?.trim();
-        const routeTo = card.routeTo ?? `/video/${card.id}`;
+        const routeTo = card.routeTo ?? `/video/public/${card.id}`;
 
         return (
           <>

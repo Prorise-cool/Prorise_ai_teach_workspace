@@ -15,6 +15,28 @@ import 'video.js/dist/video-js.css';
 /** 支持的倍速选项。 */
 const PLAYBACK_RATES = [0.5, 1, 1.5, 2];
 
+function detectVideoMimeType(videoUrl: string) {
+  const normalizedUrl = videoUrl.split('#')[0]?.split('?')[0]?.toLowerCase() ?? '';
+
+  if (normalizedUrl.endsWith('.webm')) {
+    return 'video/webm';
+  }
+
+  if (normalizedUrl.endsWith('.m3u8')) {
+    return 'application/x-mpegURL';
+  }
+
+  if (normalizedUrl.endsWith('.ogv') || normalizedUrl.endsWith('.ogg')) {
+    return 'video/ogg';
+  }
+
+  if (normalizedUrl.endsWith('.mov')) {
+    return 'video/quicktime';
+  }
+
+  return 'video/mp4';
+}
+
 /** VideoPlayer 对外暴露的实例句柄。 */
 export interface VideoPlayerHandle {
   /** 获取底层 Video.js player 实例。 */
@@ -77,7 +99,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         sources: [
           {
             src: videoUrl,
-            type: 'video/mp4',
+            type: detectVideoMimeType(videoUrl),
           },
         ],
       });
