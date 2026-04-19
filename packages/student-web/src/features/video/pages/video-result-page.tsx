@@ -1,10 +1,9 @@
 /**
- * 文件说明：视频结果页（Apple Dock 无界画布版）。
- * 全屏无界画布 + macOS Dock 播放控制台 + Companion 智能侧栏。
- * 支持 loading skeleton、完成态、视频缺失态、权限失败态和加载失败态。
+ * 文件说明：视频结果页（播放器优先版）。
+ * 保持 main 与 aside 同级 flex，侧栏只通过真实宽度挤压主舞台，不覆盖视频区域。
  */
-import { useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useMatch, useParams } from 'react-router-dom';
 import { AlertCircle, RefreshCw, ShieldAlert, VideoOff } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -23,6 +22,11 @@ import { VideoSubtitle } from '../components/video-subtitle';
 import { useSidebarToggle } from '../hooks/use-sidebar-toggle';
 import { useVideoPublish } from '../hooks/use-video-publish';
 import { useVideoResult } from '../hooks/use-video-result';
+import {
+  buildPlaybackSections,
+  getActivePlaybackSection,
+  resolveSectionSubtitle,
+} from '../utils/result-playback';
 
 import '../styles/_result.scss';
 
@@ -32,16 +36,54 @@ import '../styles/_result.scss';
  * @returns 结果页 UI。
  */
 export function VideoResultPage() {
-  const { id: taskId } = useParams<{ id: string }>();
+  const { taskId: taskIdParam, resultId: resultIdParam } = useParams<{
+    taskId?: string;
+    resultId?: string;
+  }>();
+  const isPublicView = useMatch('/video/public/:resultId') !== null;
+  const lookupId = isPublicView ? resultIdParam : taskIdParam;
   const { t } = useAppTranslation();
-  const { data, viewStatus, refetch } = useVideoResult(taskId);
-  const { publish, unpublish, isLoading: publishLoading } = useVideoPublish(taskId ?? '');
-  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebarToggle(true);
+  const { data, viewStatus, refetch } = useVideoResult(lookupId, {
+    publicView: isPublicView,
+  });
+  const { publish, unpublish, isLoading: publishLoading } = useVideoPublish(taskIdParam ?? '');
+  const { isOpen: sidebarOpen, toggle: toggleSidebar } = useSidebarToggle(!isPublicView);
   const playerRef = useRef<VideoPlayerHandle>(null);
+  const [playbackState, setPlaybackState] = useState({
+    currentTimeSeconds: 0,
+    durationSeconds: 0,
+  });
 
   const handleReturn = () => void window.history.back();
 
-  /* -- Loading -- */
+  useEffect(() => {
+    if (!data?.result) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const player = playerRef.current?.getPlayer();
+      const nextCurrentTime = player?.currentTime() ?? 0;
+      const nextDuration = player?.duration() ?? data.result?.duration ?? 0;
+
+      setPlaybackState((current) => {
+        if (
+          Math.abs(current.currentTimeSeconds - nextCurrentTime) < 0.05 &&
+          Math.abs(current.durationSeconds - nextDuration) < 0.05
+        ) {
+          return current;
+        }
+
+        return {
+          currentTimeSeconds: nextCurrentTime,
+          durationSeconds: nextDuration,
+        };
+      });
+    }, 200);
+
+    return () => window.clearInterval(intervalId);
+  }, [data?.result]);
+
   if (viewStatus === 'loading') {
     return (
       <div className="xm-video-result">
@@ -52,7 +94,6 @@ export function VideoResultPage() {
     );
   }
 
-  /* -- Permission denied (403) -- */
   if (viewStatus === 'permission-denied') {
     return (
       <div className="xm-video-result">
@@ -72,7 +113,6 @@ export function VideoResultPage() {
     );
   }
 
-  /* -- Video missing -- */
   if (viewStatus === 'video-missing') {
     return (
       <div className="xm-video-result">
@@ -92,7 +132,6 @@ export function VideoResultPage() {
     );
   }
 
-  /* -- API error -- */
   if (viewStatus === 'error') {
     return (
       <div className="xm-video-result">
@@ -113,7 +152,6 @@ export function VideoResultPage() {
     );
   }
 
-  /* -- Success -- */
   if (!data?.result) {
     return (
       <div className="xm-video-result">
@@ -134,57 +172,82 @@ export function VideoResultPage() {
   }
 
   const result = data.result;
+  const resolvedDurationSeconds = playbackState.durationSeconds || result.duration || 0;
+  const playbackSections = buildPlaybackSections(result.sections, resolvedDurationSeconds);
+  const activeSection = getActivePlaybackSection(
+    playbackSections,
+    playbackState.currentTimeSeconds,
+  );
+  const subtitleText = resolveSectionSubtitle(activeSection) ?? undefined;
+  const rawPublicUrl = result.publicUrl?.trim() || null;
+  const publicUrl =
+    rawPublicUrl && !rawPublicUrl.includes('/api/')
+      ? rawPublicUrl
+      : typeof window !== 'undefined' && result.resultId
+        ? `${window.location.origin}/video/public/${result.resultId}`
+        : rawPublicUrl;
 
   return (
     <div className="xm-video-result">
       <main className="xm-video-result__canvas">
-        {/* 背景装饰层 */}
         <div className="xm-video-result__ambient">
           <div className="xm-video-result__grid" />
           <div className="xm-video-result__glow" />
         </div>
 
-        {/* Header */}
         <ResultHeader
           title={result.title}
-          taskId={taskId}
+          taskId={result.taskId}
           published={result.published}
           publishLoading={publishLoading}
           onPublish={publish}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={toggleSidebar}
+          readOnly={isPublicView}
+          backTo={isPublicView ? null : '/video/input'}
         />
 
-        {/* 进度条 */}
-        <VideoProgressBar playerRef={playerRef} />
+        <div className="xm-video-result__body">
+          <VideoProgressBar
+            playerRef={playerRef}
+            currentTimeSeconds={playbackState.currentTimeSeconds}
+            durationSeconds={resolvedDurationSeconds}
+            sections={result.sections}
+          />
 
-        {/* 发布横幅（仅已公开时显示） */}
-        {result.published && (
           <PublishBanner
-            unpublishLoading={publishLoading}
+            published={result.published}
+            publicUrl={publicUrl}
+            publishLoading={publishLoading}
+            onPublish={publish}
             onUnpublish={unpublish}
+            readOnly={isPublicView}
           />
-        )}
 
-        {/* 全屏播放器 */}
-        <div className="xm-video-result__player-fullscreen">
-          <VideoPlayer
-            ref={playerRef}
-            videoUrl={result.videoUrl}
-            posterUrl={result.coverUrl}
-            hideControls
-          />
+          <section className="xm-video-result__stage" data-testid="video-result-stage">
+            <div className="xm-video-result__player-shell">
+              <div className="xm-video-result__player-frame">
+                <VideoPlayer
+                  ref={playerRef}
+                  videoUrl={result.videoUrl}
+                  posterUrl={result.coverUrl}
+                  hideControls
+                  className="xm-video-result__player"
+                />
+              </div>
+
+              <VideoSubtitle text={subtitleText} />
+              <VideoDock playerRef={playerRef} />
+            </div>
+          </section>
         </div>
-
-        {/* 底部字幕 */}
-        <VideoSubtitle text={result.summary} />
-
-        {/* macOS Dock 播放控制台 */}
-        <VideoDock playerRef={playerRef} />
       </main>
 
-      {/* Companion 侧栏 */}
-      <CompanionSidebar isOpen={sidebarOpen} onClose={toggleSidebar} />
+      <CompanionSidebar
+        isOpen={sidebarOpen}
+        onClose={toggleSidebar}
+        className="xm-video-result__sidebar"
+      />
     </div>
   );
 }

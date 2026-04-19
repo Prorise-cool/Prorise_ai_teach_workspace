@@ -32,6 +32,11 @@ export interface VideoResultState {
   refetch: () => void;
 }
 
+export interface UseVideoResultOptions {
+  /** 是否为匿名公开详情页。 */
+  publicView?: boolean;
+}
+
 /**
  * 判断错误对象是否包含 HTTP status 码。
  *
@@ -45,14 +50,19 @@ function hasStatusCode(err: unknown): err is Error & { status: number } {
 /**
  * 查询视频任务结果，支持缓存与重新验证。
  *
- * @param taskId - 任务 ID；为空时不发起查询。
+ * @param taskId - 任务 ID 或公开 resultId；为空时不发起查询。
+ * @param options - 查询模式配置。
  * @returns 结果页状态。
  */
-export function useVideoResult(taskId: string | undefined): VideoResultState {
+export function useVideoResult(
+  taskId: string | undefined,
+  options: UseVideoResultOptions = {},
+): VideoResultState {
   const adapter = resolveVideoResultAdapter();
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['video', 'result', taskId],
-    queryFn: () => adapter.getResult(taskId!),
+    queryKey: ['video', options.publicView ? 'public-result' : 'result', taskId],
+    queryFn: () =>
+      options.publicView ? adapter.getPublicResult(taskId!) : adapter.getResult(taskId!),
     enabled: !!taskId,
     staleTime: 5 * 60 * 1000, // 5 分钟
     retry: 1,

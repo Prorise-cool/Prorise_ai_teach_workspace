@@ -22,9 +22,12 @@ from app.features.video.pipeline.models import (
 from app.features.video.pipeline.orchestration.runtime import build_video_runtime_key
 from app.features.video.service._helpers import (
     build_published_card,
+    hydrate_result_detail,
     invalidate_published_cache,
+    load_result_detail,
     paginate_cards,
     persist_snapshot_and_invalidate,
+    persist_runtime_result_detail,
     resolve_publish_state,
     write_detail_state,
 )
@@ -64,12 +67,24 @@ class PublicationServiceMixin:
             raise AppError(code="COMMON_NOT_FOUND", message="视频任务不存在", status_code=404, task_id=task_id)
         if snapshot.user_id != access_context.user_id:
             raise AppError(code="AUTH_PERMISSION_DENIED", message="仅任务创建者可公开结果", status_code=403, task_id=task_id)
-        if snapshot.status != TaskStatus.COMPLETED or snapshot.detail_ref is None:
+        if snapshot.status != TaskStatus.COMPLETED:
             raise AppError(code="TASK_INVALID_INPUT", message="仅已完成的视频任务可公开", status_code=400, task_id=task_id)
 
-        detail = self._asset_store.read_result_detail(snapshot.detail_ref)
-        if detail.result is None:
+        detail, current_detail_ref = load_result_detail(
+            self._asset_store,
+            task_id,
+            detail_ref=snapshot.detail_ref,
+            runtime_store=runtime_store,
+        )
+        if detail is None or detail.result is None:
             raise AppError(code="TASK_INVALID_INPUT", message="结果详情缺失，暂不可公开", status_code=400, task_id=task_id)
+        detail = hydrate_result_detail(
+            task_id,
+            detail,
+            asset_store=self._asset_store,
+            runtime_store=runtime_store,
+            artifact_ref=snapshot.source_artifact_ref,
+        )
 
         publication = await self._publication_service.sync_publication(
             VideoPublicationSyncRequest(
@@ -85,11 +100,23 @@ class PublicationServiceMixin:
         publish_state = resolve_publish_state(
             detail.publish_state, publication, author_name=access_context.username,
         )
-        updated_detail = write_detail_state(self._asset_store, snapshot.detail_ref, detail, publish_state)
+        updated_detail, detail_ref = write_detail_state(
+            self._asset_store,
+            task_id,
+            detail,
+            publish_state,
+        )
+        persist_runtime_result_detail(runtime_store, task_id, updated_detail)
 
         updated_at = publication.updated_at or datetime.now(UTC)
         await persist_snapshot_and_invalidate(
-            self, snapshot, updated_at=updated_at, runtime_store=runtime_store, access_context=access_context,
+            self,
+            snapshot,
+            updated_at=updated_at,
+            runtime_store=runtime_store,
+            access_context=access_context,
+            result_ref=detail.result.video_url,
+            detail_ref=detail_ref or current_detail_ref,
         )
         return PublishOperationResult(
             task_id=task_id,
@@ -116,16 +143,25 @@ class PublicationServiceMixin:
         if snapshot.user_id != access_context.user_id:
             raise AppError(code="AUTH_PERMISSION_DENIED", message="仅任务创建者可取消公开", status_code=403, task_id=task_id)
 
-        detail = None
-        if snapshot.detail_ref is not None and self._asset_store.exists(snapshot.detail_ref):
-            detail = self._asset_store.read_result_detail(snapshot.detail_ref)
+        detail, current_detail_ref = load_result_detail(
+            self._asset_store,
+            task_id,
+            detail_ref=snapshot.detail_ref,
+            runtime_store=runtime_store,
+        )
 
         publication = await self._publication_service.get_publication(
             task_id, access_context=access_context,
         )
         if publication is None:
             if detail is not None:
-                write_detail_state(self._asset_store, snapshot.detail_ref, detail, PublishState())
+                updated_detail, _ = write_detail_state(
+                    self._asset_store,
+                    task_id,
+                    detail,
+                    PublishState(),
+                )
+                persist_runtime_result_detail(runtime_store, task_id, updated_detail)
             invalidate_published_cache(runtime_store)
             return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
@@ -142,11 +178,31 @@ class PublicationServiceMixin:
             access_context=access_context,
         )
 
+        detail_ref = current_detail_ref
         if detail is not None:
-            write_detail_state(self._asset_store, snapshot.detail_ref, detail, PublishState())
+            detail = hydrate_result_detail(
+                task_id,
+                detail,
+                asset_store=self._asset_store,
+                runtime_store=runtime_store,
+                artifact_ref=snapshot.source_artifact_ref,
+            )
+            updated_detail, detail_ref = write_detail_state(
+                self._asset_store,
+                task_id,
+                detail,
+                PublishState(),
+            )
+            persist_runtime_result_detail(runtime_store, task_id, updated_detail)
 
         await persist_snapshot_and_invalidate(
-            self, snapshot, updated_at=datetime.now(UTC), runtime_store=runtime_store, access_context=access_context,
+            self,
+            snapshot,
+            updated_at=datetime.now(UTC),
+            runtime_store=runtime_store,
+            access_context=access_context,
+            result_ref=detail.result.video_url if detail and detail.result else snapshot.result_ref,
+            detail_ref=detail_ref,
         )
         return PublishOperationResult(task_id=task_id, published=False, published_at=None, card=None)
 
@@ -183,17 +239,23 @@ class PublicationServiceMixin:
             )
             total_seen += len(publication_page.rows)
             snapshots = await asyncio.gather(
-                *(self.get_task(
-                    item.task_ref_id, access_context=access_context, request_auth=request_auth,
-                ) for item in publication_page.rows)
+                *(
+                    self.get_task(
+                        item.task_ref_id,
+                        access_context=access_context,
+                        request_auth=request_auth,
+                    )
+                    for item in publication_page.rows
+                )
             )
             for publication, snapshot in zip(publication_page.rows, snapshots, strict=False):
-                if snapshot is None or snapshot.detail_ref is None:
-                    continue
-                if not self._asset_store.exists(snapshot.detail_ref):
-                    continue
-                detail = self._asset_store.read_result_detail(snapshot.detail_ref)
-                if detail.result is None:
+                detail, _ = load_result_detail(
+                    self._asset_store,
+                    publication.task_ref_id,
+                    detail_ref=snapshot.detail_ref if snapshot is not None else None,
+                    runtime_store=runtime_store,
+                )
+                if detail is None or detail.result is None:
                     continue
                 detail = detail.model_copy(
                     update={"publish_state": resolve_publish_state(detail.publish_state, publication)}
