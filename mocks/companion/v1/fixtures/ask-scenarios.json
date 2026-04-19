@@ -1,0 +1,139 @@
+[
+  {
+    "scenario": "first_ask",
+    "description": "首轮提问成功",
+    "request": {
+      "session_id": "sess-001",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-abc@65"
+      },
+      "question_text": "这一步是怎么推导的？"
+    },
+    "response": {
+      "turn_id": "turn-001",
+      "answer_text": "这一步使用了代入法，将 x=3 代入原方程...",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-abc@65"
+      },
+      "whiteboard_actions": [],
+      "source_refs": [],
+      "persistence_status": "complete_success",
+      "context_source_hit": "redis"
+    }
+  },
+  {
+    "scenario": "follow_up",
+    "description": "连续追问",
+    "request": {
+      "session_id": "sess-001",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-abc@65"
+      },
+      "question_text": "能再详细说说代入的过程吗？",
+      "parent_turn_id": "turn-001"
+    },
+    "response": {
+      "turn_id": "turn-002",
+      "answer_text": "好的，让我们仔细看看代入的过程...",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-abc@65"
+      },
+      "whiteboard_actions": [],
+      "source_refs": [],
+      "persistence_status": "complete_success",
+      "context_source_hit": "redis"
+    }
+  },
+  {
+    "scenario": "whiteboard_success",
+    "description": "白板成功渲染",
+    "request": {
+      "session_id": "sess-002",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-def@30"
+      },
+      "question_text": "这个函数的图像是什么样的？"
+    },
+    "response": {
+      "turn_id": "turn-003",
+      "answer_text": "这是一个二次函数，图像如下...",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-def@30"
+      },
+      "whiteboard_actions": [
+        {
+          "action_type": "draw_function",
+          "payload": {"expression": "y = x^2", "x_range": [-5, 5]},
+          "render_uri": null
+        }
+      ],
+      "source_refs": [],
+      "persistence_status": "complete_success",
+      "context_source_hit": "local_file"
+    }
+  },
+  {
+    "scenario": "whiteboard_degraded",
+    "description": "白板降级",
+    "request": {
+      "session_id": "sess-003",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-ghi@90"
+      },
+      "question_text": "这个几何图形怎么画？"
+    },
+    "response": {
+      "turn_id": "turn-004",
+      "answer_text": "这个几何图形可以分为以下几步来理解：\n1. 先确定圆心位置\n2. 以半径画圆\n3. 连接切点",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-ghi@90"
+      },
+      "whiteboard_actions": [],
+      "source_refs": [],
+      "persistence_status": "whiteboard_degraded",
+      "context_source_hit": "cos"
+    }
+  },
+  {
+    "scenario": "no_context_degraded",
+    "description": "无上下文降级",
+    "request": {
+      "session_id": "sess-004",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-jkl@120"
+      },
+      "question_text": "这里在讲什么？"
+    },
+    "response": {
+      "turn_id": "turn-005",
+      "answer_text": "暂时无法获取视频上下文，请稍后再试。你可以尝试重新播放视频后再提问。",
+      "anchor": {
+        "context_type": "video",
+        "anchor_kind": "video_timestamp",
+        "anchor_ref": "task-jkl@120"
+      },
+      "whiteboard_actions": [],
+      "source_refs": [],
+      "persistence_status": "overall_failure",
+      "context_source_hit": "degraded"
+    }
+  }
+]
