@@ -202,6 +202,10 @@ class TeachingVideoAgent:
 
     def generate_design(self, duration_minutes: int = 5) -> tuple[str, list[Section]]:
         """Generate structured scene design via the ManimCat concept-designer."""
+        actual_section_count = self.section_count or max(3, min(20, duration_minutes * 2))
+        if self.section_duration_seconds is None:
+            self.section_duration_seconds = int((duration_minutes * 60) / actual_section_count)
+
         design_file = self.output_dir / "manimcat_design.txt"
 
         if design_file.exists():
@@ -450,6 +454,7 @@ class TeachingVideoAgent:
                 concept=self.learning_topic,
                 scene_design=design_text,
                 layout_family=self.design_layout_family,
+                section_duration=self.section_duration_seconds,
                 api_func=self._request_api_and_track_tokens,
                 max_tokens=self.max_code_token_length,
             )
@@ -489,6 +494,7 @@ class TeachingVideoAgent:
                 concept=self.learning_topic,
                 scene_design=section.design_text,
                 layout_family=section.layout_family,
+                section_duration=self.section_duration_seconds,
                 api_func=self._request_api_and_track_tokens,
                 max_tokens=self.section_codegen_max_tokens,
                 max_completion_tokens=self.section_codegen_max_completion_tokens,

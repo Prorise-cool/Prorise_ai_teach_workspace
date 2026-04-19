@@ -221,11 +221,14 @@ def generate_scene_design(
     """
     seed = generate_unique_seed(concept)
 
-    # Calculate section params
+    # Calculate section params (section_count is a MINIMUM, LLM may generate more)
     if section_count is None:
         section_count = max(3, min(20, duration_minutes * 2))
     if section_duration is None:
         section_duration = int((duration_minutes * 60) / section_count)
+
+    # Dynamic narration target: ~5 Chinese chars/second for TTS
+    narration_char_target = max(60, section_duration * 5)
 
     # Load prompts
     system_prompt = load_and_render("concept_designer_system.md")
@@ -238,6 +241,7 @@ def generate_scene_design(
             "duration": str(duration_minutes),
             "sectionCount": str(section_count),
             "sectionDuration": str(section_duration),
+            "narrationCharTarget": str(narration_char_target),
             "layoutHint": layout_hint or "choose the best layout for this concept",
         },
     )
