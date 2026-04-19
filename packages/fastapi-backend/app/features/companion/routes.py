@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
-from app.features.companion.service import CompanionService
+from app.features.companion.schemas import AskRequest, AskResponse
+from app.features.companion.service import CompanionAskService, CompanionService
 from app.schemas.common import build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.long_term_records import (
@@ -22,6 +23,12 @@ router = APIRouter(prefix="/companion", tags=["companion"])
 def get_companion_service() -> CompanionService:
     """获取缓存的伴学服务单例。"""
     return CompanionService()
+
+
+@lru_cache
+def get_ask_service() -> CompanionAskService:
+    """获取缓存的 Ask 服务单例。"""
+    return CompanionAskService()
 
 
 @router.get(
@@ -40,6 +47,16 @@ async def companion_bootstrap(
     """返回伴学功能域 bootstrap 基线。"""
     payload = await service.bootstrap_status()
     return build_success_envelope(payload)
+
+
+@router.post("/ask", response_model=AskResponse)
+async def ask_companion(
+    request: AskRequest,
+    access_context: AccessContext = Depends(get_access_context),
+    service: CompanionAskService = Depends(get_ask_service),
+) -> AskResponse:
+    """围绕当前视频时间点提问并获得上下文相关的回答。"""
+    return await service.ask(request, access_context=access_context)
 
 
 @router.post("/turns", response_model=CompanionTurnSnapshot)
