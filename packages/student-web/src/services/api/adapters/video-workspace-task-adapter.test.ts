@@ -6,7 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClient, ApiClientResponse, ApiRequestConfig } from '@/services/api/client';
 import type { TaskSnapshot } from '@/types/task';
 
-import { createRealVideoWorkspaceTaskAdapter } from './video-workspace-task-adapter';
+import {
+  createRealVideoWorkspaceTaskAdapter,
+  resetDismissedVideoWorkspaceTasks,
+} from './video-workspace-task-adapter';
 
 const getTaskSnapshotMock = vi.fn<(taskId: string) => Promise<TaskSnapshot>>();
 
@@ -27,9 +30,10 @@ function createClientResponse<T>(data: T): ApiClientResponse<T> {
 describe('video-workspace-task-adapter', () => {
   beforeEach(() => {
     getTaskSnapshotMock.mockReset();
+    resetDismissedVideoWorkspaceTasks();
   });
 
-  it('skips stale active rows when a task snapshot returns 404', async () => {
+  it('skips stale active rows when a task snapshot returns 404 and suppresses repeated refetches for that task', async () => {
     async function requestMock<T>(config: ApiRequestConfig): Promise<ApiClientResponse<T>> {
       if (config.url === '/api/v1/video/tasks?status=pending&pageNum=1&pageSize=10') {
         return createClientResponse({
@@ -67,6 +71,13 @@ describe('video-workspace-task-adapter', () => {
         } as T);
       }
 
+      if (config.url === '/api/v1/video/tasks?status=completed&pageNum=1&pageSize=10') {
+        return createClientResponse({
+          rows: [],
+          total: 0,
+        } as T);
+      }
+
       throw new Error(`unexpected request: ${config.url}`);
     }
     const client: ApiClient = { request: requestMock };
@@ -95,19 +106,31 @@ describe('video-workspace-task-adapter', () => {
     });
 
     const adapter = createRealVideoWorkspaceTaskAdapter({ client });
-    const result = await adapter.listActiveTasks();
+    const firstResult = await adapter.listActiveTasks();
+    const secondResult = await adapter.listActiveTasks();
 
-    expect(result.total).toBe(1);
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({
+    expect(firstResult.total).toBe(1);
+    expect(firstResult.items).toHaveLength(1);
+    expect(firstResult.items[0]).toMatchObject({
       taskId: 'vtask_processing_002',
       title: '积分题讲解',
       lifecycleStatus: 'processing',
       progress: 58,
     });
+    expect(secondResult.total).toBe(1);
+    expect(secondResult.items).toHaveLength(1);
+    expect(secondResult.items[0]).toMatchObject({
+      taskId: 'vtask_processing_002',
+      title: '积分题讲解',
+      lifecycleStatus: 'processing',
+      progress: 58,
+    });
+    expect(
+      getTaskSnapshotMock.mock.calls.filter(([taskId]) => taskId === 'vtask_stale_404'),
+    ).toHaveLength(1);
   });
 
-  it('merges pending and processing video tasks with per-task status snapshots', async () => {
+  it('merges pending, processing and completed video tasks with per-task status snapshots', async () => {
     async function requestMock<T>(config: ApiRequestConfig): Promise<ApiClientResponse<T>> {
       if (config.url === '/api/v1/video/tasks?status=pending&pageNum=1&pageSize=10') {
         return createClientResponse({
@@ -140,6 +163,14 @@ describe('video-workspace-task-adapter', () => {
               updated_at: '2026-04-17 10:05:00',
               created_at: '2026-04-17 09:55:00',
             },
+          ],
+          total: 1,
+        } as T);
+      }
+
+      if (config.url === '/api/v1/video/tasks?status=completed&pageNum=1&pageSize=10') {
+        return createClientResponse({
+          rows: [
             {
               task_id: 'vtask_completed_003',
               user_id: 'student_001',
@@ -151,7 +182,7 @@ describe('video-workspace-task-adapter', () => {
               created_at: '2026-04-17 09:54:00',
             },
           ],
-          total: 2,
+          total: 1,
         } as T);
       }
 
@@ -174,6 +205,20 @@ describe('video-workspace-task-adapter', () => {
         };
       }
 
+      if (taskId === 'vtask_completed_003') {
+        return {
+          taskId,
+          requestId: 'req_completed_003',
+          taskType: 'video',
+          status: 'completed',
+          progress: 100,
+          message: '视频已生成完成',
+          timestamp: '2026-04-17T10:06:30Z',
+          currentStage: 'completed',
+          stageLabel: 'video.stages.completed',
+        };
+      }
+
       return {
         taskId,
         requestId: 'req_pending_001',
@@ -190,9 +235,17 @@ describe('video-workspace-task-adapter', () => {
     const adapter = createRealVideoWorkspaceTaskAdapter({ client });
     const result = await adapter.listActiveTasks();
 
-    expect(result.total).toBe(2);
-    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(3);
+    expect(result.items).toHaveLength(3);
     expect(result.items[0]).toMatchObject({
+      taskId: 'vtask_completed_003',
+      title: '已完成任务',
+      lifecycleStatus: 'completed',
+      progress: 100,
+      stageLabel: 'video.stages.completed',
+      message: '视频已生成完成',
+    });
+    expect(result.items[1]).toMatchObject({
       taskId: 'vtask_processing_002',
       title: '积分题讲解',
       lifecycleStatus: 'processing',
@@ -200,7 +253,7 @@ describe('video-workspace-task-adapter', () => {
       stageLabel: 'video.stages.render',
       message: '渲染第 2 段中',
     });
-    expect(result.items[1]).toMatchObject({
+    expect(result.items[2]).toMatchObject({
       taskId: 'vtask_pending_001',
       title: '导数题讲解',
       lifecycleStatus: 'pending',
@@ -208,8 +261,9 @@ describe('video-workspace-task-adapter', () => {
       stageLabel: null,
       message: '等待进入队列',
     });
-    expect(getTaskSnapshotMock).toHaveBeenCalledTimes(2);
-    expect(getTaskSnapshotMock).toHaveBeenNthCalledWith(1, 'vtask_processing_002');
-    expect(getTaskSnapshotMock).toHaveBeenNthCalledWith(2, 'vtask_pending_001');
+    expect(getTaskSnapshotMock).toHaveBeenCalledTimes(3);
+    expect(getTaskSnapshotMock).toHaveBeenNthCalledWith(1, 'vtask_completed_003');
+    expect(getTaskSnapshotMock).toHaveBeenNthCalledWith(2, 'vtask_processing_002');
+    expect(getTaskSnapshotMock).toHaveBeenNthCalledWith(3, 'vtask_pending_001');
   });
 });

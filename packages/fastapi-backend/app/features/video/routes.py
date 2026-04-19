@@ -48,6 +48,9 @@ from app.features.video.service import VideoService
 from app.features.video.service.cancel_task import (
     cancel_video_task as cancel_video_task_service,
 )
+from app.features.video.service.delete_task import (
+    delete_video_task as delete_video_task_service,
+)
 from app.features.video.service.create_task import (
     create_video_task,
     ensure_video_task_create_permission,
@@ -284,6 +287,38 @@ async def cancel_video_task_endpoint(
         service=service,
     )
     return build_success_envelope(payload, msg="任务已取消")
+
+
+@router.delete(
+    "/tasks/{task_id}",
+    response_model=dict,
+    responses={
+        403: {"model": ErrorResponseEnvelope, "description": "仅任务创建者可删除"},
+        404: {"model": ErrorResponseEnvelope, "description": "任务不存在"},
+        409: {"model": ErrorResponseEnvelope, "description": "仅终态任务可删除"},
+    },
+)
+async def delete_video_task_endpoint(
+    task_id: str,
+    request: Request,
+    access_context: AccessContext = Depends(get_access_context),
+    service: VideoService = Depends(get_video_service),
+) -> dict[str, object]:
+    """删除已结束的视频任务。"""
+    result = await delete_video_task_service(
+        task_id,
+        runtime_store=request.app.state.runtime_store,
+        access_context=access_context,
+        service=service,
+    )
+    return {
+        "code": 200,
+        "msg": "任务已删除",
+        "data": {
+            "taskId": result["task_id"],
+            "status": result["status"],
+        },
+    }
 
 
 @router.get("/tasks/{task_id}/result", response_model=VideoResultDetailResponseEnvelope)

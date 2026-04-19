@@ -26,6 +26,7 @@ type VideoTaskCenterProps = {
 	total: number;
 	isCancellingTaskId?: string | null;
 	onCancel: (taskId: string) => void;
+	onDeleteTask: (taskId: string) => void;
 	onEnterTask: (taskId: string) => void;
 };
 
@@ -52,6 +53,7 @@ export function VideoTaskCenter({
 	total,
 	isCancellingTaskId = null,
 	onCancel,
+	onDeleteTask,
 	onEnterTask,
 }: VideoTaskCenterProps) {
 	const { t } = useAppTranslation();
@@ -163,7 +165,8 @@ export function VideoTaskCenter({
 									</div>
 
 									<div className="flex justify-end gap-2 border-t border-border/40 pt-2">
-										<button
+																				{item.lifecycleStatus !== 'completed' && (
+											<button
 											type="button"
 											className="rounded-lg px-3 py-1.5 text-[11px] font-bold text-destructive transition-colors hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-50"
 											aria-label={t('entryNav.taskCenter.cancelTaskAria', {
@@ -171,9 +174,22 @@ export function VideoTaskCenter({
 											})}
 											disabled={isCancellingTaskId === item.taskId}
 											onClick={() => onCancel(item.taskId)}
-										>
+											>
 											{t('entryNav.taskCenter.cancel')}
-										</button>
+											</button>
+										)}
+										{item.lifecycleStatus === 'completed' && (
+											<button
+											type="button"
+											className="rounded-lg px-3 py-1.5 text-[11px] font-bold text-destructive transition-colors hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-50"
+											aria-label={t('entryNav.taskCenter.deleteTaskAria', {
+												title: item.title,
+											})}
+											onClick={() => onDeleteTask(item.taskId)}
+											>
+											{t('entryNav.taskCenter.delete')}
+											</button>
+										)}
 										<button
 											type="button"
 											className="rounded-lg border border-border bg-background px-3 py-1.5 text-[11px] font-bold text-foreground shadow-sm transition-colors hover:border-[color:var(--xm-color-primary)]"
@@ -185,7 +201,7 @@ export function VideoTaskCenter({
 												onEnterTask(item.taskId);
 											}}
 										>
-											{t('entryNav.taskCenter.enter')}
+											{item.lifecycleStatus === 'completed' ? t('entryNav.taskCenter.viewResult') : t('entryNav.taskCenter.enter')}
 										</button>
 									</div>
 								</div>

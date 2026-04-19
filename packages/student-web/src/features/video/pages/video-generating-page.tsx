@@ -103,7 +103,7 @@ function buildRuntimeLogs(
 }
 
 export function VideoGeneratingPage() {
-	const { id: taskId } = useParams<{ id: string }>();
+	const { taskId } = useParams<{ taskId: string }>();
 	const navigate = useNavigate();
 	const { themeMode, toggleThemeMode } = useThemeMode();
 	const { t } = useAppTranslation();
@@ -177,6 +177,14 @@ export function VideoGeneratingPage() {
 		}
 		prevSignalsRef.current = { previewAvailable, readySections, fixAttempt, degradedToPolling, status };
 	}, [degradedToPolling, fixAttempt, notify, previewAvailable, readySections, status, t]);
+
+	useEffect(() => {
+		if (status !== 'completed' || !taskId) return;
+		const timer = setTimeout(() => {
+			void navigate(`/video/${taskId}`, { replace: true });
+		}, 1500);
+		return () => clearTimeout(timer);
+	}, [status, taskId, navigate]);
 
 	const displayTotalSections = Math.max(totalSections, sections.length);
 	const pipelineStageKey = resolveVideoGeneratingLayoutStage(currentStage, status);

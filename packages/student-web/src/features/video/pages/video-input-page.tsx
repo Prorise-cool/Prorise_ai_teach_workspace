@@ -18,7 +18,6 @@ import {
 	WorkspaceInputShell,
 	useBrowserAsr,
 } from '@/components/input-page';
-import { VideoActiveTaskCard } from '@/features/video/components/video-active-task-card';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
 import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
@@ -33,6 +32,12 @@ import {
 	type VideoInputValidationMessages,
 	createVideoInputFormSchema,
 } from '@/features/video/schemas/video-input-schema';
+import {
+	cacheCancelledVideoTask,
+	clearVideoTaskDetailQueries,
+	pruneVideoWorkspaceTaskFromCache,
+	VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
+} from '@/features/video/utils/task-center-cache';
 import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
 import { useFeedback } from '@/shared/feedback';
 import {
@@ -94,13 +99,11 @@ export function VideoInputPage() {
 	const cancelTaskMutation = useMutation({
 		mutationKey: ['video', 'workspace', 'cancel-task'],
 		mutationFn: (taskId: string) => videoTaskAdapter.cancelTask(taskId),
-		onSuccess: async (_snapshot, taskId) => {
+		onSuccess: async (snapshot, taskId) => {
+			cacheCancelledVideoTask(queryClient, snapshot);
 			await Promise.allSettled([
 				queryClient.invalidateQueries({
-					queryKey: ['video', 'workspace', 'active-tasks'],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'task-status', taskId],
+					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
 				}),
 				queryClient.invalidateQueries({
 					queryKey: ['video', 'task-preview', taskId],
@@ -254,6 +257,33 @@ export function VideoInputPage() {
 			setValue,
 		],
 	);
+	const deleteTaskMutation = useMutation({
+		mutationKey: ['video', 'workspace', 'delete-task'],
+		mutationFn: (taskId: string) => videoTaskAdapter.deleteTask(taskId),
+		onSuccess: async (_result, taskId) => {
+			pruneVideoWorkspaceTaskFromCache(queryClient, taskId);
+			clearVideoTaskDetailQueries(queryClient, taskId);
+			await Promise.allSettled([
+				queryClient.invalidateQueries({
+					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
+				}),
+			]);
+			notify({
+				title: t('entryNav.taskCenter.deleteSuccess'),
+				tone: 'success',
+			});
+		},
+		onError: (error) => {
+			notify({
+				title: t('entryNav.taskCenter.deleteFailed'),
+				description:
+					error instanceof Error
+						? error.message
+						: t('entryNav.taskCenter.deleteFailed'),
+				tone: 'error',
+			});
+		},
+	});
 	const workspaceTaskItems = useMemo<VideoWorkspaceTaskItem[]>(
 		() =>
 			workspaceTasksQuery.data?.items.map((item) => ({
@@ -265,18 +295,7 @@ export function VideoInputPage() {
 			})) ?? [],
 		[workspaceTasksQuery.data?.items, t],
 	);
-	const focusedTaskId = searchParams.get('focusTask') ?? searchParams.get('taskId');
 	const workspaceToast = searchParams.get('toast');
-	const featuredTask = useMemo(
-		() =>
-			workspaceTaskItems.find((item) => item.taskId === focusedTaskId) ??
-			workspaceTaskItems[0] ??
-			null,
-		[focusedTaskId, workspaceTaskItems],
-	);
-	const isFeaturedTaskFocused = Boolean(
-		featuredTask && focusedTaskId && featuredTask.taskId === focusedTaskId,
-	);
 
 	useEffect(() => {
 		if (!workspaceToast) {
@@ -316,37 +335,17 @@ export function VideoInputPage() {
 				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
 			}
 			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
+			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
 			onEnterTask={(taskId) => {
-				void navigate(`/video/${taskId}/generating`);
+				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
+				void navigate(
+					item?.lifecycleStatus === 'completed'
+						? `/video/${taskId}`
+						: `/video/${taskId}/generating`,
+				);
 			}}
 		/>
 	);
-	const featuredTaskNote =
-		workspaceToast === 'cancelled'
-			? t('videoInput.activeTask.cancelledInlineNote')
-			: t('videoInput.activeTask.defaultInlineNote');
-	const featuredTaskCard = featuredTask ? (
-		<VideoActiveTaskCard
-			task={featuredTask}
-			queueCount={workspaceTaskItems.length}
-			headerTitle={t('videoInput.activeTask.title')}
-			headerSubtitle={t('videoInput.activeTask.subtitle')}
-			note={featuredTaskNote}
-			isFocused={isFeaturedTaskFocused}
-			isCancelling={cancelTaskMutation.isPending}
-			focusNotice={
-				isFeaturedTaskFocused
-					? workspaceToast === 'returned'
-						? t('videoInput.activeTask.returnedInlineNote')
-						: featuredTaskNote
-					: null
-			}
-			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-			onContinue={(taskId) => {
-				void navigate(`/video/${taskId}/generating`);
-			}}
-		/>
-	) : null;
 
 	return (
 		<WorkspaceInputShell
@@ -408,7 +407,6 @@ export function VideoInputPage() {
 						}}
 						textAreaRef={textareaRef}
 					/>
-					{featuredTaskCard}
 				</div>
 			}
 			suggestionsLabel={suggestionsLabel}

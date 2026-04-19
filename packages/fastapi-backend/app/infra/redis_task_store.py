@@ -101,6 +101,10 @@ class TaskStoreMixin:
             return None
         return dict(record)
 
+    def delete_task_state(self, task_id: str) -> None:
+        """删除任务运行态快照。"""
+        self.delete_runtime_value(build_task_runtime_key(task_id))  # type: ignore[attr-defined]
+
     def set_message_mapping(self, message_id: str, task_id: str) -> None:
         """建立 Dramatiq 消息 ID 到任务 ID 的映射。
 

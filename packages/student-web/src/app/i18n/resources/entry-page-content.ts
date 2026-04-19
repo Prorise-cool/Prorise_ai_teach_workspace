@@ -99,7 +99,11 @@ export const zhCnEntryPageResources = {
       viewAll: '查看全部任务',
       viewAllCount: '查看全部 {{count}} 个任务',
       cancel: '取消',
+      delete: '删除',
       enter: '进入工作区',
+      viewResult: '查看结果',
+      deleteSuccess: '任务已删除',
+      deleteFailed: '删除任务失败',
       statusPending: '排队中',
       statusProcessing: '处理中',
       statusCompleted: '已完成',
@@ -120,6 +124,7 @@ export const zhCnEntryPageResources = {
       fallbackTitle: '视频讲解任务',
       fallbackMessage: '任务处理中',
       cancelTaskAria: '取消任务 {{title}}',
+      deleteTaskAria: '删除任务 {{title}}',
       enterTaskAria: '进入任务 {{title}}'
     }
   },
@@ -850,8 +855,11 @@ export const enUsEntryPageResources = {
       viewAll: 'View all tasks',
       viewAllCount: 'View all {{count}} tasks',
       cancel: 'Cancel',
+      delete: 'Delete',
       enter: 'Open workspace',
-      statusPending: 'Queued',
+      viewResult: 'View result',
+      deleteSuccess: 'Task deleted',
+      deleteFailed: 'Failed to delete task',
       statusProcessing: 'Processing',
       statusCompleted: 'Completed',
       statusFailed: 'Failed',
@@ -871,6 +879,7 @@ export const enUsEntryPageResources = {
       fallbackTitle: 'Video explainer task',
       fallbackMessage: 'Task is in progress',
       cancelTaskAria: 'Cancel task {{title}}',
+      deleteTaskAria: 'Delete task {{title}}',
       enterTaskAria: 'Enter task {{title}}'
     }
   },

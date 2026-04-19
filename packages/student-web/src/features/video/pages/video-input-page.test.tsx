@@ -21,6 +21,7 @@ const mockAuthService = createAuthService(createMockAuthAdapter());
 
 const createTaskMock = vi.fn();
 const cancelTaskMock = vi.fn();
+const deleteTaskMock = vi.fn();
 const preprocessImageMock = vi.fn();
 const useVideoWorkspaceTasksMock = vi.fn();
 
@@ -28,6 +29,7 @@ vi.mock('@/services/api/adapters/video-task-adapter', () => ({
 	resolveVideoTaskAdapter: () => ({
 		createTask: createTaskMock,
 		cancelTask: cancelTaskMock,
+		deleteTask: deleteTaskMock,
 	}),
 }));
 
@@ -109,6 +111,7 @@ describe('VideoInputPage', () => {
 		window.sessionStorage.clear();
 		createTaskMock.mockReset();
 		cancelTaskMock.mockReset();
+		deleteTaskMock.mockReset();
 		preprocessImageMock.mockReset();
 		usePublicVideosMock.mockReset();
 		useVideoWorkspaceTasksMock.mockReset();
@@ -674,7 +677,7 @@ describe('VideoInputPage', () => {
 		expect(screen.getByText('暂无进行中的任务')).toBeInTheDocument();
 	});
 
-	it('返回输入页后会在主体中展示当前任务状态卡，并支持继续查看或取消', async () => {
+	it('返回输入页后不展示内嵌任务卡，仅顶栏铃铛可访问任务并弹出 toast', async () => {
 		const user = userEvent.setup();
 		const session = await mockAuthService.login({
 			username: 'admin',
@@ -722,23 +725,18 @@ describe('VideoInputPage', () => {
 			</AppProvider>,
 		);
 
-		expect(screen.getByText('当前任务')).toBeInTheDocument();
-		expect(screen.getByText('积分题讲解')).toBeInTheDocument();
-		expect(screen.getByText('当前阶段：渲染中')).toBeInTheDocument();
 		expect(
-			screen.getByRole('button', { name: /继续查看任务/ }),
-		).toBeInTheDocument();
+			screen.queryByText('当前任务'),
+		).not.toBeInTheDocument();
 
 		await user.click(
-			screen.getByRole('button', { name: /取消任务/ }),
+			screen.getByRole('button', { name: '查看进行中的任务' }),
 		);
 
-		await waitFor(() => {
-			expect(cancelTaskMock).toHaveBeenCalledWith('vtask_processing_002');
-		});
+		expect(screen.getAllByText('积分题讲解').length).toBeGreaterThan(0);
 
 		await user.click(
-			screen.getByRole('button', { name: /继续查看任务/ }),
+			screen.getByRole('button', { name: '进入任务 积分题讲解' }),
 		);
 
 		await waitFor(() => {

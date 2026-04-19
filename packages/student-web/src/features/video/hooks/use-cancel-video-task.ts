@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { cacheCancelledVideoTask, VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY } from '@/features/video/utils/task-center-cache';
 import { isApiClientError, type ApiClient } from '@/services/api/client';
 import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
 import { useFeedback } from '@/shared/feedback';
@@ -63,20 +64,18 @@ export function useCancelVideoTask(
 
 			return videoTaskAdapter.cancelTask(taskId);
 		},
-		onSuccess: async () => {
+		onSuccess: async (snapshot) => {
+			cacheCancelledVideoTask(queryClient, snapshot);
 			const invalidations = taskId
 				? [
 						queryClient.invalidateQueries({
-							queryKey: ['video', 'task-status', taskId],
+							queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
 						}),
 						queryClient.invalidateQueries({
 							queryKey: ['video', 'task-preview', taskId],
 						}),
 						queryClient.invalidateQueries({
 							queryKey: ['video', 'result', taskId],
-						}),
-						queryClient.invalidateQueries({
-							queryKey: ['video', 'workspace', 'active-tasks'],
 						}),
 				  ]
 				: [];

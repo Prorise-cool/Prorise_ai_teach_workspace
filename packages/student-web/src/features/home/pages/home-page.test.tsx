@@ -20,6 +20,15 @@ import { resetAppTestState, seedCompletedUserProfile } from '@/test/utils/sessio
 
 const mockAuthService = createAuthService(createMockAuthAdapter());
 const useVideoWorkspaceTasksMock = vi.fn();
+const cancelTaskMock = vi.fn();
+const deleteTaskMock = vi.fn();
+
+vi.mock('@/services/api/adapters/video-task-adapter', () => ({
+	resolveVideoTaskAdapter: () => ({
+		cancelTask: cancelTaskMock,
+		deleteTask: deleteTaskMock,
+	}),
+}));
 
 vi.mock('@/features/video/hooks/use-video-workspace-tasks', () => ({
 	useVideoWorkspaceTasks: () => useVideoWorkspaceTasksMock(),
@@ -95,6 +104,8 @@ function createEntryRouter(initialEntries: string[] = ['/']) {
 describe('HomePage', () => {
   beforeEach(async () => {
     await resetAppTestState({ resetProfile: false });
+    cancelTaskMock.mockReset();
+    deleteTaskMock.mockReset();
     useVideoWorkspaceTasksMock.mockReset();
     useVideoWorkspaceTasksMock.mockReturnValue(
       createWorkspaceTasksQueryResult()
@@ -164,7 +175,7 @@ describe('HomePage', () => {
     expect(router.state.location.search).toBe('');
   });
 
-  it('已登录且存在视频任务时，首页会直接展示当前任务状态并支持继续查看', async () => {
+  it('已登录且存在视频任务时，首页不展示任务卡片，仅通过顶栏铃铛入口访问', async () => {
     const user = userEvent.setup();
     const session = await mockAuthService.login({
       username: 'admin',
@@ -195,12 +206,18 @@ describe('HomePage', () => {
 
     const router = createEntryRouter();
 
-    expect(screen.getByText('当前视频任务')).toBeInTheDocument();
-    expect(screen.getByText('积分题讲解')).toBeInTheDocument();
-    expect(screen.getByText('当前阶段：渲染中')).toBeInTheDocument();
+    expect(
+      screen.queryByText('当前视频任务'),
+    ).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('button', { name: '继续查看任务 积分题讲解' })
+      screen.getByRole('button', { name: '查看进行中的任务' }),
+    );
+
+    expect(screen.getByText('积分题讲解')).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: '进入任务 积分题讲解' }),
     );
 
     await waitFor(() => {
