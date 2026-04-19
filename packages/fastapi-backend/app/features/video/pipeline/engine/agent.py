@@ -714,7 +714,6 @@ class TeachingVideoAgent:
             capture_output=True,
             text=True,
             cwd=self.output_dir,
-            timeout=300,
         )
 
         if result.returncode != 0:
@@ -763,7 +762,6 @@ class TeachingVideoAgent:
             capture_output=True,
             text=True,
             cwd=run_dir,
-            timeout=180,
         )
         if result.returncode != 0:
             return False, result.stderr or result.stdout, None
