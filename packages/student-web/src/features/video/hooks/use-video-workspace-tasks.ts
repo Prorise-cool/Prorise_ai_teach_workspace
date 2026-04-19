@@ -3,6 +3,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 
+import { VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY } from '@/features/video/utils/task-center-cache';
 import { resolveVideoWorkspaceTaskAdapter } from '@/services/api/adapters/video-workspace-task-adapter';
 
 type UseVideoWorkspaceTasksOptions = {
@@ -15,7 +16,7 @@ export function useVideoWorkspaceTasks(
 	const adapter = resolveVideoWorkspaceTaskAdapter();
 
 	return useQuery({
-		queryKey: ['video', 'workspace', 'active-tasks'],
+		queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
 		queryFn: () => adapter.listActiveTasks(),
 		enabled: options.enabled ?? true,
 		staleTime: 5_000,

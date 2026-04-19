@@ -10,13 +10,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { Button } from '@/components/ui/button';
-import { VideoActiveTaskCard } from '@/features/video/components/video-active-task-card';
 import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import {
 	readDraftVideoTaskTitle,
 	type VideoWorkspaceTaskItem,
 } from '@/features/video/components/video-workspace-task-shared';
 import { useVideoWorkspaceTasks } from '@/features/video/hooks/use-video-workspace-tasks';
+import {
+	cacheCancelledVideoTask,
+	clearVideoTaskDetailQueries,
+	pruneVideoWorkspaceTaskFromCache,
+	VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
+} from '@/features/video/utils/task-center-cache';
 import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
@@ -49,13 +54,11 @@ export function HomePage() {
 	const cancelTaskMutation = useMutation({
 		mutationKey: ['video', 'workspace', 'home-cancel-task'],
 		mutationFn: (taskId: string) => videoTaskAdapter.cancelTask(taskId),
-		onSuccess: async (_snapshot, taskId) => {
+		onSuccess: async (snapshot, taskId) => {
+			cacheCancelledVideoTask(queryClient, snapshot);
 			await Promise.allSettled([
 				queryClient.invalidateQueries({
-					queryKey: ['video', 'workspace', 'active-tasks'],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'task-status', taskId],
+					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
 				}),
 				queryClient.invalidateQueries({
 					queryKey: ['video', 'task-preview', taskId],
@@ -81,6 +84,33 @@ export function HomePage() {
 			});
 		},
 	});
+	const deleteTaskMutation = useMutation({
+		mutationKey: ['video', 'workspace', 'home-delete-task'],
+		mutationFn: (taskId: string) => videoTaskAdapter.deleteTask(taskId),
+		onSuccess: async (_result, taskId) => {
+			pruneVideoWorkspaceTaskFromCache(queryClient, taskId);
+			clearVideoTaskDetailQueries(queryClient, taskId);
+			await Promise.allSettled([
+				queryClient.invalidateQueries({
+					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
+				}),
+			]);
+			notify({
+				title: t('entryNav.taskCenter.deleteSuccess'),
+				tone: 'success',
+			});
+		},
+		onError: (error) => {
+			notify({
+				title: t('entryNav.taskCenter.deleteFailed'),
+				description:
+					error instanceof Error
+						? error.message
+						: t('entryNav.taskCenter.deleteFailed'),
+				tone: 'error',
+			});
+		},
+	});
 	const workspaceTaskItems = useMemo<VideoWorkspaceTaskItem[]>(
 		() =>
 			workspaceTasksQuery.data?.items.map((item) => ({
@@ -92,7 +122,6 @@ export function HomePage() {
 			})) ?? [],
 		[workspaceTasksQuery.data?.items, t],
 	);
-	const featuredTask = workspaceTaskItems[0] ?? null;
 	const workspaceUtilitySlot = session?.accessToken ? (
 		<VideoTaskCenter
 			items={workspaceTaskItems}
@@ -101,8 +130,14 @@ export function HomePage() {
 				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
 			}
 			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
+			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
 			onEnterTask={(taskId) => {
-				void navigate(`/video/${taskId}/generating`);
+				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
+				void navigate(
+					item?.lifecycleStatus === 'completed'
+						? `/video/${taskId}`
+						: `/video/${taskId}/generating`,
+				);
 			}}
 		/>
 	) : null;
@@ -151,21 +186,6 @@ export function HomePage() {
 							</Button>
 						</div>
 
-						{featuredTask ? (
-							<VideoActiveTaskCard
-								task={featuredTask}
-								queueCount={workspaceTaskItems.length}
-								headerTitle={t('entryHome.activeTask.title')}
-								headerSubtitle={t('entryHome.activeTask.subtitle')}
-								note={t('entryHome.activeTask.note')}
-								className="xm-entry-home__task-card"
-								isCancelling={cancelTaskMutation.isPending}
-								onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-								onContinue={(taskId) => {
-									void navigate(`/video/${taskId}/generating`);
-								}}
-							/>
-						) : null}
 					</div>
 				</section>
 			</div>

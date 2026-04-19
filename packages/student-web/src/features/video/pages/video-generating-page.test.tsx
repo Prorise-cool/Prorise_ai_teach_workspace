@@ -148,7 +148,7 @@ function createGeneratingRouter(
   return createMemoryRouter(
     [
       {
-        path: '/video/:id/generating',
+        path: '/video/:taskId/generating',
         element: <VideoGeneratingPage />,
       },
       {
@@ -156,7 +156,7 @@ function createGeneratingRouter(
         element: <div>视频输入页</div>,
       },
       {
-        path: '/video/:id',
+        path: '/video/:taskId',
         element: <div>视频结果页</div>,
       },
     ],

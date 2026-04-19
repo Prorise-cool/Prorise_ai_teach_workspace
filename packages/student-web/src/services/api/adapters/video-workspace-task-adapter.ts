@@ -9,11 +9,12 @@ import type { TaskLifecycleStatus, TaskSnapshot } from '@/types/task';
 
 import { pickAdapterImplementation } from './base-adapter';
 
-const ACTIVE_VIDEO_TASK_STATUSES = ['pending', 'processing'] as const;
+const WORKSPACE_TASK_STATUSES = ['pending', 'processing', 'completed'] as const;
 const WORKSPACE_TASK_PAGE_NUM = 1;
 const WORKSPACE_TASK_PAGE_SIZE = 10;
+const dismissedVideoWorkspaceTaskIds = new Set<string>();
 
-type ActiveVideoTaskStatus = (typeof ACTIVE_VIDEO_TASK_STATUSES)[number];
+type WorkspaceTaskStatus = (typeof WORKSPACE_TASK_STATUSES)[number];
 
 type ResolveVideoWorkspaceTaskAdapterOptions = {
   client?: ApiClient;
@@ -56,12 +57,20 @@ export interface VideoWorkspaceTaskAdapter {
   listActiveTasks(options?: { signal?: AbortSignal }): Promise<VideoWorkspaceTaskListResult>;
 }
 
-function buildVideoTaskListUrl(status: ActiveVideoTaskStatus) {
+function normalizeWorkspaceTaskId(taskId: string) {
+  return taskId.trim();
+}
+
+function buildVideoTaskListUrl(status: WorkspaceTaskStatus) {
   return `/api/v1/video/tasks?status=${status}&pageNum=${WORKSPACE_TASK_PAGE_NUM}&pageSize=${WORKSPACE_TASK_PAGE_SIZE}`;
 }
 
-function isActiveTaskStatus(status: TaskLifecycleStatus) {
-  return ACTIVE_VIDEO_TASK_STATUSES.some((activeStatus) => activeStatus === status);
+function isWorkspaceTaskStatus(status: TaskLifecycleStatus) {
+  return WORKSPACE_TASK_STATUSES.some((s) => s === status);
+}
+
+function isDismissedVideoWorkspaceTask(taskId: string) {
+  return dismissedVideoWorkspaceTaskIds.has(normalizeWorkspaceTaskId(taskId));
 }
 
 function isTaskSnapshotNotFoundError(error: unknown) {
@@ -89,12 +98,39 @@ function mapWorkspaceTaskItem(
   };
 }
 
+function dedupeWorkspaceTaskRows(rows: VideoTaskListRow[]) {
+  const seenTaskIds = new Set<string>();
+
+  return rows.filter((row) => {
+    const normalizedTaskId = normalizeWorkspaceTaskId(row.task_id);
+    if (!normalizedTaskId || seenTaskIds.has(normalizedTaskId)) {
+      return false;
+    }
+
+    seenTaskIds.add(normalizedTaskId);
+    return true;
+  });
+}
+
+export function dismissVideoWorkspaceTask(taskId: string) {
+  const normalizedTaskId = normalizeWorkspaceTaskId(taskId);
+  if (!normalizedTaskId) {
+    return;
+  }
+
+  dismissedVideoWorkspaceTaskIds.add(normalizedTaskId);
+}
+
+export function resetDismissedVideoWorkspaceTasks() {
+  dismissedVideoWorkspaceTaskIds.clear();
+}
+
 export function createRealVideoWorkspaceTaskAdapter(
   { client = fastapiClient }: RealVideoWorkspaceTaskAdapterOptions = {},
 ): VideoWorkspaceTaskAdapter {
   return {
     async listActiveTasks(options) {
-      const [pendingResponse, processingResponse] = await Promise.all([
+      const [pendingResponse, processingResponse, completedResponse] = await Promise.all([
         client.request<VideoTaskRowsResponse>({
           url: buildVideoTaskListUrl('pending'),
           method: 'get',
@@ -105,9 +141,17 @@ export function createRealVideoWorkspaceTaskAdapter(
           method: 'get',
           signal: options?.signal,
         }),
+        client.request<VideoTaskRowsResponse>({
+          url: buildVideoTaskListUrl('completed'),
+          method: 'get',
+          signal: options?.signal,
+        }),
       ]);
-      const activeRows = [...pendingResponse.data.rows, ...processingResponse.data.rows]
-        .filter((row) => isActiveTaskStatus(row.status))
+      const activeRows = dedupeWorkspaceTaskRows(
+        [...pendingResponse.data.rows, ...processingResponse.data.rows, ...completedResponse.data.rows]
+          .filter((row) => isWorkspaceTaskStatus(row.status))
+          .filter((row) => !isDismissedVideoWorkspaceTask(row.task_id))
+      )
         .sort((left, right) => right.updated_at.localeCompare(left.updated_at));
       const taskAdapter = resolveTaskAdapter({ module: 'video' });
       const itemResults = await Promise.all(
@@ -118,6 +162,7 @@ export function createRealVideoWorkspaceTaskAdapter(
             return mapWorkspaceTaskItem(row, snapshot);
           } catch (error) {
             if (isTaskSnapshotNotFoundError(error)) {
+              dismissVideoWorkspaceTask(row.task_id);
               return null;
             }
 

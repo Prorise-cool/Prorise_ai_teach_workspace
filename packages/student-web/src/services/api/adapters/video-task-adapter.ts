@@ -66,6 +66,11 @@ export interface VideoTaskAdapter {
     taskId: string,
     options?: VideoTaskCancelOptions,
   ): Promise<TaskSnapshot>;
+  /** 删除已完成的视频任务。 */
+  deleteTask(
+    taskId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ taskId: string; status: string }>;
 }
 
 /* ---------- 辅助函数 ---------- */
@@ -212,6 +217,19 @@ export function createRealVideoTaskAdapter(
         throw mapVideoTaskApiClientError(error);
       }
     },
+    async deleteTask(taskId, options) {
+      try {
+        const response = await client.request<TaskDataEnvelope<{ taskId: string; status: string }>>({
+          url: `/api/v1/video/tasks/${taskId}`,
+          method: 'delete',
+          signal: options?.signal,
+        });
+
+        return response.data.data;
+      } catch (error) {
+        throw mapVideoTaskApiClientError(error);
+      }
+    },
   };
 }
 
@@ -266,6 +284,12 @@ export function createMockVideoTaskAdapter(): VideoTaskAdapter {
         currentStage: null,
         stageLabel: null,
         errorCode: 'TASK_CANCELLED',
+      }));
+    },
+    deleteTask(taskId) {
+      return runMockVideoTaskOperation(() => ({
+        taskId,
+        status: 'deleted',
       }));
     },
   };
