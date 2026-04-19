@@ -7,6 +7,7 @@ Storyboard:
 Concept: {{concept}}
 Seed: {{seed}}
 Output mode: {{outputMode}}
+Layout family: {{layoutFamily}}
 
 ## Goal Layer
 ### Input Expectation

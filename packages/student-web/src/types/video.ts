@@ -398,6 +398,8 @@ export interface VideoResult {
   publicUrl?: string | null;
   /** 最终成片对应的 section 级字幕 / 跳点信息。 */
   sections?: VideoResultSection[];
+  /** 布局偏好提示。 */
+  layoutHint?: VideoLayoutHint;
 }
 
 /* ---------- 失败结果 ---------- */

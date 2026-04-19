@@ -18,14 +18,12 @@ import { VideoDock } from '../components/video-dock';
 import { VideoPlayer } from '../components/video-player';
 import type { VideoPlayerHandle } from '../components/video-player';
 import { VideoProgressBar } from '../components/video-progress-bar';
-import { VideoSubtitle } from '../components/video-subtitle';
 import { useSidebarToggle } from '../hooks/use-sidebar-toggle';
 import { useVideoPublish } from '../hooks/use-video-publish';
 import { useVideoResult } from '../hooks/use-video-result';
 import {
   buildPlaybackSections,
   getActivePlaybackSection,
-  resolveSectionSubtitle,
 } from '../utils/result-playback';
 
 import '../styles/_result.scss';
@@ -53,6 +51,7 @@ export function VideoResultPage() {
     currentTimeSeconds: 0,
     durationSeconds: 0,
   });
+  const [bannerVisible, setBannerVisible] = useState(true);
 
   const handleReturn = () => void window.history.back();
 
@@ -178,7 +177,6 @@ export function VideoResultPage() {
     playbackSections,
     playbackState.currentTimeSeconds,
   );
-  const subtitleText = resolveSectionSubtitle(activeSection) ?? undefined;
   const rawPublicUrl = result.publicUrl?.trim() || null;
   const publicUrl =
     rawPublicUrl && !rawPublicUrl.includes('/api/')
@@ -215,14 +213,17 @@ export function VideoResultPage() {
             sections={result.sections}
           />
 
-          <PublishBanner
-            published={result.published}
-            publicUrl={publicUrl}
-            publishLoading={publishLoading}
-            onPublish={publish}
-            onUnpublish={unpublish}
-            readOnly={isPublicView}
-          />
+          {bannerVisible ? (
+            <PublishBanner
+              published={result.published}
+              publicUrl={publicUrl}
+              publishLoading={publishLoading}
+              onPublish={publish}
+              onUnpublish={unpublish}
+              onDismiss={() => setBannerVisible(false)}
+              readOnly={isPublicView}
+            />
+          ) : null}
 
           <section className="xm-video-result__stage" data-testid="video-result-stage">
             <div className="xm-video-result__player-shell">
@@ -236,7 +237,6 @@ export function VideoResultPage() {
                 />
               </div>
 
-              <VideoSubtitle text={subtitleText} />
               <VideoDock playerRef={playerRef} />
             </div>
           </section>

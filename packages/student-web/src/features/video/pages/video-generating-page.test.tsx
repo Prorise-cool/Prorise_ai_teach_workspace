@@ -292,7 +292,7 @@ describe('VideoGeneratingPage', () => {
     expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
   });
 
-  it('在 preview 数据就绪后默认停留摘要，并在用户切换后展示播放器与分段详情', async () => {
+  it('在渲染阶段自动展示分段试看，可手动切换到摘要查看', async () => {
     useVideoTaskPreviewMock.mockReturnValue(
       createPreviewResult({
         preview: createPreview(),
@@ -302,24 +302,22 @@ describe('VideoGeneratingPage', () => {
 
     const { container } = renderWithApp(<RouterProvider router={router} />);
 
-    await screen.findByText('快速讲解摘要');
-    expect(screen.queryByTestId('mock-video-player')).not.toBeInTheDocument();
-    expect(screen.getByText('导数直觉')).toBeInTheDocument();
-    expect(container.querySelector('.xm-generating-rich-content math')).not.toBeNull();
+    expect(await screen.findByTestId('mock-video-player')).toHaveTextContent('https://static.prorise.test/clip-1.mp4');
+    expect(screen.getByText('逐段推送')).toBeInTheDocument();
+    expect(screen.getByText('1 段已开放')).toBeInTheDocument();
+    expect(screen.getAllByText('1 / 3 段已就绪').length).toBeGreaterThan(0);
+
     await waitFor(() => {
       expect(notifyMock).toHaveBeenCalledWith(
         expect.objectContaining({ title: '摘要和分段讲解已经可查看' }),
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /3\. 分段试看/ }));
-    expect(await screen.findByTestId('mock-video-player')).toHaveTextContent('https://static.prorise.test/clip-1.mp4');
-
-    expect(screen.getByRole('button', { name: /3\. 分段试看/ })).toBeInTheDocument();
-    expect(screen.getByText('逐段推送')).toBeInTheDocument();
-    expect(screen.getByText('1 段已开放')).toBeInTheDocument();
-    expect(screen.getAllByText('1 / 3 段已就绪').length).toBeGreaterThan(0);
-    expect(screen.queryByText('画面')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /1\. 摘要/ }));
+    expect(await screen.findByText('快速讲解摘要')).toBeInTheDocument();
+    expect(screen.getByText('导数直觉')).toBeInTheDocument();
+    expect(container.querySelector('.xm-generating-rich-content math')).not.toBeNull();
+    expect(screen.queryByTestId('mock-video-player')).not.toBeInTheDocument();
   });
 
   it('在失败态展示可读错误信息和操作按钮', () => {

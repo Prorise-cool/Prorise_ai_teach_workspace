@@ -10,6 +10,7 @@
 
 .xm-video-result {
   display: flex;
+  flex-direction: column;
   width: 100vw;
   height: 100vh;
   background-color: var(--xm-color-background);
@@ -17,10 +18,14 @@
   font-family: var(--xm-font-family-sans);
   overflow: hidden;
 
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+
   &__canvas {
     flex: 1 1 auto;
     min-width: 0;
-    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -262,7 +267,7 @@
     display: flex;
     align-items: stretch;
     position: relative;
-    padding: 0 var(--xm-spacing-4, 1rem) var(--xm-spacing-4, 1rem);
+    padding: 0;
 
     @media (min-width: 768px) {
       padding: 0 var(--xm-spacing-10, 2.5rem) var(--xm-spacing-6, 1.5rem);
@@ -284,13 +289,18 @@
     inset: 0;
     width: 100%;
     height: 100%;
-    border-radius: 16px;
+    border-radius: 0;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--xm-color-border) 76%, transparent);
+    border: none;
     background: #000;
-    box-shadow:
-      0 28px 60px rgba(15, 23, 42, 0.12),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+    @media (min-width: 768px) {
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--xm-color-border) 76%, transparent);
+      box-shadow:
+        0 28px 60px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
   }
 
   &__player {
@@ -310,7 +320,7 @@
     .vjs-tech {
       width: 100% !important;
       height: 100% !important;
-      object-fit: cover;
+      object-fit: contain;
       background-color: #000;
     }
 
@@ -324,21 +334,30 @@
   &__subtitle {
     position: absolute;
     left: 50%;
-    bottom: 110px;
+    bottom: 85px;
     transform: translateX(-50%);
+    width: calc(100% - 32px);
     max-width: min(720px, calc(100% - 36px));
-    padding: 10px 24px;
-    border-radius: 16px;
+    padding: 8px 16px;
+    border-radius: 12px;
     background: color-mix(in srgb, var(--xm-color-text-primary) 85%, transparent);
     color: var(--xm-color-surface);
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1.4;
     text-align: center;
-    letter-spacing: 0.01em;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
     pointer-events: none;
     z-index: 20;
+    backdrop-filter: blur(8px);
     border: 1px solid transparent;
+
+    @media (min-width: 768px) {
+      width: auto;
+      max-width: min(720px, calc(100% - 36px));
+      padding: 10px 24px;
+      font-size: 15px;
+      border-radius: 16px;
+    }
   }
 }
 

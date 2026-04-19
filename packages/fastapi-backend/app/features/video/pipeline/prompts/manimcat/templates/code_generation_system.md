@@ -39,6 +39,14 @@ The storyboard uses an internal English command language. Treat it as hard instr
 - Objects in `exit` must leave in that shot.
 - If a non-core object becomes ambiguous, prefer cleaning it rather than keeping it.
 - Preserve the locked layout family exactly. Only `center_stage` and `two_column` are allowed.
+- Layout placement rules (MANDATORY):
+  - `center_stage`: Position ALL visual elements centered around x=0 (range x=-3 to x=3). Objects use standard centered placement. This is the default.
+  - `two_column`: Position ALL animation/visual elements on the RIGHT half (x=2 to x=6). Reserve the LEFT half (x=-6 to x=-1) for text, formulas, and labels that the front-end DOM subtitle layer or overlay will render. When placing Manim objects, shift their x-coordinates right by approximately +3 units compared to center_stage. For example, a graph centered at (0,0) in center_stage should be placed at (3,0) in two_column. Key anchors:
+    - Main diagram/graph center: around x=3 to x=4
+    - Labels for the diagram: to the left of the diagram (x=1 to x=2)
+    - Persistent formulas: x=-3 to x=-1 (left side)
+    - Temporary helper objects: same side as their parent object
+  - Regardless of layout family, keep the bottom subtitle safe zone (y < -2.6) clear.
 - Prefer stable, readable placement over clever motion.
 - Keep the bottom subtitle safe zone empty for front-end DOM subtitles.
 - Do not set an opaque fullscreen background or camera background color; alpha transparency must remain intact.
