@@ -90,6 +90,8 @@ export function VideoProgressBar({
         aria-valuemax={100}
       >
         {timelineSections.map((section) => {
+          const sectionTitle = section.title ?? `Section ${section.sectionIndex + 1}`;
+          const sectionSummary = resolveSectionSummary(section) ?? '...';
           const leftPercent =
             durationSeconds > 0
               ? (section.resolvedStartSeconds / durationSeconds) * 100
@@ -115,14 +117,15 @@ export function VideoProgressBar({
 
               <span className="xm-video-result__progress-tooltip" role="status">
                 <span className="xm-video-result__progress-tooltip-arrow" />
-                <span className="xm-video-result__progress-tooltip-icon-wrap">
-                  <Sparkles className="w-3.5 h-3.5" />
+                <span className="xm-video-result__progress-tooltip-header">
+                  <span className="xm-video-result__progress-tooltip-icon-wrap">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </span>
+                  <p className="xm-video-result__progress-tooltip-title">{sectionTitle}</p>
                 </span>
-                <p className="xm-video-result__progress-tooltip-title">
-                  {section.title ?? `Section ${section.sectionIndex + 1}`}
-                </p>
                 <p className="xm-video-result__progress-tooltip-summary">
-                  {resolveSectionSummary(section) ?? '...'}
+                  <strong>AI总结：</strong>
+                  {sectionSummary.replace(/^AI总结：/, '')}
                 </p>
               </span>
             </button>

@@ -1,28 +1,34 @@
 /**
  * 文件说明：Companion 智能侧栏壳层组件。
- * 右侧问答面板占位 UI，含聊天气泡、快捷标签、输入框、历史/证据抽屉。
- * 后续 Companion Epic 实现时注入真实逻辑。
+ * 对齐结果页单页设计稿，承接主题切换、菜单入口、聊天占位与输入区。
  */
 import {
   AlertCircle,
-  ArrowUp,
   Bot,
   Clock,
+  Download,
   HelpCircle,
+  Image as ImageIcon,
   Link,
+  Moon,
+  MoreHorizontal,
   Paperclip,
   Rocket,
+  Send,
+  Sparkles,
+  Sun,
+  Trash2,
   X,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
+import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 
 export interface CompanionSidebarProps {
   /** 侧栏是否展开。 */
   isOpen: boolean;
-  /** 关闭侧栏（移动端遮罩点击时触发）。 */
+  /** 关闭侧栏（当前仅用于保持调用契约）。 */
   onClose?: () => void;
   /** 额外 className。 */
   className?: string;
@@ -34,20 +40,14 @@ export interface CompanionSidebarProps {
  * @param props - 侧栏属性。
  * @returns 侧栏 UI。
  */
-export function CompanionSidebar({ isOpen, onClose: _onClose, className }: CompanionSidebarProps) {
+export function CompanionSidebar({
+  isOpen,
+  onClose: _onClose,
+  className,
+}: CompanionSidebarProps) {
   const { t } = useAppTranslation();
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
-
-  const toggleHistory = useCallback(() => {
-    setHistoryOpen((p) => !p);
-    setEvidenceOpen(false);
-  }, []);
-
-  const toggleEvidence = useCallback(() => {
-    setEvidenceOpen((p) => !p);
-    setHistoryOpen(false);
-  }, []);
+  const { themeMode, toggleThemeMode } = useThemeMode();
+  const isDark = themeMode === 'dark';
 
   return (
     <aside
@@ -57,164 +57,150 @@ export function CompanionSidebar({ isOpen, onClose: _onClose, className }: Compa
         className,
       )}
     >
-      {/* 移动端拖拽指示条 */}
       <div className="xm-companion__drag-handle" />
       <div className="xm-companion__inner">
-        {/* Header */}
-        <div className="xm-companion__header">
-          <div className="xm-companion__header-left">
+        <header className="xm-companion__header">
+          <div className="xm-companion__header-brand">
             <div className="xm-companion__avatar">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="xm-companion__header-text">
-              <span className="xm-companion__header-title">
-                {t('video.companion.title')}
-              </span>
-              <span className="xm-companion__header-subtitle">
-                {t('video.companion.subtitle')}
-              </span>
+            <div className="xm-companion__header-copy">
+              <span className="xm-companion__header-title">XiaoMai AI</span>
+              <span className="xm-companion__header-subtitle">随课智能答疑与画板</span>
             </div>
           </div>
+
           <div className="xm-companion__header-actions">
             <button
-              className="xm-companion__header-btn"
-              onClick={toggleEvidence}
-              title={t('video.companion.evidence')}
+              type="button"
+              className="xm-companion__header-circle"
+              onClick={toggleThemeMode}
+              aria-label={t('video.generating.toggleTheme')}
             >
-              <Paperclip className="w-4 h-4" />
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button
-              className="xm-companion__header-btn"
-              onClick={toggleHistory}
-              title={t('video.companion.history')}
-            >
-              <Clock className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
 
-        {/* 上下文锚点 */}
+            <div className="dropdown-trigger">
+              <button
+                type="button"
+                className="xm-companion__header-circle"
+                aria-label={t('video.result.settings')}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+
+              <div className="dropdown-menu">
+                <button type="button" className="dropdown-item">
+                  <Paperclip className="w-4 h-4 opacity-70" />
+                  {t('video.companion.evidenceTitle')}
+                </button>
+                <button type="button" className="dropdown-item">
+                  <Clock className="w-4 h-4 opacity-70" />
+                  {t('video.companion.historyTitle')}
+                </button>
+                <button type="button" className="dropdown-item">
+                  <Download className="w-4 h-4 opacity-70" />
+                  导出完整板书
+                </button>
+                <div className="xm-companion__dropdown-divider" />
+                <button type="button" className="dropdown-item dropdown-item--danger">
+                  <Trash2 className="w-4 h-4 opacity-70" />
+                  清空历史对话
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
         <div className="xm-companion__anchor">
           <Link className="w-3.5 h-3.5 shrink-0" />
           <span className="xm-companion__anchor-text">
-            {t('video.companion.anchorLabel', { anchor: 'T=02:15 / Scene-02' })}
+            {t('video.companion.anchorLabel', {
+              anchor: 'T=02:15 / Scene-02 / 积分概念',
+            })}
           </span>
-          <button className="xm-companion__anchor-close">
+          <button type="button" className="xm-companion__anchor-close">
             <X className="w-3 h-3" />
           </button>
         </div>
 
-        {/* 聊天气泡区（占位） */}
         <div className="xm-companion__chat">
-          {/* 用户气泡 */}
-          <div className="xm-companion__bubble xm-companion__bubble--user">
-            <div className="xm-companion__bubble-content xm-companion__bubble-content--user">
-              这块没听懂，积分为什么能等于面积？
-            </div>
-          </div>
+          <div className="bubble-user">这块没听懂，积分为什么能等于面积？</div>
 
-          {/* AI 气泡 */}
-          <div className="xm-companion__bubble xm-companion__bubble--ai">
-            <div className="xm-companion__agent-label">
-              <div className="xm-companion__agent-avatar">严</div>
-              <span className="xm-companion__agent-name">严谨教授</span>
+          <div className="xm-companion__message-group">
+            <div className="xm-companion__message-meta">
+              <div className="xm-companion__message-avatar">
+                <Sparkles className="w-3 h-3" />
+              </div>
+              <span className="xm-companion__message-name">XiaoMai</span>
             </div>
-            <div className="xm-companion__bubble-content xm-companion__bubble-content--ai">
-              好问题！这正是微积分的魅力。
-              <br /><br />
-              你可以把不规则的面积想象成无数个<strong>"极细的矩形"</strong>拼成的：
-              <br />
-              1. 每个矩形的宽度是无限小的 <code>dx</code>。
-              <br />
-              2. 每个矩形的高度是函数在该点的值 <code>f(x)</code>。
-              <br /><br />
-              当把所有矩形的面积加起来，取极限，就变成了这条曲线下的精确面积。
+            <div className="bubble-ai xm-markdown">
+              <p>好问题！这正是微积分的魅力。</p>
+              <p>你可以把不规则的面积想象成无数个“极细的矩形”拼成的：</p>
+              <ul>
+                <li>每个矩形的宽度是无限小的 <code>dx</code>。</li>
+                <li>每个矩形的高度是函数在该点的值 <code>f(x)</code>。</li>
+              </ul>
+              <p>
+                当把所有矩形的面积加起来，取极限，就变成了这条曲线下的精确面积。你可以在底部提问让我进行更详细的动态推演。
+              </p>
             </div>
           </div>
         </div>
 
-        {/* 底部输入区 */}
         <div className="xm-companion__input-area">
           <div className="xm-companion__quick-tags">
-            <button className="xm-companion__quick-tag">
+            <button type="button" className="xm-companion__quick-tag">
               <HelpCircle className="w-3 h-3" />
               {t('video.companion.quickNotUnderstand')}
             </button>
-            <button className="xm-companion__quick-tag">
+            <button type="button" className="xm-companion__quick-tag">
               <AlertCircle className="w-3 h-3" />
               {t('video.companion.quickExample')}
             </button>
-            <button className="xm-companion__quick-tag">
+            <button type="button" className="xm-companion__quick-tag">
               <Rocket className="w-3 h-3" />
-              {t('video.companion.quickExtend')}
+              画板演示
             </button>
           </div>
 
           <div className="xm-companion__input-box">
             <textarea
               className="xm-companion__textarea"
-              rows={2}
-              placeholder={t('video.companion.inputPlaceholder')}
+              placeholder="输入公式问题或要求推演..."
+              rows={1}
               readOnly
             />
-            <div className="xm-companion__input-footer">
-              <div className="xm-companion__input-meta">
-                <button className="xm-companion__input-clear">
-                  {t('video.companion.clear')}
+
+            <div className="xm-companion__input-tools">
+              <div className="xm-companion__tools-left">
+                <button
+                  type="button"
+                  className="xm-companion__tool-btn"
+                  title="插入图片/截图"
+                >
+                  <ImageIcon className="w-4 h-4" />
                 </button>
-                <div className="w-1 h-1 rounded-full bg-border" />
+                <button
+                  type="button"
+                  className="xm-companion__tool-btn"
+                  title="上传文件"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
                 <span className="xm-companion__input-count">
                   {t('video.companion.charCount', { count: 0 })}
                 </span>
               </div>
-              <button className="xm-companion__send-btn">
-                <ArrowUp className="w-4 h-4" />
+
+              <button
+                type="button"
+                className="xm-companion__send-btn"
+                aria-label={t('video.common.continueLearning')}
+              >
+                <Send className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* 历史抽屉 */}
-        <div
-          className={cn(
-            'xm-companion__drawer',
-            historyOpen && 'xm-companion__drawer--open',
-          )}
-        >
-          <div className="xm-companion__drawer-header">
-            <span className="xm-companion__drawer-title">
-              {t('video.companion.historyTitle')}
-            </span>
-            <button className="xm-companion__drawer-close" onClick={toggleHistory}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="xm-companion__drawer-body">
-            <p className="text-sm text-muted-foreground text-center py-8">
-              暂无历史记录
-            </p>
-          </div>
-        </div>
-
-        {/* 证据抽屉 */}
-        <div
-          className={cn(
-            'xm-companion__drawer',
-            evidenceOpen && 'xm-companion__drawer--open',
-          )}
-        >
-          <div className="xm-companion__drawer-header">
-            <span className="xm-companion__drawer-title">
-              {t('video.companion.evidenceTitle')}
-            </span>
-            <button className="xm-companion__drawer-close" onClick={toggleEvidence}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="xm-companion__drawer-body">
-            <p className="text-sm text-muted-foreground text-center py-8">
-              暂无依据数据
-            </p>
           </div>
         </div>
       </div>

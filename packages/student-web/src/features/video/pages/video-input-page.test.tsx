@@ -12,6 +12,7 @@ import { VideoInputPage } from '@/features/video/pages/video-input-page';
 import { createMockAuthAdapter } from '@/services/api/adapters';
 import { createAuthService } from '@/services/auth';
 import { getMockVideoPublicListSuccess } from '@/services/mock/fixtures/video-public';
+import { getMockVideoResult } from '@/services/mock/fixtures/video-pipeline';
 import {
 	resetAuthSessionStore,
 	useAuthSessionStore
@@ -22,6 +23,7 @@ const mockAuthService = createAuthService(createMockAuthAdapter());
 const createTaskMock = vi.fn();
 const cancelTaskMock = vi.fn();
 const deleteTaskMock = vi.fn();
+const getVideoResultMock = vi.fn();
 const preprocessImageMock = vi.fn();
 const useVideoWorkspaceTasksMock = vi.fn();
 
@@ -36,6 +38,12 @@ vi.mock('@/services/api/adapters/video-task-adapter', () => ({
 vi.mock('@/services/api/adapters/video-preprocess-adapter', () => ({
 	resolveVideoPreprocessAdapter: () => ({
 		preprocessImage: preprocessImageMock,
+	}),
+}));
+
+vi.mock('@/services/api/adapters/video-result-adapter', () => ({
+	resolveVideoResultAdapter: () => ({
+		getResult: getVideoResultMock,
 	}),
 }));
 
@@ -112,6 +120,7 @@ describe('VideoInputPage', () => {
 		createTaskMock.mockReset();
 		cancelTaskMock.mockReset();
 		deleteTaskMock.mockReset();
+		getVideoResultMock.mockReset();
 		preprocessImageMock.mockReset();
 		usePublicVideosMock.mockReset();
 		useVideoWorkspaceTasksMock.mockReset();
@@ -141,6 +150,15 @@ describe('VideoInputPage', () => {
 			suggestions: [],
 			errorCode: null
 		});
+		getVideoResultMock.mockImplementation(async (taskId: string) => ({
+			taskId,
+			status: 'completed',
+			result: {
+				...getMockVideoResult(taskId),
+				published: false,
+			},
+			failure: null,
+		}));
 		usePublicVideosMock.mockReturnValue(createPublicVideosQueryResult());
 		useVideoWorkspaceTasksMock.mockReturnValue(createWorkspaceTasksQueryResult());
 	});
@@ -220,12 +238,120 @@ describe('VideoInputPage', () => {
 			</AppProvider>
 		);
 
-		expect(screen.getByText('热门题目讲解视频')).toBeInTheDocument();
+		expect(
+			screen.getByRole('tab', { name: /我的题目/i }),
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole('tab', { name: /热门题目讲解视频/i }),
+		).toBeInTheDocument();
 		expect(screen.getByText('洛必达法则的完整推导')).toBeInTheDocument();
 		expect(screen.getAllByRole('link', { name: '查看讲解' })).toHaveLength(6);
 		expect(screen.getAllByRole('button', { name: '复用题目' })).toHaveLength(6);
 
 		expect(screen.getAllByRole('article')).toHaveLength(6);
+	});
+
+	it('keeps public cards compact and hides long summary text', async () => {
+		usePublicVideosMock.mockReturnValue(
+			createPublicVideosQueryResult({
+				data: {
+					...getMockVideoPublicListSuccess('default').data,
+					items: getMockVideoPublicListSuccess('default').data.items.map((item, index) =>
+						index === 0
+							? {
+								...item,
+								summary: '这是一段不应该直接显示在卡片里的超长总结文本，用来确保卡片不会再因为 summary 被撑高。',
+							}
+							: item,
+					),
+				},
+			}),
+		);
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(
+			screen.queryByText('这是一段不应该直接显示在卡片里的超长总结文本，用来确保卡片不会再因为 summary 被撑高。'),
+		).not.toBeInTheDocument();
+	});
+
+	it('renders completed tasks in the private tab and can switch back to public videos', async () => {
+		const user = userEvent.setup();
+		useVideoWorkspaceTasksMock.mockReturnValue(
+			createWorkspaceTasksQueryResult({
+				data: {
+					items: [
+						{
+							taskId: 'vtask_completed_private_001',
+							title: '导数定义题',
+							lifecycleStatus: 'completed',
+							progress: 100,
+							stageLabel: 'video.stages.completed',
+							currentStage: 'completed',
+							message: '视频已生成完成',
+							updatedAt: '2026-04-19T09:30:00Z',
+						},
+					],
+				},
+			}),
+		);
+		getVideoResultMock.mockResolvedValue({
+			taskId: 'vtask_completed_private_001',
+			status: 'completed',
+			result: {
+				...getMockVideoResult('vtask_completed_private_001'),
+				title: '导数定义的动画直觉',
+				published: true,
+			},
+			failure: null,
+		});
+
+		const session = await mockAuthService.login({
+			username: 'admin',
+			password: 'admin123',
+		});
+
+		useAuthSessionStore.getState().setSession(session);
+		const router = createVideoRouter();
+
+		render(
+			<AppProvider>
+				<RouterProvider router={router} />
+			</AppProvider>,
+		);
+
+		expect(
+			screen.getByRole('tab', { name: /我的题目/i }),
+		).toBeInTheDocument();
+		expect(screen.getByText('仅用户自己可见')).toBeInTheDocument();
+		expect(screen.queryByText('你的私有视频会显示在这里')).not.toBeInTheDocument();
+
+		await waitFor(() => {
+			expect(screen.getByText('导数定义的动画直觉')).toBeInTheDocument();
+		});
+
+		expect(screen.getByText('已公开')).toBeInTheDocument();
+		expect(
+			screen.getByRole('link', { name: '查看结果：导数定义的动画直觉' }),
+		).toHaveAttribute('href', '/video/vtask_completed_private_001');
+		expect(screen.queryByText('洛必达法则的完整推导')).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole('tab', { name: /热门题目讲解视频/i }));
+
+		expect(screen.getByText('洛必达法则的完整推导')).toBeInTheDocument();
+		expect(screen.queryByText('导数定义的动画直觉')).not.toBeInTheDocument();
 	});
 
 	it('does not render backend-only fields in community cards', async () => {
@@ -323,13 +449,15 @@ describe('VideoInputPage', () => {
 		useAuthSessionStore.getState().setSession(session);
 		const router = createVideoRouter();
 
-		render(
+		const { container } = render(
 			<AppProvider>
 				<RouterProvider router={router} />
 			</AppProvider>,
 		);
 
-		expect(screen.getAllByRole('article')).toHaveLength(6);
+		expect(
+			container.querySelectorAll('.xm-video-discovery__card--skeleton'),
+		).toHaveLength(6);
 		expect(screen.queryByText('洛必达法则的完整推导')).not.toBeInTheDocument();
 	});
 

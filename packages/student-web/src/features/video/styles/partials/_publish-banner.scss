@@ -16,7 +16,9 @@
 
   &__card {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--xm-spacing-4, 1rem);
     border-radius: 24px;
     border: 1px solid color-mix(in srgb, var(--xm-color-border) 86%, transparent);
@@ -25,12 +27,7 @@
     -webkit-backdrop-filter: blur(20px);
     padding: var(--xm-spacing-4, 1rem);
     box-shadow: 0 16px 38px rgba(15, 23, 42, 0.06);
-
-    @media (min-width: 1024px) {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-    }
+    flex-wrap: wrap;
   }
 
   &__info {
@@ -57,6 +54,8 @@
     flex-direction: column;
     gap: 8px;
     min-width: 0;
+    justify-content: center;
+    padding-top: 2px;
   }
 
   &__title-row {
@@ -95,14 +94,9 @@
   &__actions {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     flex-wrap: wrap;
     gap: var(--xm-spacing-2, 0.5rem);
-
-    @media (min-width: 1024px) {
-      justify-content: flex-end;
-      align-self: stretch;
-    }
   }
 
   &__btn {
@@ -123,7 +117,7 @@
       color var(--xm-duration-fast, 0.15s) var(--xm-easing-standard, ease);
 
     &:hover {
-      transform: translateY(-1px);
+      transform: translateY(-1px) scale(1.02);
     }
 
     &:disabled {
@@ -147,6 +141,11 @@
       background: color-mix(in srgb, var(--xm-color-error) 8%, transparent);
       border-color: color-mix(in srgb, var(--xm-color-error) 18%, transparent);
       color: var(--xm-color-error);
+
+      &:hover {
+        background: var(--xm-color-error);
+        color: #fff;
+      }
     }
   }
 }
