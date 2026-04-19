@@ -194,9 +194,7 @@ export function VideoGeneratingPage() {
 		if (manualStageIndex > pipelineStageIndex) setManualStageKey(null);
 	}, [manualStageIndex, pipelineStageIndex]);
 
-	const displayStageKey =
-		manualStageKey ??
-		(summary.trim().length > 0 ? 'summary' : pipelineStageKey);
+	const displayStageKey = manualStageKey ?? pipelineStageKey;
 	const pipelineStageConfig = getLayoutStageConfig(pipelineStageKey);
 	const selectedSectionId = manualSelectedSectionId && sections.some((section) => section.sectionId === manualSelectedSectionId)
 		? manualSelectedSectionId

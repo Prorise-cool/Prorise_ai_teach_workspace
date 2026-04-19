@@ -449,6 +449,7 @@ class TeachingVideoAgent:
             full_code = generate_code_from_design(
                 concept=self.learning_topic,
                 scene_design=design_text,
+                layout_family=self.design_layout_family,
                 api_func=self._request_api_and_track_tokens,
                 max_tokens=self.max_code_token_length,
             )
@@ -487,6 +488,7 @@ class TeachingVideoAgent:
             code = generate_code_from_design(
                 concept=self.learning_topic,
                 scene_design=section.design_text,
+                layout_family=section.layout_family,
                 api_func=self._request_api_and_track_tokens,
                 max_tokens=self.section_codegen_max_tokens,
                 max_completion_tokens=self.section_codegen_max_completion_tokens,

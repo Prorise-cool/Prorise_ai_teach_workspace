@@ -13,6 +13,7 @@ import {
 } from '@/services/mock/fixtures/video-pipeline';
 import type {
   VideoFailure,
+  VideoLayoutHint,
   VideoPipelineMockScenario,
   VideoResult,
   VideoResultSection,
@@ -129,6 +130,16 @@ function readStringArray(value: unknown) {
   }
 
   return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
+const VALID_LAYOUT_HINTS = new Set<string>(['center_stage', 'two_column']);
+
+function readLayoutHint(value: unknown): VideoLayoutHint | undefined {
+  if (typeof value === 'string' && VALID_LAYOUT_HINTS.has(value)) {
+    return value as VideoLayoutHint;
+  }
+
+  return undefined;
 }
 
 function toSectionRecord(value: unknown) {
@@ -356,6 +367,7 @@ function normalizeResultPayload(
       readString(rawResult.publicUrl) ??
       null,
     sections: normalizedSections,
+    layoutHint: readLayoutHint(rawResult.layoutHint ?? rawResult.layout_hint),
   };
 }
 

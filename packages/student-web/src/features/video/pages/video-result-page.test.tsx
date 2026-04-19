@@ -140,7 +140,7 @@ describe('VideoResultPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders subtitles from section narration and shows the real public url card', () => {
+  it('renders the video player and progress markers from section data', () => {
     const router = createRouter();
 
     renderWithApp(<RouterProvider router={router} />);
@@ -152,17 +152,11 @@ describe('VideoResultPage', () => {
     expect(screen.getByTestId('mock-video-player')).toHaveTextContent(
       'https://static.prorise.test/result.webm',
     );
-    expect(screen.getByText('第一段真实字幕')).toBeInTheDocument();
-    expect(
-      screen.queryByText('这个 summary 不应该作为字幕出现'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText('https://app.prorise.test/video/public/result_1'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /复制公开链接|Copy Public Link/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '柯西中值定理' })).toBeInTheDocument();
   });
 
-  it('keeps the public detail route read-only while still showing the public link', () => {
+  it('keeps the public detail route read-only while still showing the copy link button', () => {
     const router = createRouter('/video/public/result_1');
 
     renderWithApp(<RouterProvider router={router} />);
@@ -171,9 +165,7 @@ describe('VideoResultPage', () => {
       vi.advanceTimersByTime(400);
     });
 
-    expect(screen.queryByRole('button', { name: '公开发布' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText('https://app.prorise.test/video/public/result_1'),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /公开发布|Publish/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /复制公开链接|Copy Public Link/i })).toBeInTheDocument();
   });
 });

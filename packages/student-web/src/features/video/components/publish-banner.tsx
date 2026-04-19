@@ -2,7 +2,7 @@
  * 文件说明：视频结果页公开状态卡。
  * 放在进度条下方、视频舞台上方，用于展示真实公开链接与发布动作。
  */
-import { Globe2, Loader2, LockKeyhole, Share2 } from 'lucide-react';
+import { Globe2, Loader2, LockKeyhole, Share2, X } from 'lucide-react';
 import { useCallback } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -20,6 +20,8 @@ export interface PublishBannerProps {
   onPublish?: () => void;
   /** 点击取消公开。 */
   onUnpublish?: () => void;
+  /** 关闭 banner 回调。 */
+  onDismiss?: () => void;
   /** 是否只读展示（公开详情页）。 */
   readOnly?: boolean;
   /** 额外 className。 */
@@ -38,6 +40,7 @@ export function PublishBanner({
   publishLoading = false,
   onPublish,
   onUnpublish,
+  onDismiss,
   readOnly = false,
   className,
 }: PublishBannerProps) {
@@ -88,36 +91,47 @@ export function PublishBanner({
             </p>
           </div>
         </div>
-        <div className="xm-publish-banner__actions">
-          {published && normalizedPublicUrl ? (
-            <button
-              className="xm-publish-banner__btn xm-publish-banner__btn--outline"
-              onClick={() => void handleCopyLink()}
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              {t('video.result.copyPublicLink')}
-            </button>
-          ) : null}
+        <div className="xm-publish-banner__right">
+          <div className="xm-publish-banner__actions">
+            {published && normalizedPublicUrl ? (
+              <button
+                className="xm-publish-banner__btn xm-publish-banner__btn--outline"
+                onClick={() => void handleCopyLink()}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                {t('video.result.copyPublicLink')}
+              </button>
+            ) : null}
 
-          {!readOnly && !published ? (
-            <button
-              className="xm-publish-banner__btn xm-publish-banner__btn--primary"
-              onClick={onPublish}
-              disabled={publishLoading}
-            >
-              {publishLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-              {t('video.result.publishAction')}
-            </button>
-          ) : null}
+            {!readOnly && !published ? (
+              <button
+                className="xm-publish-banner__btn xm-publish-banner__btn--primary"
+                onClick={onPublish}
+                disabled={publishLoading}
+              >
+                {publishLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                {t('video.result.publishAction')}
+              </button>
+            ) : null}
 
-          {!readOnly && published ? (
+            {!readOnly && published ? (
+              <button
+                className="xm-publish-banner__btn xm-publish-banner__btn--danger"
+                onClick={onUnpublish}
+                disabled={publishLoading}
+              >
+                {publishLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                {t('video.result.cancelPublish')}
+              </button>
+            ) : null}
+          </div>
+          {onDismiss ? (
             <button
-              className="xm-publish-banner__btn xm-publish-banner__btn--danger"
-              onClick={onUnpublish}
-              disabled={publishLoading}
+              className="xm-publish-banner__dismiss"
+              onClick={onDismiss}
+              aria-label={t('video.result.dismissBanner')}
             >
-              {publishLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-              {t('video.result.cancelPublish')}
+              <X className="w-3.5 h-3.5" />
             </button>
           ) : null}
         </div>

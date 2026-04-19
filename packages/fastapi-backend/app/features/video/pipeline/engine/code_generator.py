@@ -29,6 +29,7 @@ def generate_code_from_design(
     concept: str,
     scene_design: str,
     output_mode: str = "video",
+    layout_family: str | None = None,
     api_func=None,
     max_tokens: int = CODER_MAX_TOKENS,
     max_completion_tokens: int | None = None,
@@ -42,6 +43,7 @@ def generate_code_from_design(
         concept: The learning topic (for context and seed).
         scene_design: Structured design text from scene_designer.
         output_mode: "video" or "image".
+        layout_family: Locked layout family ("center_stage" or "two_column").
         api_func: LLM API callable (prompt, max_tokens) -> response.
         max_tokens: Maximum tokens for LLM response.
 
@@ -71,6 +73,7 @@ def generate_code_from_design(
             "seed": seed,
             "outputMode": output_mode,
             "isVideo": output_mode == "video",
+            "layoutFamily": layout_family or "center_stage",
         },
     )
 

@@ -57,6 +57,7 @@ from app.features.video.pipeline.models import (
 )
 from app.features.video.pipeline.services import UnderstandingService
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
+from app.features.video.pipeline.orchestration import subtitle as subtitle_mod
 from app.features.video.pipeline.orchestration.runtime import (
     VideoRuntimeStateStore,
     attach_preview_audio_urls,
@@ -1177,6 +1178,28 @@ class VideoPipelineService:
             work_dir=ctx.work_dir,
         )
 
+        # ── 字幕烧录 ─────────────────────────────────────────────
+        cancelled_result = self._get_cancelled_result(runtime, preview_state)
+        if cancelled_result is not None:
+            return cancelled_result
+
+        await self._emit(
+            task,
+            VideoStage.COMPOSE,
+            0.5,
+            "烧录字幕...",
+            progress_override=96,
+            extra_context=self._preview_signal(preview_state),
+        )
+
+        composed_video = self._burn_subtitles(
+            composed_video=composed_video,
+            agent_sections=list(getattr(setup.agent, "sections", []) or []),
+            successful_section_ids=render.successful_sections,
+            section_clips=render.ordered_clips,
+            work_dir=ctx.work_dir,
+        )
+
         duration = _probe_duration(composed_video)
         file_size = composed_video.stat().st_size
         compose_result = ComposeResult(
@@ -1969,6 +1992,58 @@ class VideoPipelineService:
         cover = composed_dir / "cover.jpg"
         _extract_cover(final_output, cover)
         return final_output, cover
+
+    def _burn_subtitles(
+        self,
+        *,
+        composed_video: Path,
+        agent_sections: list[Any],
+        successful_section_ids: list[str],
+        section_clips: list[Path],
+        work_dir: Path,
+    ) -> Path:
+        """从 agent sections 的 lecture_lines 生成字幕并烧录到最终视频。"""
+        # 只保留成功渲染的 sections，且与 section_clips 顺序一致
+        successful_id_set = set(successful_section_ids)
+        matched_sections: list[dict[str, Any]] = []
+        matched_clips: list[Path] = []
+
+        for section in agent_sections:
+            section_id = str(getattr(section, "id", ""))
+            if section_id not in successful_id_set:
+                continue
+            lecture_lines = list(getattr(section, "lecture_lines", []) or [])
+            matched_sections.append(
+                {"id": section_id, "lecture_lines": lecture_lines}
+            )
+
+        # 按 successful_section_ids 的顺序对齐 clips
+        id_to_clip = dict(zip(successful_section_ids, section_clips))
+        for sid in successful_section_ids:
+            clip = id_to_clip.get(sid)
+            if clip and clip.exists():
+                matched_clips.append(clip)
+
+        if not matched_sections or not matched_clips:
+            logger.info("No matched sections for subtitles, skipping")
+            return composed_video
+
+        subtitle_dir = work_dir / "subtitles"
+        subtitle_dir.mkdir(exist_ok=True)
+
+        try:
+            return subtitle_mod.generate_and_burn_subtitles(
+                video_path=composed_video,
+                sections=matched_sections,
+                section_clips=matched_clips,
+                output_dir=subtitle_dir,
+            )
+        except Exception:
+            logger.warning(
+                "Subtitle burn failed, using video without subtitles",
+                exc_info=True,
+            )
+            return composed_video
 
     def _build_render_summary(
         self,
