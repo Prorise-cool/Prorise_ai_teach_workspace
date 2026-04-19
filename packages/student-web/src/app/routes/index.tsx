@@ -178,6 +178,21 @@ async function loadVideoResultRoute() {
 }
 
 /**
+ * 按需加载公开视频结果详情页路由。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadPublicVideoResultRoute() {
+  const { VideoResultPage } = await import(
+    '@/features/video/pages/video-result-page'
+  );
+
+  return {
+    Component: VideoResultPage
+  };
+}
+
+/**
  * 创建应用级 Browser Router。
  *
  * 为运行时入口保留单例导出，同时允许浏览器级测试为每个用例生成独立 router，
@@ -198,6 +213,10 @@ export function createAppRouter() {
         {
           path: 'landing',
           lazy: loadLandingRoute
+        },
+        {
+          path: 'video/public/:resultId',
+          lazy: loadPublicVideoResultRoute
         },
         {
           element: <RequireAuthRoute />,
@@ -223,11 +242,11 @@ export function createAppRouter() {
               lazy: loadVideoInputRoute
             },
             {
-              path: 'video/:id/generating',
+              path: 'video/:taskId/generating',
               lazy: loadVideoGeneratingRoute
             },
             {
-              path: 'video/:id',
+              path: 'video/:taskId',
               lazy: loadVideoResultRoute
             }
           ]

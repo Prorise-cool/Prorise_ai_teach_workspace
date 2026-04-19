@@ -34,7 +34,7 @@ export interface CompanionSidebarProps {
  * @param props - 侧栏属性。
  * @returns 侧栏 UI。
  */
-export function CompanionSidebar({ isOpen, onClose, className }: CompanionSidebarProps) {
+export function CompanionSidebar({ isOpen, onClose: _onClose, className }: CompanionSidebarProps) {
   const { t } = useAppTranslation();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -50,26 +50,17 @@ export function CompanionSidebar({ isOpen, onClose, className }: CompanionSideba
   }, []);
 
   return (
-    <>
-      {/* 移动端遮罩层 */}
-      {isOpen && (
-        <div
-          className="xm-companion-overlay"
-          onClick={onClose}
-          aria-hidden="true"
-        />
+    <aside
+      className={cn(
+        'xm-companion',
+        !isOpen && 'xm-companion--collapsed',
+        className,
       )}
-      <aside
-        className={cn(
-          'xm-companion',
-          !isOpen && 'xm-companion--collapsed',
-          className,
-        )}
-      >
-        {/* 移动端拖拽指示条 */}
-        <div className="xm-companion__drag-handle" />
-        <div className="xm-companion__inner">
-          {/* Header */}
+    >
+      {/* 移动端拖拽指示条 */}
+      <div className="xm-companion__drag-handle" />
+      <div className="xm-companion__inner">
+        {/* Header */}
         <div className="xm-companion__header">
           <div className="xm-companion__header-left">
             <div className="xm-companion__avatar">
@@ -228,6 +219,5 @@ export function CompanionSidebar({ isOpen, onClose, className }: CompanionSideba
         </div>
       </div>
     </aside>
-    </>
   );
 }

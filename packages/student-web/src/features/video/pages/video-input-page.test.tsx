@@ -67,6 +67,10 @@ function createVideoRouter(initialEntries: string[] = ['/video/input']) {
 				path: '/video/:id',
 				element: <div>视频结果页</div>,
 			},
+			{
+				path: '/video/public/:id',
+				element: <div>公开视频结果页</div>,
+			},
 		],
 		{
 			initialEntries
@@ -561,7 +565,7 @@ describe('VideoInputPage', () => {
 		await user.click(screen.getAllByRole('link', { name: '查看讲解' })[0]);
 
 		await waitFor(() => {
-			expect(router.state.location.pathname).toBe('/video/video_public_lhopital');
+			expect(router.state.location.pathname).toBe('/video/public/video_public_lhopital');
 		});
 	});
 
