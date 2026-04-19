@@ -10,6 +10,7 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 
 import { CompanionSidebar } from '../components/companion-sidebar';
+import { useCompanion } from '../hooks/use-companion';
 import { PublishBanner } from '../components/publish-banner';
 import { ResultErrorView } from '../components/result-error-view';
 import { ResultHeader } from '../components/result-header';
@@ -177,6 +178,11 @@ export function VideoResultPage() {
     playbackSections,
     playbackState.currentTimeSeconds,
   );
+  const companion = useCompanion({
+    taskId: result.taskId,
+    currentTimeSeconds: playbackState.currentTimeSeconds,
+    activeSectionTitle: activeSection?.title,
+  });
   const rawPublicUrl = result.publicUrl?.trim() || null;
   const publicUrl =
     rawPublicUrl && !rawPublicUrl.includes('/api/')
@@ -246,6 +252,12 @@ export function VideoResultPage() {
       <CompanionSidebar
         isOpen={sidebarOpen}
         onClose={toggleSidebar}
+        turns={companion.turns}
+        interactionState={companion.interactionState}
+        isAsking={companion.isAsking}
+        currentAnchor={companion.currentAnchor}
+        onAsk={companion.ask}
+        onClearTurns={companion.clearTurns}
         className="xm-video-result__sidebar"
       />
     </div>
