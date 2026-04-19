@@ -1,5 +1,5 @@
 # generated: 2026-03-28 21:10:41 +0800
-# last_updated: 2026-04-19 14:47:17 +0800
+# last_updated: 2026-04-19 16:59:54 +0800
 # project: Prorise_ai_teach_workspace
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-28 21:10:41 +0800
-last_updated: 2026-04-19 14:47:17 +0800
+last_updated: 2026-04-19 16:59:54 +0800
 project: Prorise_ai_teach_workspace
 project_key: NOKEY
 tracking_system: file-system
@@ -219,7 +219,17 @@ development_status:
   # - 删除成功后会统一清理 task runtime / task events / preview / cancel_request / fix_log / result_detail / runtime_auth 等视频运行态残留。
   # - 首页、输入页、等待页取消成功后会立即剔除 bell 本地缓存；删除成功后还会清理 detail query，并抑制 stale taskId 的重复 `/status 404` 轮询。
   # - 定向回归通过：backend `13 passed`；frontend `4 files / 27 tests passed`。
+  # 2026-04-19 输入页浏览区补强：
+  # - `video-public-feed.tsx` 已从 `CommunityFeed` 壳层切换为视频专用浏览区，改成“我的题目 / 热门题目讲解视频”tabs 切换。
+  # - 私有区通过 `useVideoWorkspaceTasks()` 获取已完成任务，再用 `resolveVideoResultAdapter().getResult(taskId)` 补齐封面、时长、公开状态等结果详情。
+  # - 公共卡片已移除正文 `summary` 直出，统一改为 16:9 缩略图 + 轻量 meta + 截断标题，避免浏览区单卡过高。
+  # - 浏览区同一时刻只展示一个 panel，不再把私有区和公开区同时铺开。
+  # - 定向回归通过：`pnpm typecheck:student-web` 与 `pnpm --filter @xiaomai/student-web exec vitest run src/features/video/pages/video-input-page.test.tsx`。
   4-8-视频结果页播放器与结果操作: review
+  # 2026-04-19 结果页主舞台满铺修复：
+  # - 已按设计稿把结果页主舞台恢复为“播放器吃满剩余空间、字幕与 Dock 只做悬浮覆盖”的结构，不再用播放器壳层底部 padding 给控件预留真实布局空间。
+  # - `xm-video-result__player-frame` 现为 `absolute inset: 0` 满铺舞台，Companion 侧栏仍通过真实宽度压缩 main，不走覆盖式假布局。
+  # - 构建验证通过：`pnpm --filter @xiaomai/student-web build`。
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review
   4-11-视频等待页渐进式产物展示与分段预览: review

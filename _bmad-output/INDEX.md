@@ -27,10 +27,12 @@
 - [4-11-首页视频任务承接与任务中心红点修正-20260418.md](./implementation-artifacts/4-11-首页视频任务承接与任务中心红点修正-20260418.md) - Story 4.11 第二轮前端修补：红点改为仅在有活跃任务时显示，并把首页 `/` 也接入当前视频任务状态卡与顶栏任务中心
 - [4-11-视频输入页任务中心404容错修复-20260418.md](./implementation-artifacts/4-11-视频输入页任务中心404容错修复-20260418.md) - Story 4.11 第三轮前端修补：活跃任务聚合层改为跳过单条 `status 404` 的过期任务，避免 bell 和当前任务卡被整批清空
 - [4-11-视频任务删除500与首页状态404风暴热修复-20260419.md](./implementation-artifacts/4-11-视频任务删除500与首页状态404风暴热修复-20260419.md) - Story 4.11 第四轮热修：删除接口改为先落库再删 Redis，首页/输入页/等待页任务中心会立即清理本地缓存，并抑制 stale taskId 的重复 `/status 404` 轮询
+- [4-11-视频输入页私有公开双分区浏览区与轻量卡片改造-20260419.md](./implementation-artifacts/4-11-视频输入页私有公开双分区浏览区与轻量卡片改造-20260419.md) - Story 4.11 输入页浏览区补强：把底部 feed 改成私有 / 公开 tabs 切换，并收口长 summary 导致卡片过高的问题
 - [4-11-等待页摘要后端接入与完成态交互修补-20260417.md](./implementation-artifacts/4-11-等待页摘要后端接入与完成态交互修补-20260417.md) - Story 4.11 追加修补：等待页摘要改由后端理解阶段真实产出，preview 提前发布 summary，完成后取消自动跳转并改为用户手动前往结果页；同日已补 system Python 回归验证
 - [4-11-理解摘要-json-约束与解析加固-20260417.md](./implementation-artifacts/4-11-理解摘要-json-约束与解析加固-20260417.md) - Story 4.11 进一步修补：UnderstandingService 增加强 JSON 输出约束，并补上语义校验、二次 repair、分镜回填兜底，以及 `dramatiq` 1.x / 2.x 的 Prometheus 兼容
 - [4-11-等待页摘要口吻与预览文风优化-20260417.md](./implementation-artifacts/4-11-等待页摘要口吻与预览文风优化-20260417.md) - Story 4.11 第二轮修补：把等待页摘要从“证明提纲”风格改成老师讲题口吻，并把 preview 步骤从编号粗体改成轻量 bullet
 - [4-11-等待页暗色主题与输入页对齐-20260417.md](./implementation-artifacts/4-11-等待页暗色主题与输入页对齐-20260417.md) - Story 4.11 等待页暗色主题收口，移除失效的 `.dark` 依赖并把卡片/标签/详情区 surface 对齐到输入页同源的 `:root[data-theme='dark']` + 全局 token 体系
+- [4-8-视频结果页主舞台满铺与悬浮控件修复-20260419.md](./implementation-artifacts/4-8-视频结果页主舞台满铺与悬浮控件修复-20260419.md) - Story 4.8 结果页布局收口：播放器重新吃满主舞台，字幕与 Dock 只作为悬浮覆盖层存在
 - [4-8-视频结果页result-detail运行态回退修复-20260412.md](./implementation-artifacts/4-8-视频结果页result-detail运行态回退修复-20260412.md) - 视频结果页“视频不可用”热修记录，补齐 `result_detail` 回退、超时失败语义与 `2026-04-12` 实机全流程验证
 - [4-2-4-3-plan-d-编排与契约收口-20260410.md](./implementation-artifacts/4-2-4-3-plan-d-编排与契约收口-20260410.md) - Plan D 剩余编排绕路、前端契约和 SQL 迁移的 2026-04-10 收口记录
 - [4-3-manim-429-重试风暴热修复-20260410.md](./implementation-artifacts/4-3-manim-429-重试风暴热修复-20260410.md) - 视频管道 429 重试风暴、健康缓存与 fallback 热修记录，补充 DeepSeek 并发 smoke test 与 auth proxy 阻塞说明

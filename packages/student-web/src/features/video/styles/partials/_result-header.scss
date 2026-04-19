@@ -57,7 +57,7 @@
     gap: var(--xm-spacing-2, 0.5rem);
     border-radius: var(--xm-radius-full, 9999px);
     border: 1px solid var(--xm-color-border);
-    background: var(--xm-color-secondary, #f5ede1);
+    background: var(--xm-color-surface);
     padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-2, 0.5rem);
     box-shadow: var(--xm-shadow-sm);
 
@@ -80,20 +80,24 @@
   }
 
   &__action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: var(--xm-spacing-1, 0.25rem) var(--xm-spacing-3, 0.75rem);
     border-radius: var(--xm-radius-full, 9999px);
     font-size: 12px;
     font-weight: 700;
-    transition: opacity var(--xm-duration-fast) var(--xm-easing-standard);
+    transition: all var(--xm-duration-fast) var(--xm-easing-standard);
     cursor: pointer;
     border: none;
 
     &--primary {
-      background: var(--xm-color-primary);
-      color: var(--xm-color-primary-foreground);
+      background: var(--xm-color-text-primary);
+      color: var(--xm-color-background);
 
       &:hover {
-        opacity: 0.9;
+        opacity: 0.92;
       }
     }
 
@@ -116,6 +120,9 @@
     background: none;
     border: none;
     padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &:hover {
       color: var(--xm-color-text-primary);

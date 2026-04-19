@@ -26,7 +26,7 @@
     position: relative;
     overflow: hidden;
     z-index: 10;
-    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   &__body {
@@ -164,7 +164,8 @@
   &__progress-tooltip {
     position: absolute;
     top: calc(100% + 16px);
-    transform: translateX(-50%) scale(0.8);
+    left: 0;
+    transform: translateX(-14px) scale(0.8);
     width: min(256px, calc(100vw - 48px));
     padding: var(--xm-spacing-4, 1rem);
     border-radius: 18px;
@@ -180,14 +181,15 @@
     transition: opacity 0.2s ease-in,
       transform 0.2s ease-in,
       visibility 0.2s;
-    transform-origin: top center;
+    transform-origin: top left;
+    text-align: left;
   }
 
   &__progress-marker:hover &__progress-tooltip,
   &__progress-marker:focus-visible &__progress-tooltip {
     visibility: visible;
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    transform: translateX(-14px) scale(1);
     transition: opacity 0.3s ease-out,
       transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
@@ -195,8 +197,8 @@
   &__progress-tooltip-arrow {
     position: absolute;
     top: -6px;
-    left: 50%;
-    transform: translateX(-50%) rotate(45deg);
+    left: 18px;
+    transform: rotate(45deg);
     width: 14px;
     height: 14px;
     background: color-mix(in srgb, var(--xm-color-surface) 85%, transparent);
@@ -214,6 +216,12 @@
     justify-content: center;
     background: color-mix(in srgb, var(--xm-color-primary) 15%, transparent);
     flex-shrink: 0;
+  }
+
+  &__progress-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: var(--xm-spacing-2, 0.5rem);
   }
 
@@ -242,6 +250,10 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+
+    strong {
+      color: var(--xm-color-text-primary);
+    }
   }
 
   &__stage {
@@ -249,6 +261,7 @@
     min-height: 0;
     display: flex;
     align-items: stretch;
+    position: relative;
     padding: 0 var(--xm-spacing-4, 1rem) var(--xm-spacing-4, 1rem);
 
     @media (min-width: 768px) {
@@ -263,19 +276,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 0 110px;
+    overflow: hidden;
   }
 
   &__player-frame {
-    position: relative;
-    width: min(100%, 600px);
-    aspect-ratio: 16 / 9;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     border-radius: 16px;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--xm-color-border) 76%, transparent);
-    background:
-      radial-gradient(circle at top, color-mix(in srgb, var(--xm-color-primary) 15%, transparent), transparent 56%),
-      color-mix(in srgb, var(--xm-color-surface) 92%, black 8%);
+    background: #000;
     box-shadow:
       0 28px 60px rgba(15, 23, 42, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.12);
@@ -284,18 +296,28 @@
   &__player {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     .video-player-container,
     .video-js {
       width: 100% !important;
       height: 100% !important;
-      background: transparent;
+      background: #000;
     }
 
-    .vjs-tech,
+    .vjs-tech {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      background-color: #000;
+    }
+
     .vjs-poster {
-      object-fit: contain;
-      background-color: transparent;
+      background-color: #000;
+      background-size: cover;
+      background-position: center;
     }
   }
 
@@ -342,12 +364,6 @@
 
   .xm-video-result__progress-marker:hover .xm-video-result__progress-marker-dot {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--xm-color-primary) 25%, transparent);
-  }
-
-  .xm-video-result__player-frame {
-    background:
-      radial-gradient(circle at top, color-mix(in srgb, var(--xm-color-primary) 14%, transparent), transparent 58%),
-      color-mix(in srgb, var(--xm-color-surface) 86%, black 14%);
   }
 
   .xm-video-result__subtitle {

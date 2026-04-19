@@ -4,6 +4,7 @@
  * Header、Suggestions、Guide 等共享样式由 components/input-page/styles 承接。
  */
 @use './partials/video-input-card' as *;
+@use './partials/video-public-feed' as *;
 
 .xm-video-input {
   position: relative;

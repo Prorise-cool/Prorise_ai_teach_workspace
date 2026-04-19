@@ -191,12 +191,22 @@ export function VideoInputPage() {
 	const feedCategories = t('videoInput.feedCategories', {
 		returnObjects: true
 	}) as string[];
+	const feedPrivateTitle = t('videoInput.feedPrivateTitle');
+	const feedPrivateDesc = t('videoInput.feedPrivateDesc');
+	const feedPrivateEmptyTitle = t('videoInput.feedPrivateEmptyTitle');
+	const feedPrivateEmptyDesc = t('videoInput.feedPrivateEmptyDesc');
+	const feedPublicTitle = t('videoInput.feedPublicTitle');
+	const feedPublicDesc = t('videoInput.feedPublicDesc');
 	const feedLoadMore = t('videoInput.feedLoadMore');
 	const feedLoading = t('videoInput.feedLoading');
 	const feedEmptyTitle = t('videoInput.feedEmptyTitle');
 	const feedEmptyDesc = t('videoInput.feedEmptyDesc');
 	const feedErrorTitle = t('videoInput.feedErrorTitle');
 	const feedErrorDesc = t('videoInput.feedErrorDesc');
+	const feedPrivateVisibilityLabel = t('videoInput.feedPrivateVisibilityLabel');
+	const feedPublicVisibilityLabel = t('videoInput.feedPublicVisibilityLabel');
+	const feedPublishedBadge = t('videoInput.feedPublishedBadge');
+	const feedPrivateViewAction = t('videoInput.feedPrivateViewAction');
 	const feedViewAction = t('videoInput.feedViewAction');
 	const feedReuseAction = t('videoInput.feedReuseAction');
 	const feedReuseToastTitle = t('videoInput.feedReuseToastTitle');
@@ -430,12 +440,23 @@ export function VideoInputPage() {
 					title={feedTitle}
 					description={feedDesc}
 					categories={feedCategories}
+					privateTitle={feedPrivateTitle}
+					privateDescription={feedPrivateDesc}
+					privateEmptyTitle={feedPrivateEmptyTitle}
+					privateEmptyDescription={feedPrivateEmptyDesc}
+					publicTitle={feedPublicTitle}
+					publicDescription={feedPublicDesc}
 					emptyTitle={feedEmptyTitle}
 					emptyDescription={feedEmptyDesc}
 					errorTitle={feedErrorTitle}
 					errorDescription={feedErrorDesc}
+					privateVisibilityLabel={feedPrivateVisibilityLabel}
+					publicVisibilityLabel={feedPublicVisibilityLabel}
+					publishedBadgeLabel={feedPublishedBadge}
+					privateViewActionLabel={feedPrivateViewAction}
 					viewActionLabel={feedViewAction}
 					reuseActionLabel={feedReuseAction}
+					workspaceTasks={workspaceTaskItems}
 					onReuseSourceText={handleReusePublicVideo}
 				/>
 			}
