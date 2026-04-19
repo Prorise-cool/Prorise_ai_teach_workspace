@@ -352,7 +352,7 @@ def _compose_section_with_audio(
             str(output_path),
         ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         logger.warning(
             "FFmpeg libvorbis audio merge failed for %s; falling back to silent clip copy: %s",
@@ -381,7 +381,7 @@ def _concat_videos(video_paths: list[Path], output_path: Path) -> Path:
         "copy",
         str(output_path),
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(f"FFmpeg concat failed: {result.stderr[:300]}")
     return output_path

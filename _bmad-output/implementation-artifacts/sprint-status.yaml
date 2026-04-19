@@ -42,10 +42,6 @@ tracking_system: file-system
 story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
-  # 2026-04-17 QA / Test Governance:
-  # - `Issue #167` 已完成 `packages/fastapi-backend` 测试体系规范化，统一 pytest 配置、目录自动 marker、公共 helper、本地脚本与 GitHub Actions。
-  # - 已删除 `test_llm_minimal.py`、`tests/e2e/video-transparent-test.html` 以及两组 Epic 10 资产测试，避免跨仓库低价值检查继续污染 FastAPI 主回归。
-  # - 当前基线已从 `313 collected / 6 failed` 收敛为 `306 passed`，`pnpm test:fastapi-backend:ci` 与 `pnpm test:fastapi-backend:coverage` 均通过，coverage 为 `80%`。
   epic-0: done
   0-1-monorepo-基础目录与工程骨架冻结: done
   0-2-契约资产目录命名规则与版本规则冻结: done
@@ -85,151 +81,11 @@ development_status:
   4-1-视频流水线阶段进度区间与结果契约冻结: review
   4-2-题目理解与分镜生成服务: review
   4-3-manim-代码生成与自动修复链: review
-  # 2026-04-14 ManimCat bulk render 收口：
-  # - 默认路径已切到 generate_design -> generate_all_code -> render_full_video_with_sections，不再把 bulk code 静默降级回逐 section generate/render/fix。
-  # - clean_manim_code 现会先剥离 fenced code / response wrapper；bulk render 失败时仅允许本地 static guard + 最多 3 次 SEARCH/REPLACE patch repair，默认总 LLM 调用预算 <= 5。
-  # - 定向测试与 local save_sections smoke 已通过，说明 `MainScene + --save_sections` 能被当前 FastAPI 编排器直接消费。
-  # 2026-04-14 晚间实机复验：
-  # - 管理员样本 vtask_20260414154217_5be3741d 在 understanding/storyboard/tts 后停在 manim_gen，共 466s 后失败，result_detail.failedStage=manim_gen，errorCode=VIDEO_MANIM_GEN_FAILED。
-  # - case 目录仅有 0-video/manimcat_design.txt + tts_audio/section_*.mp3，没有 manimcat_full_code.py、section_*.py 或渲染 mp4，说明旧 per-section 回退已被阻断，但单次 full-code LLM 调用仍不稳定。
-  # - preview/SSE 当前会先发 10 条 section_progress 再回落到 “ManimCat 全量代码生成...” 的 26%，事件语义和进度单调性仍需继续收口。
-  # 2026-04-15 厚修复：
-  # - fatal failure 时 preview 会把所有未完成 section 统一标记 failed，并把 task 级错误信息回写到 section.errorMessage。
-  # - task framework 现保留 VIDEO_* 域错误码到 /tasks/{id}/status 与 failed SSE，不再统一压成 TASK_UNHANDLED_EXCEPTION。
-  # - bulk path 不再在 full-code generation 前预发 section_progress；render 事件按 section 顺序发射，整体 progress 保持单调不回退。
-  # 2026-04-15 上午真实 token 全量复验：
-  # - 管理员样本 vtask_20260415013544_1914f169 在 understanding/storyboard/tts 后停在 manim_gen，并于 01:41:08Z 失败；按 taskId 时间戳估算总耗时约 324s（5m24s），仍未达成 5 分钟出成品。
-  # - /api/v1/tasks/{id}/events 回放仅有 10 条事件：understanding -> storyboard -> tts -> manim_gen -> failed，没有旧的 section_progress 风暴，也没有 progress 回退。
-  # - /api/v1/video/tasks/{id}/preview 返回 readySections=0、failedSections=10，所有 section.errorMessage 均已同步 task 级错误，说明厚修复的 preview 收口已在真实链路生效。
-  # - case 目录仅有 manimcat_design.txt + tts_audio/section_*.mp3，无 manimcat_full_code.py / mp4；结合事件序列推断，本次失败路径实际 LLM 调用约 2 次（design + full code），没有触发 patch repair。
-  # 2026-04-15 中午审查与兼容修复：
-  # - video 单测此前因 sandbox 错误码漂移、旧 auto_fix/services 稳定入口缺失、以及 finalize 覆盖旧 tts.preview_state 而失效。
-  # - 已补齐 `auto_fix.py`、`services.py`、`manim_runtime_prelude.py`、`script_templates.py` 兼容层，并把 sandbox 错误码统一到 `VideoTaskErrorCode`。
-  # - orchestrator 已恢复旧测试需要的 `_emit_stage/_handle_pipeline_failure/_run_understanding/_run_render_verify` helper，同时完成态 preview 优先读取 runtime 最新 snapshot。
-  # - 回归通过：`pytest packages/fastapi-backend/tests/unit/video -q` => `97 passed`；`pytest packages/fastapi-backend/tests/api/video packages/fastapi-backend/tests/contracts/test_openapi_contracts.py -q` => `3 passed`。
-  # 2026-04-16 大 prompt stream 524 修复：
-  # - `gpt_request` 现会递归估算 message payload 字符数，并在超过 `FASTAPI_VIDEO_LLM_STREAM_MAX_INPUT_CHARS`（默认 12000）时跳过 stream。
-  # - `openai_stream.create_chat_completion_text()` 新增 `prefer_stream`，大 payload 会 direct non-stream，不再先尝试 stream 建连后被 CDN 524 截断。
-  # - 回归通过：`pytest tests/unit/video/test_create_chat_completion_text.py -q` => `8 passed`；`pytest tests/unit/video/test_gpt_request_sdk.py -q` => `9 passed`。
-  # 2026-04-16 review cleanup 补充收口：
-  # - `services.py` 已删除未使用字幕 helper，`models.py` 已移除 `ResourceLimits/ExecutionResult`，bulk render / preview / upload 输出统一改走 `VIDEO_OUTPUT_FORMAT`。
-  # - `test_video_pipeline_models.py`、`test_video_pipeline_services.py` 已删除过期的 DockerSandboxExecutor/LocalSandboxExecutor 假设，改为对齐当前“本地 manim + 静态安全扫描”实现。
-  # - 回归通过：`python -m pytest tests/unit/video/ -q` => `105 passed in 2.01s`。
-  # 2026-04-17 晚间 Story 4.3 边界收口：
-  # - `api_codebook.py` 已统一改正 `buff` 关键词，并在 `SHARED_SPECIFICATION` 中显式禁止把它缩写成 `buf`。
-  # - `agent.py` 已撤回基于报错字符串触发的运行时代码硬改，render agent 重新只负责 patch retry 与错误透传。
-  # - `render_failure.py` 已兼容 sync/async Redis，失败落库不再用 `await int` 这类 telemetry 异常掩盖真实 render failure。
-  # - 回归通过：`python -m pytest packages/fastapi-backend/tests/unit/video -q` => `117 passed`。
   4-4-manim-沙箱执行与资源限制: review
   4-5-tts-合成与-provider-failover-落地: review
   4-6-ffmpeg-合成cos-上传与完成结果回写: review
   4-7-视频等待页前端状态机恢复与降级: review
-  # 2026-04-09 修复收口：
-  # - student-web SSE transport 已改为基于 ReadableStream 的增量解析，连接未关闭时也能实时产出事件。
-  # - FastAPI connected/heartbeat 仍缺少 id/sequence；前端新增 transient identity 兼容，但不会把该类 id 写入 Last-Event-ID。
-  # 2026-04-09 并行阶段补充修复：
-  # - 已恢复 understanding+storyboard 合并、TTS 并行、Docker 预热等性能优化，并补齐对应测试兼容。
-  # - 已将 MANIM_GEN/TTS/MANIM_FIX/RENDER/COMPOSE 区间改为 26-42/43-58/59-65/66-78/79-94，前后端配置与 mock 契约同步。
-  # - 后端 _emit_stage 已阻止全局 progress 倒退；manim_fix 在 render 失败后的修复态会维持单调 progress，同时保留 stage=manim_fix。
-  # 2026-04-10 实机补充验证：
-  # - OpenAICompatibleLLMProvider 与 DoubaoTTSProvider 已复用 AsyncClient，减少并行场景与多段 TTS 的重复建连。
-  # - 成功样本 vtask_20260409165517_509ac64e 用时 181.26s，progress 全程单调；当前仍略高于 180s，残余瓶颈在上游 LLM 延迟与场景数量波动。
-  # 2026-04-10 429 热修：
-  # - Failover 重试退避新增 jitter，避免并行场景生成在 429 后形成同步重试风暴。
-  # - 429 / rate limit 不再把 provider health 写成 unhealthy；单次全量 fallback 支持忽略当前请求内的 cached unhealthy。
-  # - FASTAPI_VIDEO_MANIM_PARALLEL_SCENE_CONCURRENCY 默认值已从 5 下调到 3。
-  # - 已基于 RuoYi 实时绑定解析出 manim_gen -> deepseek-v3，并完成 3 个并发真实请求的 smoke test，结果 3/3 成功且 provider health=healthy。
-  # - 新 token 下实机创建 vtask_20260410042104_7cb31937 已完整出片，createdAt=04:21:04Z、completedAt=04:22:45Z，总耗时约 101s。
-  # - 结果视频经 ffprobe 校验为 1280x720 / 30fps / H.264 + AAC，当前 video_render_quality 仍为 m，未通过降质量换时延。
-  # 2026-04-10 Plan D 编排与契约收口：
-  # - orchestrator 已取消 merged storyboard 默认捷径，固定执行 understanding -> solve -> storyboard。
-  # - render_verify 保留新修复循环，同时恢复 render / manim_fix SSE 语义，并在成功后补发 render_verify 阶段。
-  # - student-web 已补齐 solve / render_verify 文案与 VIDEO_SOLVE_FAILED 错误映射。
-  # - 20260410_plan_d_stage_bindings.sql 已改为按 module/provider/resource code 动态解析主键，避免依赖固定种子 ID。
-  # 2026-04-12 视频结果页热修：
-  # - get_result_detail 在 detail_ref 缺失时，现会优先读取 Redis xm_video_task:{id}:result_detail，再回退到 xm_task_runtime:{id}:state。
-  # - 已新增 tests/unit/video/test_video_result_service.py，覆盖 completed 结果恢复与 pending -> processing 的兼容回退。
-  # - 同日补充：worker 超时会写 failed result_detail + EXECUTION_TIMEOUT；orchestrator 显式拆出 understanding/storyboard/manim_gen/render/tts/compose/upload，并返回 taskElapsedSeconds/renderSummary。
-  # - 管理员 token 实机任务 vtask_20260412135924_6a80addf 已完成 createdAt=13:59:24Z -> completedAt=14:16:53Z，wall-clock/taskElapsedSeconds=1053.215s/1048s，renderSummary=5/5 full，result.videoUrl 正常返回。
-  # - 第二轮计时样本 vtask_20260412143844_92ee9db0 已完成 createdAt=14:38:44Z -> completedAt=14:48:39Z，wall-clock/taskElapsedSeconds=599.213s/594s；SSE 估算 understanding/storyboard/manim_gen/render/tts/compose/upload=38.579/41.692/459.229/49.412/4.86/0.521/4.567s。
-  # - 当前剩余观察：stage 内 heartbeat 不会刷新 /status.timestamp，只能证明任务活性，不能体现 stage 内细粒度进度。
-  # 2026-04-13 渐进展示方案收口：
-  # - 新增 Story 4.11，明确等待体验优化走“真实中间产物 + section 分段预览”而不走“manim_gen 阶段流式播放最终视频”的错误承诺。
-  # - 推荐新增 /api/v1/video/tasks/{id}/preview，并在既有 SSE/status 中补充 preview version 信号，保持结果页仍只消费最终 videoUrl。
-  # - 当日晚些时候已完成 FastAPI 后端 per-section streaming 重构、preview runtime 持久化、preview endpoint 与 section 级 SSE 事件；前端等待页接入尚未收口，因此 Story 保持 in-progress。
-  # 2026-04-16 本地联调补充：
-  # - development / test 环境下 Dramatiq worker 默认关闭 Prometheus middleware，避免重复启动时占用默认 9191 指标端口。
-  # - `scripts/start-worker.sh` 现会先停止同工作区旧 worker 再启动新 worker，确保 section 预览联调不会出现“旧 worker + 新 worker”并行消费同一队列。
-  # 2026-04-16 分镜承接与旁白尾句补充：
-  # - ManimCat `concept_designer_*` / `code_generation_*` 模板已补齐“尾帧停留、共享视觉锚点、旁白语义闭合”硬约束，降低 section 边界生硬感。
-  # - section 音视频合成现会在音频长于视频时先 clone padding 视频尾帧，再做音频合成，避免 `-shortest` 把旁白句尾硬切到下一段。
-  # 2026-04-16 文档补充：
-  # - 已新增 `4-11-视频等待页渐进预览前端接入需求说明-20260416.md`，用于约束 student-web 如何消费 `/preview`、`/status`、SSE 与最终 `/result`。
-  # - 文档明确 section 预览只属于等待页，结果页 `/video/:id` 仍只认最终整片完成态。
-  # 2026-04-16 前端接入收口：
-  # - student-web 已补齐输入页三档质量预设 + 高级参数弹窗，并把 `durationMinutes / sectionCount / sectionConcurrency / renderQuality / layoutHint` 透传到 createTask.userProfile。
-  # - 等待页已完成 `/preview` adapter + hook、section 级 zustand 状态机、`section_progress/section_ready` SSE 消费与 Mac 灵动岛风格等待页编排。
-  # - mock fixture / handler、输入页与等待页页面编排测试、SSE hook 测试与 preview adapter 测试已对齐；定向回归通过 `pnpm --filter @xiaomai/student-web typecheck`、4 个 Vitest 文件与 `pnpm build`。
-  # - 当前 Story 进入 review，等待前端点击验收与最终收口确认。
-  # 2026-04-16 前端体验补充：
-  # - 视频输入页已改为“干净输入框 + 底部 icon 工具栏”，质量预设与高级参数不再占据主输入区。
-  # - 新增的拖拽提示、上传反馈、提交中状态、预设弹层和等待页三段式文案均已接入 i18n，并补齐亮暗色 token 覆盖。
-  # 2026-04-17 等待页修补：
-  # - 摘要区已支持 Markdown + 常见 LaTeX 公式渲染，并在 summary 可用后默认停留摘要，不再被流水线自动带离。
-  # - 分段讲解 / 分段试看已移除 `visualNotes` 等技术性字段，只保留学生可消费的讲解内容与试听。
-  # - 等待页手写 toast 已切回 shared/feedback + sonner，全局反馈与播放器容器尺寸一并收口；定向回归继续通过 `pnpm --filter @xiaomai/student-web typecheck` 与 `video-generating-page.test.tsx`。
-  # 2026-04-17 下午补充：
-  # - FastAPI orchestrator 已在 understanding 阶段先生成 preview 摘要，并把 `topic_summary + solution_steps` 提前写入 `/preview`；结果页 summary 也改为复用该摘要。
-  # - student-web 等待页已取消完成后自动跳转，顶部 CTA 改为灰色“前往结果页”，返回输入页只保留左上品牌图标入口。
-  # - 前端定向回归继续通过；backend pytest 受当前 dramatiq 环境缺少 `Prometheus` middleware 导出阻塞，仅完成 `py_compile` 级校验。
-  # 2026-04-17 晚些时候补充：
-  # - `UnderstandingService` 已补强 JSON-only prompt，不再只把 sourcePayload/userProfile 裸传给模型。
-  # - `services._parse_jsonish()` 现支持 fenced JSON、前缀解释文本与 raw_decode 扫描，减少 Gemini 类模型返回“说明 + JSON”时的理解阶段失败。
-  # - 已补对应 unit test 用例，但当前 pytest 仍受 dramatiq 环境依赖阻塞，只完成语法校验与代码级 review 收口。
-  # 2026-04-17 下午补充：
-  # - understanding prompt 已改为“老师讲题”口吻，明确要求先讲题意、主线、为什么这样做，以及至少一个易错点，避免论文摘要/证明提纲文风。
-  # - preview summary 不再把 solution steps 渲染成编号粗体列表，统一改为轻量 bullet，降低等待页的“标准答案提纲感”。
-  # 2026-04-17 晚间收口：
-  # - `UnderstandingService` 现已追加语义校验、second-pass repair、本地 summary/knowledgePoints 兜底；即使模型给出“结构合法但内容很弱”的 JSON，也不会直接把题目标签透给等待页。
-  # - orchestrator 现会在 understanding 摘要仍像题面回声时，使用 storyboard section lecture lines 回填 `preview.summary`，避免中文题掉回英文 outline 标签。
-  # - `app/infra/redis_client.py` 已兼容 `dramatiq 1.x / 2.x` 的 `Prometheus` middleware 差异，system Python 3.13 下的 backend pytest 已恢复可跑。
-  # - 回归通过：`python -m pytest tests/unit/video -q` => `115 passed`；`python -m pytest tests/api/video/test_video_preview_route.py -q` => `1 passed`。
-  # 2026-04-17 前端播放器补充：
-  # - `video-player.tsx` 已从 `fluid` 切换到 `fill` 容器模式，避免 Video.js 自带的流体 padding-top 与等待页外层 16:9 容器重复计算，导致画面只显示一个角或看不到播放键。
-  # - `task-generating-view.scss` 已对齐设计稿 HTML：补回 `.xm-generating-player` 的 `min-height: 0`、`__screen/__tracks` 的 `flex-shrink: 0`，并把 `__details` 改回 `flex: 1; min-height: 0; overflow-y: auto`，避免详情区把上方播放器挤塌。
-  # - 前端定向回归通过：`pnpm --filter @xiaomai/student-web test -- src/features/video/components/video-player.test.tsx src/features/video/pages/video-generating-page.test.tsx` => `34 files / 192 tests passed`；`pnpm --filter @xiaomai/student-web typecheck` => `0 errors`。
-  # 2026-04-17 等待页暗色主题收口：
-  # - `task-generating-view.scss` 已将等待页局部暗色切换从失效的 `.dark` 选择器改为 `:root[data-theme='dark']`，与输入页 `_video-input-card.scss` 的主题机制保持一致。
-  # - 顶部品牌图标、阶段胶囊外层、进度轨道、状态标签、日志头、详情区、卡片区与分段引用框已改走 `--xm-generating-card-surface/soft-surface/pill-surface` 局部 token，不再在暗色下漏出白色半透明底。
-  # - 回归通过：`pnpm --filter @xiaomai/student-web test -- src/features/video/pages/video-generating-page.test.tsx` => `34 files / 192 tests passed`；`pnpm --filter @xiaomai/student-web typecheck` => `0 errors`。
-  # 2026-04-18 输入页当前任务承接补齐：
-  # - `student-web` 已在 `/video/input` 主体补上“当前任务”状态卡，直接展示任务标题、阶段、进度，并提供“继续查看 / 取消任务”动作，不再只依赖右上角 bell dropdown。
-  # - `/video/:id/generating` 返回输入页时现会附带 `focusTask/toast` 参数，输入页据此聚焦当前任务并给出 returned/cancelled 提示，等待页 -> 输入页的承接链路补齐。
-  # - 定向回归通过：`pnpm --filter @xiaomai/student-web typecheck`、`vitest run src/features/video/pages/video-input-page.test.tsx -t '有活跃任务时会在顶栏渲染任务中心并支持进入与取消'`、`vitest run src/features/video/pages/video-input-page.test.tsx -t '返回输入页后会在主体中展示当前任务状态卡，并支持继续查看或取消'`、`vitest run src/features/video/pages/video-generating-page.test.tsx`。
-  # 2026-04-18 首页视频任务承接与红点修正：
-  # - `VideoTaskCenter` 红点已改为仅在存在活跃任务时显示；空队列仍可打开 bell 查看空态。
-  # - 首页 `/` 已接入与 `/video/input` 同源的当前视频任务卡和顶栏任务中心，用户不必退回输入页才能继续查看进行中的视频任务。
-  # - 定向回归通过：`pnpm vitest run src/features/video/pages/video-input-page.test.tsx src/features/home/pages/home-page.test.tsx --reporter=dot` => `2 passed / 23 passed`。
-  # 2026-04-18 晚间补充：视频输入页任务中心 404 容错：
-  # - 已确认 `/api/v1/video/tasks?status=pending|processing` 与 `/api/v1/video/tasks/{id}/status` 分别读取元数据列表与运行态快照，单条 `status 404` 语义为运行态已过期，而非路由写错。
-  # - `video-workspace-task-adapter` 现会跳过单条 404 的旧任务，只保留仍有效的活跃任务；其它错误继续抛出，不吞真实故障。
-  # - 定向回归通过：`pnpm vitest run src/services/api/adapters/video-workspace-task-adapter.test.ts src/features/video/pages/video-input-page.test.tsx src/features/home/pages/home-page.test.tsx --reporter=dot` => `3 files / 25 tests passed`。
-  # 2026-04-19 任务删除 500 与首页状态 404 风暴热修：
-  # - `delete_video_task()` 已改为先持久化 RuoYi 元数据，再清理 Redis 运行态，避免“列表还在但 /status 已 404”的脏状态。
-  # - 删除成功后会统一清理 task runtime / task events / preview / cancel_request / fix_log / result_detail / runtime_auth 等视频运行态残留。
-  # - 首页、输入页、等待页取消成功后会立即剔除 bell 本地缓存；删除成功后还会清理 detail query，并抑制 stale taskId 的重复 `/status 404` 轮询。
-  # - 定向回归通过：backend `13 passed`；frontend `4 files / 27 tests passed`。
-  # 2026-04-19 输入页浏览区补强：
-  # - `video-public-feed.tsx` 已从 `CommunityFeed` 壳层切换为视频专用浏览区，改成“我的题目 / 热门题目讲解视频”tabs 切换。
-  # - 私有区通过 `useVideoWorkspaceTasks()` 获取已完成任务，再用 `resolveVideoResultAdapter().getResult(taskId)` 补齐封面、时长、公开状态等结果详情。
-  # - 公共卡片已移除正文 `summary` 直出，统一改为 16:9 缩略图 + 轻量 meta + 截断标题，避免浏览区单卡过高。
-  # - 浏览区同一时刻只展示一个 panel，不再把私有区和公开区同时铺开。
-  # - 定向回归通过：`pnpm typecheck:student-web` 与 `pnpm --filter @xiaomai/student-web exec vitest run src/features/video/pages/video-input-page.test.tsx`。
   4-8-视频结果页播放器与结果操作: review
-  # 2026-04-19 结果页主舞台满铺修复：
-  # - 已按设计稿把结果页主舞台恢复为“播放器吃满剩余空间、字幕与 Dock 只做悬浮覆盖”的结构，不再用播放器壳层底部 padding 给控件预留真实布局空间。
-  # - `xm-video-result__player-frame` 现为 `absolute inset: 0` 满铺舞台，Companion 侧栏仍通过真实宽度压缩 main，不走覆盖式假布局。
-  # - 构建验证通过：`pnpm --filter @xiaomai/student-web build`。
   4-9-视频侧-sessionartifactgraph-回写: review
   4-10-视频结果公开发布与输入页复用卡片: review
   4-11-视频等待页渐进式产物展示与分段预览: review

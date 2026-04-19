@@ -264,7 +264,7 @@ def burn_subtitles(
     ]
 
     logger.info("Burning subtitles: %s → %s", subtitle_path.name, output_path.name)
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
         logger.error(
