@@ -245,6 +245,43 @@
 - **状态**: done
 - **说明**: `Issue #167` 已完成 FastAPI 测试治理收口，统一 `pytest.ini`、目录自动 marker、`tests/helpers`、根目录标准脚本与 GitHub Actions，并删除不属于 FastAPI 可维护边界的伪测试和跨仓库资产测试；最终基线为 `306 passed`，覆盖率 `80%`
 
+## Epic 6: 视频伴学 -- 当前时刻解释与追问
+
+### Story 6.1: 数据读取契约 + Ask API 契约与 mock 数据基线
+- [文档](./6-1-数据读取契约与-ask-api-契约与-mock-数据基线.md)
+- **状态**: ready-for-dev
+- **说明**: 冻结 CompanionContextSource 枚举、Ask API request/response schema、artifact-graph 消费字段清单、5 种场景 mock turns 数据集
+
+### Story 6.2: 视频页 Companion 侧栏接入真实数据
+- [文档](./6-2-视频页-companion-侧栏接入真实数据.md)
+- **状态**: ready-for-dev
+- **说明**: CompanionSidebar 重构接收 currentTime/activeSection props，Ask API adapter + mock handler，6 种交互状态闭环
+
+### Story 6.3: 视频 Context Adapter（三级降级读取）
+- [文档](./6-3-视频-context-adapter三级降级读取.md)
+- **状态**: ready-for-dev
+- **说明**: 重写 video_adapter.py，实现 Redis → 本地 → COS 三级降级读取，构建 CompanionContext DTO
+
+### Story 6.4: Ask API 与 LLM 回答生成
+- [文档](./6-4-ask-api-与-llm-回答生成.md)
+- **状态**: ready-for-dev
+- **说明**: 实现 POST /companion/ask 端点，LLM prompt 构建与调用，降级策略，自动持久化集成
+
+### Story 6.5: 连续追问与 Redis 上下文窗口
+- [文档](./6-5-连续追问与-redis-上下文窗口.md)
+- **状态**: ready-for-dev
+- **说明**: Redis 上下文窗口设计（xm_companion_ctx:{session_id}，TTL 24h），多轮追问继承，窗口裁剪，锚点切换处理
+
+### Story 6.6: 白板动作协议与结构化降级
+- [文档](./6-6-白板动作协议与结构化降级.md)
+- **状态**: ready-for-dev
+- **说明**: 白板 ActionType 枚举与 payload schema，LLM 白板动作生成，前端白板渲染区组件，降级逻辑
+
+### Story 6.7: 管道 finalize 持久化修复与问答回写闭环
+- [文档](./6-7-管道-finalize-持久化修复与问答回写闭环.md)
+- **状态**: ready-for-dev
+- **说明**: _run_finalize 补调 persist_result_detail()、artifact-graph COS 上传、sync_artifact_graph()、Ask API 持久化验证、replay 验证
+
 ## 快速导航
 
 - [Epic 1 执行清单](../../../docs/01开发人员手册/0000-AI快速导航索引/epic-1-execution-checklist.md)

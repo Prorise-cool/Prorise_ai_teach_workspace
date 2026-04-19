@@ -102,14 +102,14 @@ development_status:
   5-9-课堂输入页联网搜索增强与证据范围配置: ready-for-dev
   5-10-课堂结果导出与分享产物: ready-for-dev
   epic-5-retrospective: optional
-  epic-6: backlog
-  6-1-timeanchorturn-schema-与-mock-companion-turns-基线: backlog
-  6-2-视频-课堂共享-companion-侧栏壳层: backlog
-  6-3-视频与课堂的-context-adapter: backlog
-  6-4-当前时刻提问与回答服务: backlog
-  6-5-连续追问与上下文窗口管理: backlog
-  6-6-白板动作协议与结构化降级: backlog
-  6-7-问答回写与视频-课堂双页复用闭环: backlog
+  epic-6: in-progress
+  6-1-数据读取契约与-ask-api-契约与-mock-数据基线: ready-for-dev
+  6-2-视频页-companion-侧栏接入真实数据: ready-for-dev
+  6-3-视频-context-adapter三级降级读取: ready-for-dev
+  6-4-ask-api-与-llm-回答生成: ready-for-dev
+  6-5-连续追问与-redis-上下文窗口: ready-for-dev
+  6-6-白板动作协议与结构化降级: ready-for-dev
+  6-7-管道-finalize-持久化修复与问答回写闭环: ready-for-dev
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-evidence-契约来源抽屉-schema-与-mock-数据基线: backlog
