@@ -60,6 +60,7 @@ class AskRequest(BaseModel):
     anchor: AnchorContext
     question_text: str
     parent_turn_id: str | None = None
+    frame_base64: str | None = None
 
 
 class AskResponse(BaseModel):

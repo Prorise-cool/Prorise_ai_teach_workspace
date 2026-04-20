@@ -103,6 +103,21 @@ class LLMProvider(ProviderProtocol, Protocol):
 
 
 @runtime_checkable
+class VisionLLMProvider(LLMProvider, Protocol):
+    """支持多模态（图像 + 文本）的 LLM Provider 协议。"""
+
+    async def generate_vision(
+        self,
+        prompt: str,
+        *,
+        image_base64: str,
+        image_media_type: str = "image/jpeg",
+    ) -> ProviderResult:
+        """LLM 多模态生成接口（图像 + 文本）。"""
+        ...
+
+
+@runtime_checkable
 class TTSProvider(ProviderProtocol, Protocol):
     """TTS Provider 运行时协议。"""
 

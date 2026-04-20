@@ -27,6 +27,27 @@ class DemoLLMProvider:
             }
         )
 
+    async def generate_vision(
+        self,
+        prompt: str,
+        *,
+        image_base64: str,
+        image_media_type: str = "image/jpeg",
+    ) -> ProviderResult:
+        """返回包含 prompt 的演示多模态内容。"""
+        content = f"[demo-llm-vision:{self.provider_id}] {prompt}"
+        return ProviderResult(
+            provider=self.provider_id,
+            content=content,
+            metadata={
+                "priority": self.config.priority,
+                "timeoutSeconds": self.config.timeout_seconds,
+                "retryAttempts": self.config.retry_attempts,
+                "healthSource": self.config.health_source,
+                "has_image": True,
+            }
+        )
+
 
 class DemoTTSProvider:
     """最小演示用 TTS Provider。"""

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { resolveCompanionAdapter } from '@/services/api/adapters/companion-adapter';
+import type { VideoPlayerHandle } from '../components/video-player';
 import type {
   CompanionAnchor,
   CompanionAskResponse,
@@ -13,6 +14,26 @@ import type {
   CompanionTurn,
 } from '@/types/companion';
 
+/** 用 Canvas 从 Video.js player 截取当前帧，返回 JPEG base64。 */
+function captureVideoFrame(playerRef: React.RefObject<VideoPlayerHandle | null> | undefined): string | null {
+  const player = playerRef?.current?.getPlayer();
+  if (!player) return null;
+  const videoEl = player.el()?.querySelector('video') as HTMLVideoElement | null;
+  if (!videoEl || !videoEl.videoWidth) return null;
+  try {
+    const canvas = document.createElement('canvas');
+    const scale = 720 / videoEl.videoWidth;
+    canvas.width = Math.min(videoEl.videoWidth, 720);
+    canvas.height = Math.round(videoEl.videoHeight * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.7).split(',')[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export interface UseCompanionOptions {
   /** 视频 task ID。 */
   taskId: string;
@@ -20,6 +41,8 @@ export interface UseCompanionOptions {
   currentTimeSeconds: number;
   /** 当前活跃 section 标题。 */
   activeSectionTitle?: string;
+  /** Video.js 播放器 ref，用于截取当前帧。 */
+  playerRef?: React.RefObject<VideoPlayerHandle | null>;
 }
 
 export interface UseCompanionReturn {
@@ -66,6 +89,7 @@ export function useCompanion({
   taskId,
   currentTimeSeconds,
   activeSectionTitle,
+  playerRef,
 }: UseCompanionOptions): UseCompanionReturn {
   const adapterRef = useRef<ReturnType<typeof resolveCompanionAdapter> | null>(null);
   if (adapterRef.current === null) {
@@ -105,12 +129,16 @@ export function useCompanion({
       setIsAsking(true);
       setLastError(null);
 
+      // 截取当前视频帧
+      const frameBase64 = captureVideoFrame(playerRef);
+
       try {
         const response = await adapter.ask({
           sessionId: bootstrap?.sessionId ?? `comp_sess_${taskId}`,
           anchor: currentAnchor,
           questionText,
           parentTurnId: turns.length > 0 ? turns[turns.length - 1].turnId : null,
+          frameBase64,
         });
 
         lastResponseRef.current = response;
