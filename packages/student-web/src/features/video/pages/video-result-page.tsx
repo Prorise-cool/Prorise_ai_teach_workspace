@@ -10,6 +10,7 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 
 import { CompanionSidebar } from '../components/companion-sidebar';
+import { useCompanion } from '../hooks/use-companion';
 import { PublishBanner } from '../components/publish-banner';
 import { ResultErrorView } from '../components/result-error-view';
 import { ResultHeader } from '../components/result-header';
@@ -54,6 +55,17 @@ export function VideoResultPage() {
   const [bannerVisible, setBannerVisible] = useState(true);
 
   const handleReturn = () => void window.history.back();
+
+  const sections = data?.result?.sections;
+  const duration = playbackState.durationSeconds || data?.result?.duration || 0;
+  const playbackSections = sections ? buildPlaybackSections(sections, duration) : [];
+  const activeSection = getActivePlaybackSection(playbackSections, playbackState.currentTimeSeconds);
+
+  const companion = useCompanion({
+    taskId: lookupId ?? '',
+    currentTimeSeconds: playbackState.currentTimeSeconds,
+    activeSectionTitle: activeSection?.title,
+  });
 
   useEffect(() => {
     if (!data?.result) {
@@ -171,12 +183,6 @@ export function VideoResultPage() {
   }
 
   const result = data.result;
-  const resolvedDurationSeconds = playbackState.durationSeconds || result.duration || 0;
-  const playbackSections = buildPlaybackSections(result.sections, resolvedDurationSeconds);
-  const activeSection = getActivePlaybackSection(
-    playbackSections,
-    playbackState.currentTimeSeconds,
-  );
   const rawPublicUrl = result.publicUrl?.trim() || null;
   const publicUrl =
     rawPublicUrl && !rawPublicUrl.includes('/api/')
@@ -209,7 +215,7 @@ export function VideoResultPage() {
           <VideoProgressBar
             playerRef={playerRef}
             currentTimeSeconds={playbackState.currentTimeSeconds}
-            durationSeconds={resolvedDurationSeconds}
+            durationSeconds={duration}
             sections={result.sections}
           />
 
@@ -246,6 +252,13 @@ export function VideoResultPage() {
       <CompanionSidebar
         isOpen={sidebarOpen}
         onClose={toggleSidebar}
+        turns={companion.turns}
+        interactionState={companion.interactionState}
+        isAsking={companion.isAsking}
+        currentAnchor={companion.currentAnchor}
+        onAsk={companion.ask}
+        onClearTurns={companion.clearTurns}
+        lastError={companion.lastError}
         className="xm-video-result__sidebar"
       />
     </div>

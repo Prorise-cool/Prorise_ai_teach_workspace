@@ -90,3 +90,12 @@ export {
   pickAdapterImplementation,
   resolveRuntimeMode
 } from './base-adapter';
+export type {
+  CompanionAdapter
+} from './companion-adapter';
+export {
+  CompanionAdapterError,
+  createMockCompanionAdapter,
+  createRealCompanionAdapter,
+  resolveCompanionAdapter,
+} from './companion-adapter';

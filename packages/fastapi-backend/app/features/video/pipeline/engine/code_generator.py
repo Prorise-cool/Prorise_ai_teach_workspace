@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 # ManimCat constants
 CODER_TEMPERATURE = 0.7
-CODER_MAX_TOKENS = 12000
-CODER_THINKING_TOKENS = 20000
+CODER_MAX_TOKENS = None
+CODER_THINKING_TOKENS = None
 
 
 def generate_code_from_design(
@@ -89,15 +89,17 @@ def generate_code_from_design(
     ]
 
     # 照抄 ManimCat buildTokenParams: thinkingTokens + maxTokens = max_completion_tokens
+    call_kwargs = {"temperature": CODER_TEMPERATURE}
+    if max_tokens is not None:
+        call_kwargs["max_tokens"] = max_tokens
+    if max_completion_tokens is not None:
+        call_kwargs["max_completion_tokens"] = max_completion_tokens
+    elif CODER_MAX_TOKENS is not None and CODER_THINKING_TOKENS is not None:
+        call_kwargs["max_completion_tokens"] = CODER_MAX_TOKENS + CODER_THINKING_TOKENS
+
     response = api_func(
         messages,
-        max_tokens=max_tokens,
-        max_completion_tokens=(
-            max_completion_tokens
-            if max_completion_tokens is not None
-            else CODER_MAX_TOKENS + CODER_THINKING_TOKENS
-        ),
-        temperature=CODER_TEMPERATURE,
+        **call_kwargs,
     )
 
     if response is None:

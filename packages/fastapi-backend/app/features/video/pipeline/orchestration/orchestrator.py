@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings, get_settings
-from app.features.video.pipeline.constants import VIDEO_OUTPUT_FORMAT
+from app.features.video.pipeline.constants import VIDEO_ARTIFACT_GRAPH_TEMPLATE, VIDEO_OUTPUT_FORMAT
 from app.features.video.pipeline.engine.agent import (
     RunConfig,
     TeachingVideoAgent,
@@ -44,8 +44,11 @@ from app.features.video.pipeline.engine.render_failure import (
 from app.features.video.pipeline.engine.sanitizer import sanitize_render_error
 from app.features.video.pipeline.errors import VideoPipelineError, VideoTaskErrorCode
 from app.features.video.pipeline.models import (
+    ArtifactPayload,
+    ArtifactType,
     ComposeResult,
     UnderstandingResult,
+    VideoArtifactGraph,
     VideoPreviewSection,
     VideoPreviewSectionStatus,
     VideoResult,
@@ -1282,6 +1285,18 @@ class VideoPipelineService:
         )
         runtime.save_model("result_detail", detail)
 
+        # ── Story 6.7: 持久化 result-detail + artifact-graph + 产物索引 ──
+        await self._persist_pipeline_artifacts(
+            asset_store=asset_store,
+            task=task,
+            ctx=ctx,
+            setup=setup,
+            render=render,
+            preview_state=preview_state,
+            detail=detail,
+            runtime=runtime,
+        )
+
         preview_state = mark_preview_status(preview_state, status="completed")
         runtime.save_preview(preview_state)
         await self._emit(
@@ -1303,6 +1318,162 @@ class VideoPipelineService:
         return TaskResult.completed(
             message=completion_message,
             context=video_result.model_dump(mode="json", by_alias=True),
+        )
+
+    # ── Story 6.7: Pipeline artifact persistence ──────────────────
+
+    async def _persist_pipeline_artifacts(
+        self,
+        *,
+        asset_store: LocalAssetStore,
+        task: BaseTask,
+        ctx: _PipelineContext,
+        setup: _AgentSetup,
+        render: _RenderResult,
+        preview_state,
+        detail: VideoResultDetail,
+        runtime: VideoRuntimeStateStore,
+    ) -> None:
+        """持久化 result-detail、artifact-graph 并同步产物索引到 RuoYi。"""
+        from app.features.video.service._helpers import (
+            build_artifact_graph_ref,
+            persist_result_detail,
+        )
+
+        # 1. 持久化 result-detail 到资产路径
+        try:
+            detail, _detail_ref = persist_result_detail(asset_store, ctx.task_id, detail)
+            runtime.save_model("result_detail", detail)
+        except Exception:
+            logger.warning(
+                "persist_result_detail failed  task_id=%s", ctx.task_id, exc_info=True,
+            )
+            detail = detail.model_copy(update={"artifact_writeback_failed": True})
+            runtime.save_model("result_detail", detail)
+
+        # 2. 构建并持久化 artifact-graph
+        graph_ref: str | None = None
+        try:
+            graph = self._build_artifact_graph(
+                task_id=ctx.task_id,
+                preview_state=preview_state,
+                setup=setup,
+                render=render,
+            )
+            graph_ref = build_artifact_graph_ref(asset_store, ctx.task_id)
+            asset_store.write_json(
+                asset_store.ref_to_key(graph_ref),
+                graph.model_dump(mode="json", by_alias=True),
+            )
+        except Exception:
+            logger.warning(
+                "artifact-graph persist failed  task_id=%s", ctx.task_id, exc_info=True,
+            )
+            detail = detail.model_copy(update={"artifact_writeback_failed": True})
+            runtime.save_model("result_detail", detail)
+
+        # 3. 同步产物索引到 RuoYi
+        if graph_ref is not None:
+            try:
+                await self._metadata_service.sync_artifact_graph(
+                    graph,
+                    artifact_ref=graph_ref,
+                )
+            except Exception:
+                logger.warning(
+                    "sync_artifact_graph to RuoYi failed  task_id=%s",
+                    ctx.task_id, exc_info=True,
+                )
+                detail = detail.model_copy(update={"long_term_writeback_failed": True})
+                runtime.save_model("result_detail", detail)
+
+    def _build_artifact_graph(
+        self,
+        *,
+        task_id: str,
+        preview_state,
+        setup: _AgentSetup,
+        render: _RenderResult,
+    ) -> VideoArtifactGraph:
+        """从管道运行结果构建视频产物图谱。"""
+        artifacts: list[ArtifactPayload] = []
+
+        # timeline
+        timeline_scenes: list[dict[str, Any]] = []
+        sections = list(getattr(setup.agent, "sections", []) or [])
+        for section in sections:
+            section_id = str(getattr(section, "id", ""))
+            if not section_id:
+                continue
+            start_time = getattr(section, "start_time", None)
+            end_time = getattr(section, "end_time", None)
+            timeline_scenes.append({
+                "sceneId": section_id,
+                "title": str(getattr(section, "title", "")),
+                "startTime": start_time,
+                "endTime": end_time,
+            })
+        if timeline_scenes:
+            artifacts.append(ArtifactPayload(
+                artifact_type=ArtifactType.TIMELINE,
+                data={"scenes": timeline_scenes},
+            ))
+
+        # narration
+        narration_segments: list[dict[str, Any]] = []
+        for section in sections:
+            section_id = str(getattr(section, "id", ""))
+            lecture_lines = list(getattr(section, "lecture_lines", []) or [])
+            if section_id and lecture_lines:
+                narration_segments.append({
+                    "sceneId": section_id,
+                    "text": "。".join(lecture_lines),
+                    "startTime": getattr(section, "start_time", None),
+                    "endTime": getattr(section, "end_time", None),
+                })
+        if narration_segments:
+            artifacts.append(ArtifactPayload(
+                artifact_type=ArtifactType.NARRATION,
+                data={"segments": narration_segments},
+            ))
+
+        # knowledge_points
+        if preview_state is not None and getattr(preview_state, "knowledge_points", None):
+            artifacts.append(ArtifactPayload(
+                artifact_type=ArtifactType.KNOWLEDGE_POINTS,
+                data={"items": list(preview_state.knowledge_points)},
+            ))
+
+        # solution_steps (from preview sections titles)
+        if preview_state is not None and getattr(preview_state, "sections", None):
+            steps = [
+                {
+                    "stepIndex": s.section_index,
+                    "title": s.title,
+                    "explanation": " ".join(s.lecture_lines[:2]) if s.lecture_lines else "",
+                }
+                for s in preview_state.sections
+                if s.title
+            ]
+            if steps:
+                artifacts.append(ArtifactPayload(
+                    artifact_type=ArtifactType.SOLUTION_STEPS,
+                    data={"steps": steps},
+                ))
+
+        # topic_summary
+        summary = ""
+        if preview_state is not None:
+            summary = str(getattr(preview_state, "summary", "") or "")
+        if summary:
+            artifacts.append(ArtifactPayload(
+                artifact_type=ArtifactType.STORYBOARD,
+                data={"topic_summary": summary},
+            ))
+
+        return VideoArtifactGraph(
+            session_id=task_id,
+            artifacts=artifacts,
         )
 
     # ── Section success/failure helpers ────────────────────────────

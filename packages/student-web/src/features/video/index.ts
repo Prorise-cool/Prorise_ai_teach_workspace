@@ -33,6 +33,7 @@ export { useVideoPublish } from './hooks/use-video-publish';
 export { usePublicVideos } from './hooks/use-public-videos';
 export { useTipRotation } from './hooks/use-tip-rotation';
 export { useSidebarToggle } from './hooks/use-sidebar-toggle';
+export { useCompanion } from './hooks/use-companion';
 
 // Stores
 export { useVideoGeneratingStore } from './stores/video-generating-store';
