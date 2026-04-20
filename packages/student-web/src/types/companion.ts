@@ -65,6 +65,7 @@ export interface CompanionAskRequest {
   anchor: CompanionAnchor;
   questionText: string;
   parentTurnId?: string | null;
+  frameBase64?: string | null;
 }
 
 /* ---------- 响应 ---------- */

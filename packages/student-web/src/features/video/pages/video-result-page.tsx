@@ -9,8 +9,9 @@ import { AlertCircle, RefreshCw, ShieldAlert, VideoOff } from 'lucide-react';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 
-import { CompanionSidebar } from '../components/companion-sidebar';
+import { CompanionSidebar } from '../components/companion-sidebar-v2';
 import { useCompanion } from '../hooks/use-companion';
+import { useSidebarToggle } from '../hooks/use-sidebar-toggle';
 import { PublishBanner } from '../components/publish-banner';
 import { ResultErrorView } from '../components/result-error-view';
 import { ResultHeader } from '../components/result-header';
@@ -19,7 +20,6 @@ import { VideoDock } from '../components/video-dock';
 import { VideoPlayer } from '../components/video-player';
 import type { VideoPlayerHandle } from '../components/video-player';
 import { VideoProgressBar } from '../components/video-progress-bar';
-import { useSidebarToggle } from '../hooks/use-sidebar-toggle';
 import { useVideoPublish } from '../hooks/use-video-publish';
 import { useVideoResult } from '../hooks/use-video-result';
 import {
@@ -65,6 +65,7 @@ export function VideoResultPage() {
     taskId: lookupId ?? '',
     currentTimeSeconds: playbackState.currentTimeSeconds,
     activeSectionTitle: activeSection?.title,
+    playerRef,
   });
 
   useEffect(() => {
@@ -252,13 +253,9 @@ export function VideoResultPage() {
       <CompanionSidebar
         isOpen={sidebarOpen}
         onClose={toggleSidebar}
-        turns={companion.turns}
-        interactionState={companion.interactionState}
-        isAsking={companion.isAsking}
+        taskId={lookupId ?? ''}
         currentAnchor={companion.currentAnchor}
-        onAsk={companion.ask}
-        onClearTurns={companion.clearTurns}
-        lastError={companion.lastError}
+        playerRef={playerRef}
         className="xm-video-result__sidebar"
       />
     </div>
