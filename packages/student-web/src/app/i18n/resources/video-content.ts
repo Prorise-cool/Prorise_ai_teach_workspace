@@ -192,6 +192,7 @@ export const zhCnVideoResources = {
       dismissBanner: '关闭提示',
       settings: '设置',
       toggleSidebar: '展开/收起助手',
+      learningCoachAction: '课后巩固',
     },
     companion: {
       title: 'Companion 会话',
@@ -476,6 +477,7 @@ export const enUsVideoResources = {
       dismissBanner: 'Dismiss',
       settings: 'Settings',
       toggleSidebar: 'Toggle Sidebar',
+      learningCoachAction: 'After-class review',
     },
     companion: {
       title: 'Companion Chat',
