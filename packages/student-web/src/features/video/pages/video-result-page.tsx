@@ -190,6 +190,21 @@ export function VideoResultPage() {
         ? `${window.location.origin}/video/public/${result.resultId}`
         : rawPublicUrl;
 
+  const learningCoachTo = useMemo(() => {
+    if (isPublicView) return null;
+    const sessionId = result.taskId?.trim() || taskIdParam?.trim() || '';
+    if (!sessionId) return null;
+
+    const coachParams = new URLSearchParams();
+    coachParams.set('sourceType', 'video');
+    coachParams.set('sourceSessionId', sessionId);
+    coachParams.set('sourceTaskId', sessionId);
+    coachParams.set('returnTo', `/video/${encodeURIComponent(sessionId)}`);
+    if (result.title) coachParams.set('topicHint', result.title);
+
+    return `/coach/${encodeURIComponent(sessionId)}?${coachParams.toString()}`;
+  }, [isPublicView, result.taskId, result.title, taskIdParam]);
+
   return (
     <div className="xm-video-result">
       <main className="xm-video-result__canvas">
@@ -208,6 +223,7 @@ export function VideoResultPage() {
           onToggleSidebar={toggleSidebar}
           readOnly={isPublicView}
           backTo={isPublicView ? null : '/video/input'}
+          learningCoachTo={learningCoachTo}
         />
 
         <div className="xm-video-result__body">
