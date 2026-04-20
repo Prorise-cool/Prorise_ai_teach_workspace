@@ -361,12 +361,25 @@
 		background: var(--xm-generating-text);
 	}
 
-	&__title {
-		font-size: clamp(1.95rem, 2.8vw, 3rem);
-		line-height: 1.05;
-		font-weight: 900;
-		letter-spacing: -0.04em;
-	}
+		&__title {
+			margin: 0;
+			font-size: clamp(1.95rem, 2.8vw, 3rem);
+			line-height: 1.05;
+			font-weight: 900;
+			letter-spacing: -0.04em;
+			overflow-wrap: anywhere;
+		}
+
+		&__title.is-long {
+			font-size: clamp(1.05rem, 1.3vw, 1.3rem);
+			line-height: 1.4;
+			font-weight: 800;
+			letter-spacing: -0.02em;
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 3;
+			overflow: hidden;
+		}
 
 	&__subtitle,
 	&__eta {

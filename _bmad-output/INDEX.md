@@ -28,6 +28,7 @@
 - [4-11-视频输入页任务中心404容错修复-20260418.md](./implementation-artifacts/4-11-视频输入页任务中心404容错修复-20260418.md) - Story 4.11 第三轮前端修补：活跃任务聚合层改为跳过单条 `status 404` 的过期任务，避免 bell 和当前任务卡被整批清空
 - [4-11-视频任务删除500与首页状态404风暴热修复-20260419.md](./implementation-artifacts/4-11-视频任务删除500与首页状态404风暴热修复-20260419.md) - Story 4.11 第四轮热修：删除接口改为先落库再删 Redis，首页/输入页/等待页任务中心会立即清理本地缓存，并抑制 stale taskId 的重复 `/status 404` 轮询
 - [4-11-视频输入页私有公开双分区浏览区与轻量卡片改造-20260419.md](./implementation-artifacts/4-11-视频输入页私有公开双分区浏览区与轻量卡片改造-20260419.md) - Story 4.11 输入页浏览区补强：把底部 feed 改成私有 / 公开 tabs 切换，并收口长 summary 导致卡片过高的问题
+- [4-11-等待页进度卡长提示词堆叠热修复-20260420.md](./implementation-artifacts/4-11-等待页进度卡长提示词堆叠热修复-20260420.md) - Story 4.11 等待页补丁：进度卡标题不再直接展示超长提示词，长标题采用清洗 + 截断 + line-clamp
 - [4-11-等待页摘要后端接入与完成态交互修补-20260417.md](./implementation-artifacts/4-11-等待页摘要后端接入与完成态交互修补-20260417.md) - Story 4.11 追加修补：等待页摘要改由后端理解阶段真实产出，preview 提前发布 summary，完成后取消自动跳转并改为用户手动前往结果页；同日已补 system Python 回归验证
 - [4-11-理解摘要-json-约束与解析加固-20260417.md](./implementation-artifacts/4-11-理解摘要-json-约束与解析加固-20260417.md) - Story 4.11 进一步修补：UnderstandingService 增加强 JSON 输出约束，并补上语义校验、二次 repair、分镜回填兜底，以及 `dramatiq` 1.x / 2.x 的 Prometheus 兼容
 - [4-11-等待页摘要口吻与预览文风优化-20260417.md](./implementation-artifacts/4-11-等待页摘要口吻与预览文风优化-20260417.md) - Story 4.11 第二轮修补：把等待页摘要从“证明提纲”风格改成老师讲题口吻，并把 preview 步骤从编号粗体改成轻量 bullet

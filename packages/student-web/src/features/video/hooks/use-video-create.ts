@@ -9,6 +9,7 @@ import { resolveVideoPreprocessAdapter } from '@/services/api/adapters/video-pre
 import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
 import { useFeedback } from '@/shared/feedback';
 import type { VideoInputFormValues } from '@/features/video/schemas/video-input-schema';
+import { resolveVideoTaskDraftTitle } from '@/features/video/utils/video-task-title';
 import type { VideoTaskCreateRequest } from '@/types/video';
 
 const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
@@ -74,9 +75,8 @@ export function useVideoCreate() {
       return videoTaskAdapter.createTask(request);
     },
     onSuccess: (result, values) => {
-      const draftTitle =
-        values.text.trim() ||
-        `视频讲解任务 ${values.durationMinutes} 分钟 · ${values.sectionCount} 段`;
+      const fallbackTitle = `视频讲解任务 ${values.durationMinutes} 分钟 · ${values.sectionCount} 段`;
+      const draftTitle = resolveVideoTaskDraftTitle(values.text, fallbackTitle);
 
       try {
         window.sessionStorage.setItem(

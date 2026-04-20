@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import ast
+import asyncio
 import base64
 import json
 import re
@@ -11,18 +11,14 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, Sequence
 
 from app.core.config import get_settings
-from app.features.video.pipeline.auto_fix import ast_fix_code
 from app.features.video.pipeline.constants import (
     DEFAULT_FIXED_SCENE_CLASS,
-    DEFAULT_MANIM_SCENE_CLASS,
     VIDEO_OUTPUT_FORMAT,
 )
 from app.features.video.pipeline.engine.code_cleaner import extract_code_from_response
-from app.features.video.pipeline.manim_runtime_prelude import MANIM_RUNTIME_PRELUDE
 from app.features.video.pipeline.models import (
     ArtifactPayload,
     ArtifactType,
@@ -37,7 +33,6 @@ from app.features.video.pipeline.models import (
     UnderstandingResult,
     UploadResult,
     VideoArtifactGraph,
-    VideoStage,
     VoiceConfig,
 )
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
@@ -63,7 +58,9 @@ def _get_provider_settings(provider: Any) -> dict[str, Any]:
 
 
 def _parse_jsonish(text: str) -> dict[str, Any]:
-    normalized = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE).strip()
+    normalized = re.sub(
+        r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE
+    ).strip()
     decoder = json.JSONDecoder()
 
     candidates: list[str] = []
@@ -123,22 +120,22 @@ def _build_understanding_prompt(
     return "\n".join(
         [
             "你是学生在等待教学视频生成时，最先看到的讲题老师。",
-            "你的目标不是写学术摘要，而是先把题目讲明白，让学生马上知道这题在问什么、主线怎么走、哪些地方最容易卡住。",
+            "你的目标是通过启发式提问（苏格拉底式），引导学生主动思考。不要直接“剧透”完整解法和关键辅助线，而是通过抛出认知冲突或阶梯性问题，让学生自己产生顿悟。",
             "请严格返回一个 JSON 对象，不要输出任何额外解释、Markdown、代码块标题或前后缀。",
             "写作风格要求：",
-            "- 像老师在学生身边讲题，语气自然、耐心、有人味。",
-            "- 先解释这题到底在干什么，再解释为什么这样做，不要只罗列结论。",
-            "- 可以使用必要的 Markdown 或 LaTeX 公式，但公式后要顺手用白话解释，不要只扔符号。",
-            "- 不要写成论文摘要、证明提纲、竞赛讲义、分镜脚本或流水账。",
-            "- 避免生硬表达，比如“本题探讨……”“构造辅助条件”“应用某定理即可”“取极限完成证明”；如果必须提术语，要立刻补一句白话解释。",
+            "- 像老师在学生身边讲题，语气自然、耐心、有人味，多用启发性提问（如“有没有想过…”、“如果是你，第一步会看哪…”）。",
+            "- 帮学生剥开题目复杂的表象，指出矛盾点或核心条件，然后把“直接给结论”变成“给出探索方向”。",
+            "- 可以使用必要的 Markdown 或 LaTeX 公式（行内公式使用 $，独立公式使用 $$），但公式后要顺手用白话解释，不要只扔符号。",
+            "- 不要写成论文摘要、证明提纲、竞赛讲义或直接剧透答案的流水账。",
+            "- 避免生硬表达，比如“本题探讨……”“构造辅助条件”“应用某定理即可”；禁止直接说“作辅助线XX”、“代入公式XX求解”。",
             "字段要求：",
-            '- topicSummary: 用与题目相同的语言给出 4-6 句老师式快速讲解，中文题目默认输出简体中文。第一句直接说这题在问什么或先抓什么，后面说明主线思路、为什么这样做，并至少提醒一个常见易错点；必要时可包含少量 Markdown/LaTeX 公式。',
-            '- knowledgePoints: 2-5 个真正面向学生的知识点短语，禁止技术术语堆砌、英文占位或空泛标签。',
-            '- solutionSteps: 2-4 个步骤，每步包含 stepId/title/explanation。title 用简短行动标签并跟随题目语言；explanation 用 1-3 句口语化讲解，说明这一步为什么先做、怎么想、要避免什么误区，不要只写口号。',
-            '- difficulty: easy | medium | hard。',
-            '- subject: math | physics | chemistry | biology | general。',
+            "- topicSummary: 用与题目相同的语言给出 4-6 句老师式快速引导，中文题目默认输出简体中文。第一句点出题目的表象或学生的常见畏难点，接着抛出一个核心的观察视角或疑问，引导学生关注最关键的破题线索；必要时可包含少量公式。",
+            "- knowledgePoints: 2-5 个真正面向学生的知识点短语，禁止技术术语堆砌、英文占位或空泛标签。",
+            "- solutionSteps: 2-4 个引导步骤（注意：这里是引导思考的步骤，不是解题计算步骤），每步包含 stepId/title/explanation。title 用启发式的简短行动标签（如“观察特殊点”、“倒推试试看”）；explanation 用 1-3 句口语化的提问或点拨，引导学生往某个方向想，而不是直接把这一步的结论喂给他们。",
+            "- difficulty: easy | medium | hard。",
+            "- subject: math | physics | chemistry | biology | general。",
             "返回示例：",
-            '{"topicSummary":"这题先别急着套公式，先看它到底想让我们从图像里读出什么信息。你可以把主线理解成：先把斜率和截距找准，再把解析式拼出来。这样做的原因是图像已经把最关键的数据给出来了，后面的式子只是把它写完整。很多同学会一上来代点计算，结果把正负号或者截距看错，所以第一步一定要把图读准。只要前面这层意思抓住，后面计算其实不会很长。","knowledgePoints":["斜率","截距","图像读值"],"solutionSteps":[{"stepId":"step_1","title":"先把图像信息读准","explanation":"先别急着写公式，先把图上能直接看到的截距、变化趋势和关键点读出来。信息读准了，后面代数计算才不会一开始就跑偏。"},{"stepId":"step_2","title":"再把解析式拼出来","explanation":"把读到的斜率和截距代回一次函数表达式，或者先用两点求斜率再化简。这里最容易错的是符号，所以写完后最好再拿原图核对一遍。"}],"difficulty":"easy","subject":"math"}',
+            '{"topicSummary":"这道题给了一张包含很多数据的图像，很多同学一上来就想设未知数代坐标，往往容易算错符号且陷入复杂计算。我们先不急着动笔，仔细观察一下图象：它穿过了哪几个能直接读出数据的关键点？图象的倾斜方向又在暗示我们参数是正还是负？只要你看懂了图象想告诉你的秘密，后面写出解析式其实就是水到渠成的事。","knowledgePoints":["斜率","截距","数形结合"],"solutionSteps":[{"stepId":"step_1","title":"先看图象找关键","explanation":"图上有几个点是可以直接读出坐标的，特别是它和坐标轴的交点。你能先找出它们，并判断一下整体的增减趋势吗？"},{"stepId":"step_2","title":"把特征翻译成代数","explanation":"现在你手边有了变化趋势和特殊点，回想一下，一次函数的代数式是怎么把这些图形特征‘装’进去的？尝试自己拼出表达式，写完记得用原图检验一下正负号哦。"}],"difficulty":"easy","subject":"math"}',
             "输入数据如下：",
             json.dumps(
                 {
@@ -197,9 +194,16 @@ def _read_image_as_base64(image_ref: str) -> tuple[str, str] | None:
     if not full_path.exists():
         return None
     ext = full_path.suffix.lower()
-    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    mime_map = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
     image_bytes = full_path.read_bytes()
-    return base64.b64encode(image_bytes).decode("ascii"), mime_map.get(ext, "image/jpeg")
+    return base64.b64encode(image_bytes).decode("ascii"), mime_map.get(
+        ext, "image/jpeg"
+    )
 
 
 def _normalize_compare_text(text: str) -> str:
@@ -241,7 +245,10 @@ def _looks_like_source_echo(text: str, source_text: str) -> bool:
         return False
     if normalized_text == normalized_source:
         return True
-    return normalized_source in normalized_text and len(normalized_text) <= len(normalized_source) + 16
+    return (
+        normalized_source in normalized_text
+        and len(normalized_text) <= len(normalized_source) + 16
+    )
 
 
 def _sanitize_knowledge_points(points: Sequence[Any], *, source_text: str) -> list[str]:
@@ -266,7 +273,9 @@ def _sanitize_knowledge_points(points: Sequence[Any], *, source_text: str) -> li
     return cleaned[:5]
 
 
-def _sanitize_solution_steps(steps: Sequence[SolutionStep], *, source_text: str) -> list[SolutionStep]:
+def _sanitize_solution_steps(
+    steps: Sequence[SolutionStep], *, source_text: str
+) -> list[SolutionStep]:
     prefers_cjk = _contains_cjk(source_text)
     cleaned: list[SolutionStep] = []
 
@@ -290,7 +299,9 @@ def _sanitize_solution_steps(steps: Sequence[SolutionStep], *, source_text: str)
     return cleaned[:4]
 
 
-def _build_summary_from_solution_steps(steps: Sequence[SolutionStep], *, source_text: str) -> str:
+def _build_summary_from_solution_steps(
+    steps: Sequence[SolutionStep], *, source_text: str
+) -> str:
     snippets = [
         _clean_text(step.explanation).rstrip("。；;.!? ")
         for step in steps[:2]
@@ -348,9 +359,13 @@ def _build_understanding_result(
             source_text=source_text,
         )
 
-    topic_summary = _clean_text(payload.get("topicSummary") or payload.get("topic_summary") or "")
+    topic_summary = _clean_text(
+        payload.get("topicSummary") or payload.get("topic_summary") or ""
+    )
     if not _summary_is_usable(topic_summary, source_text=source_text):
-        topic_summary = _build_summary_from_solution_steps(solution_steps, source_text=source_text)
+        topic_summary = _build_summary_from_solution_steps(
+            solution_steps, source_text=source_text
+        )
 
     return UnderstandingResult(
         topic_summary=topic_summary,
@@ -362,7 +377,9 @@ def _build_understanding_result(
     )
 
 
-def _collect_understanding_issues(result: UnderstandingResult, *, source_text: str) -> list[str]:
+def _collect_understanding_issues(
+    result: UnderstandingResult, *, source_text: str
+) -> list[str]:
     issues: list[str] = []
     summary_ok = _summary_is_usable(result.topic_summary, source_text=source_text)
     if not summary_ok:
@@ -381,7 +398,8 @@ def _normalize_solution_step(raw: Any, index: int) -> SolutionStep:
     step_id = (
         str(explicit_step_id)
         if explicit_step_id is not None
-        else f"step_{raw_step}" if raw_step is not None
+        else f"step_{raw_step}"
+        if raw_step is not None
         else f"step_{index}"
     )
     title = str(data.get("title") or f"步骤 {index}")
@@ -411,7 +429,9 @@ def _normalize_scene(raw: dict[str, Any], index: int) -> Scene:
     duration_hint = int(raw.get("durationHint") or raw.get("duration_hint") or 0)
     order = int(raw.get("order") or index)
     voice_text = str(raw.get("voiceText") or raw.get("voice_text") or narration)
-    image_desc = str(raw.get("imageDesc") or raw.get("image_desc") or visual_description)
+    image_desc = str(
+        raw.get("imageDesc") or raw.get("image_desc") or visual_description
+    )
     return Scene(
         scene_id=scene_id,
         title=title,
@@ -456,7 +476,9 @@ def _is_valid_fragment(code: str) -> bool:
 
 def _ensure_scene_inheritance(script: str) -> str:
     if "class " not in script:
-        return f"class {DEFAULT_FIXED_SCENE_CLASS}(Scene):\n    pass\n\n{script.lstrip()}"
+        return (
+            f"class {DEFAULT_FIXED_SCENE_CLASS}(Scene):\n    pass\n\n{script.lstrip()}"
+        )
 
     pattern = re.compile(r"^(\s*class\s+\w+)\s*:\s*$", re.MULTILINE)
 
@@ -465,7 +487,9 @@ def _ensure_scene_inheritance(script: str) -> str:
 
     replaced = pattern.sub(_replace, script, count=1)
     if replaced == script and "(Scene)" not in script and "Scene" not in script:
-        return f"class {DEFAULT_FIXED_SCENE_CLASS}(Scene):\n    pass\n\n{script.lstrip()}"
+        return (
+            f"class {DEFAULT_FIXED_SCENE_CLASS}(Scene):\n    pass\n\n{script.lstrip()}"
+        )
     return replaced
 
 
@@ -487,7 +511,9 @@ class UnderstandingService:
     failover_service: Any
     runtime: VideoRuntimeStateStore
 
-    async def execute(self, *, source_payload: dict[str, Any], user_profile: dict[str, Any]) -> UnderstandingResult:
+    async def execute(
+        self, *, source_payload: dict[str, Any], user_profile: dict[str, Any]
+    ) -> UnderstandingResult:
         source_text = _extract_source_text(source_payload)
         prompt = _build_understanding_prompt(
             source_payload=source_payload,
@@ -497,14 +523,17 @@ class UnderstandingService:
         if image_data:
             image_b64, mime_type = image_data
             response = await self.failover_service.generate_vision(
-                self.providers, prompt,
+                self.providers,
+                prompt,
                 image_base64=image_b64,
                 image_media_type=mime_type,
             )
         else:
             response = await self.failover_service.generate(self.providers, prompt)
         provider_used = str(
-            getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""
+            getattr(response, "provider", "") or _get_provider_id(self.providers[0])
+            if self.providers
+            else ""
         )
         raw_output = _get_text(response)
         payload = _try_parse_jsonish(raw_output)
@@ -525,9 +554,13 @@ class UnderstandingService:
             )
         )
 
-        issues = ["返回内容不是合法 JSON 对象。"] if payload is None else _collect_understanding_issues(
-            result,
-            source_text=source_text,
+        issues = (
+            ["返回内容不是合法 JSON 对象。"]
+            if payload is None
+            else _collect_understanding_issues(
+                result,
+                source_text=source_text,
+            )
         )
         if issues:
             repair_prompt = _build_understanding_repair_prompt(
@@ -548,10 +581,13 @@ class UnderstandingService:
                 repair_response = await self.failover_service.generate(
                     self.providers,
                     repair_prompt,
-                ignore_cached_unhealthy=True,
-            )
+                    ignore_cached_unhealthy=True,
+                )
             repair_provider_used = str(
-                getattr(repair_response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""
+                getattr(repair_response, "provider", "")
+                or _get_provider_id(self.providers[0])
+                if self.providers
+                else ""
             )
             repair_payload = _try_parse_jsonish(_get_text(repair_response))
             if repair_payload is None:
@@ -575,17 +611,29 @@ class StoryboardService:
 
     async def execute(self, *, understanding: UnderstandingResult) -> Storyboard:
         active_settings = self.settings or get_settings()
-        target_duration = int(getattr(active_settings, "video_target_duration_seconds", 120) or 120)
-        prompt = json.dumps({"understanding": understanding.model_dump(mode="json", by_alias=True)}, ensure_ascii=False)
+        target_duration = int(
+            getattr(active_settings, "video_target_duration_seconds", 120) or 120
+        )
+        prompt = json.dumps(
+            {"understanding": understanding.model_dump(mode="json", by_alias=True)},
+            ensure_ascii=False,
+        )
         response = await self.failover_service.generate(self.providers, prompt)
         payload = _parse_jsonish(_get_text(response))
-        scenes = [_normalize_scene(raw, index) for index, raw in enumerate(payload.get("scenes") or [], start=1)]
+        scenes = [
+            _normalize_scene(raw, index)
+            for index, raw in enumerate(payload.get("scenes") or [], start=1)
+        ]
         _scale_scene_durations(scenes, target_duration)
         result = Storyboard(
             scenes=scenes,
             total_duration=sum(scene.duration_hint for scene in scenes),
             target_duration=target_duration,
-            provider_used=str(getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""),
+            provider_used=str(
+                getattr(response, "provider", "") or _get_provider_id(self.providers[0])
+                if self.providers
+                else ""
+            ),
         )
         self.runtime.save_model("storyboard", result)
         return result
@@ -594,7 +642,9 @@ class StoryboardService:
 @dataclass(slots=True)
 class RuleBasedFixer:
     def fix(self, *, script_content: str, error_log: str) -> FixResult:
-        fixed_script = build_default_fix_script(_ensure_scene_inheritance(script_content))
+        fixed_script = build_default_fix_script(
+            _ensure_scene_inheritance(script_content)
+        )
         return FixResult(
             fixed=True,
             fixed_script=fixed_script,
@@ -608,7 +658,9 @@ class LLMBasedFixer:
     providers: Sequence[Any]
     failover_service: Any
 
-    async def fix(self, *, storyboard: Storyboard, script_content: str, error_log: str) -> FixResult:
+    async def fix(
+        self, *, storyboard: Storyboard, script_content: str, error_log: str
+    ) -> FixResult:
         prompt = json.dumps(
             {
                 "storyboard": storyboard.model_dump(mode="json", by_alias=True),
@@ -627,7 +679,9 @@ class LLMBasedFixer:
                 error_type=(error_log.split(":", 1)[0] or "llm").strip(),
             )
         except Exception:  # noqa: BLE001
-            return RuleBasedFixer().fix(script_content=script_content, error_log=error_log)
+            return RuleBasedFixer().fix(
+                script_content=script_content, error_log=error_log
+            )
 
 
 @dataclass(slots=True)
@@ -639,13 +693,18 @@ class ManimGenerationService:
 
     async def execute(self, *, storyboard: Storyboard) -> ManimCodeResult:
         active_settings = self.settings or get_settings()
-        scene_threshold = int(getattr(active_settings, "video_manim_scene_by_scene_max_scenes", 2) or 2)
+        scene_threshold = int(
+            getattr(active_settings, "video_manim_scene_by_scene_max_scenes", 2) or 2
+        )
         use_scene_by_scene = len(storyboard.scenes) >= scene_threshold
 
         if use_scene_by_scene:
             for index, scene in enumerate(storyboard.scenes, start=1):
                 prompt = json.dumps(
-                    {"mode": "scene-by-scene", "scene": scene.model_dump(mode="json", by_alias=True)},
+                    {
+                        "mode": "scene-by-scene",
+                        "scene": scene.model_dump(mode="json", by_alias=True),
+                    },
                     ensure_ascii=False,
                 )
                 response = await self.failover_service.generate(self.providers, prompt)
@@ -653,14 +712,29 @@ class ManimGenerationService:
                 if not _is_valid_fragment(code):
                     fallback_response = await self.failover_service.generate(
                         self.providers,
-                        json.dumps({"mode": "fallback", "storyboard": storyboard.model_dump(mode="json", by_alias=True)}, ensure_ascii=False),
+                        json.dumps(
+                            {
+                                "mode": "fallback",
+                                "storyboard": storyboard.model_dump(
+                                    mode="json", by_alias=True
+                                ),
+                            },
+                            ensure_ascii=False,
+                        ),
                         ignore_cached_unhealthy=True,
                     )
-                    fallback_script = build_default_fix_script(_get_text(fallback_response))
+                    fallback_script = build_default_fix_script(
+                        _get_text(fallback_response)
+                    )
                     result = ManimCodeResult(
                         script_content=fallback_script,
                         scene_mapping=[],
-                        provider_used=str(getattr(fallback_response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""),
+                        provider_used=str(
+                            getattr(fallback_response, "provider", "")
+                            or _get_provider_id(self.providers[0])
+                            if self.providers
+                            else ""
+                        ),
                     )
                     self.runtime.save_model("manim_code", result)
                     return result
@@ -675,12 +749,19 @@ class ManimGenerationService:
 
         response = await self.failover_service.generate(
             self.providers,
-            json.dumps({"storyboard": storyboard.model_dump(mode="json", by_alias=True)}, ensure_ascii=False),
+            json.dumps(
+                {"storyboard": storyboard.model_dump(mode="json", by_alias=True)},
+                ensure_ascii=False,
+            ),
         )
         result = ManimCodeResult(
             script_content=build_default_fix_script(_get_text(response)),
             scene_mapping=[],
-            provider_used=str(getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""),
+            provider_used=str(
+                getattr(response, "provider", "") or _get_provider_id(self.providers[0])
+                if self.providers
+                else ""
+            ),
         )
         self.runtime.save_model("manim_code", result)
         return result
@@ -717,8 +798,16 @@ class TTSService:
     def _select_providers(self, voice_preference: dict[str, Any] | None) -> list[Any]:
         if not voice_preference:
             return list(self.providers)
-        desired = str(voice_preference.get("voiceCode") or voice_preference.get("voice_code") or "")
-        matched = [provider for provider in self.providers if _get_provider_settings(provider).get("voice_code") == desired]
+        desired = str(
+            voice_preference.get("voiceCode")
+            or voice_preference.get("voice_code")
+            or ""
+        )
+        matched = [
+            provider
+            for provider in self.providers
+            if _get_provider_settings(provider).get("voice_code") == desired
+        ]
         return matched or list(self.providers)
 
     def _build_voice_config(self, provider: Any) -> VoiceConfig:
@@ -731,7 +820,9 @@ class TTSService:
 
     @staticmethod
     def _can_call_providers_directly(providers: Sequence[Any]) -> bool:
-        return bool(providers) and all(callable(getattr(provider, "synthesize", None)) for provider in providers)
+        return bool(providers) and all(
+            callable(getattr(provider, "synthesize", None)) for provider in providers
+        )
 
     async def execute(
         self,
@@ -747,7 +838,9 @@ class TTSService:
             self.runtime.save_value(
                 "tts_selected_voice",
                 {
-                    "voiceCode": selected_settings.get("voice_code", _get_provider_id(selected_provider)),
+                    "voiceCode": selected_settings.get(
+                        "voice_code", _get_provider_id(selected_provider)
+                    ),
                     "resourceCode": selected_settings.get("resource_code"),
                     "resourceName": selected_settings.get("resource_name"),
                 },
@@ -772,7 +865,10 @@ class TTSService:
                             text,
                             voice_config=self._build_voice_config(provider),
                         )
-                        provider_id = str(getattr(response, "provider", "") or _get_provider_id(provider))
+                        provider_id = str(
+                            getattr(response, "provider", "")
+                            or _get_provider_id(provider)
+                        )
                         break
                     except Exception as exc:  # noqa: BLE001
                         last_error = exc
@@ -782,10 +878,17 @@ class TTSService:
                 response = await self.failover_service.synthesize(
                     provider_chain,
                     text,
-                    voice_config=self._build_voice_config(selected_provider or provider_chain[0]) if provider_chain else None,
+                    voice_config=self._build_voice_config(
+                        selected_provider or provider_chain[0]
+                    )
+                    if provider_chain
+                    else None,
                 )
                 provider_id = str(
-                    getattr(response, "provider", "") or _get_provider_id(provider_chain[0]) if provider_chain else ""
+                    getattr(response, "provider", "")
+                    or _get_provider_id(provider_chain[0])
+                    if provider_chain
+                    else ""
                 )
             provider_used.append(provider_id)
             if provider_chain and provider_id != _get_provider_id(provider_chain[0]):
@@ -829,7 +932,9 @@ class UploadService:
         compose_result: ComposeResult,
         on_retry=None,
     ) -> UploadResult:
-        retry_attempts = max(int(getattr(self.settings, "video_upload_retry_attempts", 0) or 0), 0)
+        retry_attempts = max(
+            int(getattr(self.settings, "video_upload_retry_attempts", 0) or 0), 0
+        )
         total_attempts = retry_attempts + 1
 
         for attempt in range(1, total_attempts + 1):
@@ -838,7 +943,9 @@ class UploadService:
                     compose_result.video_path,
                     f"video/{task_id}/output.{VIDEO_OUTPUT_FORMAT}",
                 )
-                cover_asset = self.asset_store.copy_file(compose_result.cover_path, f"video/{task_id}/cover.jpg")
+                cover_asset = self.asset_store.copy_file(
+                    compose_result.cover_path, f"video/{task_id}/cover.jpg"
+                )
                 result = UploadResult(
                     video_url=video_asset.public_url,
                     cover_url=cover_asset.public_url,
@@ -895,13 +1002,28 @@ class ArtifactWritebackService:
         graph = VideoArtifactGraph(
             session_id=task_id,
             artifacts=[
-                ArtifactPayload(artifact_type=ArtifactType.TIMELINE, data={"scenes": timeline}),
-                ArtifactPayload(artifact_type=ArtifactType.STORYBOARD, data=storyboard.model_dump(mode="json", by_alias=True)),
-                ArtifactPayload(artifact_type=ArtifactType.NARRATION, data={"segments": narration}),
-                ArtifactPayload(artifact_type=ArtifactType.KNOWLEDGE_POINTS, data={"knowledgePoints": understanding.knowledge_points}),
+                ArtifactPayload(
+                    artifact_type=ArtifactType.TIMELINE, data={"scenes": timeline}
+                ),
+                ArtifactPayload(
+                    artifact_type=ArtifactType.STORYBOARD,
+                    data=storyboard.model_dump(mode="json", by_alias=True),
+                ),
+                ArtifactPayload(
+                    artifact_type=ArtifactType.NARRATION, data={"segments": narration}
+                ),
+                ArtifactPayload(
+                    artifact_type=ArtifactType.KNOWLEDGE_POINTS,
+                    data={"knowledgePoints": understanding.knowledge_points},
+                ),
                 ArtifactPayload(
                     artifact_type=ArtifactType.SOLUTION_STEPS,
-                    data={"solutionSteps": [step.model_dump(mode="json", by_alias=True) for step in understanding.solution_steps]},
+                    data={
+                        "solutionSteps": [
+                            step.model_dump(mode="json", by_alias=True)
+                            for step in understanding.solution_steps
+                        ]
+                    },
                 ),
                 ArtifactPayload(
                     artifact_type=ArtifactType.MANIM_CODE,
@@ -909,7 +1031,10 @@ class ArtifactWritebackService:
                 ),
             ],
         )
-        asset = self.asset_store.write_json(f"video/{task_id}/artifact-graph.json", graph.model_dump(mode="json", by_alias=True))
+        asset = self.asset_store.write_json(
+            f"video/{task_id}/artifact-graph.json",
+            graph.model_dump(mode="json", by_alias=True),
+        )
         return graph, asset.public_url
 
 
