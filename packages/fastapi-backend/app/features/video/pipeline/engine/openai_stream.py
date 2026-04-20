@@ -33,7 +33,7 @@ def create_chat_completion_text(
     client: OpenAI,
     messages: list[dict],
     model: str,
-    max_tokens: int = 12_000,
+    max_tokens: int | None = None,
     *,
     max_completion_tokens: int | None = None,
     temperature: float | None = None,

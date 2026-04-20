@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 # ManimCat constants
 DESIGNER_TEMPERATURE = 0.8
-DESIGNER_MAX_TOKENS = 12000
-DESIGNER_THINKING_TOKENS = 20000
+DESIGNER_MAX_TOKENS = None
+DESIGNER_THINKING_TOKENS = None
 
 
 # ── GAP-5: Unique seed ──────────────────────────────────────────
@@ -268,10 +268,12 @@ def generate_scene_design(
 
     # 照抄 ManimCat: messages as list, buildTokenParams, temperature
     call_kwargs = {
-        "max_tokens": max_tokens,
-        "max_completion_tokens": DESIGNER_MAX_TOKENS + DESIGNER_THINKING_TOKENS,
         "temperature": DESIGNER_TEMPERATURE,
     }
+    if max_tokens is not None:
+        call_kwargs["max_tokens"] = max_tokens
+    if DESIGNER_MAX_TOKENS is not None and DESIGNER_THINKING_TOKENS is not None:
+        call_kwargs["max_completion_tokens"] = DESIGNER_MAX_TOKENS + DESIGNER_THINKING_TOKENS
 
     # Call LLM — try with structured multimodal messages first, fallback without images.
     try:

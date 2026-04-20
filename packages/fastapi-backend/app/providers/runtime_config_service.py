@@ -38,6 +38,7 @@ _VIDEO_LLM_STAGES = (
     "manim_fix",
 )
 _TTS_STAGE = "tts"
+_COMPANION_STAGE = "companion"
 
 _DOUBAO_TTS_PROVIDER_TYPES = frozenset({"doubao-tts", "volcengine-tts", "bytedance-tts", "doubao"})
 _RUNTIME_PROVIDER_REGISTRATION_KEYS = (
@@ -95,6 +96,17 @@ class VideoProviderRuntimeAssembly:
             "defaultLlm": [provider.provider_id for provider in self.default_llm],
             "defaultTts": [provider.provider_id for provider in self.default_tts],
         }
+
+
+@dataclass(slots=True, frozen=True)
+class CompanionRuntimeAssembly:
+    """伴学模块 Provider 运行时装配结果。"""
+
+    llm: tuple[LLMProvider, ...]
+    context_ttl_seconds: int = 86400
+    max_rounds: int = 10
+    recent_rounds_to_keep: int = 3
+    source: str = "settings"
 
 
 class ProviderRuntimeResolver:
@@ -187,6 +199,91 @@ class ProviderRuntimeResolver:
 
         descriptors = self._build_tts_voice_descriptors_from_bindings(module.bindings)
         return descriptors or fallback
+
+    async def resolve_companion(
+        self,
+        *,
+        access_token: str | None = None,
+        client_id: str | None = None,
+    ) -> CompanionRuntimeAssembly:
+        """解析伴学模块 Provider 配置。"""
+        fallback = self._build_companion_from_settings()
+        runtime_source = _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower()
+        logger.info(
+            "resolve_companion called  source=%s  has_token=%s",
+            runtime_source,
+            access_token is not None,
+        )
+        if runtime_source != "ruoyi":
+            return fallback
+
+        try:
+            module = await self._ruoyi_runtime_client.get_module_runtime(
+                "companion",
+                access_token=access_token,
+                client_id=client_id,
+            )
+            logger.info(
+                "RuoYi companion runtime response  bindings_count=%s",
+                len(module.bindings),
+            )
+        except (IntegrationError, Exception) as exc:
+            logger.warning("Resolve companion runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+
+        if not module.bindings:
+            logger.warning("RuoYi returned EMPTY bindings for companion module; fallback to settings")
+            return fallback
+
+        try:
+            return self._build_companion_from_ruoyi(module.bindings, fallback=fallback)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Build companion runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+
+    def _build_companion_from_settings(self) -> CompanionRuntimeAssembly:
+        assembly = self._provider_factory.assemble_from_settings(self._settings)
+        return CompanionRuntimeAssembly(llm=assembly.llm)
+
+    def _build_companion_from_ruoyi(
+        self,
+        bindings: Sequence[RuoYiAiRuntimeBinding],
+        *,
+        fallback: CompanionRuntimeAssembly,
+    ) -> CompanionRuntimeAssembly:
+        runtime_provider_factory = self._provider_factory.clone()
+        llm_configs: list[ProviderRuntimeConfig] = []
+        runtime_settings: dict[str, Any] = {}
+
+        for binding in bindings:
+            if not binding.stage_code or not binding.provider_id:
+                continue
+            try:
+                capability = ProviderCapability(binding.capability)
+                config = self._build_runtime_config(binding)
+                self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
+            except (ProviderConfigurationError, ProviderNotFoundError, ValueError):
+                continue
+
+            if capability is ProviderCapability.LLM:
+                llm_configs.append(config)
+
+            if binding.runtime_settings:
+                runtime_settings.update(dict(binding.runtime_settings))
+
+        llm_chain = (
+            tuple(runtime_provider_factory.build_chain(ProviderCapability.LLM, llm_configs))
+            if llm_configs
+            else fallback.llm
+        )
+
+        return CompanionRuntimeAssembly(
+            llm=llm_chain,
+            context_ttl_seconds=int(runtime_settings.get("context_ttl_seconds", 86400)),
+            max_rounds=int(runtime_settings.get("max_rounds", 10)),
+            recent_rounds_to_keep=int(runtime_settings.get("recent_rounds_to_keep", 3)),
+            source="ruoyi",
+        )
 
     def _build_from_settings(self) -> VideoProviderRuntimeAssembly:
         assembly = self._provider_factory.assemble_from_settings(self._settings)

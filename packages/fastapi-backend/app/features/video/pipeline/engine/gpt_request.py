@@ -102,7 +102,7 @@ def _call_openai_compatible(
     ep: ProviderEndpoint,
     messages: list[dict[str, Any]],
     *,
-    max_tokens: int = 12_000,
+    max_tokens: int | None = None,
     max_completion_tokens: int | None = None,
     temperature: float | None = None,
     max_retries: int = 3,
@@ -116,21 +116,26 @@ def _call_openai_compatible(
     usage_info: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     prefer_stream, estimated_chars = _should_prefer_stream(messages)
 
+    # DeepSeek deepseek-chat max_tokens 上限 8192
+    capped_max_tokens = max_tokens
+    if capped_max_tokens is not None and "deepseek" in ep.model_name.lower():
+        capped_max_tokens = min(capped_max_tokens, 8192)
+
     for attempt in range(1, max_retries + 1):
         try:
             # 每次重试创建新 client — 避免复用坏连接
             client = client_from_endpoint(ep)
 
             logger.debug(
-                "LLM request  model=%s  max_tokens=%d  max_completion_tokens=%s  attempt=%d  prefer_stream=%s  estimated_chars=%d",
-                ep.model_name, max_tokens, max_completion_tokens, attempt, prefer_stream, estimated_chars,
+                "LLM request  model=%s  max_tokens=%d  capped=%d  max_completion_tokens=%s  attempt=%d  prefer_stream=%s  estimated_chars=%d",
+                ep.model_name, max_tokens, capped_max_tokens, max_completion_tokens, attempt, prefer_stream, estimated_chars,
             )
 
             result = create_chat_completion_text(
                 client,
                 messages,
                 ep.model_name,
-                max_tokens=max_tokens,
+                max_tokens=capped_max_tokens,
                 max_completion_tokens=max_completion_tokens,
                 temperature=temperature,
                 fallback_to_non_stream=True,
