@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="light" data-agent-style="serious">
+<html lang="zh-CN" data-theme="light" data-agent-style="serious" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,10 +19,18 @@
           if (storedTheme === 'light' || storedTheme === 'dark') {
             document.documentElement.dataset.theme = storedTheme;
             document.documentElement.style.colorScheme = storedTheme;
+            document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+            document.documentElement.classList.toggle('light', storedTheme !== 'dark');
+            return;
           }
         } catch {
           // 忽略浏览器禁用本地存储等初始化异常。
         }
+
+        const fallbackTheme =
+          document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', fallbackTheme === 'dark');
+        document.documentElement.classList.toggle('light', fallbackTheme !== 'dark');
       })();
     </script>
   </head>
