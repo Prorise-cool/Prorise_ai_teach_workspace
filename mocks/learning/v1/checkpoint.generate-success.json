@@ -1,0 +1,44 @@
+{
+  "code": 200,
+  "msg": "checkpoint 生成成功",
+  "data": {
+    "checkpointId": "chk_01JLEARNCOACHCHECKPOINT001",
+    "source": {
+      "sourceType": "video",
+      "sourceSessionId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceTaskId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceResultId": null,
+      "returnTo": "/video/vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "topicHint": "复合函数求导"
+    },
+    "questionTotal": 2,
+    "questions": [
+      {
+        "questionId": "q1",
+        "questionType": "single_choice",
+        "tag": "链式法则",
+        "stem": "若 y = sin(x^2)，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "cos(x^2)" },
+          { "optionId": "B", "label": "B", "text": "2x · cos(x^2)" },
+          { "optionId": "C", "label": "C", "text": "-2x · cos(x^2)" },
+          { "optionId": "D", "label": "D", "text": "2 · cos(x^2)" }
+        ]
+      },
+      {
+        "questionId": "q2",
+        "questionType": "single_choice",
+        "tag": "复合函数",
+        "stem": "若 y = (3x+1)^5，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "5(3x+1)^4" },
+          { "optionId": "B", "label": "B", "text": "15(3x+1)^4" },
+          { "optionId": "C", "label": "C", "text": "5(3x+1)^5" },
+          { "optionId": "D", "label": "D", "text": "3(3x+1)^4" }
+        ]
+      }
+    ],
+    "expiresInSeconds": 7200
+  }
+}
+

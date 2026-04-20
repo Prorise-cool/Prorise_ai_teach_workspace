@@ -1,0 +1,27 @@
+{
+  "code": 200,
+  "msg": "checkpoint 判分成功",
+  "data": {
+    "checkpointId": "chk_01JLEARNCOACHCHECKPOINT001",
+    "questionTotal": 2,
+    "correctTotal": 1,
+    "passed": false,
+    "items": [
+      {
+        "questionId": "q1",
+        "selectedOptionId": "A",
+        "correctOptionId": "B",
+        "isCorrect": false,
+        "explanation": "链式法则：外层 sin(u) 导数为 cos(u)，内层 u=x^2 导数为 2x，因此 y' = 2x·cos(x^2)。"
+      },
+      {
+        "questionId": "q2",
+        "selectedOptionId": "B",
+        "correctOptionId": "B",
+        "isCorrect": true,
+        "explanation": "链式法则：y=(3x+1)^5，y'=5(3x+1)^4·(3)=15(3x+1)^4。"
+      }
+    ]
+  }
+}
+

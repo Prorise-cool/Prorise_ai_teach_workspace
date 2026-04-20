@@ -1,0 +1,21 @@
+{
+  "code": 200,
+  "msg": "Learning Coach 入口加载成功",
+  "data": {
+    "source": {
+      "sourceType": "video",
+      "sourceSessionId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceTaskId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceResultId": null,
+      "returnTo": "/video/vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "topicHint": "复合函数求导"
+    },
+    "capabilities": {
+      "checkpoint": { "enabled": true, "questionCount": 2 },
+      "quiz": { "enabled": true, "questionCount": 20 },
+      "path": { "enabled": true }
+    },
+    "knowledgePoints": ["链式法则", "复合函数求导", "导数符号与运算"]
+  }
+}
+

@@ -1,0 +1,10 @@
+{
+  "code": 200,
+  "msg": "path 保存成功",
+  "data": {
+    "pathId": "path_01JLEARNCOACHPATH001",
+    "versionNo": 1,
+    "persisted": true
+  }
+}
+

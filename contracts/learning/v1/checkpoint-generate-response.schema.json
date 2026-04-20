@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/checkpoint-generate-response.schema.json",
+  "title": "CheckpointGenerateResponse",
+  "description": "Checkpoint 生成响应（Story 8.3 冻结）。",
+  "type": "object",
+  "required": ["checkpointId", "source", "questionTotal", "questions", "expiresInSeconds"],
+  "additionalProperties": false,
+  "properties": {
+    "checkpointId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "source": { "$ref": "learning-source.schema.json" },
+    "questionTotal": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "$ref": "learning-question.schema.json" }
+    },
+    "expiresInSeconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 86400,
+      "description": "本次 checkpoint 运行态缓存的有效期（秒）。"
+    }
+  }
+}
+

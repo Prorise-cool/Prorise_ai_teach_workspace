@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/path-save-response.schema.json",
+  "title": "LearningPathSaveResponse",
+  "description": "学习路径保存结果（Story 8.6 冻结）。",
+  "type": "object",
+  "required": ["pathId", "versionNo", "persisted"],
+  "additionalProperties": false,
+  "properties": {
+    "pathId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "versionNo": { "type": "integer", "minimum": 1, "maximum": 1000 },
+    "persisted": { "type": "boolean" }
+  }
+}
+

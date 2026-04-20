@@ -1,0 +1,50 @@
+{
+  "code": 200,
+  "msg": "quiz 判题成功",
+  "data": {
+    "quizId": "quiz_01JLEARNCOACHQUIZ001",
+    "questionTotal": 5,
+    "correctTotal": 4,
+    "score": 80,
+    "summary": "整体掌握良好：链式法则与指数/对数求导较稳，三角复合仍需注意符号与系数。",
+    "items": [
+      {
+        "questionId": "q1",
+        "selectedOptionId": "B",
+        "correctOptionId": "B",
+        "isCorrect": true,
+        "explanation": "链式法则：y'=cos(x^2)·2x。"
+      },
+      {
+        "questionId": "q2",
+        "selectedOptionId": "B",
+        "correctOptionId": "B",
+        "isCorrect": true,
+        "explanation": "幂函数复合：5(3x+1)^4·3。"
+      },
+      {
+        "questionId": "q3",
+        "selectedOptionId": "A",
+        "correctOptionId": "A",
+        "isCorrect": true,
+        "explanation": "e^{kx} 的导数为 k e^{kx}。"
+      },
+      {
+        "questionId": "q4",
+        "selectedOptionId": "B",
+        "correctOptionId": "B",
+        "isCorrect": true,
+        "explanation": "ln(x^2) = 2 ln|x|，导数为 2/x。"
+      },
+      {
+        "questionId": "q5",
+        "selectedOptionId": "B",
+        "correctOptionId": "A",
+        "isCorrect": false,
+        "explanation": "cos(3x) 的导数为 -sin(3x)·3。"
+      }
+    ],
+    "persisted": true
+  }
+}
+
