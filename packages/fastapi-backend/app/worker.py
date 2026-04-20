@@ -72,11 +72,16 @@ def _ensure_initialized() -> None:
         register_task("demo", build_demo_task)
         register_task("video", build_video_worker_task)
 
-        task_actor = dramatiq.actor(
-            queue_name=settings.dramatiq_queue_name,
-            actor_name="execute_task",
-            max_retries=0,
-        )(consume_task_message)
+        time_limit_ms = int(getattr(settings, "dramatiq_task_time_limit_ms", 0) or 0)
+        actor_options = {
+            "queue_name": settings.dramatiq_queue_name,
+            "actor_name": "execute_task",
+            "max_retries": 0,
+        }
+        if time_limit_ms > 0:
+            actor_options["time_limit"] = time_limit_ms
+
+        task_actor = dramatiq.actor(**actor_options)(consume_task_message)
 
         _initialized = True
 

@@ -87,7 +87,7 @@ class RunConfig:
     max_mllm_fix_bugs_tries: int = 3
     layout_hint: str | None = None
     static_guard_max_passes: int = 3
-    patch_retry_max_retries: int = 3
+    patch_retry_max_retries: int = 1
     section_count: int | None = None
     section_duration_seconds: int | None = None
     section_codegen_max_tokens: int = 4000
@@ -128,7 +128,7 @@ class TeachingVideoAgent:
             1, int(getattr(self.cfg, "static_guard_max_passes", 3))
         )
         self.patch_retry_max_retries = max(
-            0, int(getattr(self.cfg, "patch_retry_max_retries", 3))
+            0, min(1, int(getattr(self.cfg, "patch_retry_max_retries", 1)))
         )
         self.section_count = getattr(self.cfg, "section_count", None)
         self.section_duration_seconds = getattr(
@@ -609,7 +609,7 @@ class TeachingVideoAgent:
             self._notify_section_status(
                 section_id=section.id,
                 status="fixing",
-                fixAttempt=attempt,
+                attemptNo=attempt,
                 maxFixAttempts=self.patch_retry_max_retries,
             )
             snippet = extract_error_snippet(last_error, current_code)
@@ -654,6 +654,75 @@ class TeachingVideoAgent:
                 return str(rendered_path)
 
             last_error = stderr or last_error
+
+        try:
+            fallback_title = str(getattr(section, "title", "") or "").strip()
+            if fallback_title:
+                fallback_title = fallback_title[:80]
+            else:
+                fallback_title = section.id
+
+            fallback_reason = extract_error_message(last_error)[:200]
+            fallback_lines = [
+                str(line).strip()[:80]
+                for line in (getattr(section, "lecture_lines", []) or [])[:6]
+                if str(line).strip()
+            ]
+
+            fallback_code = "\n".join(
+                [
+                    "from manim import *",
+                    "",
+                    f"TITLE = {json.dumps(fallback_title, ensure_ascii=False)}",
+                    f"REASON = {json.dumps(fallback_reason, ensure_ascii=False)}",
+                    f"LINES = {json.dumps(fallback_lines, ensure_ascii=False)}",
+                    "",
+                    f"class {scene_name}(Scene):",
+                    "    def construct(self):",
+                    "        header = Text(TITLE, font_size=40)",
+                    "        notice = Text(",
+                    "            \"Render failed. Using placeholder clip.\",",
+                    "            font_size=28,",
+                    "            color=YELLOW,",
+                    "        )",
+                    "        reason = Text(REASON, font_size=20, color=GRAY)",
+                    "        reason.set_opacity(0.75)",
+                    "        items = VGroup(",
+                    "            *[Text(line, font_size=26) for line in LINES]",
+                    "        )",
+                    "        if len(items) > 0:",
+                    "            items.arrange(DOWN, aligned_edge=LEFT, buff=0.2)",
+                    "        content = VGroup(header, notice, reason)",
+                    "        if len(items) > 0:",
+                    "            content.add(items)",
+                    "        content.arrange(DOWN, buff=0.35)",
+                    "        content.move_to(ORIGIN)",
+                    "        self.add(content)",
+                    "        self.wait(1.0)",
+                    "",
+                ]
+            )
+            fallback_code = self._normalize_code_for_scene(fallback_code, scene_name)
+            success, stderr, rendered_path = self._render_single_scene(
+                fallback_code,
+                scene_name=scene_name,
+                section_id=section.id,
+            )
+            if success and rendered_path is not None:
+                self.section_codes[section.id] = fallback_code
+                self.section_videos[section.id] = str(rendered_path)
+                logger.warning(
+                    "Section render degraded to placeholder section=%s reason=%s",
+                    section.id,
+                    fallback_reason,
+                )
+                return str(rendered_path)
+        except Exception:
+            logger.warning(
+                "Section placeholder render failed section=%s",
+                section.id,
+                exc_info=True,
+            )
 
         error = ValueError(
             f"Section render failed after {self.patch_retry_max_retries + 1} attempts: "

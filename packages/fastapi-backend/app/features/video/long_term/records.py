@@ -12,6 +12,8 @@ from app.shared.ruoyi_mapper import RUOYI_DATETIME_FORMAT
 
 VIDEO_PUBLICATION_TABLE = "xm_user_work"
 SESSION_ARTIFACT_TABLE = "xm_session_artifact"
+VIDEO_PUBLICATION_TITLE_MAX_LEN = 200
+VIDEO_PUBLICATION_DESCRIPTION_MAX_LEN = 500
 
 _ARTIFACT_TITLES: dict[ArtifactType, str] = {
     ArtifactType.TIMELINE: "视频时间轴",
@@ -147,11 +149,19 @@ def video_publication_to_ruoyi_payload(
     request: VideoPublicationSyncRequest | VideoPublicationSnapshot,
 ) -> dict[str, Any]:
     """将发布请求转为 RuoYi 接口 payload。"""
+    title = request.title
+    if isinstance(title, str) and len(title) > VIDEO_PUBLICATION_TITLE_MAX_LEN:
+        title = title[:VIDEO_PUBLICATION_TITLE_MAX_LEN]
+
+    description = request.description
+    if isinstance(description, str) and len(description) > VIDEO_PUBLICATION_DESCRIPTION_MAX_LEN:
+        description = description[:VIDEO_PUBLICATION_DESCRIPTION_MAX_LEN]
+
     return {
         "userId": request.user_id,
         "taskRefId": request.task_ref_id,
-        "title": request.title,
-        "description": request.description,
+        "title": title,
+        "description": description,
         "coverUrl": request.cover_url,
         "isPublic": request.is_public,
         "workType": request.work_type,
