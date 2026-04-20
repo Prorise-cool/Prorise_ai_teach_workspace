@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/path-plan-request.schema.json",
+  "title": "LearningPathPlanRequest",
+  "description": "学习路径规划请求（Story 8.6 冻结）。",
+  "type": "object",
+  "required": ["source", "goal", "cycleDays"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "learning-source.schema.json" },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "学习目标描述。"
+    },
+    "cycleDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "description": "规划周期（天）。"
+    }
+  }
+}
+

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/path-save-request.schema.json",
+  "title": "LearningPathSaveRequest",
+  "description": "学习路径保存请求（Story 8.6 冻结）。",
+  "type": "object",
+  "required": ["path"],
+  "additionalProperties": false,
+  "properties": {
+    "path": { "$ref": "path-plan-response.schema.json" }
+  }
+}
+

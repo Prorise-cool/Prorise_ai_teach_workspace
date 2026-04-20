@@ -1,0 +1,80 @@
+{
+  "code": 200,
+  "msg": "quiz 生成成功",
+  "data": {
+    "quizId": "quiz_01JLEARNCOACHQUIZ001",
+    "source": {
+      "sourceType": "video",
+      "sourceSessionId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceTaskId": "vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "sourceResultId": null,
+      "returnTo": "/video/vtask_01JA2B3C4D5E6F7G8H9J0KLM",
+      "topicHint": "复合函数求导"
+    },
+    "questionTotal": 5,
+    "questions": [
+      {
+        "questionId": "q1",
+        "questionType": "single_choice",
+        "tag": "链式法则",
+        "stem": "若 y = sin(x^2)，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "cos(x^2)" },
+          { "optionId": "B", "label": "B", "text": "2x · cos(x^2)" },
+          { "optionId": "C", "label": "C", "text": "-2x · cos(x^2)" },
+          { "optionId": "D", "label": "D", "text": "2 · cos(x^2)" }
+        ]
+      },
+      {
+        "questionId": "q2",
+        "questionType": "single_choice",
+        "tag": "复合函数",
+        "stem": "若 y = (3x+1)^5，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "5(3x+1)^4" },
+          { "optionId": "B", "label": "B", "text": "15(3x+1)^4" },
+          { "optionId": "C", "label": "C", "text": "5(3x+1)^5" },
+          { "optionId": "D", "label": "D", "text": "3(3x+1)^4" }
+        ]
+      },
+      {
+        "questionId": "q3",
+        "questionType": "single_choice",
+        "tag": "指数函数",
+        "stem": "若 y = e^{2x}，y' 是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "2e^{2x}" },
+          { "optionId": "B", "label": "B", "text": "e^{2x}" },
+          { "optionId": "C", "label": "C", "text": "2e^x" },
+          { "optionId": "D", "label": "D", "text": "e^x" }
+        ]
+      },
+      {
+        "questionId": "q4",
+        "questionType": "single_choice",
+        "tag": "对数函数",
+        "stem": "若 y = ln(x^2)，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "1/x" },
+          { "optionId": "B", "label": "B", "text": "2/x" },
+          { "optionId": "C", "label": "C", "text": "1/(x^2)" },
+          { "optionId": "D", "label": "D", "text": "2/(x^2)" }
+        ]
+      },
+      {
+        "questionId": "q5",
+        "questionType": "single_choice",
+        "tag": "三角函数",
+        "stem": "若 y = cos(3x)，y' 的正确形式是？",
+        "options": [
+          { "optionId": "A", "label": "A", "text": "-3sin(3x)" },
+          { "optionId": "B", "label": "B", "text": "3sin(3x)" },
+          { "optionId": "C", "label": "C", "text": "-sin(3x)" },
+          { "optionId": "D", "label": "D", "text": "sin(3x)" }
+        ]
+      }
+    ],
+    "expiresInSeconds": 7200
+  }
+}
+

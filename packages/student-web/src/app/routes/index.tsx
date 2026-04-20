@@ -178,6 +178,58 @@ async function loadVideoResultRoute() {
 }
 
 /**
+ * 按需加载 Learning Coach 会话后入口页。
+ */
+async function loadLearningCoachEntryRoute() {
+  const { LearningCoachEntryPage } = await import(
+    '@/features/learning-coach/pages/learning-coach-entry-page'
+  );
+
+  return {
+    Component: LearningCoachEntryPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach Checkpoint 页。
+ */
+async function loadLearningCheckpointRoute() {
+  const { LearningCheckpointPage } = await import(
+    '@/features/learning-coach/pages/learning-assessment-page'
+  );
+
+  return {
+    Component: LearningCheckpointPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach Quiz 页。
+ */
+async function loadLearningQuizRoute() {
+  const { LearningQuizPage } = await import(
+    '@/features/learning-coach/pages/learning-assessment-page'
+  );
+
+  return {
+    Component: LearningQuizPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach 学习路径页。
+ */
+async function loadLearningPathRoute() {
+  const { LearningPathPage } = await import(
+    '@/features/learning-coach/pages/learning-path-page'
+  );
+
+  return {
+    Component: LearningPathPage
+  };
+}
+
+/**
  * 按需加载公开视频结果详情页路由。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -248,6 +300,22 @@ export function createAppRouter() {
             {
               path: 'video/:taskId',
               lazy: loadVideoResultRoute
+            },
+            {
+              path: 'coach/:sessionId',
+              lazy: loadLearningCoachEntryRoute
+            },
+            {
+              path: 'checkpoint/:sessionId',
+              lazy: loadLearningCheckpointRoute
+            },
+            {
+              path: 'quiz/:sessionId',
+              lazy: loadLearningQuizRoute
+            },
+            {
+              path: 'path',
+              lazy: loadLearningPathRoute
             }
           ]
         },
