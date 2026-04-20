@@ -43,20 +43,52 @@ class OpenAICompatibleLLMProvider:
 
     async def generate(self, prompt: str) -> ProviderResult:
         """调用 OpenAI compatible API 生成文本（via SDK）。"""
+        messages = [{"role": "user", "content": prompt}]
+        return await self._chat(messages)
+
+    async def generate_vision(
+        self,
+        prompt: str,
+        *,
+        image_base64: str,
+        image_media_type: str = "image/jpeg",
+    ) -> ProviderResult:
+        """调用 OpenAI compatible API 进行多模态生成（图像 + 文本）。"""
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_media_type};base64,{image_base64}",
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+        return await self._chat(messages)
+
+    async def _chat(self, messages: list[dict[str, object]]) -> ProviderResult:
+        """通用 chat completions 调用。"""
         payload = {
             "temperature": self._temperature,
             **self._extra_body,
         }
 
+        prompt_len = sum(
+            len(str(m.get("content", ""))) for m in messages
+        )
         logger.info(
             "LLM request  provider=%s  base_url=%s  model=%s  prompt_len=%d",
-            self.provider_id, self._base_url[:50], self._model_name, len(prompt),
+            self.provider_id, self._base_url[:50], self._model_name, prompt_len,
         )
 
         try:
             response = await self._client.chat.completions.create(
                 model=self._model_name,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 **payload,
             )
         except Exception as exc:

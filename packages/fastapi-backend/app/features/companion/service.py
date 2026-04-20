@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -25,6 +26,14 @@ if TYPE_CHECKING:
     from app.core.security import AccessContext
     from app.features.companion.context_window import ContextWindow
     from app.providers.factory import ProviderFactory
+
+
+MAX_ANSWER_LENGTH = 50
+
+_SYSTEM_PROMPT = (
+    "你是视频伴学助手。根据视频截图和字幕回答学生提问。"
+    "规则：回复不超过50字，纯文本，不要用markdown，不要分点，直接简洁回答。"
+)
 
 
 class CompanionService(RuoYiServiceMixin):
@@ -74,18 +83,13 @@ class CompanionService(RuoYiServiceMixin):
         *,
         access_context: "AccessContext | None" = None,
     ) -> CompanionTurnSnapshot:
-        """持久化伴学对话轮次到 RuoYi。
-
-        Args:
-            request: 对话轮次创建请求。
-            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
-        """
+        """持久化伴学对话轮次到 RuoYi。"""
         async with self._resolve_authenticated_factory(access_context)() as client:
             result = await client.post_single(
                 "/internal/xiaomai/companion/turns",
                 resource=self._RESOURCE,
                 operation="persist",
-                json_body=companion_turn_to_ruoyi_payload(request)
+                json_body=companion_turn_to_ruoyi_payload(request),
             )
         return self._parse_companion_turn(result.data, operation="persist", endpoint="/internal/xiaomai/companion/turns")
 
@@ -95,18 +99,13 @@ class CompanionService(RuoYiServiceMixin):
         *,
         access_context: "AccessContext | None" = None,
     ) -> CompanionTurnSnapshot | None:
-        """按 ID 查询伴学对话轮次。
-
-        Args:
-            turn_id: 轮次唯一标识。
-            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
-        """
+        """按 ID 查询伴学对话轮次。"""
         try:
             async with self._resolve_authenticated_factory(access_context)() as client:
                 result = await client.get_single(
                     f"/internal/xiaomai/companion/turns/{turn_id}",
                     resource=self._RESOURCE,
-                    operation="get"
+                    operation="get",
                 )
         except IntegrationError as exc:
             if exc.code == "RUOYI_NOT_FOUND":
@@ -115,7 +114,7 @@ class CompanionService(RuoYiServiceMixin):
         return self._parse_companion_turn(
             result.data,
             operation="get",
-            endpoint=f"/internal/xiaomai/companion/turns/{turn_id}"
+            endpoint=f"/internal/xiaomai/companion/turns/{turn_id}",
         )
 
     async def replay_session(
@@ -124,22 +123,17 @@ class CompanionService(RuoYiServiceMixin):
         *,
         access_context: "AccessContext | None" = None,
     ) -> SessionReplaySnapshot:
-        """回放指定会话的伴学对话记录。
-
-        Args:
-            session_id: 会话唯一标识。
-            access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
-        """
+        """回放指定会话的伴学对话记录。"""
         async with self._resolve_authenticated_factory(access_context)() as client:
             result = await client.get_single(
                 f"/internal/xiaomai/companion/sessions/{session_id}/replay",
                 resource=self._RESOURCE,
-                operation="replay"
+                operation="replay",
             )
         return self._parse_session_replay(
             result.data,
             operation="replay",
-            endpoint=f"/internal/xiaomai/companion/sessions/{session_id}/replay"
+            endpoint=f"/internal/xiaomai/companion/sessions/{session_id}/replay",
         )
 
     def _parse_companion_turn(
@@ -147,7 +141,7 @@ class CompanionService(RuoYiServiceMixin):
         payload: dict[str, object],
         *,
         operation: str,
-        endpoint: str
+        endpoint: str,
     ) -> CompanionTurnSnapshot:
         try:
             return companion_turn_from_ruoyi_data(payload)
@@ -159,7 +153,7 @@ class CompanionService(RuoYiServiceMixin):
         payload: dict[str, object],
         *,
         operation: str,
-        endpoint: str
+        endpoint: str,
     ) -> SessionReplaySnapshot:
         try:
             return session_replay_from_ruoyi_data(payload)
@@ -171,7 +165,7 @@ logger = logging.getLogger(__name__)
 
 
 class CompanionAskService:
-    """伴学 Ask API 业务服务：获取上下文 → 调用 LLM → 回答 → 持久化。"""
+    """伴学 Ask API 业务服务：前端帧 + 上下文 → 视觉 LLM → 回答 → 持久化。"""
 
     def __init__(
         self,
@@ -193,7 +187,7 @@ class CompanionAskService:
         *,
         access_context: "AccessContext | None" = None,
     ) -> "AskResponse":
-        """处理伴学提问：获取上下文、调用 LLM 生成回答、持久化。"""
+        """处理伴学提问：前端帧 → 视觉 LLM → 回答 → 持久化。"""
         from app.features.companion.schemas import (
             AskResponse,
             CompanionContextSource,
@@ -208,19 +202,23 @@ class CompanionAskService:
         turn_id = str(uuid.uuid4())
         session_id = request.session_id
 
-        # 1. 获取上下文
+        # 1. 获取上下文（元信息作为辅助）
         context = await self._get_context(task_id, seconds)
 
-        # 2. 构建含历史追问的 prompt
+        # 2. 构建 prompt（字幕 + 问题 + 辅助元信息）
         prompt = self._build_prompt(
             question=request.question_text,
             context=context,
             session_id=session_id,
         )
 
-        # 3. 调用 LLM 生成回答
+        # 3. 调用视觉 LLM 生成回答（前端传来的帧 or 降级纯文本）
+        image_base64 = request.frame_base64
         try:
-            answer_text = await self._generate_answer(prompt, access_context=access_context)
+            answer_text = await self._generate_answer(
+                prompt, image_base64=image_base64, access_context=access_context,
+            )
+            answer_text = _sanitize_answer(answer_text)
             persistence_status = PersistenceStatus.COMPLETE_SUCCESS
         except Exception:
             logger.warning("LLM answer generation failed  session=%s", session_id, exc_info=True)
@@ -268,7 +266,7 @@ class CompanionAskService:
         return response
 
     async def _get_context(self, task_id: str, seconds: int) -> Any:
-        """获取视频上下文。"""
+        """获取视频上下文（作为辅助信息）。"""
         from app.features.companion.schemas import CompanionContext
 
         if self._context_adapter_factory is not None:
@@ -283,43 +281,39 @@ class CompanionAskService:
         context: Any,
         session_id: str,
     ) -> str:
-        """构建 LLM prompt，注入上下文和历史追问。"""
-        parts: list[str] = []
+        """构建 LLM prompt — 字幕为主，元信息为辅。"""
+        parts: list[str] = [_SYSTEM_PROMPT, ""]
 
+        # 字幕（从当前 section 获取）
         section = getattr(context, "current_section", None)
-        if section and getattr(section, "title", None):
-            parts.append(f"当前视频段落：{section.title}")
+        if section:
             narration = getattr(section, "narration_text", "")
             if narration:
-                parts.append(f"旁白内容：{narration}")
+                parts.append(f"当前字幕：{narration}")
+            title = getattr(section, "title", "")
+            if title:
+                parts.append(f"当前段落：{title}")
 
+        # 辅助元信息（仅作为补充）
         knowledge_points = getattr(context, "knowledge_points", [])
         if knowledge_points:
-            parts.append(f"知识点：{', '.join(knowledge_points)}")
-
-        solution_steps = getattr(context, "solution_steps", [])
-        if solution_steps:
-            steps_text = "; ".join(
-                str(s.get("title", s)) if isinstance(s, dict) else str(s)
-                for s in solution_steps
-            )
-            parts.append(f"解题步骤：{steps_text}")
+            parts.append(f"相关知识点：{'、'.join(knowledge_points[:5])}")
 
         topic_summary = getattr(context, "topic_summary", "")
         if topic_summary:
-            parts.append(f"主题摘要：{topic_summary}")
+            parts.append(f"主题：{topic_summary}")
 
-        # 注入历史追问上下文
+        # 历史对话上下文
         if self._context_window is not None:
             history = self._context_window.build_prompt_context(session_id)
             if history:
-                parts.append("历史对话：")
-                for entry in history:
-                    role_label = "用户" if entry["role"] == "user" else "AI"
-                    parts.append(f"  {role_label}：{entry['content']}")
+                recent = history[-4:]
+                parts.append("近期对话：")
+                for entry in recent:
+                    role_label = "问" if entry["role"] == "user" else "答"
+                    parts.append(f"  {role_label}：{entry['content'][:50]}")
 
         parts.append(f"学生提问：{question}")
-        parts.append("请基于以上视频上下文，用清晰易懂的语言回答学生的提问。如果信息不足，请如实说明并给出引导。")
 
         return "\n".join(parts)
 
@@ -327,7 +321,7 @@ class CompanionAskService:
         self,
         access_context: "AccessContext | None" = None,
     ) -> Any:
-        """懒加载伴学模块运行时配置（从数据库读取 Provider 链和窗口参数）。"""
+        """懒加载伴学模块运行时配置。"""
         if self._runtime_config is not None:
             return self._runtime_config
 
@@ -355,14 +349,28 @@ class CompanionAskService:
         self._runtime_config = config
         return config
 
-    async def _generate_answer(self, prompt: str, *, access_context: "AccessContext | None" = None) -> str:
-        """调用 LLM Provider 生成回答（使用数据库解析的 Provider 链）。"""
+    async def _generate_answer(
+        self,
+        prompt: str,
+        *,
+        image_base64: str | None,
+        access_context: "AccessContext | None" = None,
+    ) -> str:
+        """调用 LLM 生成回答。有帧图片时用视觉模式，否则降级为纯文本。"""
         from app.providers.factory import get_provider_factory
 
         config = await self._ensure_runtime_config(access_context=access_context)
         factory = self._provider_factory or get_provider_factory()
         failover = factory.create_failover_service()
-        result = await failover.generate(config.llm, prompt)
+
+        if image_base64:
+            result = await failover.generate_vision(
+                config.llm,
+                prompt,
+                image_base64=image_base64,
+            )
+        else:
+            result = await failover.generate(config.llm, prompt)
         return result.content
 
     @staticmethod
@@ -377,3 +385,22 @@ class CompanionAskService:
             except (ValueError, TypeError):
                 pass
         return task_id, seconds
+
+
+_MARKDOWN_PATTERN = re.compile(r"[*_~`#\[\]|>{}]+")
+
+
+def _sanitize_answer(text: str) -> str:
+    """清理 LLM 回答：去 markdown 格式，截断到 50 字。"""
+    # 去除 markdown 格式符号
+    cleaned = _MARKDOWN_PATTERN.sub("", text).strip()
+    # 去除多余空白
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    # 截断到限制长度
+    if len(cleaned) > MAX_ANSWER_LENGTH:
+        cleaned = cleaned[:MAX_ANSWER_LENGTH].rstrip()
+        # 在最后一个完整字/词处截断
+        if not cleaned.endswith(("。", "，", "！", "？", ".", "！", "；", "：")):
+            # 不在标点处截断，直接截取（中文字符不需要词边界）
+            pass
+    return cleaned or text[:MAX_ANSWER_LENGTH]

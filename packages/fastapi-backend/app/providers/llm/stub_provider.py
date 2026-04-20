@@ -24,3 +24,23 @@ class StubLLMProvider:
                 "healthSource": self.config.health_source,
             },
         )
+
+    async def generate_vision(
+        self,
+        prompt: str,
+        *,
+        image_base64: str,
+        image_media_type: str = "image/jpeg",
+    ) -> ProviderResult:
+        """返回 stub 前缀拼接 prompt 的多模态结果。"""
+        return ProviderResult(
+            provider=self.provider_id,
+            content=f"stub-vision:{prompt}",
+            metadata={
+                "priority": self.config.priority,
+                "timeoutSeconds": self.config.timeout_seconds,
+                "retryAttempts": self.config.retry_attempts,
+                "healthSource": self.config.health_source,
+                "has_image": True,
+            },
+        )

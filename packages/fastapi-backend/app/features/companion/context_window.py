@@ -43,7 +43,9 @@ class ContextWindow:
                 return None
             return json.loads(raw) if isinstance(raw, str) else raw
         except Exception:
-            logger.debug("Failed to load context window session=%s", session_id, exc_info=True)
+            logger.debug(
+                "Failed to load context window session=%s", session_id, exc_info=True
+            )
             return None
 
     def save(self, session_id: str, window: dict[str, Any]) -> None:
@@ -51,11 +53,14 @@ class ContextWindow:
         try:
             key = self._key(session_id)
             self._store.set_runtime_value(
-                key, json.dumps(window, ensure_ascii=False),
+                key,
+                json.dumps(window, ensure_ascii=False),
                 ttl_seconds=self.context_ttl_seconds,
             )
         except Exception:
-            logger.warning("Failed to save context window session=%s", session_id, exc_info=True)
+            logger.warning(
+                "Failed to save context window session=%s", session_id, exc_info=True
+            )
 
     def append_turn(
         self,
@@ -77,16 +82,18 @@ class ContextWindow:
         window["current_anchor_ref"] = anchor_ref
 
         # 追加轮次摘要
-        window["turns"].append({
-            "turn_id": turn_id,
-            "question": question_text,
-            "answer_summary": answer_summary[:200],
-            "anchor_ref": anchor_ref,
-        })
+        window["turns"].append(
+            {
+                "turn_id": turn_id,
+                "question": question_text,
+                "answer_summary": answer_summary[:200],
+                "anchor_ref": anchor_ref,
+            }
+        )
 
         # 裁剪：保留最近 N 轮 + 必要会话元信息
         if len(window["turns"]) > self.max_rounds:
-            window["turns"] = window["turns"][-self.recent_rounds_to_keep:]
+            window["turns"] = window["turns"][-self.recent_rounds_to_keep :]
 
         self.save(session_id, window)
         return window

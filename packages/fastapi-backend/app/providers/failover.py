@@ -19,6 +19,7 @@ from app.providers.protocols import (
     ProviderProtocolError,
     ProviderResult,
     TTSProvider,
+    VisionLLMProvider,
 )
 from app.shared.task_framework.status import TaskErrorCode, coerce_task_error_code
 
@@ -154,6 +155,38 @@ class ProviderFailoverService:
         return await self._run(
             providers,
             lambda provider: provider.generate(prompt),
+            emit_switch=emit_switch,
+            ignore_cached_unhealthy=ignore_cached_unhealthy,
+        )
+
+    async def generate_vision(
+        self,
+        providers: Sequence[LLMProvider],
+        prompt: str,
+        *,
+        image_base64: str,
+        image_media_type: str = "image/jpeg",
+        emit_switch: SwitchObserver | None = None,
+        ignore_cached_unhealthy: bool = False,
+    ) -> ProviderResult:
+        """带 Failover 的 LLM 多模态生成调用。
+
+        不支持视觉的 Provider 自动跳过，全部不支持时降级为纯文本调用。
+        """
+        vision_providers = [
+            p for p in providers if isinstance(p, VisionLLMProvider)
+        ]
+        if vision_providers:
+            return await self._run(
+                vision_providers,
+                lambda provider: provider.generate_vision(
+                    prompt, image_base64=image_base64, image_media_type=image_media_type,
+                ),
+                emit_switch=emit_switch,
+                ignore_cached_unhealthy=ignore_cached_unhealthy,
+            )
+        return await self.generate(
+            providers, prompt,
             emit_switch=emit_switch,
             ignore_cached_unhealthy=ignore_cached_unhealthy,
         )
