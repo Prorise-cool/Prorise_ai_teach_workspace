@@ -169,7 +169,7 @@ def _build_service(
         metadata_service=SimpleNamespace(),
         settings=SimpleNamespace(
             video_asset_root=str(tmp_path),
-            dramatiq_task_time_limit_ms=1_200_000,
+            dramatiq_task_time_limit_ms=36_000_000,
             video_default_duration_minutes=5,
             video_section_codegen_concurrency=section_codegen_concurrency,
         ),
