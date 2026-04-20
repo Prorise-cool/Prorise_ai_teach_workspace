@@ -99,3 +99,10 @@ export {
   createRealCompanionAdapter,
   resolveCompanionAdapter,
 } from './companion-adapter';
+
+export type { LearningCenterAdapter } from './learning-center-adapter';
+export {
+  createMockLearningCenterAdapter,
+  createRealLearningCenterAdapter,
+  resolveLearningCenterAdapter,
+} from './learning-center-adapter';

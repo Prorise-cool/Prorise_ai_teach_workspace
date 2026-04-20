@@ -3,6 +3,7 @@
  */
 import { authHandlers } from './handlers/auth';
 import { companionHandlers } from './handlers/companion';
+import { learningCenterHandlers } from './handlers/learning-center';
 import { taskHandlers } from './handlers/task';
 import { videoPipelineHandlers } from './handlers/video-pipeline';
 import { videoPreprocessHandlers } from './handlers/video-preprocess';
@@ -11,6 +12,7 @@ import { videoTaskHandlers } from './handlers/video-task';
 
 export { authMockFixtures } from './fixtures/auth';
 export { companionMockFixtures } from './fixtures/companion';
+export { learningCenterMockFixtures } from './fixtures/learning-center';
 export { taskMockFixtures } from './fixtures/task';
 export { videoPipelineMockFixtures } from './fixtures/video-pipeline';
 export { videoPreprocessMockFixtures } from './fixtures/video-preprocess';
@@ -18,6 +20,7 @@ export { videoPublicMockFixtures } from './fixtures/video-public';
 export { videoTaskMockFixtures } from './fixtures/video-task';
 export { authHandlers } from './handlers/auth';
 export { companionHandlers } from './handlers/companion';
+export { learningCenterHandlers } from './handlers/learning-center';
 export { taskHandlers } from './handlers/task';
 export { videoPipelineHandlers } from './handlers/video-pipeline';
 export { videoPreprocessHandlers } from './handlers/video-preprocess';
@@ -61,6 +64,7 @@ export function resetMockServiceWorkerForTest() {
 export const mockHandlers = [
   ...authHandlers,
   ...companionHandlers,
+  ...learningCenterHandlers,
   ...taskHandlers,
   ...videoPipelineHandlers,
   ...videoPreprocessHandlers,
