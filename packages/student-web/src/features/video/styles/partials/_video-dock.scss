@@ -5,10 +5,21 @@
 
 .xm-video-dock {
 	position: absolute;
-	bottom: var(--xm-spacing-10, 2.5rem);
+	bottom: 0;
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 30;
+	width: 320px;
+	padding-top: 40px;
+	padding-bottom: var(--xm-spacing-10, 2.5rem);
+	display: flex;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.3s var(--xm-easing-standard, ease);
+
+	&:hover {
+		opacity: 1;
+	}
 
 	&__island {
 		background: color-mix(in srgb, var(--xm-color-surface) 80%, transparent);

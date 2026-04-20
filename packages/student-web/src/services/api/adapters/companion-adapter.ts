@@ -111,6 +111,7 @@ type BackendAskRequestBody = {
   anchor: BackendAnchorContext;
   question_text: string;
   parent_turn_id: string | null;
+  frame_base64?: string | null;
 };
 
 type BackendAskResponseData = {
@@ -150,6 +151,7 @@ function toBackendAskRequest(request: CompanionAskRequest): BackendAskRequestBod
     anchor: toBackendAnchor(request.anchor),
     question_text: request.questionText,
     parent_turn_id: request.parentTurnId ?? null,
+    frame_base64: request.frameBase64 ?? null,
   };
 }
 
