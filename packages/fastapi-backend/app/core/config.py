@@ -129,7 +129,7 @@ class Settings(BaseSettings):
         default=1, alias="FASTAPI_DRAMATIQ_WORKER_PROCESSES"
     )
     dramatiq_task_time_limit_ms: int = Field(
-        default=1_200_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
+        default=36_000_000, alias="FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS"
     )
     dramatiq_prometheus_enabled: bool | None = Field(
         default=None, alias="FASTAPI_DRAMATIQ_PROMETHEUS_ENABLED"
