@@ -191,7 +191,7 @@ class Settings(BaseSettings):
         default=str(PROJECT_ROOT / ".runtime" / "video-assets"),
         alias="FASTAPI_VIDEO_ASSET_ROOT",
     )
-    video_render_quality: str = Field(default="m", alias="FASTAPI_VIDEO_RENDER_QUALITY")
+    video_render_quality: str = Field(default="l", alias="FASTAPI_VIDEO_RENDER_QUALITY")
     video_fix_max_attempts: int = Field(
         default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS"
     )
@@ -229,7 +229,7 @@ class Settings(BaseSettings):
         alias="FASTAPI_VIDEO_STATIC_GUARD_MAX_PASSES",
     )
     video_patch_retry_max_retries: int = Field(
-        default=3,
+        default=1,
         alias="FASTAPI_VIDEO_PATCH_RETRY_MAX_RETRIES",
     )
     video_designer_max_tokens: int = Field(

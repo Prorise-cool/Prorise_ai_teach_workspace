@@ -1375,9 +1375,16 @@ class VideoPipelineService:
         # 3. 同步产物索引到 RuoYi
         if graph_ref is not None:
             try:
+                from app.features.video.runtime_auth import load_video_runtime_auth
+
+                request_auth = load_video_runtime_auth(
+                    runtime.runtime_store,
+                    task_id=ctx.task_id,
+                )
                 await self._metadata_service.sync_artifact_graph(
                     graph,
                     artifact_ref=graph_ref,
+                    request_auth=request_auth,
                 )
             except Exception:
                 logger.warning(
@@ -1790,7 +1797,7 @@ class VideoPipelineService:
                 self._settings, "video_static_guard_max_passes", 3
             ),
             patch_retry_max_retries=getattr(
-                self._settings, "video_patch_retry_max_retries", 3
+                self._settings, "video_patch_retry_max_retries", 1
             ),
             section_count=getattr(self, "_section_count", None),
             section_codegen_max_tokens=getattr(
@@ -1812,7 +1819,7 @@ class VideoPipelineService:
         )
         logger.info(
             "MLLM feedback DISABLED for section pipeline; patch_retry_max_retries=%d section_codegen_concurrency=%d layout_hint=%s render_quality=%s",
-            getattr(self._settings, "video_patch_retry_max_retries", 3),
+            getattr(self._settings, "video_patch_retry_max_retries", 1),
             getattr(self, "_section_codegen_concurrency", 1),
             getattr(self, "_layout_hint", None),
             getattr(self, "_render_quality", "l"),

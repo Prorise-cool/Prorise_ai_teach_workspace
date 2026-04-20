@@ -478,8 +478,8 @@ public class XmPersistenceSyncService {
         record.setUserId(userId);
         record.setWorkType(normalizeWorkType(source.getWorkType()));
         record.setTaskRefId(source.getTaskRefId());
-        record.setTitle(firstNotBlank(source.getTitle(), existing == null ? null : existing.getTitle(), source.getTaskRefId()));
-        record.setDescription(firstNotBlank(source.getDescription(), existing == null ? null : existing.getDescription()));
+        record.setTitle(truncateValue(firstNotBlank(source.getTitle(), existing == null ? null : existing.getTitle(), source.getTaskRefId()), 200));
+        record.setDescription(truncateValue(firstNotBlank(source.getDescription(), existing == null ? null : existing.getDescription()), 500));
         record.setCoverUrl(firstNotBlank(source.getCoverUrl(), existing == null ? null : existing.getCoverUrl()));
         record.setIsPublic(Boolean.TRUE.equals(source.getIsPublic()));
         record.setStatus(firstNotBlank(source.getStatus(), existing == null ? null : existing.getStatus(), "normal"));
@@ -740,6 +740,19 @@ public class XmPersistenceSyncService {
             }
         }
         return null;
+    }
+
+    private String truncateValue(String value, int maxLen) {
+        if (value == null) {
+            return null;
+        }
+        if (maxLen <= 0) {
+            return "";
+        }
+        if (value.length() <= maxLen) {
+            return value;
+        }
+        return value.substring(0, maxLen);
     }
 
     private Long nextLongId() {

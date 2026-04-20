@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from app.features.video.long_term.records import (
     build_session_artifact_batch_request,
     video_publication_from_ruoyi_data,
+    video_publication_to_ruoyi_payload,
+    VideoPublicationSyncRequest,
 )
 from app.features.video.pipeline.models import ArtifactPayload, ArtifactType, VideoArtifactGraph
 
@@ -60,3 +62,19 @@ def test_build_session_artifact_batch_request_derives_titles_summaries_and_metad
     assert request.artifacts[0].metadata["sceneCount"] == 2
     assert request.artifacts[1].title == "Manim 代码"
     assert request.artifacts[1].metadata["lineCount"] == 3
+
+
+def test_video_publication_to_ruoyi_payload_truncates_title_and_description() -> None:
+    payload = video_publication_to_ruoyi_payload(
+        VideoPublicationSyncRequest(
+            user_id="10001",
+            task_ref_id="video-task-003",
+            title="t" * 999,
+            description="d" * 999,
+            cover_url="https://cdn.test/video-task-003/cover.jpg",
+            is_public=True,
+        )
+    )
+
+    assert payload["title"] == "t" * 200
+    assert payload["description"] == "d" * 500

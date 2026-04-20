@@ -164,11 +164,15 @@
 - [Bulk render 收口记录](./4-3-manimcat-bulk-render-save-sections-收口-20260414.md)
 - [审查与兼容修复记录](./4-3-manimcat-review-compat-fix-20260415.md)
 - [大 Prompt Stream 524 修复记录](./4-3-manimcat-large-prompt-stream-524修复-20260416.md)
+- [修复重试上限收敛为 1 与 time_limit 对齐](./4-3-manim-修复重试上限收敛为1与worker-time-limit对齐-20260420.md)
+- [占位降级与 RuoYi 回写修复](./4-3-视频流水线占位降级与RuoYi回写修复-20260420.md)
 - **状态**: review
 - **说明**: 实现 manim_gen service 与 FixChain（RuleBasedFixer → LLMBasedFixer），最大修复 2 次
 - **热修摘要**: 2026-04-10 已修复并行场景生成触发的 429 重试风暴，补齐 jitter、429 健康缓存策略、fallback 缓存绕过、默认并发下调，并补做 DeepSeek 实机并发 smoke test
 - **收口摘要**: 2026-04-10 已移除 merged storyboard 默认捷径，恢复 `render` / `manim_fix` 事件语义，补齐前端 `solve/render_verify` 契约与 SQL 动态种子；2026-04-15 已补齐 `scene_designer` multimodal message 透传与 `sandbox` render quality 真正落到 Manim 命令
 - **补充收口摘要**: 2026-04-14 已把 ManimCat bulk path 改为真实 `MainScene + --save_sections` 单次渲染，并把默认 patch repair 上限收敛到 3，避免 bulk code 再掉回逐 section LLM 修复风暴
+- **最新超时收口摘要**: 2026-04-20 已把 patch retry 硬上限收敛到 1，并让 Dramatiq `execute_task` actor 的 `time_limit` 对齐 `FASTAPI_DRAMATIQ_TASK_TIME_LIMIT_MS`，避免默认 10min 强杀导致任务僵尸化
+- **最新回写/发布收口摘要**: 2026-04-20 worker 回写 artifact graph 时显式读取并透传 `xm_video_runtime_auth` 作为 `request_auth`；公开发布同步对 `title<=200/description<=500` 截断，避免 `xm_user_work.description` 写库溢出；分镜渲染失败时自动降级渲染占位片段，避免最终视频丢分镜
 - **实机复验摘要**: 2026-04-14 晚间管理员样本 `vtask_20260414154217_5be3741d` 证明新链路未再生成 `section_*.py`，但单次 `manim_gen` full-code 调用仍在 `466s` 后失败，当前瓶颈已收敛为 bulk code 单调用稳定性而非旧的多轮 section 风暴
 - **厚修复摘要**: 2026-04-15 已补齐 fatal failure 时的 section failed 回写、`/tasks/{id}/status` 的 `VIDEO_*` errorCode 透传，以及 bulk progress/SSE 单调性收口
 - **最新实机摘要**: 2026-04-15 上午管理员样本 `vtask_20260415013544_1914f169` 在 `5m24s` 后仍失败于 `VIDEO_MANIM_GEN_FAILED`；但事件回放已不再伪造 section 级生成进度，`/preview` 也正确收口为 `failedSections=10`
