@@ -32,6 +32,7 @@ import { useVideoTaskPreview } from '../hooks/use-video-task-preview';
 import { useVideoTaskSse } from '../hooks/use-video-task-sse';
 import { useVideoTaskStatus } from '../hooks/use-video-task-status';
 import { useVideoGeneratingStore } from '../stores/video-generating-store';
+import { resolveVideoTaskTitleDisplay } from '../utils/video-task-title';
 
 const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
 
@@ -195,16 +196,18 @@ export function VideoGeneratingPage() {
 	}, [manualStageIndex, pipelineStageIndex]);
 
 	const displayStageKey = manualStageKey ?? pipelineStageKey;
-	const pipelineStageConfig = getLayoutStageConfig(pipelineStageKey);
-	const selectedSectionId = manualSelectedSectionId && sections.some((section) => section.sectionId === manualSelectedSectionId)
-		? manualSelectedSectionId
-		: (sections.find((section) => section.status === 'ready') ?? sections.find((section) => section.status !== 'pending') ?? sections[0])?.sectionId ?? null;
-	const etaText = t(estimateEtaText(progress));
-	const logs = useMemo(() => buildRuntimeLogs(currentStage, progress, sections, t), [currentStage, progress, sections, t]);
-	const titleText = readDraftTitle(taskId, t('video.generating.defaultTitle'));
-	const stageTags = buildStageTags(displayStageKey, knowledgePoints, sections, readySections, displayTotalSections, t);
-	const isResultReady = status === 'completed' && Boolean(taskId);
-	const inputReturnUrl =
+		const pipelineStageConfig = getLayoutStageConfig(pipelineStageKey);
+		const selectedSectionId = manualSelectedSectionId && sections.some((section) => section.sectionId === manualSelectedSectionId)
+			? manualSelectedSectionId
+			: (sections.find((section) => section.status === 'ready') ?? sections.find((section) => section.status !== 'pending') ?? sections[0])?.sectionId ?? null;
+		const etaText = t(estimateEtaText(progress));
+		const logs = useMemo(() => buildRuntimeLogs(currentStage, progress, sections, t), [currentStage, progress, sections, t]);
+		const defaultTitleText = t('video.generating.defaultTitle');
+		const rawTitleText = readDraftTitle(taskId, defaultTitleText);
+		const titleMeta = resolveVideoTaskTitleDisplay(rawTitleText, defaultTitleText);
+		const stageTags = buildStageTags(displayStageKey, knowledgePoints, sections, readySections, displayTotalSections, t);
+		const isResultReady = status === 'completed' && Boolean(taskId);
+		const inputReturnUrl =
 		taskId && status !== 'completed' && status !== 'failed' && status !== 'cancelled'
 			? `/video/input?focusTask=${encodeURIComponent(taskId)}&toast=returned`
 			: '/video/input';
@@ -292,14 +295,19 @@ export function VideoGeneratingPage() {
 				<section className="xm-generating-shell__aside">
 					<div className="xm-generating-shell__progress-card">
 						<div className="xm-generating-shell__progress-head">
-							<div className="space-y-2">
-								<div className="xm-generating-shell__status-line">
-									<span className="xm-generating-shell__status-dot" />
-									<span>{t(pipelineStageConfig.statusKey)}</span>
+								<div className="space-y-2">
+									<div className="xm-generating-shell__status-line">
+										<span className="xm-generating-shell__status-dot" />
+										<span>{t(pipelineStageConfig.statusKey)}</span>
+									</div>
+									<h1
+										className={cn('xm-generating-shell__title', titleMeta.isLong && 'is-long')}
+										title={titleMeta.fullTitle}
+									>
+										{titleMeta.displayTitle}
+									</h1>
+									<p className="xm-generating-shell__subtitle">{t(pipelineStageConfig.subtitleKey)}</p>
 								</div>
-								<h1 className="xm-generating-shell__title">{titleText}</h1>
-								<p className="xm-generating-shell__subtitle">{t(pipelineStageConfig.subtitleKey)}</p>
-							</div>
 							<div className="space-y-1 text-right">
 								<p className="xm-generating-shell__eta">{etaText}</p>
 								<p className="xm-generating-shell__progress-value">{Math.round(progress)}%</p>

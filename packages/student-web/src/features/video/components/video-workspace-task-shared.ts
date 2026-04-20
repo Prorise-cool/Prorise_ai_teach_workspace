@@ -3,6 +3,8 @@
  */
 import type { TaskLifecycleStatus } from '@/types/task';
 
+import { normalizeVideoTaskTitle } from '../utils/video-task-title';
+
 export type VideoWorkspaceTaskItem = {
 	taskId: string;
 	title: string;
@@ -20,10 +22,10 @@ const VIDEO_TASK_DRAFT_CACHE_PREFIX = 'video-task-draft:';
 
 export function readDraftVideoTaskTitle(taskId: string, fallback: string) {
 	try {
-		return (
-			window.sessionStorage.getItem(`${VIDEO_TASK_DRAFT_CACHE_PREFIX}${taskId}`) ||
-			fallback
-		);
+		const cached = window.sessionStorage.getItem(`${VIDEO_TASK_DRAFT_CACHE_PREFIX}${taskId}`) || '';
+		const normalized = cached ? normalizeVideoTaskTitle(cached) : '';
+
+		return normalized || fallback;
 	} catch {
 		return fallback;
 	}
