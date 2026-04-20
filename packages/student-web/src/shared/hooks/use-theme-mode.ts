@@ -47,6 +47,8 @@ function readThemeMode(): ThemeMode {
 function persistThemeMode(themeMode: ThemeMode) {
   document.documentElement.dataset.theme = themeMode;
   document.documentElement.style.colorScheme = themeMode;
+  document.documentElement.classList.toggle('dark', themeMode === 'dark');
+  document.documentElement.classList.toggle('light', themeMode !== 'dark');
   window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
   window.dispatchEvent(
     new CustomEvent<ThemeMode>(THEME_MODE_SYNC_EVENT, {
