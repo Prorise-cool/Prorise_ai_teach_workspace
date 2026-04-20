@@ -186,6 +186,22 @@ def _contains_cjk(text: str) -> bool:
     return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
 
 
+def _read_image_as_base64(image_ref: str) -> tuple[str, str] | None:
+    """从 local:// 图片引用读取文件并返回 (base64, mime_type)。"""
+    if not image_ref or not image_ref.startswith("local://"):
+        return None
+    relative_path = image_ref.removeprefix("local://")
+    settings = get_settings()
+    base_dir = Path(getattr(settings, "video_asset_root", "."))
+    full_path = base_dir / relative_path
+    if not full_path.exists():
+        return None
+    ext = full_path.suffix.lower()
+    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    image_bytes = full_path.read_bytes()
+    return base64.b64encode(image_bytes).decode("ascii"), mime_map.get(ext, "image/jpeg")
+
+
 def _normalize_compare_text(text: str) -> str:
     return re.sub(r"[\W_]+", "", text, flags=re.UNICODE).casefold()
 
@@ -477,7 +493,16 @@ class UnderstandingService:
             source_payload=source_payload,
             user_profile=user_profile,
         )
-        response = await self.failover_service.generate(self.providers, prompt)
+        image_data = _read_image_as_base64(str(source_payload.get("imageRef") or ""))
+        if image_data:
+            image_b64, mime_type = image_data
+            response = await self.failover_service.generate_vision(
+                self.providers, prompt,
+                image_base64=image_b64,
+                image_media_type=mime_type,
+            )
+        else:
+            response = await self.failover_service.generate(self.providers, prompt)
         provider_used = str(
             getattr(response, "provider", "") or _get_provider_id(self.providers[0]) if self.providers else ""
         )
@@ -511,9 +536,18 @@ class UnderstandingService:
                 previous_output=raw_output,
                 issues=issues,
             )
-            repair_response = await self.failover_service.generate(
-                self.providers,
-                repair_prompt,
+            if image_data:
+                repair_response = await self.failover_service.generate_vision(
+                    self.providers,
+                    repair_prompt,
+                    image_base64=image_b64,
+                    image_media_type=mime_type,
+                    ignore_cached_unhealthy=True,
+                )
+            else:
+                repair_response = await self.failover_service.generate(
+                    self.providers,
+                    repair_prompt,
                 ignore_cached_unhealthy=True,
             )
             repair_provider_used = str(
