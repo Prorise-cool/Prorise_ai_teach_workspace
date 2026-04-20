@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from app.core.errors import IntegrationError
-from app.features.companion.schemas import CompanionBootstrapData, CompanionBootstrapResponse, CompanionContextSource
+from app.features.companion.schemas import CompanionBootstrapData, CompanionContextSource
 from app.shared.long_term_records import (
     CompanionTurnCreateRequest,
     CompanionTurnSnapshot,

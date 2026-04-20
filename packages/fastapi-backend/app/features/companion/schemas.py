@@ -9,7 +9,6 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from app.features.common import BootstrapStatus
 from app.shared.long_term.models import (
     AnchorContext,
     AnchorKind,
@@ -17,15 +16,6 @@ from app.shared.long_term.models import (
     PersistenceStatus,
     WhiteboardActionRecord,
 )
-
-
-# ── Bootstrap ─────────────────────────────────────────────────────────
-
-
-class CompanionBootstrapResponse(BootstrapStatus):
-    """伴学功能域 bootstrap 状态数据。"""
-
-    feature: str = "companion"
 
 
 # ── 上下文来源枚举 ────────────────────────────────────────────────────

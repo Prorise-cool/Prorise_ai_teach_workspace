@@ -17,7 +17,6 @@ export { ResultErrorView } from './components/result-error-view';
 export { ResultSkeleton } from './components/result-skeleton';
 export { PublishBanner } from './components/publish-banner';
 export { FutureActionsBar } from './components/future-actions-bar';
-export { CompanionSidebar } from './components/companion-sidebar';
 export { LogItemRow } from './components/log-item-row';
 export { FixAttemptIndicator } from './components/fix-attempt-indicator';
 export { GeneratingFailureCard } from './components/generating-failure-card';
@@ -33,8 +32,6 @@ export { useVideoPublish } from './hooks/use-video-publish';
 export { usePublicVideos } from './hooks/use-public-videos';
 export { useTipRotation } from './hooks/use-tip-rotation';
 export { useSidebarToggle } from './hooks/use-sidebar-toggle';
-export { useCompanion } from './hooks/use-companion';
-
 // Stores
 export { useVideoGeneratingStore } from './stores/video-generating-store';
 

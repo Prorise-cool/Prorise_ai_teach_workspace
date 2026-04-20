@@ -16,23 +16,11 @@ vi.mock('@/features/video/hooks/use-video-publish', () => ({
   useVideoPublish: vi.fn(),
 }));
 
-vi.mock('@/features/video/hooks/use-companion', () => ({
-  useCompanion: () => ({
-    turns: [],
-    interactionState: 'empty',
-    isAsking: false,
-    bootstrap: null,
-    ask: vi.fn(),
-    clearTurns: vi.fn(),
-    currentAnchor: { taskId: '', seconds: 0 },
-  }),
-}));
-
 vi.mock('@/features/video/components/video-dock', () => ({
   VideoDock: () => <div data-testid="mock-video-dock" />,
 }));
 
-vi.mock('@/features/video/components/companion-sidebar', () => ({
+vi.mock('@/features/video/components/companion-sidebar-v2', () => ({
   CompanionSidebar: ({ isOpen }: { isOpen: boolean }) => (
     <aside data-testid="mock-companion-sidebar" data-open={isOpen} />
   ),

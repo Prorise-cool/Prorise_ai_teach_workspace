@@ -2,7 +2,7 @@
  * 文件说明：视频结果页（播放器优先版）。
  * 保持 main 与 aside 同级 flex，侧栏只通过真实宽度挤压主舞台，不覆盖视频区域。
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMatch, useParams } from 'react-router-dom';
 import { AlertCircle, RefreshCw, ShieldAlert, VideoOff } from 'lucide-react';
 
@@ -10,7 +10,6 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 
 import { CompanionSidebar } from '../components/companion-sidebar-v2';
-import { useCompanion } from '../hooks/use-companion';
 import { useSidebarToggle } from '../hooks/use-sidebar-toggle';
 import { PublishBanner } from '../components/publish-banner';
 import { ResultErrorView } from '../components/result-error-view';
@@ -61,12 +60,11 @@ export function VideoResultPage() {
   const playbackSections = sections ? buildPlaybackSections(sections, duration) : [];
   const activeSection = getActivePlaybackSection(playbackSections, playbackState.currentTimeSeconds);
 
-  const companion = useCompanion({
+  const currentAnchor = useMemo(() => ({
     taskId: lookupId ?? '',
-    currentTimeSeconds: playbackState.currentTimeSeconds,
-    activeSectionTitle: activeSection?.title,
-    playerRef,
-  });
+    seconds: playbackState.currentTimeSeconds,
+    sectionTitle: activeSection?.title,
+  }), [lookupId, playbackState.currentTimeSeconds, activeSection?.title]);
 
   useEffect(() => {
     if (!data?.result) {
@@ -254,7 +252,7 @@ export function VideoResultPage() {
         isOpen={sidebarOpen}
         onClose={toggleSidebar}
         taskId={lookupId ?? ''}
-        currentAnchor={companion.currentAnchor}
+        currentAnchor={currentAnchor}
         playerRef={playerRef}
         className="xm-video-result__sidebar"
       />
