@@ -2,7 +2,7 @@
  * 文件说明：全局顶栏导航桌面端部分（md 及以上）。
  * 负责品牌入口、桌面导航链接、工作区路由、主题切换、语言切换与账号动作。
  */
-import { Languages, LogOut, Menu, Moon, SunMedium, X } from 'lucide-react';
+import { Languages, Menu, Moon, SunMedium, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -10,7 +10,7 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
 import { DialogTrigger } from '@/components/ui/dialog';
 import { useTopNavControls } from '@/components/navigation/use-top-nav-controls';
-import { useAuthSessionActions } from '@/features/auth/hooks/use-auth-session-actions';
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { cn } from '@/lib/utils';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 
@@ -39,7 +39,6 @@ export function GlobalTopNavDesktop({
   const { t } = useAppTranslation();
   const location = useLocation();
   const session = useAuthSessionStore(state => state.session);
-  const { logout, isLoggingOut } = useAuthSessionActions();
   const {
     closeMobileMenu,
     handleLocaleToggle,
@@ -197,50 +196,18 @@ export function GlobalTopNavDesktop({
         </Button>
 
         {showAuthAction ? (
-          isWorkspace && session?.accessToken ? (
-            <div className="hidden items-center gap-2 md:flex">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-border/80"
-                disabled={isLoggingOut}
-                onClick={() => {
-                  void logout();
-                }}
-              >
-                <LogOut className="mr-1 h-3.5 w-3.5" />
-                {t('entryNav.signOut')}
-              </Button>
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground">
-                {session.user?.nickname?.charAt(0) ?? session.user?.username?.charAt(0) ?? 'U'}
-              </div>
-            </div>
+          session?.accessToken ? (
+            // 登录态统一显示头像下拉菜单（内含 学习中心 / 个人资料 / 设置 / 退出登录），
+            // 替代历史上的 "登出按钮 + 首字母圆圈" 双块布局。
+            <UserAvatarMenu className="hidden md:inline-flex" />
           ) : (
-            <>
-              <Button
-                asChild
-                variant={actionButtonVariant}
-                className="hidden md:inline-flex"
-              >
-                <Link to={accountAction.to}>{accountAction.label}</Link>
-              </Button>
-
-              {session?.accessToken ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="hidden border-border/80 md:inline-flex"
-                  disabled={isLoggingOut}
-                  onClick={() => {
-                    void logout();
-                  }}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {t('entryNav.signOut')}
-                </Button>
-              ) : null}
-            </>
+            <Button
+              asChild
+              variant={actionButtonVariant}
+              className="hidden md:inline-flex"
+            >
+              <Link to={accountAction.to}>{accountAction.label}</Link>
+            </Button>
           )
         ) : null}
 
