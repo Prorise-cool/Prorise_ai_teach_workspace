@@ -241,7 +241,6 @@ export function FavoritesPage() {
 
   return (
     <FavoritesLayout
-      avatarUrl={avatarUrl}
       sidebar={
         <FavoritesSidebar
           activeFolderId={activeFolderId}

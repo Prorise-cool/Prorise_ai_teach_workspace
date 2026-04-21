@@ -1,12 +1,17 @@
 /**
  * 文件说明：学习中心 / 个人域页面 Dock（从 Ux 成品页抽取，Epic 9）。
+ * 头像与 `UserAvatarMenu` 保持同一规则：直接读 auth session，
+ * 加载失败或缺图时降级为昵称首字母，避免回到 pravatar 外网占位。
  */
 import { BookOpen, Globe, LayoutTemplate, Moon, PlaySquare, Sun } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import { cn } from '@/lib/utils';
+import { useAuthSessionStore } from '@/stores/auth-session-store';
 
 export type SurfaceDashboardDockActive = 'learning' | 'settings';
 
@@ -16,7 +21,6 @@ export type SurfaceDashboardDockProps = {
   classroomTo?: string | null;
   learningCenterTo?: string | null;
   settingsTo?: string | null;
-  avatarUrl?: string | null;
 };
 
 export function SurfaceDashboardDock({
@@ -25,10 +29,20 @@ export function SurfaceDashboardDock({
   classroomTo = '/classroom/input',
   learningCenterTo = '/learning',
   settingsTo = '/profile',
-  avatarUrl = 'https://i.pravatar.cc/150?img=68',
 }: SurfaceDashboardDockProps) {
   const { t } = useAppTranslation();
   const { toggleThemeMode } = useThemeMode();
+  const session = useAuthSessionStore((state) => state.session);
+  const [avatarErrored, setAvatarErrored] = useState(false);
+
+  const avatarUrl = session?.user.avatarUrl ?? null;
+  const displayName =
+    session?.user.nickname?.trim() ||
+    session?.user.username?.trim() ||
+    '';
+  const avatarInitial = (displayName.slice(0, 1) || '?').toUpperCase();
+  const showAvatarImage = Boolean(avatarUrl) && !avatarErrored;
+
   const localeLabel = appI18n.resolvedLanguage === 'en-US' ? 'EN / 中' : '中 / EN';
 
   const toggleLocale = () => {
@@ -152,45 +166,43 @@ export function SurfaceDashboardDock({
           <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
             {t('learningCenter.dock.settings')}
           </div>
-          {settingsTo ? (
-            <Link
-              to={settingsTo}
-              className={
-                settingsActive
-                  ? 'w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm overflow-hidden p-0.5'
-                  : 'dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition'
-              }
-            >
+          {(() => {
+            const containerClass = cn(
+              'w-10 h-10 rounded-[12px] overflow-hidden shadow-sm btn-transition',
+              settingsActive
+                ? 'bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark p-0.5 flex items-center justify-center'
+                : 'border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark',
+            );
+            const imgClass = cn(
+              'w-full h-full object-cover',
+              settingsActive ? 'rounded-[10px] opacity-90' : null,
+            );
+            const initialClass = cn(
+              'flex w-full h-full items-center justify-center font-bold text-sm select-none',
+              settingsActive
+                ? 'text-surface-light dark:text-surface-dark'
+                : 'bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark',
+            );
+            const inner = showAvatarImage ? (
               <img
                 src={avatarUrl ?? ''}
-                alt="User"
-                className={
-                  settingsActive
-                    ? 'w-full h-full object-cover rounded-[10px] opacity-90'
-                    : 'w-full h-full object-cover'
-                }
+                alt={displayName || 'User'}
+                className={imgClass}
+                onError={() => setAvatarErrored(true)}
               />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className={
-                settingsActive
-                  ? 'w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm overflow-hidden p-0.5'
-                  : 'dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition'
-              }
-            >
-              <img
-                src={avatarUrl ?? ''}
-                alt="User"
-                className={
-                  settingsActive
-                    ? 'w-full h-full object-cover rounded-[10px] opacity-90'
-                    : 'w-full h-full object-cover'
-                }
-              />
-            </button>
-          )}
+            ) : (
+              <span className={initialClass}>{avatarInitial}</span>
+            );
+            return settingsTo ? (
+              <Link to={settingsTo} className={containerClass}>
+                {inner}
+              </Link>
+            ) : (
+              <button type="button" className={containerClass}>
+                {inner}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

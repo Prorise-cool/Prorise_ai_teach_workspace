@@ -432,7 +432,7 @@ export function ProfilePage() {
         </div>
       </main>
 
-      <SurfaceDashboardDock active="settings" avatarUrl={avatarUrl} />
+      <SurfaceDashboardDock active="settings" />
     </div>
   );
 }

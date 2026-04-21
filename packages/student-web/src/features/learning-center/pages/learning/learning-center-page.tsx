@@ -170,7 +170,7 @@ export function LearningCenterPage() {
         </div>
       </main>
 
-      <SurfaceDashboardDock active="learning" avatarUrl={avatarUrl} />
+      <SurfaceDashboardDock active="learning" />
     </div>
   );
 }

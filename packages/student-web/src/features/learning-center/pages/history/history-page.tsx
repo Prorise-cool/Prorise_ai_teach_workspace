@@ -274,7 +274,7 @@ export function HistoryPage() {
         />
       </main>
 
-      <SurfaceDashboardDock active="learning" avatarUrl={avatarUrl} />
+      <SurfaceDashboardDock active="learning" />
     </div>
   );
 }

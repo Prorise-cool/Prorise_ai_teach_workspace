@@ -366,7 +366,7 @@ export function SettingsPage() {
         </div>
       </main>
 
-      <SurfaceDashboardDock active="settings" avatarUrl={avatarUrl} />
+      <SurfaceDashboardDock active="settings" />
 
       <SettingsPhoneDialog
         open={phoneDialogOpen}

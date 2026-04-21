@@ -6,13 +6,12 @@ import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { SurfaceDashboardDock } from '@/components/surface/surface-dashboard-dock';
 
 type FavoritesLayoutProps = {
-  avatarUrl: string | null;
   sidebar: ReactNode;
   content: ReactNode;
   dialogs?: ReactNode;
 };
 
-export function FavoritesLayout({ avatarUrl, sidebar, content, dialogs }: FavoritesLayoutProps) {
+export function FavoritesLayout({ sidebar, content, dialogs }: FavoritesLayoutProps) {
   const { t } = useAppTranslation();
 
   return (
@@ -51,7 +50,7 @@ export function FavoritesLayout({ avatarUrl, sidebar, content, dialogs }: Favori
         {content}
       </main>
 
-      <SurfaceDashboardDock active="learning" avatarUrl={avatarUrl} />
+      <SurfaceDashboardDock active="learning" />
 
       {dialogs}
     </div>
