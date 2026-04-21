@@ -3,7 +3,9 @@
  * 当前只覆盖已接入 i18n 的最小页面范围，用于验证资源扩展能力。
  */
 import { enUsEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+import { enUsLearningCenterResources } from '@/app/i18n/resources/learning-center-content';
 import { enUsProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
+import { enUsUserSettingsResources } from '@/app/i18n/resources/user-settings-content';
 import { enUsVideoResources } from '@/app/i18n/resources/video-content';
 
 export const enUsResources = {
@@ -174,5 +176,7 @@ export const enUsResources = {
   },
   ...enUsProfileOnboardingResources,
   ...enUsEntryPageResources,
-  ...enUsVideoResources
+  ...enUsVideoResources,
+  ...enUsLearningCenterResources,
+  ...enUsUserSettingsResources
 } as const;

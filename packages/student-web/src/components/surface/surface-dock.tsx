@@ -6,6 +6,7 @@ import { BookOpen, Globe, Moon, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { appI18n } from '@/app/i18n';
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 
 export type SurfaceDockProps = {
@@ -24,6 +25,7 @@ export function SurfaceDock({
   settingsTo = '/settings',
   avatarUrl = 'https://i.pravatar.cc/150?img=68',
 }: SurfaceDockProps) {
+  const { t } = useAppTranslation();
   const { toggleThemeMode } = useThemeMode();
   const localeLabel = appI18n.resolvedLanguage === 'en-US' ? 'EN / 中' : '中 / EN';
 
@@ -47,7 +49,7 @@ export function SurfaceDock({
 
         <div className="dock-icon-wrapper w-10">
           <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
-            学习中心
+            {t('learningCenter.dock.learning')}
           </div>
           {learningCenterTo ? (
             <Link
@@ -83,7 +85,7 @@ export function SurfaceDock({
 
         <div className="dock-icon-wrapper w-10">
           <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
-            切换主题
+            {t('learningCenter.dock.theme')}
           </div>
           <button
             type="button"
@@ -97,7 +99,7 @@ export function SurfaceDock({
 
         <div className="dock-icon-wrapper w-10 relative">
           <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
-            设置
+            {t('learningCenter.dock.settings')}
           </div>
           {settingsTo ? (
             <Link

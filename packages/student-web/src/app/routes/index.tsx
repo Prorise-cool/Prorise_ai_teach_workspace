@@ -75,6 +75,75 @@ async function loadForbiddenRoute() {
 }
 
 /**
+ * 按需加载学习中心聚合页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadLearningCenterRoute() {
+  const { LearningCenterPage } = await import(
+    '@/features/learning-center/pages/learning-center-page'
+  );
+
+  return {
+    Component: LearningCenterPage
+  };
+}
+
+/**
+ * 按需加载历史记录页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadHistoryRoute() {
+  const { HistoryPage } = await import('@/features/learning-center/pages/history-page');
+
+  return {
+    Component: HistoryPage
+  };
+}
+
+/**
+ * 按需加载收藏页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadFavoritesRoute() {
+  const { FavoritesPage } = await import(
+    '@/features/learning-center/pages/favorites-page'
+  );
+
+  return {
+    Component: FavoritesPage
+  };
+}
+
+/**
+ * 按需加载个人资料页（Epic 9）。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadProfileRoute() {
+  const { ProfilePage } = await import('@/features/profile/pages/profile-page');
+
+  return {
+    Component: ProfilePage
+  };
+}
+
+/**
+ * 按需加载设置页（Epic 9）。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadSettingsRoute() {
+  const { SettingsPage } = await import('@/features/profile/pages/settings-page');
+
+  return {
+    Component: SettingsPage
+  };
+}
+
+/**
  * 按需加载课堂输入页，确保受保护工作区独立分包。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -273,6 +342,26 @@ export function createAppRouter() {
         {
           element: <RequireAuthRoute />,
           children: [
+            {
+              path: 'learning',
+              lazy: loadLearningCenterRoute
+            },
+            {
+              path: 'history',
+              lazy: loadHistoryRoute
+            },
+            {
+              path: 'favorites',
+              lazy: loadFavoritesRoute
+            },
+            {
+              path: 'profile',
+              lazy: loadProfileRoute
+            },
+            {
+              path: 'settings',
+              lazy: loadSettingsRoute
+            },
             {
               path: 'profile/setup',
               lazy: loadProfileSetupRoute
