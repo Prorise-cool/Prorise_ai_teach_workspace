@@ -119,6 +119,12 @@ public class XmUserProfileVo implements Serializable {
     private String language;
 
     /**
+     * 主题模式 light/dark/system
+     */
+    @ExcelProperty(value = "主题模式")
+    private String themeMode;
+
+    /**
      * 站内通知偏好
      */
     @ExcelProperty(value = "站内通知偏好", converter = ExcelDictConvert.class)

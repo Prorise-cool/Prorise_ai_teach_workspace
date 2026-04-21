@@ -533,6 +533,7 @@ CREATE TABLE `xm_user_profile` (
   `personality_type` varchar(50) DEFAULT NULL COMMENT '性格类型(action_oriented/explorer/methodological/social/creative)',
   `teacher_tags` varchar(500) DEFAULT NULL COMMENT 'AI导师偏好（JSON数组字符串，如["humorous","logical"]）',
   `language` varchar(10) DEFAULT 'zh-CN' COMMENT '语言偏好',
+  `theme_mode` varchar(16) DEFAULT NULL COMMENT '主题模式 light/dark/system',
   `notification_enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '站内通知偏好（1-开启 0-关闭）',
   `is_completed` tinyint(1) DEFAULT '0' COMMENT '是否完成配置（0-否 1-是）',
   `create_dept` bigint DEFAULT NULL COMMENT '创建部门',

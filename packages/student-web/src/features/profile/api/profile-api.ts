@@ -17,7 +17,9 @@ import {
   mergeUserProfile,
   PROFILE_API_BASE_PATH,
   PROFILE_DEFAULT_LANGUAGE,
+  PROFILE_THEME_MODES,
   TEACHER_TAGS,
+  type ProfileThemeMode,
   type SaveUserProfileInput,
   type TeacherTag,
   type UserProfile
@@ -44,6 +46,8 @@ type ProfilePayload = {
   teacherTags?: string[] | string | null;
   teacher_tags?: string[] | string | null;
   language?: string | null;
+  themeMode?: string | null;
+  theme_mode?: string | null;
   notificationEnabled?: boolean | number | string | null;
   notification_enabled?: boolean | number | string | null;
   isCompleted?: boolean | number | string | null;
@@ -123,6 +127,18 @@ function parseTeacherTags(value: unknown): TeacherTag[] {
   return [];
 }
 
+function parseThemeMode(value: unknown): ProfileThemeMode | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  return (PROFILE_THEME_MODES as readonly string[]).includes(normalized)
+    ? (normalized as ProfileThemeMode)
+    : null;
+}
+
 function parseCompletedFlag(value: unknown) {
   if (typeof value === 'boolean') {
     return value;
@@ -157,6 +173,7 @@ function mapProfilePayload(userId: string, payload: ProfilePayload): UserProfile
     teacherTags: parseTeacherTags(payload.teacherTags ?? payload.teacher_tags),
     language:
       payload.language === 'en-US' ? 'en-US' : PROFILE_DEFAULT_LANGUAGE,
+    themeMode: parseThemeMode(payload.themeMode ?? payload.theme_mode),
     notificationEnabled: parseCompletedFlag(
       payload.notificationEnabled ?? payload.notification_enabled
     ),
@@ -316,6 +333,7 @@ function createRealProfileApi({
               personalityType: nextProfile.personalityType,
               teacherTags: JSON.stringify(nextProfile.teacherTags),
               language: nextProfile.language,
+              themeMode: nextProfile.themeMode,
               notificationEnabled: nextProfile.notificationEnabled ? 1 : 0,
               isCompleted: nextProfile.isCompleted ? 1 : 0
             }

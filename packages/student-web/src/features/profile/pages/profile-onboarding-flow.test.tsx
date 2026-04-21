@@ -149,6 +149,7 @@ describe('Profile onboarding', () => {
       personalityType: 'action_oriented',
       teacherTags: ['humorous'],
       language: 'zh-CN',
+      themeMode: null,
       notificationEnabled: true,
       isCompleted: false,
       createTime: null,

@@ -67,7 +67,7 @@ describe('SettingsPage', () => {
     vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
   });
 
-  it('opens the phone binding dialog and persists updated phone value', async () => {
+  it('opens the phone binding dialog and sends phonenumber to the system profile endpoint', async () => {
     const user = userEvent.setup();
     renderRouterWithApp(
       [
@@ -84,13 +84,19 @@ describe('SettingsPage', () => {
     await user.type(screen.getByPlaceholderText('请输入手机号'), '13912345678');
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    expect(window.localStorage.getItem('xiaomai-user-phone')).toBe('13912345678');
+    // 手机号改由 RuoYi /system/user/profile PUT 承接，前端只本地缓存展示值。
     await waitFor(() => {
       expect(screen.getByText(/139\s\*{4}\s5678/)).toBeInTheDocument();
     });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    const phoneCall = fetchMock.mock.calls.find(([request]) => {
+      const url = typeof request === 'string' ? request : (request as Request).url;
+      return url.includes('/system/user/profile') && !url.includes('updatePwd');
+    });
+    expect(phoneCall).toBeDefined();
   });
 
-  it('opens the password dialog and persists an updated timestamp on success', async () => {
+  it('opens the password dialog and calls the RuoYi updatePwd endpoint on success', async () => {
     const user = userEvent.setup();
     renderRouterWithApp(
       [
@@ -108,11 +114,16 @@ describe('SettingsPage', () => {
     await user.type(screen.getByPlaceholderText('再次输入新密码'), 'NewPassw0rd!');
     await user.click(screen.getByRole('button', { name: '保存' }));
 
+    // 密码更新走 /system/user/profile/updatePwd，成功后 dialog 关闭。
     await waitFor(() => {
-      expect(window.localStorage.getItem('xiaomai-password-updated-at')).toMatch(
-        /\d{4}-\d{2}-\d{2}T/,
-      );
+      expect(screen.queryByPlaceholderText('请输入旧密码')).not.toBeInTheDocument();
     });
+    const fetchMock = vi.mocked(globalThis.fetch);
+    const updatePwdCall = fetchMock.mock.calls.find(([request]) => {
+      const url = typeof request === 'string' ? request : (request as Request).url;
+      return url.includes('/system/user/profile/updatePwd');
+    });
+    expect(updatePwdCall).toBeDefined();
   });
 
   it('opens the sessions dialog and can logout from within it', async () => {

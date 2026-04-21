@@ -80,6 +80,11 @@ public class XmUserProfile extends BaseEntity {
     private String language;
 
     /**
+     * 主题模式 light/dark/system
+     */
+    private String themeMode;
+
+    /**
      * 站内通知偏好（1-开启 0-关闭）
      */
     private Long notificationEnabled;

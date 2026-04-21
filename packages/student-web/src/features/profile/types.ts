@@ -37,6 +37,8 @@ export const TEACHER_TAGS = [
 export type PersonalityType = (typeof PERSONALITY_TYPES)[number];
 export type TeacherTag = (typeof TEACHER_TAGS)[number];
 export type ProfileLanguage = 'zh-CN' | 'en-US';
+export type ProfileThemeMode = 'light' | 'dark' | 'system';
+export const PROFILE_THEME_MODES: readonly ProfileThemeMode[] = ['light', 'dark', 'system'];
 
 export interface UserProfile {
   id: number | null;
@@ -50,6 +52,7 @@ export interface UserProfile {
   personalityType: PersonalityType | null;
   teacherTags: TeacherTag[];
   language: ProfileLanguage;
+  themeMode: ProfileThemeMode | null;
   notificationEnabled: boolean;
   isCompleted: boolean;
   createTime: string | null;
@@ -66,6 +69,7 @@ export interface SaveUserProfileInput {
   personalityType?: PersonalityType | null;
   teacherTags?: TeacherTag[];
   language?: ProfileLanguage;
+  themeMode?: ProfileThemeMode | null;
   notificationEnabled?: boolean;
   isCompleted?: boolean;
 }
@@ -93,6 +97,7 @@ export function createEmptyUserProfile(
     personalityType: null,
     teacherTags: [],
     language,
+    themeMode: null,
     notificationEnabled: true,
     isCompleted: false,
     createTime: null,
@@ -133,6 +138,8 @@ export function mergeUserProfile(
         ? [...input.teacherTags]
         : currentProfile.teacherTags,
     language: input.language ?? currentProfile.language,
+    themeMode:
+      input.themeMode !== undefined ? input.themeMode : currentProfile.themeMode,
     notificationEnabled:
       input.notificationEnabled !== undefined
         ? input.notificationEnabled
