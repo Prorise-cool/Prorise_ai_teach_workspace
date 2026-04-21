@@ -488,7 +488,7 @@ export function LearningCenterPage() {
 
         <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8 pt-2">
           <Link
-            to="/path"
+            to="/history?resultType=path"
             className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 hover:shadow-lg transition-shadow relative overflow-hidden block shadow-md"
           >
             <div className="absolute -right-6 -top-6 opacity-[0.08]">
