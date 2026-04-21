@@ -105,19 +105,19 @@ def _build_path_prompt(
         "5. 严格输出 JSON，不要 Markdown 代码块。\n\n"
         "JSON Schema：\n"
         "{\n"
-        '  "path_title": "...",\n'
-        '  "path_summary": "一句话总结，80 字内",\n'
+        '  "path_title": "<必填：阶段化学习路径的完整中文标题，8-30 字，必须体现目标与周期，禁止照抄占位>",\n'
+        '  "path_summary": "<必填：一句话总结，40-80 字，说明该路径的核心收益>",\n'
         '  "stages": [\n'
         "    {\n"
-        '      "title": "第一阶段：...",\n'
-        '      "goal": "该阶段目标",\n'
+        '      "title": "<必填：阶段标题，6-20 字，形如「第一阶段：基础夯实」，禁止只写省略号>",\n'
+        '      "goal": "<必填：阶段目标，20-60 字，说明该阶段期望达到的能力>",\n'
         '      "steps": [\n'
-        '        {"title": "...", "action": "...", "estimatedMinutes": 30}\n'
+        '        {"title": "<必填：步骤标题 4-15 字>", "action": "<必填：具体行动 15-60 字>", "estimatedMinutes": 30}\n'
         "      ]\n"
         "    }\n"
         "  ]\n"
         "}\n\n"
-        "仅输出 JSON。"
+        "严禁把上方的占位说明（含尖括号与省略号）原样作为字段值返回。仅输出 JSON，字段值必须是实际内容。"
     )
 
 
@@ -251,6 +251,26 @@ def _parse_questions(payload: object, expected_count: int) -> list[QuestionTuple
     return parsed[:expected_count]
 
 
+_PLACEHOLDER_RE = re.compile(r"^[\s.…<>]*$")
+
+
+def _looks_like_placeholder(value: str) -> bool:
+    """LLM 若原样回填 prompt 的占位（如 '...'、'<...>'、'第一阶段：...'），识别并拒绝。"""
+    stripped = value.strip()
+    if not stripped:
+        return True
+    # 纯省略号 / 尖括号 / 空白
+    if _PLACEHOLDER_RE.match(stripped):
+        return True
+    # 以 '...' 结尾的仍视作占位（如 '第一阶段：...'）
+    if stripped.endswith("...") or stripped.endswith("…"):
+        return True
+    # 只剩单个字符（空或 '.'）才算占位；实际中文词汇最少 2 字
+    if len(stripped) < 2:
+        return True
+    return False
+
+
 def _parse_path(payload: object) -> tuple[str, str, list[PathStageDict]]:
     if not isinstance(payload, dict):
         raise LLMGenerationError("LLM path JSON 根节点必须是对象")
@@ -259,6 +279,10 @@ def _parse_path(payload: object) -> tuple[str, str, list[PathStageDict]]:
     stages_raw = payload.get("stages")
     if not title or not summary or not isinstance(stages_raw, list) or not stages_raw:
         raise LLMGenerationError("LLM path 字段缺失")
+    if _looks_like_placeholder(title):
+        raise LLMGenerationError(f"LLM 返回了占位性 path_title: {title!r}")
+    if _looks_like_placeholder(summary):
+        raise LLMGenerationError(f"LLM 返回了占位性 path_summary: {summary!r}")
     stages: list[PathStageDict] = []
     for stage_idx, stage in enumerate(stages_raw, start=1):
         if not isinstance(stage, dict):
@@ -268,6 +292,10 @@ def _parse_path(payload: object) -> tuple[str, str, list[PathStageDict]]:
         steps_raw = stage.get("steps")
         if not stage_title or not stage_goal or not isinstance(steps_raw, list) or not steps_raw:
             raise LLMGenerationError(f"第 {stage_idx} 阶段字段缺失")
+        if _looks_like_placeholder(stage_title):
+            raise LLMGenerationError(f"第 {stage_idx} 阶段 title 是占位: {stage_title!r}")
+        if _looks_like_placeholder(stage_goal):
+            raise LLMGenerationError(f"第 {stage_idx} 阶段 goal 是占位: {stage_goal!r}")
         steps: list[dict[str, object]] = []
         for step_idx, step in enumerate(steps_raw, start=1):
             if not isinstance(step, dict):
@@ -282,6 +310,10 @@ def _parse_path(payload: object) -> tuple[str, str, list[PathStageDict]]:
             minutes = max(10, min(90, minutes))
             if not step_title or not step_action:
                 raise LLMGenerationError(f"阶段 {stage_idx} 第 {step_idx} 步字段缺失")
+            if _looks_like_placeholder(step_title) or _looks_like_placeholder(step_action):
+                raise LLMGenerationError(
+                    f"阶段 {stage_idx} 第 {step_idx} 步 title/action 是占位: {step_title!r} / {step_action!r}"
+                )
             steps.append({"title": step_title, "action": step_action, "estimatedMinutes": minutes})
         stages.append({"title": stage_title, "goal": stage_goal, "steps": steps})
     return title, summary, stages
