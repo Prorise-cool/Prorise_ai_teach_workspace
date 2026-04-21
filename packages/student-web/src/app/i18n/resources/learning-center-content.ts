@@ -25,7 +25,7 @@ export const zhCnLearningCenterResources = {
       clearSuccessMessage: '已清空当前页记录。',
     },
     page: {
-      streakLabel: '学习连击 4 天',
+      streakLabel: '开启今日学习',
       greeting: '早上好，同学！',
       greetingSubtitle: '今天也要攻克新的知识点，保持学习的节奏。',
       continueSection: '继续上次学习',
@@ -179,7 +179,7 @@ export const enUsLearningCenterResources = {
       clearSuccessMessage: 'The current page has been cleared.',
     },
     page: {
-      streakLabel: 'Streak: 4 days',
+      streakLabel: 'Start today',
       greeting: 'Good morning!',
       greetingSubtitle: 'Keep your pace and conquer a new concept today.',
       continueSection: 'Continue learning',

@@ -9,7 +9,7 @@ function sanitizePhone(value: string) {
 
 export function maskPhone(value: string | null) {
   const digitsOnly = value ? sanitizePhone(value) : null;
-  if (!digitsOnly) return '138 **** 0000';
+  if (!digitsOnly) return null;
   return `${digitsOnly.slice(0, 3)} **** ${digitsOnly.slice(-4)}`;
 }
 

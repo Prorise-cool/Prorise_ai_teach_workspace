@@ -30,7 +30,12 @@ export function SettingsSecuritySection({
               {t('userSettings.settings.phoneTitle')}
             </p>
             <p className="text-[12px] text-text-secondary dark:text-text-secondary-dark font-medium">
-              {t('userSettings.settings.phoneValue', { phone: maskPhone(phoneNumber) })}
+              {(() => {
+                const masked = maskPhone(phoneNumber);
+                return masked
+                  ? t('userSettings.settings.phoneValue', { phone: masked })
+                  : t('userSettings.settings.phoneValueUnbound');
+              })()}
             </p>
           </div>
           <button

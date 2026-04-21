@@ -23,6 +23,7 @@ import {
   Sun,
 } from 'lucide-react';
 
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { useFeedback } from '@/shared/feedback';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import { resolveLearningCoachAdapter } from '@/services/api/adapters/learning-coach-adapter';
@@ -256,12 +257,12 @@ export function LearningPathPage() {
 
       {/* ==================== 1. 悬浮全局导航 ==================== */}
       <header className="w-[94%] max-w-5xl mx-auto mt-6 sticky top-6 z-50 rounded-full flex justify-between items-center p-3 px-4 glass-nav border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
-        <a href="#" className="font-bold text-lg flex items-center gap-3">
+        <Link to="/" className="font-bold text-lg flex items-center gap-3">
           <div className="w-8 h-8 bg-text-primary dark:bg-text-primary-dark rounded-md flex items-center justify-center shadow-sm">
             <Leaf className="w-4 h-4 text-bg-light dark:text-bg-dark" />
           </div>
           <span className="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block">XiaoMai</span>
-        </a>
+        </Link>
 
         <nav className="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-surface-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
           <Link
@@ -276,31 +277,34 @@ export function LearningPathPage() {
           >
             <LayoutTemplate className="w-4 h-4" /> 主题课堂
           </Link>
-          <button
-            type="button"
-            onClick={enterLearningCenter}
+          <Link
+            to="/learning"
             className="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light text-text-primary dark:text-text-primary-dark shadow-sm btn-transition"
           >
             <BookOpen className="w-4 h-4" /> 学习中心
-          </button>
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 md:gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveView('view-generating')}
-            className="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition"
-          >
-            预览：生成态
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('view-path')}
-            className="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition"
-          >
-            预览：结果态
-          </button>
-          <div className="w-px h-5 bg-bordercolor-light dark:border-bordercolor-dark mx-1 hidden sm:block" />
+          {import.meta.env.DEV ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveView('view-generating')}
+                className="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition"
+              >
+                预览：生成态
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('view-path')}
+                className="hidden sm:block text-xs font-bold border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-3 py-1.5 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark btn-transition"
+              >
+                预览：结果态
+              </button>
+              <div className="w-px h-5 bg-bordercolor-light dark:border-bordercolor-dark mx-1 hidden sm:block" />
+            </>
+          ) : null}
 
           <button
             id="themeToggle"
@@ -310,12 +314,7 @@ export function LearningPathPage() {
           >
             {themeMode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
-          <Link
-            to="/settings"
-            className="w-8 h-8 rounded-full border border-bordercolor-light dark:border-bordercolor-dark overflow-hidden hover:ring-2 hover:border-brand btn-transition shadow-sm shrink-0"
-          >
-            <img src="https://i.pravatar.cc/150?img=68" alt="User" className="w-full h-full object-cover" />
-          </Link>
+          <UserAvatarMenu />
         </div>
       </header>
 
