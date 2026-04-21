@@ -254,7 +254,7 @@ export function ProfilePage() {
           </div>
 
           <section className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6 shadow-sm">
-            <div className="w-24 h-24 rounded-full bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center overflow-hidden relative group cursor-pointer shrink-0 shadow-sm">
+            <div className="w-24 h-24 rounded-full bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center overflow-hidden relative group cursor-pointer shrink-0 shadow-sm">
               <img
                 src={avatarUrl ?? 'https://i.pravatar.cc/150?img=68'}
                 alt="Current Avatar"
@@ -278,7 +278,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark px-5 py-2.5 rounded-xl text-[13px] font-bold hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark btn-transition shadow-sm"
+                  className="border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark px-5 py-2.5 rounded-xl text-[13px] font-bold hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark btn-transition shadow-sm"
                 >
                   {t('userSettings.profile.avatarUpload')}
                 </button>
@@ -324,7 +324,7 @@ export function ProfilePage() {
                 <label className="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">
                   {t('userSettings.profile.account')}
                 </label>
-                <div className="w-full bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark rounded-xl px-4 py-3 text-sm text-text-secondary dark:text-text-secondary-dark flex justify-between items-center cursor-not-allowed">
+                <div className="w-full bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-xl px-4 py-3 text-sm text-text-secondary dark:text-text-secondary-dark flex justify-between items-center cursor-not-allowed">
                   <span className="font-mono">{session?.user.username ?? '-'}</span>
                   <div className="flex items-center gap-1.5 text-[10px] font-bold bg-surface-light dark:bg-surface-dark px-2 py-0.5 rounded shadow-sm border border-bordercolor-light dark:border-bordercolor-dark">
                     <Lock className="w-3 h-3" /> {t('userSettings.profile.accountLocked')}
@@ -351,7 +351,7 @@ export function ProfilePage() {
               <h2 className="text-lg font-black text-text-primary dark:text-text-primary-dark">
                 {t('userSettings.profile.sectionEducation')}
               </h2>
-              <span className="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark bg-secondary dark:bg-[#2c2522] px-2 py-1 rounded">
+              <span className="text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark bg-secondary px-2 py-1 rounded">
                 {t('userSettings.profile.optional')}
               </span>
             </div>
@@ -433,7 +433,7 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={resetDraft}
-                  className="border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-6 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
+                  className="border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-bg-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-6 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
                 >
                   {t('userSettings.profile.cancel')}
                 </button>

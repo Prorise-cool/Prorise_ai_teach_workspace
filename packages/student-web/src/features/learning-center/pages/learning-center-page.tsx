@@ -261,7 +261,7 @@ export function LearningCenterPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-              <div className="w-full sm:w-48 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden">
+              <div className="w-full sm:w-48 aspect-video bg-secondary dark:bg-bg-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden">
                 <img
                   src={
                     latestRecord?.resultType === 'classroom'
@@ -282,7 +282,7 @@ export function LearningCenterPage() {
 
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark bg-secondary/50 dark:bg-[#2c2522]">
+                  <span className="text-[10px] font-bold border border-bordercolor-light dark:border-bordercolor-dark px-1.5 py-0.5 rounded text-text-secondary dark:text-text-secondary-dark bg-secondary/50 dark:bg-secondary">
                     {latestRecord ? getRecordTypeLabel(latestRecord.resultType) : t('learningCenter.page.continueFallbackType')}
                   </span>
                   <h3 className="text-xl font-black text-text-primary dark:text-text-primary-dark tracking-tight">
@@ -327,7 +327,7 @@ export function LearningCenterPage() {
               ].map(([type, label]) => (
                 <span
                   key={type}
-                  className="px-3 py-1.5 rounded-full bg-bg-light dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark"
+                  className="px-3 py-1.5 rounded-full bg-bg-light dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark"
                 >
                   {label} {countByType.get(type) ?? 0}
                 </span>
@@ -345,7 +345,7 @@ export function LearningCenterPage() {
                 className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
               >
                 <div className="flex justify-between items-start relative z-10">
-                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-[#1a1614] flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
+                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
                     <History className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
                   </div>
                   <span className="text-[10px] font-black font-mono bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
@@ -360,7 +360,7 @@ export function LearningCenterPage() {
                     {t('learningCenter.page.libraryHistorySubtitle')}
                   </p>
                 </div>
-                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-[#1a1614] rounded-full z-0" />
+                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-bg-dark rounded-full z-0" />
               </Link>
 
               <Link
@@ -368,7 +368,7 @@ export function LearningCenterPage() {
                 className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
               >
                 <div className="flex justify-between items-start relative z-10">
-                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-[#1a1614] flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
+                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
                     <Star className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
                   </div>
                   <span className="text-[10px] font-black font-mono bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
@@ -383,7 +383,7 @@ export function LearningCenterPage() {
                     {t('learningCenter.page.libraryFavoritesSubtitle')}
                   </p>
                 </div>
-                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-[#1a1614] rotate-45 rounded-2xl z-0" />
+                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-bg-dark rotate-45 rounded-2xl z-0" />
               </Link>
 
               <Link
@@ -391,10 +391,10 @@ export function LearningCenterPage() {
                 className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
               >
                 <div className="flex justify-between items-start relative z-10">
-                  <div className="w-10 h-10 rounded-xl bg-[#fff1f0] dark:bg-[#3a1c1c] flex items-center justify-center border border-error dark:border-[#bf0004]">
-                    <BookX className="w-5 h-5 text-error dark:text-[#ff4d4f]" />
+                  <div className="w-10 h-10 rounded-xl bg-error/10 dark:bg-error/20 flex items-center justify-center border border-error/30 dark:border-error/20">
+                    <BookX className="w-5 h-5 text-error" />
                   </div>
-                  <span className="text-[10px] font-black bg-error dark:bg-[#bf0004] text-white px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
+                  <span className="text-[10px] font-black bg-error text-white px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
                     {t('learningCenter.page.libraryWrongbookBadge')}
                   </span>
                 </div>
@@ -402,11 +402,11 @@ export function LearningCenterPage() {
                   <h3 className="font-black text-[16px] text-text-primary dark:text-text-primary-dark">
                     {t('learningCenter.page.libraryWrongbookTitle')}
                   </h3>
-                  <p className="text-[12px] font-bold text-error dark:text-[#ff4d4f] mt-0.5">
+                  <p className="text-[12px] font-bold text-error mt-0.5">
                     {t('learningCenter.page.libraryWrongbookSubtitle')}
                   </p>
                 </div>
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-[#fff1f0] dark:bg-[#3a1c1c] rotate-12 rounded-xl z-0" />
+                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-error/10 dark:bg-error/20 rotate-12 rounded-xl z-0" />
               </Link>
 
               <Link
@@ -414,7 +414,7 @@ export function LearningCenterPage() {
                 className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
               >
                 <div className="flex justify-between items-start relative z-10">
-                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-[#1a1614] flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
+                  <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
                     <Paperclip className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
                   </div>
                   <span className="text-[10px] font-black font-mono bg-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
@@ -429,7 +429,7 @@ export function LearningCenterPage() {
                     {t('learningCenter.page.libraryEvidenceSubtitle')}
                   </p>
                 </div>
-                <div className="absolute -bottom-6 -right-2 w-20 h-10 bg-bg-light dark:bg-[#1a1614] rounded-full z-0" />
+                <div className="absolute -bottom-6 -right-2 w-20 h-10 bg-bg-light dark:bg-bg-dark rounded-full z-0" />
               </Link>
             </div>
           </section>
@@ -457,7 +457,7 @@ export function LearningCenterPage() {
                   <Link
                     key={record.recordId}
                     to={resolveDetailTo(record)}
-                    className="flex items-center justify-between p-4 rounded-xl hover:bg-bg-light dark:hover:bg-[#1a1614] btn-transition group"
+                    className="flex items-center justify-between p-4 rounded-xl hover:bg-bg-light dark:hover:bg-bg-dark btn-transition group"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center text-text-secondary dark:text-text-secondary-dark shadow-sm">
@@ -499,7 +499,7 @@ export function LearningCenterPage() {
                 <h2 className="text-xs font-bold uppercase tracking-widest text-surface-light/70 dark:text-text-secondary-dark">
                   Current Path
                 </h2>
-                <span className="text-[10px] font-bold bg-brand text-[#3b1701] px-2 py-0.5 rounded shadow-sm">
+                <span className="text-[10px] font-bold bg-brand text-primary-foreground px-2 py-0.5 rounded shadow-sm">
                   Target
                 </span>
               </div>
@@ -512,7 +512,7 @@ export function LearningCenterPage() {
                 <span>{t('learningCenter.page.pathProgressLabel')}</span>
                 <span>25% (1/4)</span>
               </div>
-              <div className="w-full h-1.5 bg-[#5e381b] dark:bg-[#110e0d] rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-text-secondary dark:bg-bg-dark rounded-full overflow-hidden">
                 <div className="h-full bg-brand rounded-full w-[25%]" />
               </div>
             </div>
@@ -531,7 +531,7 @@ export function LearningCenterPage() {
                     cy="50"
                     r="42"
                     fill="none"
-                    className="stroke-bg-light dark:stroke-[#1a1614]"
+                    className="stroke-bg-light dark:stroke-bg-dark"
                     strokeWidth="8"
                     strokeLinecap="round"
                   />
@@ -568,22 +568,22 @@ export function LearningCenterPage() {
             </p>
             <Link
               to="/history?resultType=wrongbook"
-              className="w-full border border-bordercolor-light dark:border-bordercolor-dark bg-bg-light dark:bg-[#1a1614] text-[13px] font-bold py-2.5 rounded-xl hover:border-text-primary dark:hover:border-text-primary-dark transition-colors text-text-primary dark:text-text-primary-dark shadow-sm flex items-center justify-center"
+              className="w-full border border-bordercolor-light dark:border-bordercolor-dark bg-bg-light dark:bg-bg-dark text-[13px] font-bold py-2.5 rounded-xl hover:border-text-primary dark:hover:border-text-primary-dark transition-colors text-text-primary dark:text-text-primary-dark shadow-sm flex items-center justify-center"
             >
               {t('learningCenter.page.quizHealthCta')}
             </Link>
           </section>
 
-          <section className="view-enter stagger-3 bg-[#fdf6e3] dark:bg-[#241e0f] border border-[#f5c547] dark:border-[#e6b841] rounded-2xl p-6 md:p-8 shadow-sm">
+          <section className="view-enter stagger-3 bg-brand/10 dark:bg-brand/10 border border-brand dark:border-brand-dark rounded-2xl p-6 md:p-8 shadow-sm">
             <h2 className="text-xs font-bold uppercase tracking-widest text-text-secondary dark:text-text-secondary-dark mb-5 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-brand-dark dark:text-brand" /> {t('learningCenter.page.recommendTitle')}
             </h2>
             <div className="space-y-3">
               <Link
                 to="/history?resultType=recommendation"
-                className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4 rounded-xl hover:border-[#f5c547] dark:hover:border-[#e6b841] btn-transition block shadow-sm"
+                className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark p-4 rounded-xl hover:border-brand dark:hover:border-brand-dark btn-transition block shadow-sm"
               >
-                <span className="text-[10px] font-bold bg-[#f5c547] dark:bg-[#e6b841] text-[#3b1701] px-1.5 py-0.5 rounded-sm mb-2 inline-block shadow-sm">
+                <span className="text-[10px] font-bold bg-brand dark:bg-brand-dark text-primary-foreground px-1.5 py-0.5 rounded-sm mb-2 inline-block shadow-sm">
                   {t('learningCenter.page.recommendBadge1')}
                 </span>
                 <h3 className="text-[14px] font-bold text-text-primary dark:text-text-primary-dark leading-snug line-clamp-2">
