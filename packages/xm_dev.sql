@@ -273,6 +273,7 @@ CREATE TABLE `xm_landing_lead` (
 DROP TABLE IF EXISTS `xm_learning_favorite`;
 CREATE TABLE `xm_learning_favorite` (
   `favorite_id` bigint NOT NULL AUTO_INCREMENT COMMENT '收藏主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `result_type` varchar(32) NOT NULL COMMENT '结果类型',
   `source_table` varchar(64) NOT NULL COMMENT '来源宿主表',
@@ -336,6 +337,7 @@ CREATE TABLE `xm_learning_favorite_folder_assignment` (
 DROP TABLE IF EXISTS `xm_learning_path`;
 CREATE TABLE `xm_learning_path` (
   `path_id` bigint NOT NULL COMMENT '路径主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `record_id` bigint NOT NULL COMMENT '关联结果主键',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `result_type` varchar(32) NOT NULL DEFAULT 'path' COMMENT '结果类型',
@@ -367,6 +369,7 @@ CREATE TABLE `xm_learning_path` (
 DROP TABLE IF EXISTS `xm_learning_recommendation`;
 CREATE TABLE `xm_learning_recommendation` (
   `recommendation_id` bigint NOT NULL COMMENT '推荐主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `record_id` bigint NOT NULL COMMENT '关联结果主键',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `result_type` varchar(32) NOT NULL DEFAULT 'recommendation' COMMENT '结果类型',
@@ -397,6 +400,7 @@ CREATE TABLE `xm_learning_recommendation` (
 DROP TABLE IF EXISTS `xm_learning_record`;
 CREATE TABLE `xm_learning_record` (
   `record_id` bigint NOT NULL AUTO_INCREMENT COMMENT '学习记录主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `result_type` varchar(32) NOT NULL COMMENT '结果类型 checkpoint/quiz/wrongbook/recommendation/path',
   `display_title` varchar(255) DEFAULT NULL COMMENT '聚合卡片标题',
@@ -431,6 +435,7 @@ CREATE TABLE `xm_learning_record` (
 DROP TABLE IF EXISTS `xm_learning_wrongbook`;
 CREATE TABLE `xm_learning_wrongbook` (
   `wrongbook_id` bigint NOT NULL COMMENT '错题本主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `record_id` bigint NOT NULL COMMENT '关联结果主键',
   `quiz_result_id` bigint DEFAULT NULL COMMENT '关联测验结果主键',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
@@ -462,6 +467,7 @@ CREATE TABLE `xm_learning_wrongbook` (
 DROP TABLE IF EXISTS `xm_quiz_result`;
 CREATE TABLE `xm_quiz_result` (
   `quiz_result_id` bigint NOT NULL COMMENT '测验结果主键',
+  `tenant_id` varchar(20) NOT NULL DEFAULT '000000' COMMENT '租户编号',
   `record_id` bigint NOT NULL COMMENT '关联结果主键',
   `user_id` varchar(64) NOT NULL COMMENT '用户ID',
   `source_type` varchar(32) NOT NULL COMMENT '来源类型',
