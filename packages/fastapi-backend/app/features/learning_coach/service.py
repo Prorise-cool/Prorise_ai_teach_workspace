@@ -63,8 +63,11 @@ def _hash_seed(*parts: str) -> int:
     return int.from_bytes(digest[:8], byteorder="big", signed=False)
 
 
-def _normalize_source_type(source_type: LearningCoachSourceType) -> LearningSourceType:
-    return LearningSourceType(source_type.value)
+def _normalize_source_type(source_type: LearningCoachSourceType | str) -> LearningSourceType:
+    # LearningCoachSource 配置了 use_enum_values=True，model_validate 出来就是 str；
+    # 来自路由直接构造时则是 enum，这里做兼容归一化。
+    raw_value = source_type.value if isinstance(source_type, LearningCoachSourceType) else source_type
+    return LearningSourceType(raw_value)
 
 
 @dataclass(frozen=True)
