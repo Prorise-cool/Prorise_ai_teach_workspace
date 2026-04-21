@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/learning-coach-entry.schema.json",
+  "title": "LearningCoachEntryPayload",
+  "description": "Learning Coach 会话后入口 payload（Story 8.1 冻结）。",
+  "type": "object",
+  "required": ["source", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "source": { "$ref": "learning-source.schema.json" },
+    "capabilities": {
+      "type": "object",
+      "required": ["checkpoint", "quiz", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint": {
+          "type": "object",
+          "required": ["enabled", "questionCount"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "questionCount": { "type": "integer", "minimum": 1, "maximum": 3 }
+          }
+        },
+        "quiz": {
+          "type": "object",
+          "required": ["enabled", "questionCount"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "questionCount": { "type": "integer", "minimum": 1, "maximum": 50 }
+          }
+        },
+        "path": {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "knowledgePoints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "可选的知识点摘要，供页面展示与生成提示。"
+    }
+  }
+}
+

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { THEME_STORAGE_KEY } from '@/shared/constants';
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 const THEME_MODE_SYNC_EVENT = 'xiaomai-theme-mode-sync';
 
@@ -17,7 +17,7 @@ const THEME_MODE_SYNC_EVENT = 'xiaomai-theme-mode-sync';
  * @returns 是否为 `ThemeMode`。
  */
 function isThemeMode(value: unknown): value is ThemeMode {
-  return value === 'light' || value === 'dark';
+  return value === 'light' || value === 'dark' || value === 'system';
 }
 
 /**
@@ -39,14 +39,26 @@ function readThemeMode(): ThemeMode {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
+function resolveSystemTheme(): Exclude<ThemeMode, 'system'> {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 /**
  * 持久化主题模式，并向同页其他消费者广播同步事件。
  *
  * @param themeMode - 待写入的主题模式。
  */
 function persistThemeMode(themeMode: ThemeMode) {
-  document.documentElement.dataset.theme = themeMode;
-  document.documentElement.style.colorScheme = themeMode;
+  const resolvedThemeMode = themeMode === 'system' ? resolveSystemTheme() : themeMode;
+
+  document.documentElement.dataset.theme = resolvedThemeMode;
+  document.documentElement.style.colorScheme = resolvedThemeMode;
+  document.documentElement.classList.toggle('dark', resolvedThemeMode === 'dark');
+  document.documentElement.classList.toggle('light', resolvedThemeMode !== 'dark');
   window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
   window.dispatchEvent(
     new CustomEvent<ThemeMode>(THEME_MODE_SYNC_EVENT, {
@@ -61,7 +73,7 @@ function persistThemeMode(themeMode: ThemeMode) {
  * @returns 当前主题模式与切换方法。
  */
 export function useThemeMode() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(readThemeMode);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(readThemeMode);
 
   useEffect(() => {
     persistThemeMode(themeMode);
@@ -73,7 +85,7 @@ export function useThemeMode() {
         const syncedThemeMode = event.detail;
 
         if (isThemeMode(syncedThemeMode)) {
-          setThemeMode(currentTheme =>
+          setThemeModeState(currentTheme =>
             currentTheme === syncedThemeMode
               ? currentTheme
               : syncedThemeMode
@@ -84,7 +96,7 @@ export function useThemeMode() {
 
       const nextThemeMode = readThemeMode();
 
-      setThemeMode(currentTheme =>
+      setThemeModeState(currentTheme =>
         currentTheme === nextThemeMode ? currentTheme : nextThemeMode
       );
     }
@@ -104,14 +116,43 @@ export function useThemeMode() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (themeMode !== 'system') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+
+    if (!mediaQuery) {
+      return;
+    }
+
+    const handleChange = () => {
+      persistThemeMode('system');
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, [themeMode]);
+
+  const setThemeMode = useCallback((nextThemeMode: ThemeMode) => {
+    setThemeModeState(nextThemeMode);
+  }, []);
+
   const toggleThemeMode = useCallback(() => {
-    setThemeMode(currentTheme =>
-      currentTheme === 'dark' ? 'light' : 'dark'
-    );
+    setThemeModeState(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
   }, []);
 
   return {
     themeMode,
+    setThemeMode,
     toggleThemeMode
   };
 }

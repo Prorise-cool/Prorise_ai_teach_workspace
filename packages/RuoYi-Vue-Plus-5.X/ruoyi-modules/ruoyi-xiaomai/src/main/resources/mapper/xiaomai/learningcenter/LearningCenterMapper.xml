@@ -4,6 +4,15 @@
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.xiaomai.learningcenter.mapper.LearningCenterMapper">
 
+    <!--
+        user_id 下推：每个 UNION ALL 子查询在源表扫描阶段就按当前登录用户过滤，
+        避免先 LEFT JOIN + UNION 再在外层按 user_id 过滤导致的 9 表全量聚合。
+
+        同时兼容两个调用入口：
+        - selectAggregateRecords / countAggregateRecords 传 `query.userId`
+        - selectSourceRecord                             传 `userId`
+    -->
+
     <sql id="aggregate_union_raw">
         SELECT
             CONCAT('xm_video_task:', vt.task_id) AS record_id,
@@ -31,6 +40,14 @@
             AND fav.source_table = 'xm_video_task'
             AND fav.source_result_id = vt.task_id
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND vt.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND vt.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -60,6 +77,14 @@
             AND fav.source_table = 'xm_classroom_session'
             AND fav.source_result_id = cs.task_id
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND cs.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND cs.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -89,6 +114,14 @@
             AND fav.source_table = 'xm_companion_turn'
             AND fav.source_result_id = ct.turn_id
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND ct.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND ct.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -118,6 +151,14 @@
             AND fav.source_table = 'xm_knowledge_chat_log'
             AND fav.source_result_id = kg.chat_log_id
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND kg.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND kg.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -153,8 +194,16 @@
             AND fav.source_table = 'xm_learning_record'
             AND fav.source_result_id = COALESCE(lr.source_result_id, CAST(lr.record_id AS CHAR))
             AND fav.active_flag = '1'
-        WHERE lr.source_table = 'xm_learning_record'
-          AND lr.result_type = 'checkpoint'
+        <where>
+            AND lr.source_table = 'xm_learning_record'
+            AND lr.result_type = 'checkpoint'
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND lr.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND lr.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -184,6 +233,14 @@
             AND fav.source_table = 'xm_quiz_result'
             AND fav.source_result_id = COALESCE(qr.source_result_id, CAST(qr.quiz_result_id AS CHAR))
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND qr.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND qr.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -213,6 +270,14 @@
             AND fav.source_table = 'xm_learning_wrongbook'
             AND fav.source_result_id = COALESCE(wb.source_result_id, CAST(wb.wrongbook_id AS CHAR))
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND wb.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND wb.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -242,6 +307,14 @@
             AND fav.source_table = 'xm_learning_recommendation'
             AND fav.source_result_id = COALESCE(lr2.source_result_id, CAST(lr2.recommendation_id AS CHAR))
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND lr2.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND lr2.user_id = #{userId}
+            </if>
+        </where>
 
         UNION ALL
 
@@ -271,10 +344,22 @@
             AND fav.source_table = 'xm_learning_path'
             AND fav.source_result_id = COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR))
             AND fav.active_flag = '1'
+        <where>
+            <if test="query != null and query.userId != null and query.userId != ''">
+                AND lp.user_id = #{query.userId}
+            </if>
+            <if test="(query == null or query.userId == null or query.userId == '') and userId != null and userId != ''">
+                AND lp.user_id = #{userId}
+            </if>
+        </where>
     </sql>
 
     <sql id="aggregate_where">
         <where>
+            <!--
+                user_id 已经在 aggregate_union_raw 的每个子查询里下推过滤，
+                外层保留一个冗余条件让 SQL 意图仍然可读，MySQL optimizer 会把它消掉。
+            -->
             <if test="query != null and query.userId != null and query.userId != ''">
                 AND agg.user_id = #{query.userId}
             </if>

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/checkpoint-submit-request.schema.json",
+  "title": "CheckpointSubmitRequest",
+  "description": "Checkpoint 提交请求（Story 8.3 冻结）。",
+  "type": "object",
+  "required": ["checkpointId", "answers"],
+  "additionalProperties": false,
+  "properties": {
+    "checkpointId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "answers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["questionId", "optionId"],
+        "additionalProperties": false,
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "optionId": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    }
+  }
+}
+

@@ -5,6 +5,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./theme.css";
+@import "./surface-utils.css";
 
 @source "../../node_modules/streamdown/dist/*.js";
 
@@ -28,15 +29,45 @@
   --color-ring: var(--xm-color-ring);
   --color-destructive: var(--xm-color-error);
   --color-destructive-foreground: #ffffff;
+  --color-error: var(--xm-color-error);
   --color-success: var(--xm-color-success);
   --color-warning: var(--xm-color-warning);
   --color-info: var(--xm-color-info);
+
+  /**
+   * 以下为 Ux 高保真 HTML 使用的别名 token（Epic 8/9）。
+   * 仅做变量映射，让设计稿里的 className 可以被 Tailwind v4 识别。
+   */
+  --color-brand: var(--xm-color-brand-400);
+  --color-brand-dark: var(--xm-color-brand-500);
+  --color-decorative: var(--xm-color-text-primary);
+  --color-bg-light: var(--xm-color-background);
+  --color-bg-dark: var(--xm-color-background);
+  --color-surface-light: var(--xm-color-surface);
+  --color-surface-dark: var(--xm-color-surface);
+  --color-text-primary: var(--xm-color-text-primary);
+  --color-text-primary-dark: var(--xm-color-text-primary);
+  --color-text-secondary: var(--xm-color-text-secondary);
+  --color-text-secondary-dark: var(--xm-color-text-secondary);
+  --color-bordercolor-light: var(--xm-color-border);
+  --color-bordercolor-dark: var(--xm-color-border);
+  --color-agent-efficient: var(--xm-color-agent-efficient);
+  --color-agent-humorous: var(--xm-color-agent-humorous);
+  --color-agent-patient: var(--xm-color-agent-patient);
+  --color-agent-serious: var(--xm-color-agent-serious);
+  --color-success-dark: var(--xm-color-success);
+  --color-warning-dark: var(--xm-color-warning);
+  --color-error-dark: var(--xm-color-error);
   --font-sans: var(--xm-font-family-sans);
   --font-mono: var(--xm-font-family-mono);
   --shadow-sm: var(--xm-shadow-sm);
   --shadow-md: var(--xm-shadow-md);
   --shadow-lg: var(--xm-shadow-lg);
   --shadow-xl: var(--xm-shadow-xl);
+  --shadow-dock: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-island: 0 10px 30px -5px rgba(0, 0, 0, 0.2);
+  --shadow-inner-soft: inset 0 2px 10px rgba(0, 0, 0, 0.03);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
   --radius-sm: var(--xm-radius-sm);
   --radius-md: var(--xm-radius-md);
   --radius-lg: var(--xm-radius-lg);
@@ -141,6 +172,14 @@ body {
 }
 
 @layer utilities {
+  .w-4\\.5 {
+    width: 1.125rem;
+  }
+
+  .h-4\\.5 {
+    height: 1.125rem;
+  }
+
   .animate-audio-bar-1 {
     animation: audio-bounce 1s ease-in-out infinite;
     animation-delay: 0s;

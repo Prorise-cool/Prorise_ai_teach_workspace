@@ -36,6 +36,8 @@ export interface ResultHeaderProps {
   readOnly?: boolean;
   /** 返回目标路径；不传则走 history.back()。 */
   backTo?: string | null;
+  /** Learning Coach 会话后入口路径（Epic 8）。 */
+  learningCoachTo?: string | null;
 }
 
 /**
@@ -55,6 +57,7 @@ export function ResultHeader({
   className,
   readOnly = false,
   backTo = '/video/input',
+  learningCoachTo = null,
 }: ResultHeaderProps) {
   const { t } = useAppTranslation();
   const navigate = useNavigate();
@@ -74,6 +77,12 @@ export function ResultHeader({
     }
   }, [navigate, taskId]);
 
+  const handleLearningCoach = useCallback(() => {
+    if (learningCoachTo) {
+      void navigate(learningCoachTo);
+    }
+  }, [learningCoachTo, navigate]);
+
   return (
     <header className={cn('xm-result-header', className)}>
       <div className="xm-result-header__left">
@@ -90,6 +99,15 @@ export function ResultHeader({
       </div>
 
       <div className="xm-result-header__right">
+        {!readOnly && learningCoachTo ? (
+          <button
+            className="xm-result-header__action-btn xm-result-header__action-btn--outline"
+            onClick={handleLearningCoach}
+          >
+            {t('video.result.learningCoachAction')}
+          </button>
+        ) : null}
+
         {/* 发布状态胶囊 — xl 以上显示 */}
         <div className="xm-result-header__publish-capsule">
           <span className="xm-result-header__status-badge">

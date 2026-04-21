@@ -45,6 +45,26 @@ public class XmUserProfile extends BaseEntity {
     private String bio;
 
     /**
+     * 学校
+     */
+    private String schoolName;
+
+    /**
+     * 专业
+     */
+    private String majorName;
+
+    /**
+     * 身份
+     */
+    private String identityLabel;
+
+    /**
+     * 年级
+     */
+    private String gradeLabel;
+
+    /**
      * 性格类型
      */
     private String personalityType;
@@ -58,6 +78,16 @@ public class XmUserProfile extends BaseEntity {
      * 语言偏好
      */
     private String language;
+
+    /**
+     * 主题模式 light/dark/system
+     */
+    private String themeMode;
+
+    /**
+     * 站内通知偏好（1-开启 0-关闭）
+     */
+    private Long notificationEnabled;
 
     /**
      * 是否完成配置

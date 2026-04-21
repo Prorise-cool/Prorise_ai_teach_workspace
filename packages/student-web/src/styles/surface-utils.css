@@ -1,0 +1,537 @@
+/**
+ * 文件说明：从 Ux 高保真 HTML 中抽取的通用交互与背景工具类（Epic 8/9）。
+ * 仅承载设计稿已存在的 className，不在此自由发挥新增视觉体系。
+ */
+
+/* -------------------- Background grid -------------------- */
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(59, 23, 1, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 23, 1, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at top, black 50%, transparent 90%);
+  -webkit-mask-image: radial-gradient(ellipse at top, black 50%, transparent 90%);
+}
+
+.dark .bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(245, 237, 225, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(245, 237, 225, 0.02) 1px, transparent 1px);
+}
+
+/* Dashboard / User settings pages use a denser grid pattern (12/13/14/15/16). */
+.surface-dashboard .bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(59, 23, 1, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 23, 1, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 30%, transparent 100%);
+}
+
+.dark .surface-dashboard .bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, rgba(245, 237, 225, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(245, 237, 225, 0.03) 1px, transparent 1px);
+}
+
+/* -------------------- Scrollbars -------------------- */
+
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #e6dcc8;
+  border-radius: 4px;
+}
+
+.dark .custom-scroll::-webkit-scrollbar-thumb {
+  background: #302824;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* -------------------- Transitions -------------------- */
+
+.btn-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-scale {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.btn-hover-scale:active {
+  transform: scale(0.97);
+}
+
+/* -------------------- Card hover (Learning Center) -------------------- */
+
+.hover-card-soft {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-card-soft:hover {
+  border-color: var(--tw-border-opacity);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dark .hover-card-soft:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* -------------------- Dock interactions -------------------- */
+
+.dock-container {
+  overflow: visible !important;
+}
+
+.dock-icon-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.dock-icon {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s ease;
+  transform-origin: bottom center;
+}
+
+.dock-icon-wrapper:hover .dock-icon {
+  transform: translateY(-3px);
+}
+
+.dock-tooltip {
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+.dock-icon-wrapper:hover .dock-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* -------------------- Animations -------------------- */
+
+@keyframes breath {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 197, 71, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 197, 71, 0);
+  }
+}
+
+.bot-breath {
+  animation: breath 3s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 供 quiz 页面平滑切题使用 */
+.question-transition {
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 供学习中心 / 路径等页面入场动画使用 */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-enter {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+.view-hidden {
+  display: none !important;
+}
+
+.stagger-1 {
+  animation-delay: 0.05s;
+}
+
+.stagger-2 {
+  animation-delay: 0.1s;
+}
+
+.stagger-3 {
+  animation-delay: 0.15s;
+}
+
+.stagger-4 {
+  animation-delay: 0.2s;
+}
+
+/* -------------------- Form controls (Profile / Settings) -------------------- */
+
+.form-input {
+  width: 100%;
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #f5c547;
+  box-shadow: 0 0 0 3px rgba(245, 197, 71, 0.15);
+}
+
+.dark .form-input:focus {
+  border-color: #e6b841;
+  box-shadow: 0 0 0 3px rgba(230, 184, 65, 0.15);
+}
+
+/* Solid toggle switch (16-设置页/01-settings.html) */
+.toggle-checkbox:checked + .toggle-label {
+  background-color: var(--color-text-primary);
+}
+
+.dark .toggle-checkbox:checked + .toggle-label {
+  background-color: var(--color-text-primary-dark);
+}
+
+.toggle-checkbox:checked + .toggle-label:after {
+  transform: translateX(100%);
+  border-color: white;
+}
+
+.toggle-label {
+  width: 44px;
+  height: 24px;
+  background-color: var(--color-secondary);
+  border: 1px solid var(--color-bordercolor-light);
+  border-radius: 9999px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dark .toggle-label {
+  background-color: #1a1614;
+  border-color: var(--color-bordercolor-dark);
+}
+
+.toggle-label:after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background-color: var(--color-surface-light);
+  border: 1px solid var(--color-bordercolor-light);
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark .toggle-label:after {
+  background-color: var(--color-surface-dark);
+  border-color: transparent;
+}
+
+/* -------------------- Learning Path helpers -------------------- */
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.dark .glass-nav {
+  background: rgba(31, 26, 24, 0.85);
+}
+
+.timeline-dash {
+  background-image: linear-gradient(to bottom, currentColor 50%, transparent 50%);
+  background-size: 2px 10px;
+}
+
+/* Loader / progress (11-学习路径页/01-path.html) */
+
+html.light {
+  --loader-text: #3b1701;
+  --loader-spotlight-main: rgba(59, 23, 1, 0.9);
+  --loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(230, 220, 200, 0.5);
+}
+
+html.dark {
+  --loader-text: #f5ede1;
+  --loader-spotlight-main: rgba(245, 237, 225, 0.9);
+  --loader-spotlight-sec: rgba(245, 197, 71, 0.8);
+  --glass-bg: rgba(42, 36, 32, 0.4);
+  --glass-border: rgba(61, 54, 48, 0.5);
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+.log-item {
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  background-color: #f5c547;
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 6px;
+  border-radius: 2px;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.tip-transition {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.tip-hidden {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.tip-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.loader-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.75rem;
+  font-weight: 900;
+  user-select: none;
+  color: var(--loader-text);
+  letter-spacing: 0.1em;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  transition: color 0.5s ease;
+}
+
+.loader {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: transparent;
+  mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+  -webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+}
+
+.loader::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, var(--loader-spotlight-main) 0%, transparent 50%),
+    radial-gradient(circle at 45% 45%, var(--loader-spotlight-sec) 0%, transparent 45%);
+  mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+  animation: transform-animation 2.2s infinite alternate ease-in-out, opacity-animation 4.2s infinite;
+}
+
+.loader-letter {
+  position: relative;
+  display: inline-block;
+  opacity: 0.15;
+  animation: loader-letter-anim 4.2s infinite linear;
+  z-index: 2;
+}
+
+.loader-letter:nth-child(1) {
+  animation-delay: 0s;
+}
+.loader-letter:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.loader-letter:nth-child(3) {
+  animation-delay: 0.5s;
+}
+.loader-letter:nth-child(4) {
+  animation-delay: 0.75s;
+}
+.loader-letter:nth-child(5) {
+  animation-delay: 1s;
+}
+.loader-letter:nth-child(6) {
+  animation-delay: 1.25s;
+}
+.loader-letter:nth-child(7) {
+  animation-delay: 1.5s;
+}
+.loader-letter:nth-child(8) {
+  animation-delay: 1.75s;
+}
+.loader-letter:nth-child(9) {
+  animation-delay: 2s;
+}
+.loader-letter:nth-child(10) {
+  animation-delay: 2.25s;
+}
+
+@keyframes transform-animation {
+  0% {
+    transform: translateX(-40%) translateY(-40%) scale(1.8);
+  }
+  100% {
+    transform: translateX(40%) translateY(40%) scale(2.2);
+  }
+}
+
+@keyframes opacity-animation {
+  0% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes loader-letter-anim {
+  0% {
+    opacity: 0.15;
+    filter: blur(0);
+  }
+  6% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1.03) translateY(-2px);
+  }
+  22% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0.15;
+    filter: blur(2px);
+  }
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background-color: #f5c547;
+  background-image: linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.4) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.4) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 32px 32px;
+  animation: progress-pan 1.5s linear infinite;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: 0 0 16px rgba(245, 197, 71, 0.7);
+  opacity: 0.7;
+}
+
+@keyframes progress-pan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 32px 0;
+  }
+}
+
+/* Select reset (14-历史记录页/01-history.html etc.) */
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+}

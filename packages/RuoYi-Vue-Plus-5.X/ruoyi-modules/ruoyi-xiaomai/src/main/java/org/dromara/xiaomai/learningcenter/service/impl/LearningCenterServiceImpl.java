@@ -1,9 +1,8 @@
 package org.dromara.xiaomai.learningcenter.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
-import org.dromara.common.core.exception.ServiceException;
-import cn.hutool.core.bean.BeanUtil;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
@@ -69,17 +68,17 @@ public class LearningCenterServiceImpl implements ILearningCenterService {
     private TableDataInfo<LearningCenterRecordVo> queryPage(LearningCenterQueryBo bo, PageQuery pageQuery) {
         PageQuery query = pageQuery == null ? new PageQuery(PageQuery.DEFAULT_PAGE_SIZE, PageQuery.DEFAULT_PAGE_NUM) : pageQuery;
         Page<LearningCenterRecordVo> page = query.build();
-        long total = baseMapper.countAggregateRecords(bo);
+        long total = baseMapper.countAggregateRecords(bo, null);
         if (total <= 0) {
             return new TableDataInfo<>(List.of(), 0);
         }
         long offset = (page.getCurrent() - 1) * page.getSize();
-        List<LearningCenterRecordVo> rows = baseMapper.selectAggregateRecords(bo, offset, page.getSize());
+        List<LearningCenterRecordVo> rows = baseMapper.selectAggregateRecords(bo, null, offset, page.getSize());
         return new TableDataInfo<>(rows, total);
     }
 
     private LearningCenterRecordVo requireSourceRecord(LearningCenterActionBo bo) {
-        LearningCenterRecordVo record = baseMapper.selectSourceRecord(bo.getUserId(), bo.getSourceTable(), bo.getSourceResultId());
+        LearningCenterRecordVo record = baseMapper.selectSourceRecord(bo.getUserId(), bo.getSourceTable(), bo.getSourceResultId(), null);
         if (record == null) {
             throw new ServiceException("学习记录不存在或不属于当前用户");
         }

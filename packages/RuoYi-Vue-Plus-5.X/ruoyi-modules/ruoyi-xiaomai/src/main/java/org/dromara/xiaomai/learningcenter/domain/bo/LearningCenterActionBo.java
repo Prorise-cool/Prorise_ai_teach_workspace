@@ -17,7 +17,6 @@ public class LearningCenterActionBo implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @NotBlank(message = "用户ID不能为空")
     private String userId;
 
     @NotBlank(message = "来源宿主表不能为空")

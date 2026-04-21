@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/learning-question.schema.json",
+  "title": "LearningCoachQuestion",
+  "description": "Learning Coach 单选题结构（Story 8.1 冻结，MVP 仅支持单选）。",
+  "type": "object",
+  "required": ["questionId", "stem", "options"],
+  "additionalProperties": false,
+  "properties": {
+    "questionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "题目主键。"
+    },
+    "questionType": {
+      "type": "string",
+      "enum": ["single_choice"],
+      "default": "single_choice",
+      "description": "题目类型。MVP 仅支持单选题。"
+    },
+    "tag": {
+      "type": ["string", "null"],
+      "maxLength": 60,
+      "description": "可选考点标签（如：复合函数求导）。"
+    },
+    "stem": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "题干文本。"
+    },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["optionId", "label", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "optionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "选项 ID。"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8,
+            "description": "选项显示标记（如 A/B/C/D）。"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "选项文本。"
+          }
+        }
+      },
+      "description": "选项列表。"
+    }
+  }
+}
+

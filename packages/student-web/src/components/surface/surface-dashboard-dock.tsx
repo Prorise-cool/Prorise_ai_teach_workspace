@@ -1,0 +1,210 @@
+/**
+ * 文件说明：学习中心 / 个人域页面 Dock（从 Ux 成品页抽取，Epic 9）。
+ * 头像与 `UserAvatarMenu` 保持同一规则：直接读 auth session，
+ * 加载失败或缺图时降级为昵称首字母，避免回到 pravatar 外网占位。
+ */
+import { BookOpen, Globe, LayoutTemplate, Moon, PlaySquare, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+
+import { appI18n } from '@/app/i18n';
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import { cn } from '@/lib/utils';
+import { useAuthSessionStore } from '@/stores/auth-session-store';
+
+export type SurfaceDashboardDockActive = 'learning' | 'settings';
+
+export type SurfaceDashboardDockProps = {
+  active: SurfaceDashboardDockActive;
+  videoTo?: string | null;
+  classroomTo?: string | null;
+  learningCenterTo?: string | null;
+  settingsTo?: string | null;
+};
+
+export function SurfaceDashboardDock({
+  active,
+  videoTo = '/video/input',
+  classroomTo = '/classroom/input',
+  learningCenterTo = '/learning',
+  settingsTo = '/profile',
+}: SurfaceDashboardDockProps) {
+  const { t } = useAppTranslation();
+  const { toggleThemeMode } = useThemeMode();
+  const session = useAuthSessionStore((state) => state.session);
+  const [avatarErrored, setAvatarErrored] = useState(false);
+
+  const avatarUrl = session?.user.avatarUrl ?? null;
+  const displayName =
+    session?.user.nickname?.trim() ||
+    session?.user.username?.trim() ||
+    '';
+  const avatarInitial = (displayName.slice(0, 1) || '?').toUpperCase();
+  const showAvatarImage = Boolean(avatarUrl) && !avatarErrored;
+
+  const localeLabel = appI18n.resolvedLanguage === 'en-US' ? 'EN / 中' : '中 / EN';
+
+  const toggleLocale = () => {
+    const nextLocale = appI18n.resolvedLanguage === 'zh-CN' ? 'en-US' : 'zh-CN';
+    void appI18n.changeLanguage(nextLocale);
+  };
+
+  const learningActive = active === 'learning';
+  const settingsActive = active === 'settings';
+
+  return (
+    <div className="fixed bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+      <div className="pointer-events-auto bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2 rounded-[24px] shadow-dock flex items-end gap-1 dock-container">
+        <div className="dock-icon-wrapper w-10">
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {t('learningCenter.dock.video')}
+          </div>
+          {videoTo ? (
+            <Link
+              to={videoTo}
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+            >
+              <PlaySquare className="w-5 h-5" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+            >
+              <PlaySquare className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="dock-icon-wrapper w-10">
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {t('learningCenter.dock.classroom')}
+          </div>
+          {classroomTo ? (
+            <Link
+              to={classroomTo}
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+            >
+              <LayoutTemplate className="w-5 h-5" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+            >
+              <LayoutTemplate className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="dock-icon-wrapper w-10 relative">
+          {learningActive ? (
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-text-primary dark:bg-text-primary-dark" />
+          ) : null}
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {t('learningCenter.dock.learning')}
+          </div>
+          {learningCenterTo ? (
+            <Link
+              to={learningCenterTo}
+              className={
+                learningActive
+                  ? 'dock-icon w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm'
+                  : 'dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition'
+              }
+            >
+              <BookOpen className="w-5 h-5" />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className={
+                learningActive
+                  ? 'dock-icon w-10 h-10 rounded-[12px] bg-text-primary dark:bg-text-primary-dark flex items-center justify-center text-surface-light dark:text-surface-dark shadow-sm'
+                  : 'dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition'
+              }
+            >
+              <BookOpen className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        <div className="w-px h-8 bg-bordercolor-light dark:bg-bordercolor-dark mx-1 self-center mb-1" />
+
+        <div className="dock-icon-wrapper w-10">
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {localeLabel}
+          </div>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+          >
+            <Globe className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="dock-icon-wrapper w-10">
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {t('learningCenter.dock.theme')}
+          </div>
+          <button
+            type="button"
+            onClick={toggleThemeMode}
+            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
+          >
+            <Sun className="w-5 h-5 hidden dark:block" />
+            <Moon className="w-5 h-5 block dark:hidden" />
+          </button>
+        </div>
+
+        <div className="dock-icon-wrapper w-10 relative">
+          {settingsActive ? (
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-text-primary dark:bg-text-primary-dark" />
+          ) : null}
+          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
+            {t('learningCenter.dock.settings')}
+          </div>
+          {(() => {
+            const containerClass = cn(
+              'w-10 h-10 rounded-[12px] overflow-hidden shadow-sm btn-transition',
+              settingsActive
+                ? 'bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark p-0.5 flex items-center justify-center'
+                : 'border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark',
+            );
+            const imgClass = cn(
+              'w-full h-full object-cover',
+              settingsActive ? 'rounded-[10px] opacity-90' : null,
+            );
+            const initialClass = cn(
+              'flex w-full h-full items-center justify-center font-bold text-sm select-none',
+              settingsActive
+                ? 'text-surface-light dark:text-surface-dark'
+                : 'bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark',
+            );
+            const inner = showAvatarImage ? (
+              <img
+                src={avatarUrl ?? ''}
+                alt={displayName || 'User'}
+                className={imgClass}
+                onError={() => setAvatarErrored(true)}
+              />
+            ) : (
+              <span className={initialClass}>{avatarInitial}</span>
+            );
+            return settingsTo ? (
+              <Link to={settingsTo} className={containerClass}>
+                {inner}
+              </Link>
+            ) : (
+              <button type="button" className={containerClass}>
+                {inner}
+              </button>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -151,6 +151,7 @@ export function HomePage() {
 					links={navLinks}
 					variant="home"
 					showLocaleToggle
+					showAuthAction
 					workspaceUtilitySlot={workspaceUtilitySlot}
 					className="xm-entry-home__nav"
 				/>

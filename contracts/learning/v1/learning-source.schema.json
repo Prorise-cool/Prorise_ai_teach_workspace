@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/learning-source.schema.json",
+  "title": "LearningCoachSource",
+  "description": "Learning Coach 会话来源标识（Story 8.1 冻结）。",
+  "type": "object",
+  "required": ["sourceType", "sourceSessionId"],
+  "additionalProperties": false,
+  "properties": {
+    "sourceType": {
+      "type": "string",
+      "enum": ["video", "classroom", "companion", "quiz", "knowledge", "learning", "manual"],
+      "description": "来源会话类型。"
+    },
+    "sourceSessionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "来源会话 ID（如 video taskId / classroom sessionId）。"
+    },
+    "sourceTaskId": {
+      "type": ["string", "null"],
+      "maxLength": 128,
+      "description": "来源任务 ID（可选）。"
+    },
+    "sourceResultId": {
+      "type": ["string", "null"],
+      "maxLength": 128,
+      "description": "来源结果 ID（可选，用于回看定位）。"
+    },
+    "returnTo": {
+      "type": ["string", "null"],
+      "maxLength": 512,
+      "description": "返回原会话结果页的前端路由（可选）。"
+    },
+    "topicHint": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "可选的主题提示，用于生成 checkpoint/quiz/path。"
+    }
+  }
+}
+

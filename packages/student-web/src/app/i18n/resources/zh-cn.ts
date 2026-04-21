@@ -3,7 +3,9 @@
  * 当前先承接认证页与首页占位页文案，后续页面继续按相同结构扩展。
  */
 import { zhCnEntryPageResources } from '@/app/i18n/resources/entry-page-content';
+import { zhCnLearningCenterResources } from '@/app/i18n/resources/learning-center-content';
 import { zhCnProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
+import { zhCnUserSettingsResources } from '@/app/i18n/resources/user-settings-content';
 import { zhCnVideoResources } from '@/app/i18n/resources/video-content';
 
 export const zhCnResources = {
@@ -171,5 +173,7 @@ export const zhCnResources = {
   },
   ...zhCnProfileOnboardingResources,
   ...zhCnEntryPageResources,
-  ...zhCnVideoResources
+  ...zhCnVideoResources,
+  ...zhCnLearningCenterResources,
+  ...zhCnUserSettingsResources
 } as const;

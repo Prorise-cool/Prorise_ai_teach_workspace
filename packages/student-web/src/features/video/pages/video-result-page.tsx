@@ -94,6 +94,21 @@ export function VideoResultPage() {
     return () => window.clearInterval(intervalId);
   }, [data?.result]);
 
+  const learningCoachTo = useMemo(() => {
+    if (isPublicView || !data?.result) return null;
+    const sessionId = data.result.taskId?.trim() || taskIdParam?.trim() || '';
+    if (!sessionId) return null;
+
+    const coachParams = new URLSearchParams();
+    coachParams.set('sourceType', 'video');
+    coachParams.set('sourceSessionId', sessionId);
+    coachParams.set('sourceTaskId', sessionId);
+    coachParams.set('returnTo', `/video/${encodeURIComponent(sessionId)}`);
+    if (data.result.title) coachParams.set('topicHint', data.result.title);
+
+    return `/coach/${encodeURIComponent(sessionId)}?${coachParams.toString()}`;
+  }, [isPublicView, data?.result, taskIdParam]);
+
   if (viewStatus === 'loading') {
     return (
       <div className="xm-video-result">
@@ -208,6 +223,7 @@ export function VideoResultPage() {
           onToggleSidebar={toggleSidebar}
           readOnly={isPublicView}
           backTo={isPublicView ? null : '/video/input'}
+          learningCoachTo={learningCoachTo}
         />
 
         <div className="xm-video-result__body">

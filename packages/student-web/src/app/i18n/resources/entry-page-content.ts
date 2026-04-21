@@ -15,6 +15,14 @@ export const zhCnEntryPageResources = {
   entryNav: {
     brand: '小麦 XiaoMai',
     homeBrand: 'XiaoMai',
+    userMenu: {
+      trigger: '用户菜单',
+      learningCenter: '学习中心',
+      profile: '个人资料',
+      settings: '设置',
+      logout: '退出登录',
+      loggingOut: '退出中…'
+    },
     links: [
       {
         label: '关于我们',
@@ -73,13 +81,13 @@ export const zhCnEntryPageResources = {
         icon: 'video'
       },
       {
-        label: '虚拟课堂',
+        label: '主题课堂',
         href: '/classroom/input',
         icon: 'layout-template'
       },
       {
         label: '学习中心',
-        href: '#',
+        href: '/learning',
         icon: 'book-open'
       }
     ],
@@ -778,6 +786,14 @@ export const enUsEntryPageResources = {
   entryNav: {
     brand: 'XiaoMai',
     homeBrand: 'XiaoMai',
+    userMenu: {
+      trigger: 'User menu',
+      learningCenter: 'Learning center',
+      profile: 'Profile',
+      settings: 'Settings',
+      logout: 'Log out',
+      loggingOut: 'Logging out…'
+    },
     links: [
       {
         label: 'About',
@@ -839,13 +855,13 @@ export const enUsEntryPageResources = {
         icon: 'video'
       },
       {
-        label: 'Virtual Classroom',
+        label: 'Topic Classroom',
         href: '/classroom/input',
         icon: 'layout-template'
       },
       {
         label: 'Learning Center',
-        href: '#',
+        href: '/learning',
         icon: 'book-open'
       }
     ],

@@ -5,9 +5,9 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
-import org.dromara.xiaomai.landing.controller.XmLandingLeadPublicController.CreateLandingLeadResponse;
-import org.dromara.xiaomai.landing.controller.XmLandingLeadPublicController.PublicLandingLeadSubmitRequest;
+import org.dromara.xiaomai.landing.domain.bo.PublicLandingLeadSubmitBo;
 import org.dromara.xiaomai.landing.domain.bo.XmLandingLeadBo;
+import org.dromara.xiaomai.landing.domain.vo.CreateLandingLeadVo;
 import org.dromara.xiaomai.landing.service.IXmLandingLeadService;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ public class XmLandingLeadPublicControllerTest {
     @Test
     void shouldFreezeAnonymousPublicSubmitContract() throws NoSuchMethodException {
         RequestMapping requestMapping = XmLandingLeadPublicController.class.getAnnotation(RequestMapping.class);
-        Method submitLead = XmLandingLeadPublicController.class.getMethod("submitLead", PublicLandingLeadSubmitRequest.class);
+        Method submitLead = XmLandingLeadPublicController.class.getMethod("submitLead", PublicLandingLeadSubmitBo.class);
 
         assertNotNull(XmLandingLeadPublicController.class.getAnnotation(SaIgnore.class));
         assertNotNull(requestMapping);
@@ -54,15 +54,14 @@ public class XmLandingLeadPublicControllerTest {
 
     @Test
     void shouldRejectInvalidSubmitRequestByBeanValidation() {
-        PublicLandingLeadSubmitRequest request = new PublicLandingLeadSubmitRequest(
-            "",
-            null,
-            "not-an-email",
-            "",
-            "",
-            null,
-            null
-        );
+        PublicLandingLeadSubmitBo request = new PublicLandingLeadSubmitBo();
+        request.setContactName("");
+        request.setOrganizationName(null);
+        request.setContactEmail("not-an-email");
+        request.setSubject("");
+        request.setMessage("");
+        request.setSourcePage(null);
+        request.setSourceLocale(null);
 
         Set<String> violationFields = validator.validate(request).stream()
             .map(violation -> violation.getPropertyPath().toString())
@@ -81,15 +80,16 @@ public class XmLandingLeadPublicControllerTest {
             return true;
         });
 
-        R<CreateLandingLeadResponse> response = controller.submitLead(new PublicLandingLeadSubmitRequest(
-            " 小林 ",
-            " 计算机学院 ",
-            " pilot@example.com ",
-            " 教师试点合作 ",
-            " 希望了解试点方案 ",
-            " ",
-            null
-        ));
+        PublicLandingLeadSubmitBo request = new PublicLandingLeadSubmitBo();
+        request.setContactName(" 小林 ");
+        request.setOrganizationName(" 计算机学院 ");
+        request.setContactEmail(" pilot@example.com ");
+        request.setSubject(" 教师试点合作 ");
+        request.setMessage(" 希望了解试点方案 ");
+        request.setSourcePage(" ");
+        request.setSourceLocale(null);
+
+        R<CreateLandingLeadVo> response = controller.submitLead(request);
 
         ArgumentCaptor<XmLandingLeadBo> boCaptor = ArgumentCaptor.forClass(XmLandingLeadBo.class);
         verify(service).insertByBo(boCaptor.capture());
@@ -107,8 +107,8 @@ public class XmLandingLeadPublicControllerTest {
         assertEquals(R.SUCCESS, response.getCode());
         assertEquals("线索已受理", response.getMsg());
         assertNotNull(response.getData());
-        assertEquals("2001", response.getData().leadId());
-        assertTrue(response.getData().accepted());
+        assertEquals("2001", response.getData().getLeadId());
+        assertTrue(response.getData().getAccepted());
     }
 
     @Test
@@ -117,15 +117,16 @@ public class XmLandingLeadPublicControllerTest {
         XmLandingLeadPublicController controller = new XmLandingLeadPublicController(service);
         when(service.insertByBo(any(XmLandingLeadBo.class))).thenReturn(false);
 
-        R<CreateLandingLeadResponse> response = controller.submitLead(new PublicLandingLeadSubmitRequest(
-            "小林",
-            null,
-            "pilot@example.com",
-            "教师试点合作",
-            "希望了解试点方案",
-            "/landing",
-            "zh-CN"
-        ));
+        PublicLandingLeadSubmitBo request = new PublicLandingLeadSubmitBo();
+        request.setContactName("小林");
+        request.setOrganizationName(null);
+        request.setContactEmail("pilot@example.com");
+        request.setSubject("教师试点合作");
+        request.setMessage("希望了解试点方案");
+        request.setSourcePage("/landing");
+        request.setSourceLocale("zh-CN");
+
+        R<CreateLandingLeadVo> response = controller.submitLead(request);
 
         assertEquals(R.FAIL, response.getCode());
         assertEquals("线索提交失败，请稍后重试", response.getMsg());

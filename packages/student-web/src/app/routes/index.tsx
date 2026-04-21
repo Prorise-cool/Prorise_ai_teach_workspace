@@ -75,6 +75,75 @@ async function loadForbiddenRoute() {
 }
 
 /**
+ * 按需加载学习中心聚合页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadLearningCenterRoute() {
+  const { LearningCenterPage } = await import(
+    '@/features/learning-center/pages/learning-center-page'
+  );
+
+  return {
+    Component: LearningCenterPage
+  };
+}
+
+/**
+ * 按需加载历史记录页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadHistoryRoute() {
+  const { HistoryPage } = await import('@/features/learning-center/pages/history-page');
+
+  return {
+    Component: HistoryPage
+  };
+}
+
+/**
+ * 按需加载收藏页。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadFavoritesRoute() {
+  const { FavoritesPage } = await import(
+    '@/features/learning-center/pages/favorites-page'
+  );
+
+  return {
+    Component: FavoritesPage
+  };
+}
+
+/**
+ * 按需加载个人资料页（Epic 9）。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadProfileRoute() {
+  const { ProfilePage } = await import('@/features/profile/pages/profile-page');
+
+  return {
+    Component: ProfilePage
+  };
+}
+
+/**
+ * 按需加载设置页（Epic 9）。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadSettingsRoute() {
+  const { SettingsPage } = await import('@/features/profile/pages/settings-page');
+
+  return {
+    Component: SettingsPage
+  };
+}
+
+/**
  * 按需加载课堂输入页，确保受保护工作区独立分包。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -178,6 +247,58 @@ async function loadVideoResultRoute() {
 }
 
 /**
+ * 按需加载 Learning Coach 会话后入口页。
+ */
+async function loadLearningCoachEntryRoute() {
+  const { LearningCoachEntryPage } = await import(
+    '@/features/learning-coach/pages/learning-coach-entry-page'
+  );
+
+  return {
+    Component: LearningCoachEntryPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach Checkpoint 页。
+ */
+async function loadLearningCheckpointRoute() {
+  const { LearningCheckpointPage } = await import(
+    '@/features/learning-coach/pages/learning-checkpoint-page'
+  );
+
+  return {
+    Component: LearningCheckpointPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach Quiz 页。
+ */
+async function loadLearningQuizRoute() {
+  const { LearningQuizPage } = await import(
+    '@/features/learning-coach/pages/learning-quiz-page'
+  );
+
+  return {
+    Component: LearningQuizPage
+  };
+}
+
+/**
+ * 按需加载 Learning Coach 学习路径页。
+ */
+async function loadLearningPathRoute() {
+  const { LearningPathPage } = await import(
+    '@/features/learning-coach/pages/learning-path-page'
+  );
+
+  return {
+    Component: LearningPathPage
+  };
+}
+
+/**
  * 按需加载公开视频结果详情页路由。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -222,6 +343,26 @@ export function createAppRouter() {
           element: <RequireAuthRoute />,
           children: [
             {
+              path: 'learning',
+              lazy: loadLearningCenterRoute
+            },
+            {
+              path: 'history',
+              lazy: loadHistoryRoute
+            },
+            {
+              path: 'favorites',
+              lazy: loadFavoritesRoute
+            },
+            {
+              path: 'profile',
+              lazy: loadProfileRoute
+            },
+            {
+              path: 'settings',
+              lazy: loadSettingsRoute
+            },
+            {
               path: 'profile/setup',
               lazy: loadProfileSetupRoute
             },
@@ -248,6 +389,22 @@ export function createAppRouter() {
             {
               path: 'video/:taskId',
               lazy: loadVideoResultRoute
+            },
+            {
+              path: 'coach/:sessionId',
+              lazy: loadLearningCoachEntryRoute
+            },
+            {
+              path: 'checkpoint/:sessionId',
+              lazy: loadLearningCheckpointRoute
+            },
+            {
+              path: 'quiz/:sessionId',
+              lazy: loadLearningQuizRoute
+            },
+            {
+              path: 'path',
+              lazy: loadLearningPathRoute
             }
           ]
         },

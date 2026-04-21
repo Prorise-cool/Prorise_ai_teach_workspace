@@ -70,6 +70,18 @@ export function createViteConfig(mode: string) {
           target: ruoyiProxyTarget,
           changeOrigin: true
         },
+        '/xiaomai': {
+          target: ruoyiProxyTarget,
+          changeOrigin: true
+        },
+        '/system': {
+          target: ruoyiProxyTarget,
+          changeOrigin: true
+        },
+        '/monitor': {
+          target: ruoyiProxyTarget,
+          changeOrigin: true
+        },
         '/api/v1': {
           target: fastapiProxyTarget,
           changeOrigin: true

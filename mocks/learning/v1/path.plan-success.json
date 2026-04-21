@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "msg": "path 规划成功",
+  "data": {
+    "pathId": "path_01JLEARNCOACHPATH001",
+    "source": {
+      "sourceType": "learning",
+      "sourceSessionId": "coach_session_001",
+      "sourceTaskId": null,
+      "sourceResultId": null,
+      "returnTo": "/learning",
+      "topicHint": "复合函数求导"
+    },
+    "pathTitle": "7 天掌握复合函数求导",
+    "pathSummary": "用 7 天完成链式法则巩固、典型题型训练与错题复盘，形成稳定解题套路。",
+    "versionNo": 1,
+    "stages": [
+      {
+        "title": "第 1-2 天：链式法则与基础题",
+        "goal": "能快速识别外层/内层函数并写出导数结构。",
+        "steps": [
+          { "title": "复习链式法则", "action": "整理 3 个典型模板：sin(g(x))/ln(g(x))/e^{g(x)}", "estimatedMinutes": 35 },
+          { "title": "基础训练", "action": "完成 10 道复合求导基础题并自查", "estimatedMinutes": 45 }
+        ]
+      },
+      {
+        "title": "第 3-5 天：常见变式与综合",
+        "goal": "处理带参数、绝对值、三角复合等变式。",
+        "steps": [
+          { "title": "变式清单", "action": "总结 5 类常见陷阱：符号、系数、对数、指数、三角复合", "estimatedMinutes": 40 },
+          { "title": "综合训练", "action": "做 2 套小测（每套 5 题），整理错因", "estimatedMinutes": 50 }
+        ]
+      },
+      {
+        "title": "第 6-7 天：错题复盘与巩固",
+        "goal": "对薄弱点做 targeted drill，形成稳固记忆。",
+        "steps": [
+          { "title": "错题复盘", "action": "回看错题本，按错因分类并重做", "estimatedMinutes": 45 },
+          { "title": "最终自测", "action": "完成 1 次正式 quiz 并达到 90 分以上", "estimatedMinutes": 35 }
+        ]
+      }
+    ]
+  }
+}
+

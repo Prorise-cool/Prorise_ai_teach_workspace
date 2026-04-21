@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/learning/v1/checkpoint-submit-response.schema.json",
+  "title": "CheckpointSubmitResponse",
+  "description": "Checkpoint 判分与反馈响应（Story 8.3 冻结）。",
+  "type": "object",
+  "required": ["checkpointId", "questionTotal", "correctTotal", "passed", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "checkpointId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "questionTotal": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "correctTotal": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "passed": {
+      "type": "boolean",
+      "description": "是否通过 checkpoint。"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["questionId", "selectedOptionId", "correctOptionId", "isCorrect", "explanation"],
+        "additionalProperties": false,
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "selectedOptionId": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "correctOptionId": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "isCorrect": { "type": "boolean" },
+          "explanation": { "type": "string", "minLength": 1, "maxLength": 3000 }
+        }
+      }
+    }
+  }
+}
+

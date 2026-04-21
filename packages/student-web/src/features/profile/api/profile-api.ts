@@ -17,7 +17,9 @@ import {
   mergeUserProfile,
   PROFILE_API_BASE_PATH,
   PROFILE_DEFAULT_LANGUAGE,
+  PROFILE_THEME_MODES,
   TEACHER_TAGS,
+  type ProfileThemeMode,
   type SaveUserProfileInput,
   type TeacherTag,
   type UserProfile
@@ -31,11 +33,23 @@ type ProfilePayload = {
   avatarUrl?: string | null;
   avatar_url?: string | null;
   bio?: string | null;
+  schoolName?: string | null;
+  school_name?: string | null;
+  majorName?: string | null;
+  major_name?: string | null;
+  identityLabel?: string | null;
+  identity_label?: string | null;
+  gradeLabel?: string | null;
+  grade_label?: string | null;
   personalityType?: string | null;
   personality_type?: string | null;
   teacherTags?: string[] | string | null;
   teacher_tags?: string[] | string | null;
   language?: string | null;
+  themeMode?: string | null;
+  theme_mode?: string | null;
+  notificationEnabled?: boolean | number | string | null;
+  notification_enabled?: boolean | number | string | null;
   isCompleted?: boolean | number | string | null;
   is_completed?: boolean | number | string | null;
   createTime?: string | null;
@@ -113,6 +127,18 @@ function parseTeacherTags(value: unknown): TeacherTag[] {
   return [];
 }
 
+function parseThemeMode(value: unknown): ProfileThemeMode | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  return (PROFILE_THEME_MODES as readonly string[]).includes(normalized)
+    ? (normalized as ProfileThemeMode)
+    : null;
+}
+
 function parseCompletedFlag(value: unknown) {
   if (typeof value === 'boolean') {
     return value;
@@ -138,11 +164,19 @@ function mapProfilePayload(userId: string, payload: ProfilePayload): UserProfile
     userId: normalizedUserId,
     avatarUrl: payload.avatarUrl ?? payload.avatar_url ?? null,
     bio: payload.bio?.trim() ?? '',
+    schoolName: payload.schoolName?.trim() ?? payload.school_name?.trim() ?? '',
+    majorName: payload.majorName?.trim() ?? payload.major_name?.trim() ?? '',
+    identityLabel: payload.identityLabel?.trim() ?? payload.identity_label?.trim() ?? '',
+    gradeLabel: payload.gradeLabel?.trim() ?? payload.grade_label?.trim() ?? '',
     personalityType:
       (payload.personalityType ?? payload.personality_type ?? null) as UserProfile['personalityType'],
     teacherTags: parseTeacherTags(payload.teacherTags ?? payload.teacher_tags),
     language:
       payload.language === 'en-US' ? 'en-US' : PROFILE_DEFAULT_LANGUAGE,
+    themeMode: parseThemeMode(payload.themeMode ?? payload.theme_mode),
+    notificationEnabled: parseCompletedFlag(
+      payload.notificationEnabled ?? payload.notification_enabled
+    ),
     isCompleted: parseCompletedFlag(
       payload.isCompleted ?? payload.is_completed
     ),
@@ -244,6 +278,12 @@ function createRealProfileApi({
         return writeLocalProfile(mapProfilePayload(userId, payload));
       } catch (error) {
         if (shouldFallbackToLocal(error)) {
+          // 后端接口缺位或短暂失败：为避免 onboarding 被完全阻塞，读本地缓存
+          // 过一下 UI。务必把故障暴露到控制台，便于运维和监控上报。
+          console.warn(
+            '[profile-api] getCurrentProfile: backend unavailable, returning local snapshot',
+            error,
+          );
           return readLocalProfile(userId);
         }
 
@@ -292,9 +332,15 @@ function createRealProfileApi({
               id: nextProfile.id ?? undefined,
               avatarUrl: nextProfile.avatarUrl,
               bio: nextProfile.bio,
+              schoolName: nextProfile.schoolName,
+              majorName: nextProfile.majorName,
+              identityLabel: nextProfile.identityLabel,
+              gradeLabel: nextProfile.gradeLabel,
               personalityType: nextProfile.personalityType,
               teacherTags: JSON.stringify(nextProfile.teacherTags),
               language: nextProfile.language,
+              themeMode: nextProfile.themeMode,
+              notificationEnabled: nextProfile.notificationEnabled ? 1 : 0,
               isCompleted: nextProfile.isCompleted ? 1 : 0
             }
           },
@@ -304,6 +350,12 @@ function createRealProfileApi({
         return writeLocalProfile(mapProfilePayload(userId, payload));
       } catch (error) {
         if (shouldFallbackToLocal(error)) {
+          // 后端写失败但接口已知缺位或网络瞬断：先写本地缓存让 onboarding 可继续。
+          // 告知运维：这次保存并没有真正落库，下一次用户访问会用本地副本。
+          console.warn(
+            '[profile-api] saveProfile: backend unavailable, persisted locally only',
+            error,
+          );
           return writeLocalProfile(nextProfile);
         }
 
