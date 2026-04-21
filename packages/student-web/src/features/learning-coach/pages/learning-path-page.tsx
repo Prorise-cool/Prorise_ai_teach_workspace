@@ -102,6 +102,22 @@ export function LearningPathPage() {
   const [tipIndex, setTipIndex] = useState(0);
   const [tipVisible, setTipVisible] = useState(true);
 
+  // Path 学习进度：LearningPathPlanPayload 当前 schema 不包含已完成步骤字段，
+  // 刚生成的 path 统一展示 0%，第一阶段为 next，其余 locked。
+  // 后续 Story 补齐 completedStepCount / completedStageCount 字段后，只需替换下列变量来源。
+  const completedStageCount = 0;
+  const totalStageCount = plan?.stages.length ?? 0;
+  const pathCompletionPercent =
+    totalStageCount > 0
+      ? Math.round((completedStageCount / totalStageCount) * 100)
+      : 0;
+
+  const deriveMilestoneStatus = (index: number): 'completed' | 'next' | 'locked' => {
+    if (index < completedStageCount) return 'completed';
+    if (index === completedStageCount) return 'next';
+    return 'locked';
+  };
+
   const saveAttemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -429,10 +445,10 @@ export function LearningPathPage() {
               <div className="w-full md:w-[240px] bg-secondary/30 dark:bg-bg-dark/50 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 shrink-0 flex flex-col justify-center">
                 <div className="flex justify-between items-end mb-3">
                   <span className="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">总体进度</span>
-                  <span className="text-lg font-black text-text-primary dark:text-text-primary-dark tracking-tight">25%</span>
+                  <span className="text-lg font-black text-text-primary dark:text-text-primary-dark tracking-tight">{pathCompletionPercent}%</span>
                 </div>
                 <div className="w-full h-2 bg-surface-light dark:bg-surface-dark rounded-full overflow-hidden border border-bordercolor-light dark:border-bordercolor-dark shadow-inner mb-5">
-                  <div className="h-full bg-text-primary dark:bg-text-primary-dark rounded-full w-[25%]" />
+                  <div className="h-full bg-text-primary dark:bg-text-primary-dark rounded-full transition-all" style={{ width: `${pathCompletionPercent}%` }} />
                 </div>
                 <button
                   type="button"
@@ -452,7 +468,7 @@ export function LearningPathPage() {
 
             <div className="flex flex-col">
               {(plan?.stages ?? []).map((stage, idx, all) => {
-                const status = idx === 0 ? 'completed' : idx === 1 ? 'next' : 'locked';
+                const status = deriveMilestoneStatus(idx);
                 const hasConnector = idx < all.length - 1;
 
                 if (status === 'completed') {
