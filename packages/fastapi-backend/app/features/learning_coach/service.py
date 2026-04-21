@@ -451,7 +451,8 @@ class LearningCoachService:
         question_total = question_total or max(len(items), 1)
         passed = correct_total >= max(1, question_total - 1)
 
-        # 持久化（不阻塞主流程，失败则降级为 persisted=false）
+        # 持久化（不阻塞主流程；失败则降级为 persisted=False 并记录完整异常）
+        persisted = True
         try:
             await self._persistence_service.persist_results(
                 LearningPersistenceRequest(
@@ -479,8 +480,15 @@ class LearningCoachService:
                 access_context=access_context,
             )
         except Exception:
-            # 仅做降级，不抛出
-            pass
+            persisted = False
+            logger.exception(
+                "learning_coach.checkpoint.persist_failed",
+                extra={
+                    "checkpoint_id": checkpoint_id,
+                    "user_id": user_id,
+                    "source_session_id": source.source_session_id,
+                },
+            )
 
         return CheckpointSubmitPayload(
             checkpoint_id=checkpoint_id,
@@ -488,6 +496,7 @@ class LearningCoachService:
             correct_total=correct_total,
             passed=passed,
             items=items,
+            persisted=persisted,
         )
 
     async def generate_quiz(
@@ -648,6 +657,15 @@ class LearningCoachService:
             persisted = True
         except Exception:
             persisted = False
+            logger.exception(
+                "learning_coach.quiz.persist_failed",
+                extra={
+                    "quiz_id": quiz_id,
+                    "user_id": user_id,
+                    "source_session_id": source.source_session_id,
+                    "wrong_question_count": len(wrong_questions),
+                },
+            )
 
         return QuizSubmitPayload(
             quiz_id=quiz_id,
@@ -720,6 +738,15 @@ class LearningCoachService:
             persisted_at = _now()
         except Exception:
             persisted = False
+            logger.exception(
+                "learning_coach.path.persist_failed",
+                extra={
+                    "path_id": path.path_id,
+                    "user_id": user_id,
+                    "source_session_id": path.source.source_session_id,
+                    "version_no": path.version_no,
+                },
+            )
 
         return LearningPathSavePayload(
             path_id=path.path_id,

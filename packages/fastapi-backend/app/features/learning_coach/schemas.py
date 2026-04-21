@@ -131,6 +131,7 @@ class CheckpointSubmitPayload(CamelCaseModel):
     correct_total: int = Field(ge=0, le=3)
     passed: bool
     items: list[CheckpointJudgeItem]
+    persisted: bool = True
 
 
 class CheckpointSubmitEnvelope(CamelCaseModel):
