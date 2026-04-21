@@ -1,5 +1,16 @@
 /**
- * 文件说明：Learning Coach Checkpoint / Quiz 页面（Epic 8）。
+ * 文件说明：Learning Coach 测评视图组件（Epic 8，内部复用单元）。
+ *
+ * Story 8.2 要求 `/checkpoint/:sessionId` 与 `/quiz/:sessionId` 有独立的
+ * 页面骨架入口。实际的 page 文件位于同目录下的 `learning-checkpoint-page.tsx`
+ * 与 `learning-quiz-page.tsx`；它们各自 export 独立 Component，路由分别
+ * 挂载，互不共享顶层 React 组件身份。
+ *
+ * 本文件只再导出共享视图 `LearningAssessmentPage`：提供 mode 参数化的
+ * 题目列表 / 提交 / 回看 UI，两个 page 文件通过 `mode="checkpoint"` /
+ * `mode="quiz"` 调用；后续 Story 若要让两条路径的 UI 骨架进一步分化，
+ * 可以把本文件拆成独立视图，不影响路由层。
+ *
  * 视觉基准：Ux/.../10-Checkpoint 与 Quiz 页/03-quiz.html（checkpoint 复用同一视觉骨架）。
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -730,10 +741,3 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
   );
 }
 
-export function LearningCheckpointPage() {
-  return <LearningAssessmentPage mode="checkpoint" />;
-}
-
-export function LearningQuizPage() {
-  return <LearningAssessmentPage mode="quiz" />;
-}

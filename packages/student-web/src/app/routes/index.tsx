@@ -264,7 +264,7 @@ async function loadLearningCoachEntryRoute() {
  */
 async function loadLearningCheckpointRoute() {
   const { LearningCheckpointPage } = await import(
-    '@/features/learning-coach/pages/learning-assessment-page'
+    '@/features/learning-coach/pages/learning-checkpoint-page'
   );
 
   return {
@@ -277,7 +277,7 @@ async function loadLearningCheckpointRoute() {
  */
 async function loadLearningQuizRoute() {
   const { LearningQuizPage } = await import(
-    '@/features/learning-coach/pages/learning-assessment-page'
+    '@/features/learning-coach/pages/learning-quiz-page'
   );
 
   return {
