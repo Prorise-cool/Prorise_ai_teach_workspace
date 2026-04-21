@@ -81,13 +81,13 @@ export const zhCnEntryPageResources = {
         icon: 'video'
       },
       {
-        label: '虚拟课堂',
+        label: '主题课堂',
         href: '/classroom/input',
         icon: 'layout-template'
       },
       {
         label: '学习中心',
-        href: '#',
+        href: '/learning',
         icon: 'book-open'
       }
     ],
@@ -855,13 +855,13 @@ export const enUsEntryPageResources = {
         icon: 'video'
       },
       {
-        label: 'Virtual Classroom',
+        label: 'Topic Classroom',
         href: '/classroom/input',
         icon: 'layout-template'
       },
       {
         label: 'Learning Center',
-        href: '#',
+        href: '/learning',
         icon: 'book-open'
       }
     ],

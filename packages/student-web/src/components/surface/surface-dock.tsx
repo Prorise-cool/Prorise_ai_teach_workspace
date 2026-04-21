@@ -1,20 +1,24 @@
 /**
  * 文件说明：macOS 风格 Dock（从 Ux 成品页抽取，Epic 8/9 共用）。
+ * 头像与 UserAvatarMenu / SurfaceDashboardDock 同步：直接读 auth session，
+ * 加载失败或缺图时降级为昵称首字母，避免回到 pravatar 外网占位。
  */
 import type { ElementType, ReactNode } from 'react';
+import { useState } from 'react';
 import { BookOpen, Globe, Moon, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { appI18n } from '@/app/i18n';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { cn } from '@/lib/utils';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import { useAuthSessionStore } from '@/stores/auth-session-store';
 
 export type SurfaceDockProps = {
   activeTooltip: string;
   activeIcon: ElementType;
   learningCenterTo?: string | null;
   settingsTo?: string | null;
-  avatarUrl?: string | null;
   children?: ReactNode;
 };
 
@@ -23,10 +27,20 @@ export function SurfaceDock({
   activeIcon: ActiveIcon,
   learningCenterTo = '/learning',
   settingsTo = '/settings',
-  avatarUrl = 'https://i.pravatar.cc/150?img=68',
 }: SurfaceDockProps) {
   const { t } = useAppTranslation();
   const { toggleThemeMode } = useThemeMode();
+  const session = useAuthSessionStore((state) => state.session);
+  const [avatarErrored, setAvatarErrored] = useState(false);
+
+  const avatarUrl = session?.user.avatarUrl ?? null;
+  const displayName =
+    session?.user.nickname?.trim() ||
+    session?.user.username?.trim() ||
+    '';
+  const avatarInitial = (displayName.slice(0, 1) || '?').toUpperCase();
+  const showAvatarImage = Boolean(avatarUrl) && !avatarErrored;
+
   const localeLabel = appI18n.resolvedLanguage === 'en-US' ? 'EN / 中' : '中 / EN';
 
   const toggleLocale = () => {
@@ -101,21 +115,35 @@ export function SurfaceDock({
           <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
             {t('learningCenter.dock.settings')}
           </div>
-          {settingsTo ? (
-            <Link
-              to={settingsTo}
-              className="dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition"
-            >
-              <img src={avatarUrl ?? ''} alt="User" className="w-full h-full object-cover" />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className="dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition"
-            >
-              <img src={avatarUrl ?? ''} alt="User" className="w-full h-full object-cover" />
-            </button>
-          )}
+          {(() => {
+            const containerClass =
+              'dock-icon w-10 h-10 rounded-[12px] overflow-hidden border border-transparent hover:border-bordercolor-light dark:hover:border-bordercolor-dark shadow-sm btn-transition';
+            const inner = showAvatarImage ? (
+              <img
+                src={avatarUrl ?? ''}
+                alt={displayName || 'User'}
+                className="w-full h-full object-cover"
+                onError={() => setAvatarErrored(true)}
+              />
+            ) : (
+              <span
+                className={cn(
+                  'flex w-full h-full items-center justify-center bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark font-bold text-sm select-none',
+                )}
+              >
+                {avatarInitial}
+              </span>
+            );
+            return settingsTo ? (
+              <Link to={settingsTo} className={containerClass}>
+                {inner}
+              </Link>
+            ) : (
+              <button type="button" className={containerClass}>
+                {inner}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>
