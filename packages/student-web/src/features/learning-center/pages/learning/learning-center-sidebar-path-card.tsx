@@ -3,8 +3,20 @@ import { Compass } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
+// Sidebar 卡片当前没有接真实 path 追踪字段（LearningPathPlanPayload schema 无
+// completedStepCount），刷新生成路径后统一展示 0%；后续 Story 补齐进度字段时
+// 替换下列常量来源即可。
+const COMPLETED_STEP_COUNT = 0;
+const TOTAL_STEP_COUNT = 0;
+
 export function LearningCenterSidebarPathCard() {
   const { t } = useAppTranslation();
+
+  const progressPercent =
+    TOTAL_STEP_COUNT > 0
+      ? Math.round((COMPLETED_STEP_COUNT / TOTAL_STEP_COUNT) * 100)
+      : 0;
+  const progressRatio = `${COMPLETED_STEP_COUNT}/${TOTAL_STEP_COUNT}`;
 
   return (
     <Link
@@ -30,10 +42,13 @@ export function LearningCenterSidebarPathCard() {
         </h3>
         <div className="flex justify-between text-xs font-bold mb-3 text-surface-light/80 dark:text-text-secondary-dark">
           <span>{t('learningCenter.page.pathProgressLabel')}</span>
-          <span>25% (1/4)</span>
+          <span>{progressPercent}% ({progressRatio})</span>
         </div>
         <div className="w-full h-1.5 bg-text-secondary dark:bg-bg-dark rounded-full overflow-hidden">
-          <div className="h-full bg-brand rounded-full w-[25%]" />
+          <div
+            className="h-full bg-brand rounded-full transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
     </Link>
