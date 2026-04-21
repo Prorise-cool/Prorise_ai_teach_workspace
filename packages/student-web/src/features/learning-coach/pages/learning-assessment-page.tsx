@@ -78,7 +78,7 @@ function buildAnswerGridButtonClass(params: {
     classes += 'bg-error text-white';
   } else {
     classes +=
-      'bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:border-text-primary dark:hover:border-text-primary-dark';
+      'bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:border-text-primary dark:hover:border-text-primary-dark';
   }
 
   if (active) {
@@ -370,7 +370,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
         <aside className="hidden lg:flex flex-col w-[260px] h-full shrink-0 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-[24px] shadow-sm p-5 transition-all">
           <div className="flex justify-between items-center mb-5 shrink-0">
             <h3 className="font-black text-[16px] text-text-primary dark:text-text-primary-dark tracking-tight">答题卡</h3>
-            <span className="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark px-2.5 py-1 rounded-md shadow-sm">
+            <span className="text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark px-2.5 py-1 rounded-md shadow-sm">
               {Math.min(currentIndex + 1, totalCount)} / {totalCount || '--'}
             </span>
           </div>
@@ -385,7 +385,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
               错误
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-sm bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark" />
+              <span className="w-2 h-2 rounded-sm bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark" />
               未答
             </div>
           </div>
@@ -435,7 +435,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
         <main className="flex-1 h-full overflow-y-auto custom-scroll flex flex-col relative px-1 md:px-2">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-widest shadow-sm">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark uppercase tracking-widest shadow-sm">
                 {pageTitle}
               </div>
               <span className="lg:hidden px-3 py-1.5 rounded-lg bg-brand/10 dark:bg-brand/5 border border-brand/20 dark:border-brand/10 text-[11px] font-bold text-text-primary dark:text-brand shadow-sm">
@@ -454,7 +454,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
           </div>
 
           {submitState ? (
-            <div className="mb-4 rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#1a1614]/60 px-4 py-3 shadow-sm">
+            <div className="mb-4 rounded-2xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-bg-dark/60 px-4 py-3 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-[13px] font-bold text-text-primary dark:text-text-primary-dark">
                   {mode === 'checkpoint'
@@ -475,7 +475,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                       }
                       void navigate('/learning');
                     }}
-                    className="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#2c2522] transition-colors"
+                    className="px-3 py-1.5 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-secondary transition-colors"
                   >
                     返回
                   </button>
@@ -541,16 +541,16 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                       <button
                         key={opt.optionId}
                         type="button"
-                        className="p-4 md:p-5 rounded-[16px] border border-error dark:border-[#bf0004] bg-[#fff1f0] dark:bg-[#3a1c1c] flex items-center justify-between shadow-sm transition-all cursor-pointer"
+                        className="p-4 md:p-5 rounded-[16px] border border-error/30 dark:border-error/20 bg-error/10 dark:bg-error/20 flex items-center justify-between shadow-sm transition-all cursor-pointer"
                         onClick={() => handleSelectOption(currentQuestion!.questionId, opt.optionId)}
                       >
-                        <div className="flex items-center gap-4 text-error dark:text-[#ff4d4f]">
-                          <span className="w-8 h-8 rounded-lg bg-white dark:bg-[#1f1a18] border border-error dark:border-[#bf0004] flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                        <div className="flex items-center gap-4 text-error">
+                          <span className="w-8 h-8 rounded-lg bg-white dark:bg-secondary border border-error/30 dark:border-error/20 flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                             {opt.label}
                           </span>
                           <span className="font-mono text-[15px] md:text-[16px] font-bold">{opt.text}</span>
                         </div>
-                        <X className="w-5 h-5 text-error dark:text-[#ff4d4f] shrink-0" />
+                        <X className="w-5 h-5 text-error shrink-0" />
                       </button>
                     );
                   }
@@ -560,7 +560,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                       <button
                         key={opt.optionId}
                         type="button"
-                        className="p-4 md:p-5 rounded-[16px] border-[2px] border-success bg-[#f6ffed] dark:bg-[#1a2e1b] flex items-center justify-between shadow-sm transition-all cursor-pointer"
+                        className="p-4 md:p-5 rounded-[16px] border-2 border-success bg-success/10 dark:bg-success/20 flex items-center justify-between shadow-sm transition-all cursor-pointer"
                         onClick={() => handleSelectOption(currentQuestion!.questionId, opt.optionId)}
                       >
                         <div className="flex items-center gap-4 text-success">
@@ -579,7 +579,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                       key={opt.optionId}
                       type="button"
                       className={[
-                        'p-4 md:p-5 rounded-[16px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-[#1a1614]/50 flex items-center gap-4 text-text-secondary dark:text-text-secondary-dark transition-all cursor-pointer',
+                        'p-4 md:p-5 rounded-[16px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/30 dark:bg-bg-dark/50 flex items-center gap-4 text-text-secondary dark:text-text-secondary-dark transition-all cursor-pointer',
                         submitted ? 'opacity-70 hover:opacity-100 hover:border-text-primary dark:hover:border-text-primary-dark' : '',
                         !submitted && isSelected ? 'border-text-primary dark:border-text-primary-dark text-text-primary dark:text-text-primary-dark' : '',
                       ]
@@ -598,7 +598,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                 })}
               </div>
 
-              <div className="rounded-[20px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/60 dark:bg-[#1a1614] p-6 shadow-sm">
+              <div className="rounded-[20px] border border-bordercolor-light dark:border-bordercolor-dark bg-secondary/60 dark:bg-bg-dark p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-5">
                   <h4 className="font-black flex items-center gap-2 text-[15px] text-text-primary dark:text-text-primary-dark">
                     <div className="w-7 h-7 rounded-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shadow-sm">
@@ -630,7 +630,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                 <button
                   type="button"
                   onClick={goPrev}
-                  className="px-4 py-2.5 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-[#1a1614] text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-bg-dark text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
                   disabled={currentIndex <= 0}
                 >
                   <ArrowLeft className="w-4 h-4" /> 上一题
@@ -671,13 +671,13 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg text-text-secondary hover:bg-secondary dark:hover:bg-[#2c2522] xl:hidden btn-transition"
+                className="p-2 rounded-lg text-text-secondary hover:bg-secondary dark:hover:bg-secondary xl:hidden btn-transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-[#1a1614]/20">
+            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-bg-dark/20">
               <div className="flex flex-col items-start w-full">
                 <div className="flex items-center gap-2 mb-1.5 ml-1">
                   <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
@@ -692,19 +692,19 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
               <div className="flex flex-col gap-2 mb-3">
                 <button
                   type="button"
-                  className="text-[12px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
+                  className="text-[12px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <HelpCircle className="w-4 h-4 text-brand" /> 先给我拆题思路
                 </button>
                 <button
                   type="button"
-                  className="text-[12px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
+                  className="text-[12px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <PlayCircle className="w-4 h-4 text-agent-efficient" /> 回看相关视频片段
                 </button>
               </div>
 
-              <div className="bg-secondary/40 dark:bg-[#1a1514] border border-bordercolor-light dark:border-bordercolor-dark rounded-xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
+              <div className="bg-secondary/40 dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
                 <textarea
                   className="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed custom-scroll"
                   rows={2}

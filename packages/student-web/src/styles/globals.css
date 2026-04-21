@@ -29,6 +29,7 @@
   --color-ring: var(--xm-color-ring);
   --color-destructive: var(--xm-color-error);
   --color-destructive-foreground: #ffffff;
+  --color-error: var(--xm-color-error);
   --color-success: var(--xm-color-success);
   --color-warning: var(--xm-color-warning);
   --color-info: var(--xm-color-info);

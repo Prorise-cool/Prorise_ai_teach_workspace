@@ -263,7 +263,7 @@ export function LearningPathPage() {
           <button
             type="button"
             onClick={enterLearningCenter}
-            className="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light dark:bg-[#2c2522] text-text-primary dark:text-text-primary-dark shadow-sm btn-transition"
+            className="flex items-center gap-1.5 px-6 py-1.5 text-sm font-bold rounded-full bg-surface-light text-text-primary dark:text-text-primary-dark shadow-sm btn-transition"
           >
             <BookOpen className="w-4 h-4" /> 学习中心
           </button>
@@ -426,7 +426,7 @@ export function LearningPathPage() {
                 </p>
               </div>
 
-              <div className="w-full md:w-[240px] bg-secondary/30 dark:bg-[#1a1614]/50 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 shrink-0 flex flex-col justify-center">
+              <div className="w-full md:w-[240px] bg-secondary/30 dark:bg-bg-dark/50 border border-bordercolor-light dark:border-bordercolor-dark rounded-xl p-5 shrink-0 flex flex-col justify-center">
                 <div className="flex justify-between items-end mb-3">
                   <span className="text-xs font-bold text-text-secondary dark:text-text-secondary-dark">总体进度</span>
                   <span className="text-lg font-black text-text-primary dark:text-text-primary-dark tracking-tight">25%</span>
@@ -437,7 +437,7 @@ export function LearningPathPage() {
                 <button
                   type="button"
                   onClick={() => void adjustGoal()}
-                  className="w-full bg-surface-light dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark text-[12px] font-bold py-2 rounded-lg hover:bg-secondary dark:hover:bg-bordercolor-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition flex justify-center items-center shadow-sm"
+                  className="w-full bg-surface-light border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark text-[12px] font-bold py-2 rounded-lg hover:bg-secondary dark:hover:bg-bordercolor-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition flex justify-center items-center shadow-sm"
                 >
                   调整目标设定
                 </button>
@@ -496,8 +496,8 @@ export function LearningPathPage() {
                   return (
                     <div key={stage.title} className="flex gap-4 md:gap-6 relative">
                       <div className="flex flex-col items-center relative z-10 w-10 shrink-0">
-                        <div className="w-8 h-8 rounded-full bg-brand text-[#3b1701] flex items-center justify-center border-2 border-surface-light dark:border-surface-dark shrink-0 z-10">
-                          <MapPin className="w-4 h-4 fill-[#3b1701]/20 stroke-[2.5]" />
+                        <div className="w-8 h-8 rounded-full bg-brand text-primary-foreground flex items-center justify-center border-2 border-surface-light dark:border-surface-dark shrink-0 z-10">
+                          <MapPin className="w-4 h-4 fill-primary-foreground/20 stroke-[2.5]" />
                         </div>
                         {hasConnector ? (
                           <div className="w-[2px] flex-1 mt-1 timeline-dash text-bordercolor-light dark:text-bordercolor-dark opacity-80" />
@@ -505,7 +505,7 @@ export function LearningPathPage() {
                       </div>
 
                       <div className="flex-1 pb-10">
-                        <div className="bg-secondary/40 dark:bg-[#2c2522]/40 border-2 border-brand/50 rounded-xl p-5 relative">
+                        <div className="bg-secondary/40 dark:bg-secondary/40 border-2 border-brand/50 rounded-xl p-5 relative">
                           <div className="absolute top-4 right-5 text-[10px] font-black text-brand-dark dark:text-brand uppercase tracking-widest">
                             Next Action
                           </div>

@@ -120,7 +120,7 @@ export function LearningCoachEntryPage() {
 
               <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
                 <div className="flex-1">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark shadow-sm mb-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-[12px] font-bold text-text-secondary dark:text-text-secondary-dark shadow-sm mb-6">
                     <Sparkles className="w-4 h-4 text-brand-dark dark:text-brand" />
                     本节知识点已解锁
                   </div>
@@ -133,13 +133,13 @@ export function LearningCoachEntryPage() {
                   </p>
 
                   <div className="flex flex-wrap gap-2 mt-6">
-                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-[#2c2522] text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
+                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-secondary text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
                       智能判分解析
                     </span>
-                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-[#2c2522] text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
+                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-secondary text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
                       自动生成错题本
                     </span>
-                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-[#2c2522] text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
+                    <span className="px-3 py-1.5 rounded-md bg-secondary/70 dark:bg-secondary text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">
                       规划下一步路径
                     </span>
                   </div>
@@ -157,7 +157,7 @@ export function LearningCoachEntryPage() {
                   <button
                     type="button"
                     onClick={goQuiz}
-                    className="w-full bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark rounded-[16px] px-6 py-4 font-bold text-[14px] hover:border-text-primary dark:hover:border-text-primary-dark flex justify-center items-center gap-2 btn-transition shadow-sm"
+                    className="w-full bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark rounded-[16px] px-6 py-4 font-bold text-[14px] hover:border-text-primary dark:hover:border-text-primary-dark flex justify-center items-center gap-2 btn-transition shadow-sm"
                   >
                     <ClipboardCheck className="w-4 h-4" /> 进入正式 Quiz
                   </button>
@@ -167,7 +167,7 @@ export function LearningCoachEntryPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div className="bg-surface-light/60 dark:bg-surface-dark/60 backdrop-blur-md border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
-                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-[#1a1614] flex items-center justify-center mb-4">
+                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-bg-dark flex items-center justify-center mb-4">
                   <Target className="w-4 h-4 text-text-secondary dark:text-text-secondary-dark" />
                 </div>
                 <div className="text-lg font-black text-text-primary dark:text-text-primary-dark">快速热身</div>
@@ -176,7 +176,7 @@ export function LearningCoachEntryPage() {
                 </p>
               </div>
               <div className="bg-surface-light/60 dark:bg-surface-dark/60 backdrop-blur-md border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
-                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-[#1a1614] flex items-center justify-center mb-4">
+                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-bg-dark flex items-center justify-center mb-4">
                   <Layers className="w-4 h-4 text-text-secondary dark:text-text-secondary-dark" />
                 </div>
                 <div className="text-lg font-black text-text-primary dark:text-text-primary-dark">完整测验</div>
@@ -185,7 +185,7 @@ export function LearningCoachEntryPage() {
                 </p>
               </div>
               <div className="bg-surface-light/60 dark:bg-surface-dark/60 backdrop-blur-md border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
-                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-[#1a1614] flex items-center justify-center mb-4">
+                <div className="w-8 h-8 rounded-full bg-secondary dark:bg-bg-dark flex items-center justify-center mb-4">
                   <Map className="w-4 h-4 text-text-secondary dark:text-text-secondary-dark" />
                 </div>
                 <div className="text-lg font-black text-text-primary dark:text-text-primary-dark">学习建议</div>
@@ -218,13 +218,13 @@ export function LearningCoachEntryPage() {
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg text-text-secondary hover:bg-secondary dark:hover:bg-[#2c2522] xl:hidden btn-transition"
+                className="p-2 rounded-lg text-text-secondary hover:bg-secondary dark:hover:bg-secondary xl:hidden btn-transition"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-[#1a1614]/20">
+            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-bg-dark/20">
               <div className="flex flex-col items-start w-full">
                 <div className="flex items-center gap-2 mb-1.5 ml-1">
                   <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
@@ -264,7 +264,7 @@ export function LearningCoachEntryPage() {
                 <button
                   type="button"
                   onClick={goCheckpoint}
-                  className="text-[13px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-4 py-3 rounded-xl hover:border-brand text-text-primary dark:text-text-primary-dark btn-transition text-left flex items-center justify-between group"
+                  className="text-[13px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-4 py-3 rounded-xl hover:border-brand text-text-primary dark:text-text-primary-dark btn-transition text-left flex items-center justify-between group"
                 >
                   <span>我想先热身</span>
                   <ArrowRight className="w-4 h-4 text-text-secondary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
@@ -272,7 +272,7 @@ export function LearningCoachEntryPage() {
                 <button
                   type="button"
                   onClick={goQuiz}
-                  className="text-[13px] font-bold bg-secondary/50 dark:bg-[#2c2522]/50 border border-bordercolor-light dark:border-bordercolor-dark px-4 py-3 rounded-xl hover:border-brand text-text-primary dark:text-text-primary-dark btn-transition text-left flex items-center justify-between group"
+                  className="text-[13px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-4 py-3 rounded-xl hover:border-brand text-text-primary dark:text-text-primary-dark btn-transition text-left flex items-center justify-between group"
                 >
                   <span>直接开始完整测验</span>
                   <ArrowRight className="w-4 h-4 text-text-secondary opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
@@ -287,4 +287,3 @@ export function LearningCoachEntryPage() {
     </div>
   );
 }
-
