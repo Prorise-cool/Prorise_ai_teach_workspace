@@ -120,21 +120,21 @@ development_status:
   7-6-证据问答回写与学习中心回看: backlog
   7-7-联网搜索-provider-与生成前证据增强: backlog
   epic-7-retrospective: optional
-  epic-8: backlog
-  8-1-学后入口契约与-checkpoint-quiz-path-schema-冻结: backlog
-  8-2-会话后入口与-learning-coach-路由承接: backlog
-  8-3-轻量-checkpoint-生成与反馈: backlog
-  8-4-正式-quiz-生成判题与解析: backlog
-  8-5-错题本与知识推荐: backlog
-  8-6-学习路径规划保存与调整: backlog
-  8-7-learning-coach-长期数据回写: backlog
+  epic-8: review
+  8-1-学后入口契约与-checkpoint-quiz-path-schema-冻结: review
+  8-2-会话后入口与-learning-coach-路由承接: review
+  8-3-轻量-checkpoint-生成与反馈: review
+  8-4-正式-quiz-生成判题与解析: review
+  8-5-错题本与知识推荐: review
+  8-6-学习路径规划保存与调整: review
+  8-7-learning-coach-长期数据回写: review
   epic-8-retrospective: optional
-  epic-9: backlog
-  9-1-学习中心聚合契约分页结构与-mock-数据集: backlog
-  9-2-学习中心结果回看与入口整合: backlog
-  9-3-历史记录与收藏管理: backlog
-  9-4-个人资料与设置管理: backlog
-  9-5-i18n-与亮暗色基线扩展到学习中心与个人域: backlog
+  epic-9: review
+  9-1-学习中心聚合契约分页结构与-mock-数据集: review
+  9-2-学习中心结果回看与入口整合: review
+  9-3-历史记录与收藏管理: review
+  9-4-个人资料与设置管理: review
+  9-5-i18n-与亮暗色基线扩展到学习中心与个人域: review
   epic-9-retrospective: optional
   epic-10: done
   10-1-长期业务数据边界业务表清单与字段基线冻结: done
