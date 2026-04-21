@@ -339,7 +339,7 @@ export function HistoryPage() {
             type="button"
             onClick={() => void clearCurrentPage()}
             disabled={isClearing || records.length === 0}
-            className="bg-[#fff1f0] dark:bg-[#3a1c1c] border border-error dark:border-[#bf0004] text-error dark:text-[#ff4d4f] hover:bg-error hover:text-white dark:hover:bg-[#bf0004] dark:hover:text-white rounded-xl px-5 py-2.5 font-bold text-[13px] btn-transition shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-error/10 dark:bg-error/20 border border-error/30 dark:border-error/20 text-error hover:bg-error hover:text-white dark:hover:bg-error dark:hover:text-white rounded-xl px-5 py-2.5 font-bold text-[13px] btn-transition shadow-sm flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Trash2 className="w-4 h-4" /> {isClearing ? t('learningCenter.history.clearing') : t('learningCenter.history.clear')}
           </button>
@@ -435,7 +435,7 @@ export function HistoryPage() {
                     key={record.recordId}
                     className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm"
                   >
-                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
+                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-bg-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
                       <img
                         src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400"
                         className="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-luminosity"
@@ -450,7 +450,7 @@ export function HistoryPage() {
                       <div>
                         <div className="flex justify-between items-start mb-1.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
+                            <span className="text-[10px] font-bold bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
                               {getTypeLabel(record.resultType)}
                             </span>
                             <h3 className="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
@@ -489,7 +489,7 @@ export function HistoryPage() {
                           <button
                             type="button"
                             onClick={() => void removeHistory(record)}
-                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"
+                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-error btn-transition flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> {t('learningCenter.history.remove')}
                           </button>
@@ -506,7 +506,7 @@ export function HistoryPage() {
                     key={record.recordId}
                     className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm"
                   >
-                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
+                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-bg-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center relative overflow-hidden shrink-0">
                       <img
                         src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=400"
                         className="absolute inset-0 w-full h-full object-cover opacity-70 mix-blend-luminosity"
@@ -521,7 +521,7 @@ export function HistoryPage() {
                       <div>
                         <div className="flex justify-between items-start mb-1.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
+                            <span className="text-[10px] font-bold bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
                               {getTypeLabel(record.resultType)}
                             </span>
                             <h3 className="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
@@ -540,7 +540,7 @@ export function HistoryPage() {
                       <div className="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
                         <Link
                           to="/classroom/input"
-                          className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
+                          className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
                         >
                           {t('learningCenter.history.continueLearning')}{' '}
                           <span className="inline-flex items-center">
@@ -563,7 +563,7 @@ export function HistoryPage() {
                           <button
                             type="button"
                             onClick={() => void removeHistory(record)}
-                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"
+                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-error btn-transition flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> {t('learningCenter.history.remove')}
                           </button>
@@ -581,12 +581,12 @@ export function HistoryPage() {
                     key={record.recordId}
                     className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm"
                   >
-                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex flex-col items-center justify-center shrink-0">
+                    <div className="w-full sm:w-40 aspect-video bg-secondary dark:bg-bg-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex flex-col items-center justify-center shrink-0">
                       <span className="text-3xl font-black font-mono text-text-primary dark:text-text-primary-dark tracking-tighter">
                         {score}
                         <span className="text-sm font-sans ml-0.5">分</span>
                       </span>
-                      <span className="text-[11px] font-bold text-error dark:text-[#ff4d4f] mt-1 bg-error/10 dark:bg-error/20 px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-bold text-error mt-1 bg-error/10 dark:bg-error/20 px-2 py-0.5 rounded">
                         {t('learningCenter.history.quizBadge')}
                       </span>
                     </div>
@@ -595,7 +595,7 @@ export function HistoryPage() {
                       <div>
                         <div className="flex justify-between items-start mb-1.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
+                            <span className="text-[10px] font-bold bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
                               {getTypeLabel(record.resultType)}
                             </span>
                             <h3 className="text-[16px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
@@ -614,7 +614,7 @@ export function HistoryPage() {
                       <div className="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
                         <Link
                           to={`/quiz/${record.sourceSessionId}`}
-                          className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
+                          className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
                         >
                           <FileCheck2 className="w-3.5 h-3.5" /> {t('learningCenter.history.quizReview')}
                         </Link>
@@ -622,7 +622,7 @@ export function HistoryPage() {
                           <button
                             type="button"
                             onClick={() => void removeHistory(record)}
-                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"
+                            className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-error btn-transition flex items-center gap-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> {t('learningCenter.history.remove')}
                           </button>
@@ -638,7 +638,7 @@ export function HistoryPage() {
                   key={record.recordId}
                   className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm"
                 >
-                  <div className="w-full sm:w-40 h-24 bg-secondary dark:bg-[#1a1614] rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0">
+                  <div className="w-full sm:w-40 h-24 bg-secondary dark:bg-bg-dark rounded-xl border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center shrink-0">
                     <MessageSquare className="w-8 h-8 text-text-secondary dark:text-text-secondary-dark opacity-50" />
                   </div>
 
@@ -646,7 +646,7 @@ export function HistoryPage() {
                     <div>
                       <div className="flex justify-between items-start mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
+                          <span className="text-[10px] font-bold bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-0.5 rounded uppercase tracking-widest">
                             {getTypeLabel(record.resultType)}
                           </span>
                           <h3 className="text-[15px] font-black text-text-primary dark:text-text-primary-dark truncate max-w-[200px] md:max-w-sm">
@@ -665,7 +665,7 @@ export function HistoryPage() {
                     <div className="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
                       <Link
                         to="/history"
-                        className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
+                        className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
                       >
                         <MessagesSquare className="w-3.5 h-3.5" /> {t('learningCenter.history.openDetail')}
                       </Link>
@@ -685,7 +685,7 @@ export function HistoryPage() {
                         <button
                           type="button"
                           onClick={() => void removeHistory(record)}
-                          className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-[#ff4d4f] btn-transition flex items-center gap-1"
+                          className="text-text-secondary dark:text-text-secondary-dark hover:text-error dark:hover:text-error btn-transition flex items-center gap-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> {t('learningCenter.history.remove')}
                         </button>
@@ -704,7 +704,7 @@ export function HistoryPage() {
               type="button"
               onClick={() => setPageNum((current) => Math.max(1, current - 1))}
               disabled={pageNum <= 1}
-              className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary/50 dark:text-text-secondary-dark/50 px-3 py-1.5 rounded-lg text-[13px] font-bold shadow-sm disabled:cursor-not-allowed"
+              className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary/50 dark:text-text-secondary-dark/50 px-3 py-1.5 rounded-lg text-[13px] font-bold shadow-sm disabled:cursor-not-allowed"
             >
               {t('learningCenter.history.prev')}
             </button>

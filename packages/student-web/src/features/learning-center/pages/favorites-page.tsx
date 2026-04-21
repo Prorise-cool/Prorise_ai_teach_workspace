@@ -367,7 +367,7 @@ export function FavoritesPage() {
             <button
               type="button"
               onClick={() => setCreateFolderOpen(true)}
-              className="w-6 h-6 rounded-md flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-[#1a1614] hover:text-text-primary dark:hover:text-text-primary-dark btn-transition"
+              className="w-6 h-6 rounded-md flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary dark:hover:bg-bg-dark hover:text-text-primary dark:hover:text-text-primary-dark btn-transition"
               title={t('learningCenter.favorites.createFolder')}
             >
               <FolderPlus className="w-4 h-4" />
@@ -381,7 +381,7 @@ export function FavoritesPage() {
               className={
                 activeFolderId === 'all'
                   ? 'bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center shadow-sm btn-transition'
-                  : 'border border-transparent text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#1a1614] rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center btn-transition'
+                  : 'border border-transparent text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-secondary dark:hover:bg-bg-dark rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center btn-transition'
               }
             >
               <span className="flex items-center gap-2.5">
@@ -409,7 +409,7 @@ export function FavoritesPage() {
                   className={
                     isActive
                       ? 'bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center shadow-sm btn-transition'
-                      : 'border border-transparent text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#1a1614] rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center btn-transition'
+                      : 'border border-transparent text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-secondary dark:hover:bg-bg-dark rounded-xl px-4 py-3 font-bold text-[14px] flex justify-between items-center btn-transition'
                   }
                 >
                   <span className="flex items-center gap-2.5">
@@ -483,8 +483,8 @@ export function FavoritesPage() {
                           }}
                           className={
                             isActive
-                              ? 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark transition-colors'
-                              : 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-bg-light dark:hover:bg-[#201c19] transition-colors'
+                              ? 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark transition-colors'
+                              : 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors'
                           }
                         >
                           {item.label}
@@ -536,8 +536,8 @@ export function FavoritesPage() {
                           }}
                           className={
                             isActive
-                              ? 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold bg-secondary dark:bg-[#1a1614] text-text-primary dark:text-text-primary-dark transition-colors'
-                              : 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-bg-light dark:hover:bg-[#201c19] transition-colors'
+                              ? 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold bg-secondary dark:bg-bg-dark text-text-primary dark:text-text-primary-dark transition-colors'
+                              : 'dropdown-item text-left px-3 py-2 rounded-lg text-[13px] font-bold text-text-secondary dark:text-text-secondary-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors'
                           }
                         >
                           {item.label}
@@ -569,8 +569,8 @@ export function FavoritesPage() {
                     to={resolveDetailTo(record)}
                     className={
                       record.resultType === 'companion' || record.resultType === 'evidence'
-                        ? 'w-full aspect-video bg-secondary dark:bg-[#1a1614] flex items-center justify-center relative overflow-hidden border-b border-bordercolor-light dark:border-bordercolor-dark p-6'
-                        : 'w-full aspect-video bg-secondary dark:bg-[#1a1614] flex items-center justify-center relative overflow-hidden border-b border-bordercolor-light dark:border-bordercolor-dark'
+                        ? 'w-full aspect-video bg-secondary dark:bg-bg-dark flex items-center justify-center relative overflow-hidden border-b border-bordercolor-light dark:border-bordercolor-dark p-6'
+                        : 'w-full aspect-video bg-secondary dark:bg-bg-dark flex items-center justify-center relative overflow-hidden border-b border-bordercolor-light dark:border-bordercolor-dark'
                     }
                   >
                     {record.resultType === 'companion' || record.resultType === 'evidence' ? (
@@ -625,7 +625,7 @@ export function FavoritesPage() {
                       <span
                         className={
                           record.resultType === 'classroom'
-                            ? 'text-[10px] font-bold bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-1.5 py-0.5 rounded shadow-sm tracking-wider'
+                            ? 'text-[10px] font-bold bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-1.5 py-0.5 rounded shadow-sm tracking-wider'
                             : 'text-[10px] font-bold bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-1.5 py-0.5 rounded shadow-sm tracking-wider'
                         }
                       >
@@ -652,14 +652,14 @@ export function FavoritesPage() {
                       <button
                         type="button"
                         onClick={() => openMoveDialog(record)}
-                        className="flex-1 bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary hover:bg-bordercolor-light dark:hover:text-text-primary-dark dark:hover:bg-bordercolor-dark py-2 rounded-xl text-[12px] font-bold btn-transition flex justify-center items-center gap-1.5 shadow-sm"
+                        className="flex-1 bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary hover:bg-bordercolor-light dark:hover:text-text-primary-dark dark:hover:bg-bordercolor-dark py-2 rounded-xl text-[12px] font-bold btn-transition flex justify-center items-center gap-1.5 shadow-sm"
                       >
                         <FolderInput className="w-3.5 h-3.5" /> {t('learningCenter.favorites.move')}
                       </button>
                       <button
                         type="button"
                         onClick={() => void cancelFavorite(record)}
-                        className="flex-1 bg-transparent border border-error dark:border-[#bf0004] text-error dark:text-[#ff4d4f] hover:bg-error hover:text-white dark:hover:bg-[#bf0004] dark:hover:text-white py-2 rounded-xl text-[12px] font-bold btn-transition flex justify-center items-center gap-1.5 shadow-sm"
+                        className="flex-1 bg-transparent border border-error/30 dark:border-error/20 text-error hover:bg-error hover:text-white dark:hover:bg-error dark:hover:text-white py-2 rounded-xl text-[12px] font-bold btn-transition flex justify-center items-center gap-1.5 shadow-sm"
                       >
                         <StarOff className="w-3.5 h-3.5" /> {t('learningCenter.favorites.cancel')}
                       </button>
@@ -694,7 +694,7 @@ export function FavoritesPage() {
             <DialogClose asChild>
               <button
                 type="button"
-                className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
+                className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
               >
                 {t('learningCenter.favorites.folderCreateCancel')}
               </button>
@@ -725,7 +725,7 @@ export function FavoritesPage() {
               className={
                 moveFolderId === ''
                   ? 'w-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between shadow-sm btn-transition'
-                  : 'w-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#1a1614] rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between btn-transition'
+                  : 'w-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-bg-dark rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between btn-transition'
               }
             >
               <span className="flex items-center gap-2">
@@ -742,7 +742,7 @@ export function FavoritesPage() {
                   className={
                     isActive
                       ? 'w-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between shadow-sm btn-transition'
-                      : 'w-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-[#1a1614] rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between btn-transition'
+                      : 'w-full bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-secondary dark:hover:bg-bg-dark rounded-xl px-4 py-3 font-bold text-[13px] flex items-center justify-between btn-transition'
                   }
                 >
                   <span className="flex items-center gap-2">
@@ -756,7 +756,7 @@ export function FavoritesPage() {
             <DialogClose asChild>
               <button
                 type="button"
-                className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
+                className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
               >
                 {t('learningCenter.favorites.moveCancel')}
               </button>

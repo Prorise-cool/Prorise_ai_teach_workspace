@@ -178,7 +178,7 @@ export function SettingsPage() {
                       description: t('userSettings.settings.comingSoonMessage'),
                     })
                   }
-                  className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
+                  className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
                 >
                   {t('userSettings.settings.phoneAction')}
                 </button>
@@ -202,7 +202,7 @@ export function SettingsPage() {
                       description: t('userSettings.settings.comingSoonMessage'),
                     })
                   }
-                  className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
+                  className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
                 >
                   {t('userSettings.settings.passwordAction')}
                 </button>
@@ -214,7 +214,7 @@ export function SettingsPage() {
                     <p className="text-[14px] font-bold text-text-primary dark:text-text-primary-dark">
                       {t('userSettings.settings.sessionsTitle')}
                     </p>
-                    <span className="px-2 py-0.5 rounded-full bg-secondary dark:bg-[#2c2522] border border-bordercolor-light dark:border-bordercolor-dark text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark">
+                    <span className="px-2 py-0.5 rounded-full bg-secondary border border-bordercolor-light dark:border-bordercolor-dark text-[10px] font-bold text-text-secondary dark:text-text-secondary-dark">
                       {t('userSettings.settings.sessionsBadge')}
                     </span>
                   </div>
@@ -231,7 +231,7 @@ export function SettingsPage() {
                       description: t('userSettings.settings.comingSoonMessage'),
                     })
                   }
-                  className="bg-secondary dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
+                  className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
                 >
                   {t('userSettings.settings.sessionsAction')}
                 </button>
@@ -313,15 +313,15 @@ export function SettingsPage() {
             </div>
           </section>
 
-          <section className="bg-[#fff1f0] dark:bg-[#2c1515] border border-error/30 dark:border-error/20 rounded-2xl p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg font-black mb-6 text-error dark:text-[#ff4d4f] border-b border-error/20 dark:border-error/20 pb-4">
+          <section className="bg-error/10 dark:bg-error/20 border border-error/30 dark:border-error/20 rounded-2xl p-6 md:p-8 shadow-sm">
+            <h2 className="text-lg font-black mb-6 text-error border-b border-error/20 dark:border-error/20 pb-4">
               {t('userSettings.settings.sectionDanger')}
             </h2>
 
             <div className="flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-dashed border-error/20 dark:border-error/20 pb-6">
                 <div>
-                  <p className="text-[14px] font-bold text-text-primary dark:text-[#ff4d4f] mb-1.5">
+                  <p className="text-[14px] font-bold text-text-primary dark:text-error mb-1.5">
                     {t('userSettings.settings.clearCacheTitle')}
                   </p>
                   <p className="text-[12px] text-text-secondary dark:text-text-secondary-dark font-medium">
@@ -331,7 +331,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={clearCache}
-                  className="bg-surface-light dark:bg-[#1a1614] border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:border-text-primary dark:hover:border-text-primary-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
+                  className="bg-surface-light dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark hover:border-text-primary dark:hover:border-text-primary-dark px-5 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit"
                 >
                   {t('userSettings.settings.clearCacheAction')}
                 </button>
@@ -339,7 +339,7 @@ export function SettingsPage() {
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <p className="text-[14px] font-bold text-text-primary dark:text-[#ff4d4f] mb-1.5">
+                  <p className="text-[14px] font-bold text-text-primary dark:text-error mb-1.5">
                     {t('userSettings.settings.logoutTitle')}
                   </p>
                   <p className="text-[12px] text-text-secondary dark:text-text-secondary-dark font-medium">
@@ -350,7 +350,7 @@ export function SettingsPage() {
                   type="button"
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className="bg-surface-light dark:bg-[#1a1614] border border-error dark:border-[#bf0004] text-error dark:text-[#ff4d4f] hover:bg-error hover:text-white dark:hover:bg-[#bf0004] dark:hover:text-white px-6 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit text-center disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="bg-surface-light dark:bg-bg-dark border border-error/30 dark:border-error/20 text-error hover:bg-error hover:text-white dark:hover:bg-error dark:hover:text-white px-6 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm whitespace-nowrap w-fit text-center disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
                   {isLoggingOut ? t('userSettings.settings.loggingOut') : t('userSettings.settings.logoutAction')}

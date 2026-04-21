@@ -54,14 +54,14 @@ export function SurfaceDock({
           {learningCenterTo ? (
             <Link
               to={learningCenterTo}
-              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition"
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
             >
               <BookOpen className="w-5 h-5" />
             </Link>
           ) : (
             <button
               type="button"
-              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition"
+              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
             >
               <BookOpen className="w-5 h-5" />
             </button>
@@ -77,7 +77,7 @@ export function SurfaceDock({
           <button
             type="button"
             onClick={toggleLocale}
-            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition"
+            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
           >
             <Globe className="w-5 h-5" />
           </button>
@@ -90,7 +90,7 @@ export function SurfaceDock({
           <button
             type="button"
             onClick={toggleThemeMode}
-            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-[#1a1614] dark:hover:text-text-primary-dark btn-transition"
+            className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
           >
             <Sun className="w-5 h-5 hidden dark:block" />
             <Moon className="w-5 h-5 block dark:hidden" />
