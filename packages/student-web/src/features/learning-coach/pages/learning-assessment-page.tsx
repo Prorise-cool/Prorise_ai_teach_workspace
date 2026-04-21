@@ -32,6 +32,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { SurfaceDock } from '@/components/surface/surface-dock';
 import { resolveLearningCoachAdapter } from '@/services/api/adapters/learning-coach-adapter';
 import type { LearningCoachJudgeItem, LearningCoachQuestion, LearningCoachSource } from '@/types/learning';
@@ -366,14 +367,17 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
           <span className="tracking-tight text-text-primary dark:text-text-primary-dark text-xl hidden sm:block">XiaoMai</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm btn-transition"
-        >
-          <PanelRight className="w-5 h-5" />
-          <span className="text-[13px] font-bold hidden sm:block">辅导助手</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm btn-transition"
+          >
+            <PanelRight className="w-5 h-5" />
+            <span className="text-[13px] font-bold hidden sm:block">辅导助手</span>
+          </button>
+          <UserAvatarMenu />
+        </div>
       </header>
 
       <div className="relative z-20 flex-1 w-full max-w-[1500px] mx-auto flex flex-row items-stretch px-4 pb-[90px] overflow-hidden gap-6">

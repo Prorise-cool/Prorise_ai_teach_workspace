@@ -3,9 +3,10 @@
  * 视觉基准：Ux/.../10-Checkpoint 与 Quiz 页/01-entry.html
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Leaf, PanelRight, Sparkles, Zap, ClipboardCheck, Target, Layers, Map, Bot, X, ArrowRight, LayoutTemplate } from 'lucide-react';
 
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { SurfaceDock } from '@/components/surface/surface-dock';
 import { resolveLearningCoachAdapter } from '@/services/api/adapters/learning-coach-adapter';
 import type { LearningCoachEntryPayload } from '@/types/learning';
@@ -95,21 +96,24 @@ export function LearningCoachEntryPage() {
 
       {/* 顶部导航栏 */}
       <header className="relative z-20 w-full max-w-[1400px] mx-auto h-[72px] px-6 flex justify-between items-center shrink-0">
-        <a href="#" className="font-bold text-lg flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link to="/" className="font-bold text-lg flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
             <Leaf className="w-4.5 h-4.5 text-bg-light dark:text-bg-dark" />
           </div>
           <span className="tracking-tight text-text-primary dark:text-text-primary-dark text-xl">XiaoMai</span>
-        </a>
+        </Link>
 
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm btn-transition"
-        >
-          <PanelRight className="w-5 h-5" />
-          <span className="text-[13px] font-bold hidden sm:block">陪练助手</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark shadow-sm btn-transition"
+          >
+            <PanelRight className="w-5 h-5" />
+            <span className="text-[13px] font-bold hidden sm:block">陪练助手</span>
+          </button>
+          <UserAvatarMenu />
+        </div>
       </header>
 
       <div className="relative z-20 flex-1 w-full max-w-[1400px] mx-auto flex flex-row items-stretch px-4 pb-[100px] overflow-hidden">
