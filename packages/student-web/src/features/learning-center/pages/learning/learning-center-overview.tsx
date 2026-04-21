@@ -4,6 +4,17 @@ type LearningCenterOverviewProps = {
   countByType: Map<string, number>;
 };
 
+const RESULT_TYPE_I18N_KEYS: ReadonlyArray<readonly [string, string]> = [
+  ['video', 'learningCenter.page.resultTypeVideo'],
+  ['classroom', 'learningCenter.page.resultTypeClassroom'],
+  ['companion', 'learningCenter.page.resultTypeCompanion'],
+  ['evidence', 'learningCenter.page.resultTypeEvidence'],
+  ['checkpoint', 'learningCenter.page.resultTypeCheckpoint'],
+  ['quiz', 'learningCenter.page.resultTypeQuiz'],
+  ['path', 'learningCenter.page.resultTypePath'],
+  ['recommendation', 'learningCenter.page.resultTypeRecommendation'],
+];
+
 export function LearningCenterOverview({ countByType }: LearningCenterOverviewProps) {
   const { t } = useAppTranslation();
 
@@ -23,21 +34,12 @@ export function LearningCenterOverview({ countByType }: LearningCenterOverviewPr
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {[
-          ['video', '视频'],
-          ['classroom', '课堂'],
-          ['companion', 'Companion'],
-          ['evidence', 'Evidence'],
-          ['checkpoint', 'Checkpoint'],
-          ['quiz', 'Quiz'],
-          ['path', 'Path'],
-          ['recommendation', 'Recommendation'],
-        ].map(([type, label]) => (
+        {RESULT_TYPE_I18N_KEYS.map(([type, labelKey]) => (
           <span
             key={type}
             className="px-3 py-1.5 rounded-full bg-bg-light dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-[12px] font-bold text-text-primary dark:text-text-primary-dark"
           >
-            {label} {countByType.get(type) ?? 0}
+            {t(labelKey)} {countByType.get(type) ?? 0}
           </span>
         ))}
       </div>

@@ -3,6 +3,10 @@ import { Activity, TrendingUp } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
+// TODO(epic-9): quizHealthTrend / quizHealthHint 目前是 i18n 里的占位模拟文案
+// ("较上周提升 12%"、"隐函数求导模块失分较多")，后端没有对应统计接口。
+// 后续 Story 需把 quizScore 改为从 xm_quiz_result.score 聚合，
+// 把 trend 改为真实环比，hint 从 xm_learning_wrongbook 的高频错题维度聚合。
 type LearningCenterSidebarQuizHealthProps = {
   quizScore: number;
 };

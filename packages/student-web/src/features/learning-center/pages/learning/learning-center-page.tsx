@@ -113,6 +113,9 @@ export function LearningCenterPage() {
     return counts;
   }, [records]);
 
+  // TODO(epic-9): 此处 fallback 86 是占位分，没找到 quiz 记录或 summary 里无数字时使用。
+  // 后续 Story 应改为后端直接返回 averageQuizScore 字段（从 xm_quiz_result 真实聚合），
+  // 无真实数据时应显示空态而非 86。
   const quizScore = useMemo(() => {
     const quiz = records.find((record) => record.resultType === 'quiz');
     if (!quiz) return 86;

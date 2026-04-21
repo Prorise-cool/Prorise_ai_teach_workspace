@@ -3,9 +3,10 @@ import { Compass } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
-// Sidebar 卡片当前没有接真实 path 追踪字段（LearningPathPlanPayload schema 无
-// completedStepCount），刷新生成路径后统一展示 0%；后续 Story 补齐进度字段时
-// 替换下列常量来源即可。
+// TODO(epic-9): 当前卡片展示的标题 (pathFallbackTitleLine1/2 "微积分求导/进阶攻坚")
+// 是 i18n 占位文案，不是当前用户活跃路径。进度 0/0 也因为 LearningPathPlanPayload
+// 还没有 completedStepCount / totalStepCount 字段，统一展示 0% 避免误导。
+// 后续 Story 应从 xm_learning_path 按 user_id 最新一条拉取 path_title + 真实进度字段。
 const COMPLETED_STEP_COUNT = 0;
 const TOTAL_STEP_COUNT = 0;
 
@@ -29,10 +30,10 @@ export function LearningCenterSidebarPathCard() {
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xs font-bold uppercase tracking-widest text-surface-light/70 dark:text-text-secondary-dark">
-            Current Path
+            {t('learningCenter.page.currentPathSectionTitle')}
           </h2>
           <span className="text-[10px] font-bold bg-brand text-primary-foreground px-2 py-0.5 rounded shadow-sm">
-            Target
+            {t('learningCenter.page.currentPathTargetBadge')}
           </span>
         </div>
         <h3 className="text-2xl md:text-3xl font-black mb-8 tracking-tight">

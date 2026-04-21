@@ -3,6 +3,10 @@ import { Sparkles } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
+// TODO(epic-9): 两条推荐（recommendItem1/recommendItem2）目前是 i18n 里的占位文案
+// ("生成单题讲解：隐函数求导的几何推导过程"、"延伸课堂：从偏导数到全微分")，
+// 没有调真实推荐接口。后续 Story 应从 xm_learning_recommendation 表按 user_id + source_time DESC
+// 拉最新 2 条，每条绑定真实 detail_ref 作跳转目标。
 export function LearningCenterSidebarRecommendation() {
   const { t } = useAppTranslation();
 

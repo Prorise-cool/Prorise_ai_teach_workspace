@@ -45,7 +45,7 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
   return (
     <section className="view-enter stagger-4">
       <h2 className="text-[15px] font-black mb-4 flex items-center gap-2 text-text-primary dark:text-text-primary-dark uppercase tracking-widest">
-        Library
+        {t('learningCenter.page.librarySectionTitle')}
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <Link
@@ -126,7 +126,7 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
               <History className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
             </div>
             <span className="text-[10px] font-black font-mono bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
-              {total} Files
+              {total} {t('learningCenter.page.libraryHistoryBadgeSuffix')}
             </span>
           </div>
           <div className="relative z-10 mt-4">
@@ -149,7 +149,7 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
               <Star className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
             </div>
             <span className="text-[10px] font-black font-mono bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
-              {favoritesTotal === null ? '-' : favoritesTotal} Saved
+              {favoritesTotal === null ? '-' : favoritesTotal} {t('learningCenter.page.libraryFavoritesBadgeSuffix')}
             </span>
           </div>
           <div className="relative z-10 mt-4">
@@ -195,7 +195,7 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
               <Paperclip className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
             </div>
             <span className="text-[10px] font-black font-mono bg-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
-              Demo
+              {t('learningCenter.page.libraryEvidenceBadge')}
             </span>
           </div>
           <div className="relative z-10 mt-4">

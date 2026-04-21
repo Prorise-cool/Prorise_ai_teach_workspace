@@ -23,7 +23,7 @@ export function LearningCenterRecentActivity({
     <section className="view-enter stagger-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-[15px] font-black text-text-primary dark:text-text-primary-dark uppercase tracking-widest">
-          Recent Activity
+          {t('learningCenter.page.recentActivityTitle')}
         </h2>
         <Link
           to="/history"
