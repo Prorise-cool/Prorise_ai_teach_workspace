@@ -19,6 +19,7 @@ import {
 	useBrowserAsr,
 } from '@/components/input-page';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
 import {
@@ -338,23 +339,26 @@ export function VideoInputPage() {
 	}, [notify, searchParams, t, workspaceToast]);
 
 	const workspaceUtilitySlot = (
-		<VideoTaskCenter
-			items={workspaceTaskItems}
-			total={workspaceTaskItems.length}
-			isCancellingTaskId={
-				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
-			}
-			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-			onEnterTask={(taskId) => {
-				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
-				void navigate(
-					item?.lifecycleStatus === 'completed'
-						? `/video/${taskId}`
-						: `/video/${taskId}/generating`,
-				);
-			}}
-		/>
+		<div className="flex items-center gap-3">
+			<VideoTaskCenter
+				items={workspaceTaskItems}
+				total={workspaceTaskItems.length}
+				isCancellingTaskId={
+					cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
+				}
+				onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
+				onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+				onEnterTask={(taskId) => {
+					const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
+					void navigate(
+						item?.lifecycleStatus === 'completed'
+							? `/video/${taskId}`
+							: `/video/${taskId}/generating`,
+					);
+				}}
+			/>
+			<UserAvatarMenu />
+		</div>
 	);
 
 	return (

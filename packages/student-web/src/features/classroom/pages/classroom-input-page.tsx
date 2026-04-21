@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import {
 	INPUT_PAGE_GUIDE_CARD_ICONS,
 	type InputWorkspaceNavLink,
@@ -98,6 +99,7 @@ export function ClassroomInputPage() {
 			rootClassName="xm-classroom-input"
 			navLinks={navLinks}
 			workspaceRoutes={wsRoutes}
+			workspaceUtilitySlot={<UserAvatarMenu />}
 			content={{
 				className: 'xm-classroom-input__content'
 			}}

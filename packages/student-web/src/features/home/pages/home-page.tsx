@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
+import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { Button } from '@/components/ui/button';
 import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import {
@@ -123,23 +124,26 @@ export function HomePage() {
 		[workspaceTasksQuery.data?.items, t],
 	);
 	const workspaceUtilitySlot = session?.accessToken ? (
-		<VideoTaskCenter
-			items={workspaceTaskItems}
-			total={workspaceTaskItems.length}
-			isCancellingTaskId={
-				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
-			}
-			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-			onEnterTask={(taskId) => {
-				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
-				void navigate(
-					item?.lifecycleStatus === 'completed'
-						? `/video/${taskId}`
-						: `/video/${taskId}/generating`,
-				);
-			}}
-		/>
+		<div className="xm-entry-home__nav-utilities flex items-center gap-3">
+			<VideoTaskCenter
+				items={workspaceTaskItems}
+				total={workspaceTaskItems.length}
+				isCancellingTaskId={
+					cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
+				}
+				onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
+				onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+				onEnterTask={(taskId) => {
+					const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
+					void navigate(
+						item?.lifecycleStatus === 'completed'
+							? `/video/${taskId}`
+							: `/video/${taskId}/generating`,
+					);
+				}}
+			/>
+			<UserAvatarMenu />
+		</div>
 	) : null;
 
 	return (
