@@ -1,5 +1,8 @@
 """Learning Coach API routes（Epic 8）。"""
 
+from __future__ import annotations
+
+import logging
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends
@@ -22,14 +25,34 @@ from app.features.learning_coach.schemas import (
     QuizSubmitRequest,
 )
 from app.features.learning_coach.service import LearningCoachService
+from app.providers.llm.factory import get_llm_provider_chain
+from app.providers.protocols import LLMProvider
 from app.worker import get_runtime_store
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/learning-coach", tags=["learning-coach"])
 
 
+def _resolve_provider_chain() -> tuple[LLMProvider, ...]:
+    """取 LLM Provider failover 链；不可用时返回空元组让 service 自动降级。"""
+    try:
+        chain = get_llm_provider_chain()
+    except Exception as error:  # pragma: no cover - 启动期配置异常
+        logger.warning(
+            "learning_coach.provider_chain.unavailable",
+            extra={"error": str(error)},
+        )
+        return tuple()
+    return tuple(chain)
+
+
 @lru_cache
 def get_learning_coach_service() -> LearningCoachService:
-    return LearningCoachService(runtime_store=get_runtime_store())
+    return LearningCoachService(
+        runtime_store=get_runtime_store(),
+        provider_chain=_resolve_provider_chain(),
+    )
 
 
 @router.get("/entry", response_model=LearningCoachEntryEnvelope)
@@ -61,7 +84,7 @@ async def learning_checkpoint_generate(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> CheckpointGenerateEnvelope:
-    payload = service.generate_checkpoint(
+    payload = await service.generate_checkpoint(
         source=request.source,
         question_count=request.question_count,
     )
@@ -89,7 +112,7 @@ async def learning_quiz_generate(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> QuizGenerateEnvelope:
-    payload = service.generate_quiz(
+    payload = await service.generate_quiz(
         source=request.source,
         question_count=request.question_count,
     )
@@ -117,7 +140,7 @@ async def learning_path_plan(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> LearningPathPlanEnvelope:
-    payload = service.plan_path(
+    payload = await service.plan_path(
         source=request.source,
         goal=request.goal,
         cycle_days=request.cycle_days,
@@ -137,4 +160,3 @@ async def learning_path_save(
         access_context=access_context,
     )
     return LearningPathSaveEnvelope(data=payload)
-

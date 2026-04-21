@@ -98,6 +98,7 @@ class CheckpointGeneratePayload(CamelCaseModel):
     question_total: int = Field(ge=1, le=3)
     questions: list[LearningCoachQuestion]
     expires_in_seconds: int = Field(ge=60, le=86400)
+    generation_source: str = Field(default="llm", pattern="^(llm|fallback)$")
 
 
 class CheckpointGenerateEnvelope(CamelCaseModel):
@@ -149,6 +150,7 @@ class QuizGeneratePayload(CamelCaseModel):
     question_total: int = Field(ge=1, le=50)
     questions: list[LearningCoachQuestion]
     expires_in_seconds: int = Field(ge=60, le=86400)
+    generation_source: str = Field(default="llm", pattern="^(llm|fallback)$")
 
 
 class QuizGenerateEnvelope(CamelCaseModel):
@@ -207,6 +209,7 @@ class LearningPathPlanPayload(CamelCaseModel):
     path_summary: str = Field(min_length=1, max_length=2000)
     version_no: int = Field(default=1, ge=1, le=1000)
     stages: list[LearningPathStage] = Field(min_length=1, max_length=20)
+    generation_source: str = Field(default="llm", pattern="^(llm|fallback)$")
 
 
 class LearningPathPlanEnvelope(CamelCaseModel):
