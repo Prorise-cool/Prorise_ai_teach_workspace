@@ -24,10 +24,19 @@ from app.features.learning_coach.schemas import (
     QuizSubmitEnvelope,
     QuizSubmitRequest,
 )
+from app.features.learning_coach.rate_limit import enforce_rate_limit
 from app.features.learning_coach.service import LearningCoachService
 from app.providers.llm.factory import get_llm_provider_chain
 from app.providers.protocols import LLMProvider
 from app.worker import get_runtime_store
+
+# 限流阈值按 LLM 成本递增收紧：
+# - checkpoint 单次 <= 3 题、轻量热身，允许 20/min；
+# - quiz 单次最多 50 题，每次消耗 LLM 较多，10/min；
+# - path 规划消耗最大，3/min。
+RATE_LIMIT_CHECKPOINT_PER_MINUTE = 20
+RATE_LIMIT_QUIZ_PER_MINUTE = 10
+RATE_LIMIT_PATH_PLAN_PER_MINUTE = 3
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +87,17 @@ async def learning_coach_entry(
     return LearningCoachEntryEnvelope(data=payload)
 
 
-@router.post("/checkpoint/generate", response_model=CheckpointGenerateEnvelope)
+@router.post(
+    "/checkpoint/generate",
+    response_model=CheckpointGenerateEnvelope,
+    dependencies=[
+        Depends(
+            enforce_rate_limit(
+                "checkpoint_generate", RATE_LIMIT_CHECKPOINT_PER_MINUTE
+            )
+        )
+    ],
+)
 async def learning_checkpoint_generate(
     request: CheckpointGenerateRequest,
     access_context: AccessContext = Depends(get_access_context),
@@ -106,7 +125,13 @@ async def learning_checkpoint_submit(
     return CheckpointSubmitEnvelope(data=payload)
 
 
-@router.post("/quiz/generate", response_model=QuizGenerateEnvelope)
+@router.post(
+    "/quiz/generate",
+    response_model=QuizGenerateEnvelope,
+    dependencies=[
+        Depends(enforce_rate_limit("quiz_generate", RATE_LIMIT_QUIZ_PER_MINUTE))
+    ],
+)
 async def learning_quiz_generate(
     request: QuizGenerateRequest,
     access_context: AccessContext = Depends(get_access_context),
@@ -134,7 +159,15 @@ async def learning_quiz_submit(
     return QuizSubmitEnvelope(data=payload)
 
 
-@router.post("/path/plan", response_model=LearningPathPlanEnvelope)
+@router.post(
+    "/path/plan",
+    response_model=LearningPathPlanEnvelope,
+    dependencies=[
+        Depends(
+            enforce_rate_limit("path_plan", RATE_LIMIT_PATH_PLAN_PER_MINUTE)
+        )
+    ],
+)
 async def learning_path_plan(
     request: LearningPathPlanRequest,
     access_context: AccessContext = Depends(get_access_context),
