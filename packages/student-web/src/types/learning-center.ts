@@ -27,3 +27,13 @@ export interface LearningCenterPage<TRecord = LearningCenterRecord> {
   msg?: string;
 }
 
+export interface LearningCenterFavoriteFolder {
+  folderId: string;
+  folderName: string;
+  createTime?: string | null;
+}
+
+export interface LearningCenterFavoriteFolderState {
+  folders: LearningCenterFavoriteFolder[];
+  assignments: Record<string, string>;
+}

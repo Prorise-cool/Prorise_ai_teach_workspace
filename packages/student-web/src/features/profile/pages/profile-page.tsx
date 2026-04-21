@@ -2,7 +2,7 @@
  * 文件说明：个人资料页（Epic 9）。
  * 视觉结构直接对齐 Ux 成品页：13-个人资料页/01-profile.html
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { SurfaceDashboardDock } from '@/components/surface/surface-dashboard-dock';
+import { updateCurrentSystemProfile } from '@/features/profile/api/system-profile-api';
+import { useUserProfile } from '@/features/profile/hooks/use-user-profile';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
 
@@ -29,80 +31,44 @@ type ProfileExtras = {
   grade: string;
 };
 
-const PROFILE_EXTRAS_STORAGE_KEY = 'xiaomai-profile-extras';
-
-function readProfileExtras(storage: Storage | undefined): ProfileExtras {
-  if (!storage) {
-    return {
-      bio: '',
-      school: '',
-      major: '',
-      identity: '',
-      grade: '',
-    };
-  }
-
-  const rawValue = storage.getItem(PROFILE_EXTRAS_STORAGE_KEY);
-  if (!rawValue) {
-    return {
-      bio: '',
-      school: '',
-      major: '',
-      identity: '',
-      grade: '',
-    };
-  }
-
-  try {
-    const parsed = JSON.parse(rawValue) as Partial<ProfileExtras>;
-    return {
-      bio: parsed.bio ?? '',
-      school: parsed.school ?? '',
-      major: parsed.major ?? '',
-      identity: parsed.identity ?? '',
-      grade: parsed.grade ?? '',
-    };
-  } catch {
-    storage.removeItem(PROFILE_EXTRAS_STORAGE_KEY);
-    return {
-      bio: '',
-      school: '',
-      major: '',
-      identity: '',
-      grade: '',
-    };
-  }
-}
-
-function persistProfileExtras(extras: ProfileExtras) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(PROFILE_EXTRAS_STORAGE_KEY, JSON.stringify(extras));
-}
-
 export function ProfilePage() {
   const { t } = useAppTranslation();
   const { notify } = useFeedback();
   const session = useAuthSessionStore(state => state.session);
   const setSession = useAuthSessionStore(state => state.setSession);
-
-  const initialExtras = useMemo(
-    () => readProfileExtras(typeof window === 'undefined' ? undefined : window.localStorage),
-    [],
-  );
+  const { profile, saveProfile, uploadAvatar, isSavingProfile, isUploadingAvatar } = useUserProfile();
 
   const [nickname, setNickname] = useState(session?.user.nickname ?? '');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(session?.user.avatarUrl ?? null);
   const [extras, setExtras] = useState<ProfileExtras>({
-    bio: initialExtras.bio || '高等数学狂热爱好者，正在努力攻克微积分与线性代数。',
-    school: initialExtras.school || '示例职业技术学院',
-    major: initialExtras.major || '机电工程系',
-    identity: initialExtras.identity || '高职学生',
-    grade: initialExtras.grade || '大一',
+    bio: '高等数学狂热爱好者，正在努力攻克微积分与线性代数。',
+    school: '示例职业技术学院',
+    major: '机电工程系',
+    identity: '高职学生',
+    grade: '大一',
   });
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isBusy = isSaving || isSavingProfile || isUploadingAvatar;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const applySave = () => {
+  useEffect(() => {
+    if (!profile) return;
+    if (hasHydrated) return;
+
+    setExtras({
+      bio: profile.bio || '高等数学狂热爱好者，正在努力攻克微积分与线性代数。',
+      school: profile.schoolName || '',
+      major: profile.majorName || '',
+      identity: profile.identityLabel || '',
+      grade: profile.gradeLabel || '',
+    });
+    setHasHydrated(true);
+  }, [hasHydrated, profile]);
+
+  const applySave = async () => {
     if (!session) {
       notify({
         tone: 'error',
@@ -121,37 +87,57 @@ export function ProfilePage() {
       return;
     }
 
-    persistProfileExtras(extras);
-    setSession(
-      {
-        ...session,
-        user: {
-          ...session.user,
-          nickname: nickname.trim(),
-          avatarUrl,
-        },
-      },
-      undefined,
-    );
+    setIsSaving(true);
 
-    notify({
-      tone: 'success',
-      title: t('userSettings.profile.saveSuccessTitle'),
-      description: t('userSettings.profile.saveSuccessMessage'),
-    });
+    try {
+      await updateCurrentSystemProfile({ nickName: nickname.trim() });
+      await saveProfile({
+        avatarUrl,
+        bio: extras.bio,
+        schoolName: extras.school,
+        majorName: extras.major,
+        identityLabel: extras.identity,
+        gradeLabel: extras.grade,
+      });
+
+      setSession(
+        {
+          ...session,
+          user: {
+            ...session.user,
+            nickname: nickname.trim(),
+            avatarUrl,
+          },
+        },
+        undefined,
+      );
+
+      notify({
+        tone: 'success',
+        title: t('userSettings.profile.saveSuccessTitle'),
+        description: t('userSettings.profile.saveSuccessMessage'),
+      });
+    } catch (error: unknown) {
+      notify({
+        tone: 'error',
+        title: t('userSettings.profile.saveFailedTitle'),
+        description: error instanceof Error ? error.message : t('userSettings.profile.saveFailedMessage'),
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetDraft = () => {
     if (!session) return;
-    const latestExtras = readProfileExtras(typeof window === 'undefined' ? undefined : window.localStorage);
     setNickname(session.user.nickname ?? '');
     setAvatarUrl(session.user.avatarUrl ?? null);
     setExtras({
-      bio: latestExtras.bio || '',
-      school: latestExtras.school || '',
-      major: latestExtras.major || '',
-      identity: latestExtras.identity || '',
-      grade: latestExtras.grade || '',
+      bio: profile?.bio ?? '',
+      school: profile?.schoolName ?? '',
+      major: profile?.majorName ?? '',
+      identity: profile?.identityLabel ?? '',
+      grade: profile?.gradeLabel ?? '',
     });
   };
 
@@ -159,28 +145,21 @@ export function ProfilePage() {
     if (!file) return;
     if (!file.type.startsWith('image/')) return;
 
-    const reader = new FileReader();
-    const dataUrl = await new Promise<string | null>((resolve) => {
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
-    });
-
-    if (!dataUrl) {
+    try {
+      const url = await uploadAvatar(file);
+      setAvatarUrl(url);
+      notify({
+        tone: 'success',
+        title: t('userSettings.profile.avatarUpdatedTitle'),
+        description: t('userSettings.profile.avatarUpdatedMessage'),
+      });
+    } catch (error: unknown) {
       notify({
         tone: 'error',
         title: t('userSettings.profile.avatarFailedTitle'),
-        description: t('userSettings.profile.avatarFailedMessage'),
+        description: error instanceof Error ? error.message : t('userSettings.profile.avatarFailedMessage'),
       });
-      return;
     }
-
-    setAvatarUrl(dataUrl);
-    notify({
-      tone: 'success',
-      title: t('userSettings.profile.avatarUpdatedTitle'),
-      description: t('userSettings.profile.avatarUpdatedMessage'),
-    });
   };
 
   return (
@@ -433,13 +412,15 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={resetDraft}
+                  disabled={isBusy}
                   className="border border-bordercolor-light dark:border-bordercolor-dark bg-secondary dark:bg-bg-dark text-text-secondary dark:text-text-secondary-dark hover:text-text-primary dark:hover:text-text-primary-dark hover:bg-bordercolor-light dark:hover:bg-bordercolor-dark px-6 py-2.5 rounded-xl text-[13px] font-bold btn-transition shadow-sm"
                 >
                   {t('userSettings.profile.cancel')}
                 </button>
                 <button
                   type="button"
-                  onClick={applySave}
+                  onClick={() => void applySave()}
+                  disabled={isBusy}
                   className="bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-8 py-2.5 rounded-xl text-[13px] font-bold hover:opacity-90 btn-transition flex items-center gap-2 shadow-sm"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(82,196,26,0.8)]" />

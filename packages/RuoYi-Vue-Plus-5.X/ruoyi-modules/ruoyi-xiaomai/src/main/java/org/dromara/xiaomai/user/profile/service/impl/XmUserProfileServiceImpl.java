@@ -104,6 +104,9 @@ public class XmUserProfileServiceImpl implements IXmUserProfileService {
         }
 
         if (existingEntity == null) {
+            if (bo.getNotificationEnabled() == null) {
+                bo.setNotificationEnabled(1L);
+            }
             if (bo.getIsCompleted() == null) {
                 bo.setIsCompleted(0L);
             }
@@ -112,6 +115,9 @@ public class XmUserProfileServiceImpl implements IXmUserProfileService {
         }
 
         bo.setId(existingEntity.getId());
+        if (bo.getNotificationEnabled() == null) {
+            bo.setNotificationEnabled(existingEntity.getNotificationEnabled() == null ? 1L : existingEntity.getNotificationEnabled());
+        }
         if (bo.getIsCompleted() == null) {
             bo.setIsCompleted(existingEntity.getIsCompleted());
         }

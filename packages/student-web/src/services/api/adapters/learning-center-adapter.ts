@@ -7,7 +7,12 @@ import type { ApiClient } from '@/services/api/client';
 import { ApiClientError } from '@/services/api/client';
 import { ruoyiClient } from '@/services/api/ruoyi-client';
 import type { RuoyiEnvelope } from '@/types/auth';
-import type { LearningCenterPage, LearningCenterRecord } from '@/types/learning-center';
+import type {
+  LearningCenterFavoriteFolder,
+  LearningCenterFavoriteFolderState,
+  LearningCenterPage,
+  LearningCenterRecord,
+} from '@/types/learning-center';
 
 import { learningCenterMockFixtures } from '@/services/mock/fixtures/learning-center';
 import { pickAdapterImplementation } from './base-adapter';
@@ -37,6 +42,10 @@ export interface LearningCenterAdapter {
   favorite(action: LearningCenterAction): Promise<void>;
   cancelFavorite(action: LearningCenterAction): Promise<void>;
   removeHistory(action: LearningCenterAction): Promise<void>;
+  getFavoriteFolderState(query: { userId: string }): Promise<LearningCenterFavoriteFolderState>;
+  createFavoriteFolder(action: { userId: string; folderName: string }): Promise<LearningCenterFavoriteFolder>;
+  assignFavoriteFolder(action: { userId: string; recordId: string; folderId: string | null }): Promise<void>;
+  removeFavoriteFolder(action: { userId: string; folderId: string }): Promise<void>;
 }
 
 type ResolveLearningCenterAdapterOptions = {
@@ -158,6 +167,41 @@ export function createRealLearningCenterAdapter(
 
       unwrapRuoyiEnvelope(response.data, response.status);
     },
+    async getFavoriteFolderState({ userId }) {
+      const response = await client.request<RuoyiEnvelope<LearningCenterFavoriteFolderState>>({
+        url: `/xiaomai/learning-center/favorite-folders?userId=${encodeURIComponent(userId)}`,
+        method: 'get',
+      });
+
+      return unwrapRuoyiEnvelope(response.data, response.status);
+    },
+    async createFavoriteFolder(action) {
+      const response = await client.request<RuoyiEnvelope<LearningCenterFavoriteFolder>>({
+        url: '/xiaomai/learning-center/favorite-folders',
+        method: 'post',
+        data: action,
+      });
+
+      return unwrapRuoyiEnvelope(response.data, response.status);
+    },
+    async assignFavoriteFolder(action) {
+      const response = await client.request<RuoyiEnvelope<null>>({
+        url: '/xiaomai/learning-center/favorite-folders/assign',
+        method: 'post',
+        data: action,
+      });
+
+      unwrapRuoyiEnvelope(response.data, response.status);
+    },
+    async removeFavoriteFolder(action) {
+      const response = await client.request<RuoyiEnvelope<null>>({
+        url: '/xiaomai/learning-center/favorite-folders/remove',
+        method: 'post',
+        data: action,
+      });
+
+      unwrapRuoyiEnvelope(response.data, response.status);
+    },
   };
 }
 
@@ -179,6 +223,18 @@ export function createMockLearningCenterAdapter(): LearningCenterAdapter {
       return Promise.resolve();
     },
     removeHistory() {
+      return Promise.resolve();
+    },
+    getFavoriteFolderState() {
+      return Promise.resolve({ folders: [], assignments: {} });
+    },
+    createFavoriteFolder() {
+      return Promise.resolve({ folderId: 'mock-folder', folderName: 'Mock Folder', createTime: null });
+    },
+    assignFavoriteFolder() {
+      return Promise.resolve();
+    },
+    removeFavoriteFolder() {
       return Promise.resolve();
     },
   };

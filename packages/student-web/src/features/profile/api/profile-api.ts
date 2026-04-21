@@ -31,11 +31,21 @@ type ProfilePayload = {
   avatarUrl?: string | null;
   avatar_url?: string | null;
   bio?: string | null;
+  schoolName?: string | null;
+  school_name?: string | null;
+  majorName?: string | null;
+  major_name?: string | null;
+  identityLabel?: string | null;
+  identity_label?: string | null;
+  gradeLabel?: string | null;
+  grade_label?: string | null;
   personalityType?: string | null;
   personality_type?: string | null;
   teacherTags?: string[] | string | null;
   teacher_tags?: string[] | string | null;
   language?: string | null;
+  notificationEnabled?: boolean | number | string | null;
+  notification_enabled?: boolean | number | string | null;
   isCompleted?: boolean | number | string | null;
   is_completed?: boolean | number | string | null;
   createTime?: string | null;
@@ -138,11 +148,18 @@ function mapProfilePayload(userId: string, payload: ProfilePayload): UserProfile
     userId: normalizedUserId,
     avatarUrl: payload.avatarUrl ?? payload.avatar_url ?? null,
     bio: payload.bio?.trim() ?? '',
+    schoolName: payload.schoolName?.trim() ?? payload.school_name?.trim() ?? '',
+    majorName: payload.majorName?.trim() ?? payload.major_name?.trim() ?? '',
+    identityLabel: payload.identityLabel?.trim() ?? payload.identity_label?.trim() ?? '',
+    gradeLabel: payload.gradeLabel?.trim() ?? payload.grade_label?.trim() ?? '',
     personalityType:
       (payload.personalityType ?? payload.personality_type ?? null) as UserProfile['personalityType'],
     teacherTags: parseTeacherTags(payload.teacherTags ?? payload.teacher_tags),
     language:
       payload.language === 'en-US' ? 'en-US' : PROFILE_DEFAULT_LANGUAGE,
+    notificationEnabled: parseCompletedFlag(
+      payload.notificationEnabled ?? payload.notification_enabled
+    ),
     isCompleted: parseCompletedFlag(
       payload.isCompleted ?? payload.is_completed
     ),
@@ -292,9 +309,14 @@ function createRealProfileApi({
               id: nextProfile.id ?? undefined,
               avatarUrl: nextProfile.avatarUrl,
               bio: nextProfile.bio,
+              schoolName: nextProfile.schoolName,
+              majorName: nextProfile.majorName,
+              identityLabel: nextProfile.identityLabel,
+              gradeLabel: nextProfile.gradeLabel,
               personalityType: nextProfile.personalityType,
               teacherTags: JSON.stringify(nextProfile.teacherTags),
               language: nextProfile.language,
+              notificationEnabled: nextProfile.notificationEnabled ? 1 : 0,
               isCompleted: nextProfile.isCompleted ? 1 : 0
             }
           },

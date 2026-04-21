@@ -293,6 +293,44 @@ CREATE TABLE `xm_learning_favorite` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='学习中心收藏表';
 
 -- ----------------------------
+-- Table structure for xm_learning_favorite_folder
+-- ----------------------------
+DROP TABLE IF EXISTS `xm_learning_favorite_folder`;
+CREATE TABLE `xm_learning_favorite_folder` (
+  `folder_id` varchar(64) NOT NULL COMMENT '文件夹ID（如 fld_xxx）',
+  `user_id` varchar(64) NOT NULL COMMENT '用户ID',
+  `folder_name` varchar(100) NOT NULL COMMENT '文件夹名称',
+  `create_by` bigint DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` bigint DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `del_flag` char(1) NOT NULL DEFAULT '0' COMMENT '删除标志（0-存在 1-删除）',
+  PRIMARY KEY (`folder_id`),
+  UNIQUE KEY `uk_xm_learning_favorite_folder_user_name` (`user_id`,`folder_name`),
+  KEY `idx_xm_learning_favorite_folder_user` (`user_id`,`del_flag`,`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='收藏页文件夹';
+
+-- ----------------------------
+-- Table structure for xm_learning_favorite_folder_assignment
+-- ----------------------------
+DROP TABLE IF EXISTS `xm_learning_favorite_folder_assignment`;
+CREATE TABLE `xm_learning_favorite_folder_assignment` (
+  `assignment_id` bigint NOT NULL AUTO_INCREMENT COMMENT '归档映射主键',
+  `user_id` varchar(64) NOT NULL COMMENT '用户ID',
+  `record_id` varchar(128) NOT NULL COMMENT '学习中心记录ID',
+  `folder_id` varchar(64) NOT NULL COMMENT '文件夹ID',
+  `create_by` bigint DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` bigint DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`assignment_id`),
+  UNIQUE KEY `uk_xm_learning_favorite_folder_assignment_user_record` (`user_id`,`record_id`),
+  KEY `idx_xm_learning_favorite_folder_assignment_user_folder` (`user_id`,`folder_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='收藏记录归档映射';
+
+-- ----------------------------
 -- Table structure for xm_learning_path
 -- ----------------------------
 DROP TABLE IF EXISTS `xm_learning_path`;
@@ -488,9 +526,14 @@ CREATE TABLE `xm_user_profile` (
   `user_id` bigint NOT NULL COMMENT '用户ID（关联sys_user.user_id）',
   `avatar_url` varchar(500) DEFAULT NULL COMMENT '头像URL',
   `bio` varchar(500) DEFAULT NULL COMMENT '个人简介（200字限制）',
+  `school_name` varchar(200) DEFAULT NULL COMMENT '学校',
+  `major_name` varchar(200) DEFAULT NULL COMMENT '专业',
+  `identity_label` varchar(100) DEFAULT NULL COMMENT '身份',
+  `grade_label` varchar(100) DEFAULT NULL COMMENT '年级',
   `personality_type` varchar(50) DEFAULT NULL COMMENT '性格类型(action_oriented/explorer/methodological/social/creative)',
   `teacher_tags` varchar(500) DEFAULT NULL COMMENT 'AI导师偏好（JSON数组字符串，如["humorous","logical"]）',
   `language` varchar(10) DEFAULT 'zh-CN' COMMENT '语言偏好',
+  `notification_enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '站内通知偏好（1-开启 0-关闭）',
   `is_completed` tinyint(1) DEFAULT '0' COMMENT '是否完成配置（0-否 1-是）',
   `create_dept` bigint DEFAULT NULL COMMENT '创建部门',
   `create_by` bigint DEFAULT NULL COMMENT '创建者',
