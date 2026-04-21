@@ -43,9 +43,14 @@ export interface UserProfile {
   userId: string;
   avatarUrl: string | null;
   bio: string;
+  schoolName: string;
+  majorName: string;
+  identityLabel: string;
+  gradeLabel: string;
   personalityType: PersonalityType | null;
   teacherTags: TeacherTag[];
   language: ProfileLanguage;
+  notificationEnabled: boolean;
   isCompleted: boolean;
   createTime: string | null;
   updateTime: string | null;
@@ -54,9 +59,14 @@ export interface UserProfile {
 export interface SaveUserProfileInput {
   avatarUrl?: string | null;
   bio?: string;
+  schoolName?: string;
+  majorName?: string;
+  identityLabel?: string;
+  gradeLabel?: string;
   personalityType?: PersonalityType | null;
   teacherTags?: TeacherTag[];
   language?: ProfileLanguage;
+  notificationEnabled?: boolean;
   isCompleted?: boolean;
 }
 
@@ -76,9 +86,14 @@ export function createEmptyUserProfile(
     userId,
     avatarUrl: null,
     bio: '',
+    schoolName: '',
+    majorName: '',
+    identityLabel: '',
+    gradeLabel: '',
     personalityType: null,
     teacherTags: [],
     language,
+    notificationEnabled: true,
     isCompleted: false,
     createTime: null,
     updateTime: null
@@ -101,6 +116,14 @@ export function mergeUserProfile(
     avatarUrl:
       input.avatarUrl !== undefined ? input.avatarUrl : currentProfile.avatarUrl,
     bio: input.bio !== undefined ? input.bio.trim() : currentProfile.bio,
+    schoolName:
+      input.schoolName !== undefined ? input.schoolName.trim() : currentProfile.schoolName,
+    majorName:
+      input.majorName !== undefined ? input.majorName.trim() : currentProfile.majorName,
+    identityLabel:
+      input.identityLabel !== undefined ? input.identityLabel.trim() : currentProfile.identityLabel,
+    gradeLabel:
+      input.gradeLabel !== undefined ? input.gradeLabel.trim() : currentProfile.gradeLabel,
     personalityType:
       input.personalityType !== undefined
         ? input.personalityType
@@ -110,6 +133,10 @@ export function mergeUserProfile(
         ? [...input.teacherTags]
         : currentProfile.teacherTags,
     language: input.language ?? currentProfile.language,
+    notificationEnabled:
+      input.notificationEnabled !== undefined
+        ? input.notificationEnabled
+        : currentProfile.notificationEnabled,
     isCompleted: input.isCompleted ?? currentProfile.isCompleted
   };
 }

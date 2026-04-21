@@ -74,6 +74,30 @@ public class XmUserProfileVo implements Serializable {
     private String bio;
 
     /**
+     * 学校
+     */
+    @ExcelProperty(value = "学校")
+    private String schoolName;
+
+    /**
+     * 专业
+     */
+    @ExcelProperty(value = "专业")
+    private String majorName;
+
+    /**
+     * 身份
+     */
+    @ExcelProperty(value = "身份")
+    private String identityLabel;
+
+    /**
+     * 年级
+     */
+    @ExcelProperty(value = "年级")
+    private String gradeLabel;
+
+    /**
      * 性格类型
      */
     @ExcelProperty(value = "性格类型", converter = ExcelDictConvert.class)
@@ -93,6 +117,13 @@ public class XmUserProfileVo implements Serializable {
     @ExcelProperty(value = "语言偏好", converter = ExcelDictConvert.class)
     @ExcelDictFormat(dictType = "sys_language")
     private String language;
+
+    /**
+     * 站内通知偏好
+     */
+    @ExcelProperty(value = "站内通知偏好", converter = ExcelDictConvert.class)
+    @ExcelDictFormat(dictType = "sys_yes_no")
+    private Long notificationEnabled;
 
     /**
      * 是否完成配置
