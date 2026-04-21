@@ -308,6 +308,7 @@ CREATE TABLE `xm_learning_path` (
   `path_title` varchar(255) DEFAULT NULL COMMENT '路径标题',
   `path_summary` varchar(2000) DEFAULT NULL COMMENT '路径摘要',
   `step_count` int DEFAULT NULL COMMENT '步骤数',
+  `path_payload_json` json DEFAULT NULL COMMENT '路径详情载荷(JSON)',
   `detail_ref` varchar(255) DEFAULT NULL COMMENT '打开详情定位',
   `source_time` datetime DEFAULT NULL COMMENT '来源发生时间',
   `status` varchar(20) NOT NULL DEFAULT 'completed' COMMENT '结果状态',

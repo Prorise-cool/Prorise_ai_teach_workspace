@@ -283,7 +283,12 @@ export function LearningCoachEntryPage() {
         </aside>
       </div>
 
-      <SurfaceDock activeTooltip="当前环节" activeIcon={LayoutTemplate} />
+      <SurfaceDock
+        activeTooltip="当前环节"
+        activeIcon={LayoutTemplate}
+        learningCenterTo={source.returnTo?.trim() || '/video/input'}
+        settingsTo={null}
+      />
     </div>
   );
 }

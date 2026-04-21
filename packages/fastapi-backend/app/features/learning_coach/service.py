@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
+import json
 import random
-from typing import Iterable
+import re
+from typing import Any, Iterable
 
 from app.core.errors import AppError
 from app.features.learning.schemas import (
@@ -56,6 +58,136 @@ def _normalize_source_type(source_type: LearningCoachSourceType) -> LearningSour
 class _AnswerKeyItem:
     correct_option_id: str
     explanation: str
+
+
+def extract_json_payload(text: str) -> dict[str, Any]:
+    """从 LLM 输出中提取 JSON 对象 payload。
+
+    支持以下格式：
+    - 纯 JSON：`{"foo": "bar"}`
+    - fenced JSON：```json ... ```
+    - 前后包裹说明：`xxx {"foo":"bar"} yyy`
+    """
+    if not isinstance(text, str):
+        raise ValueError("LLM 输出必须是字符串")
+
+    candidate = text.strip()
+    if not candidate:
+        raise ValueError("LLM 输出为空")
+
+    lines = candidate.splitlines()
+    if lines and lines[0].strip().startswith("```") and lines[-1].strip().startswith("```"):
+        candidate = "\n".join(lines[1:-1]).strip()
+
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        start = candidate.find("{")
+        end = candidate.rfind("}")
+        if start < 0 or end < 0 or end <= start:
+            raise ValueError("LLM 输出未包含可解析的 JSON") from None
+        parsed = json.loads(candidate[start : end + 1])
+
+    if not isinstance(parsed, dict):
+        raise ValueError("LLM JSON 输出必须是对象")
+
+    return parsed
+
+
+def parse_llm_questions(
+    text: str,
+    *,
+    question_total: int,
+) -> tuple[list[LearningCoachQuestion], dict[str, _AnswerKeyItem]]:
+    """将 LLM 输出解析为题目与答题卡。"""
+    if question_total <= 0:
+        raise ValueError("question_total 必须大于 0")
+
+    payload = extract_json_payload(text)
+    raw_questions = payload.get("questions")
+    if not isinstance(raw_questions, list) or not raw_questions:
+        raise ValueError("LLM 输出缺少 questions 列表")
+
+    questions: list[LearningCoachQuestion] = []
+    answer_key: dict[str, _AnswerKeyItem] = {}
+
+    for index, raw in enumerate(raw_questions):
+        if len(questions) >= question_total:
+            break
+        if not isinstance(raw, dict):
+            continue
+
+        question_id = raw.get("questionId") or raw.get("question_id") or f"q{index + 1}"
+        question_id = str(question_id).strip()
+        if not question_id:
+            continue
+
+        tag = raw.get("tag")
+        tag_value = str(tag).strip() if isinstance(tag, str) and tag.strip() else None
+
+        stem = raw.get("stem")
+        stem_value = str(stem).strip() if isinstance(stem, str) and stem.strip() else ""
+        if not stem_value:
+            continue
+
+        raw_options = raw.get("options")
+        if not isinstance(raw_options, list) or not raw_options:
+            continue
+        options: list[LearningCoachOption] = []
+        option_id_set: set[str] = set()
+        for opt in raw_options:
+            if not isinstance(opt, dict):
+                continue
+            opt_id = opt.get("optionId") or opt.get("option_id") or opt.get("id")
+            opt_text = opt.get("text") or opt.get("label") or opt.get("content")
+            if not isinstance(opt_id, str) or not opt_id.strip():
+                continue
+            if not isinstance(opt_text, str) or not opt_text.strip():
+                continue
+            normalized_id = opt_id.strip()
+            if normalized_id in option_id_set:
+                continue
+            option_id_set.add(normalized_id)
+            options.append(
+                LearningCoachOption(
+                    option_id=normalized_id,
+                    label=normalized_id,
+                    text=opt_text.strip(),
+                )
+            )
+
+        if not options:
+            continue
+
+        correct_option_id = raw.get("correctOptionId") or raw.get("correct_option_id")
+        correct_option_value = str(correct_option_id).strip() if correct_option_id else ""
+        if not correct_option_value or correct_option_value not in option_id_set:
+            continue
+
+        explanation = raw.get("explanation")
+        explanation_value = (
+            str(explanation).strip()
+            if isinstance(explanation, str) and explanation.strip()
+            else "暂无解析"
+        )
+
+        questions.append(
+            LearningCoachQuestion(
+                question_id=question_id,
+                tag=tag_value,
+                stem=stem_value,
+                options=options,
+            )
+        )
+        answer_key[question_id] = _AnswerKeyItem(
+            correct_option_id=correct_option_value,
+            explanation=explanation_value,
+        )
+
+    if not questions:
+        raise ValueError("LLM 输出未生成有效题目")
+
+    return questions, answer_key
 
 
 def _question_bank(topic_hint: str | None) -> list[tuple[str, str | None, str, list[tuple[str, str]], str, str]]:
@@ -201,9 +333,12 @@ class LearningCoachService:
         *,
         runtime_store: RuntimeStore,
         persistence_service: LearningService | None = None,
+        provider_factory=None,
     ) -> None:
         self._runtime_store = runtime_store
         self._persistence_service = persistence_service or LearningService()
+        self._provider_factory = provider_factory
+        self._runtime_config = None
 
     async def build_entry(self, source: LearningCoachSource) -> LearningCoachEntryPayload:
         return LearningCoachEntryPayload(
@@ -211,17 +346,108 @@ class LearningCoachService:
             knowledge_points=[item for item in (source.topic_hint or "").split("、") if item][:0],
         )
 
-    def generate_checkpoint(
+    async def _ensure_runtime_config(self, access_context=None):
+        if self._runtime_config is not None:
+            return self._runtime_config
+
+        from app.core.config import get_settings
+        from app.providers.factory import get_provider_factory
+        from app.providers.runtime_config_service import ProviderRuntimeResolver
+
+        factory = self._provider_factory or get_provider_factory()
+        resolver = ProviderRuntimeResolver(
+            settings=get_settings(),
+            provider_factory=factory,
+        )
+        access_token = getattr(access_context, "token", None)
+        client_id = getattr(access_context, "client_id", None)
+        config = await resolver.resolve_learning_coach(
+            access_token=access_token,
+            client_id=client_id,
+        )
+        self._runtime_config = config
+        return config
+
+    async def _generate_llm(self, prompt: str, *, stage: str, access_context=None) -> str:
+        from app.providers.factory import get_provider_factory
+
+        config = await self._ensure_runtime_config(access_context=access_context)
+        factory = self._provider_factory or get_provider_factory()
+        failover = factory.create_failover_service(self._runtime_store)
+        result = await failover.generate(config.llm_for(stage), prompt)
+        return result.content
+
+    @staticmethod
+    def _build_question_prompt(
+        *,
+        source: LearningCoachSource,
+        question_total: int,
+        mode: str,
+    ) -> str:
+        topic_hint = (source.topic_hint or "").strip()
+        topic_line = f"topicHint={topic_hint}" if topic_hint else "topicHint="
+        return (
+            "你是学习教练出题助手。\n"
+            f"任务：为学生生成 {question_total} 道{mode} 单选题（每题 4 个选项 A-D）。\n"
+            "要求：题干与选项中文、简洁；答案唯一；解析 1-2 句。\n"
+            "输出：严格输出 JSON（不要 markdown，不要多余文字）。\n"
+            "JSON schema:\n"
+            "{\n"
+            '  "questions": [\n'
+            "    {\n"
+            '      "questionId": "q1",\n'
+            '      "tag": "知识点标签(可选)",\n'
+            '      "stem": "题干",\n'
+            '      "options": [{"optionId":"A","text":"..."},{"optionId":"B","text":"..."},{"optionId":"C","text":"..."},{"optionId":"D","text":"..."}],\n'
+            '      "correctOptionId": "A|B|C|D",\n'
+            '      "explanation": "解析"\n'
+            "    }\n"
+            "  ]\n"
+            "}\n"
+            "会话信息：\n"
+            f"sourceType={source.source_type.value}\n"
+            f"sourceSessionId={source.source_session_id}\n"
+            f"{topic_line}\n"
+        )
+
+    async def _generate_questions(
+        self,
+        *,
+        source: LearningCoachSource,
+        question_total: int,
+        seed_namespace: str,
+        llm_stage: str,
+        access_context=None,
+    ) -> tuple[list[LearningCoachQuestion], dict[str, _AnswerKeyItem]]:
+        try:
+            prompt = self._build_question_prompt(
+                source=source,
+                question_total=question_total,
+                mode=llm_stage,
+            )
+            content = await self._generate_llm(prompt, stage=llm_stage, access_context=access_context)
+            return parse_llm_questions(content, question_total=question_total)
+        except Exception:
+            return _build_questions(
+                source=source,
+                question_total=question_total,
+                seed_namespace=seed_namespace,
+            )
+
+    async def generate_checkpoint(
         self,
         *,
         source: LearningCoachSource,
         question_count: int,
+        access_context=None,
     ) -> CheckpointGeneratePayload:
         checkpoint_id = f"chk_{hashlib.sha1((_now().isoformat() + source.source_session_id).encode('utf-8')).hexdigest()[:20]}"
-        questions, answer_key = _build_questions(
+        questions, answer_key = await self._generate_questions(
             source=source,
             question_total=question_count,
             seed_namespace="checkpoint",
+            llm_stage="checkpoint",
+            access_context=access_context,
         )
         state = {
             "source": source.model_dump(mode="json", by_alias=True),
@@ -330,17 +556,20 @@ class LearningCoachService:
             items=items,
         )
 
-    def generate_quiz(
+    async def generate_quiz(
         self,
         *,
         source: LearningCoachSource,
         question_count: int,
+        access_context=None,
     ) -> QuizGeneratePayload:
         quiz_id = f"quiz_{hashlib.sha1((_now().isoformat() + source.source_session_id).encode('utf-8')).hexdigest()[:20]}"
-        questions, answer_key = _build_questions(
+        questions, answer_key = await self._generate_questions(
             source=source,
             question_total=question_count,
             seed_namespace="quiz",
+            llm_stage="quiz",
+            access_context=access_context,
         )
         state = {
             "source": source.model_dump(mode="json", by_alias=True),
@@ -491,19 +720,113 @@ class LearningCoachService:
             persisted=persisted,
         )
 
-    def plan_path(
+    @staticmethod
+    def _build_path_prompt(*, source: LearningCoachSource, goal: str, cycle_days: int) -> str:
+        topic_hint = (source.topic_hint or "").strip()
+        topic_line = f"topicHint={topic_hint}" if topic_hint else "topicHint="
+        return (
+            "你是学习教练学习路径规划助手。\n"
+            "任务：为学生生成可执行的学习路径计划。\n"
+            "输出：严格输出 JSON（不要 markdown，不要多余文字）。\n"
+            "JSON schema:\n"
+            "{\n"
+            '  "pathTitle": "标题",\n'
+            '  "pathSummary": "摘要(<=2000字)",\n'
+            '  "stages": [\n'
+            "    {\n"
+            '      "title": "阶段标题",\n'
+            '      "goal": "阶段目标",\n'
+            '      "steps": [\n'
+            '        {"title":"步骤标题","action":"可执行动作","estimatedMinutes":30}\n'
+            "      ]\n"
+            "    }\n"
+            "  ]\n"
+            "}\n"
+            "约束：stages 3-6 个；每个阶段 steps 2-5 条；estimatedMinutes 5-180。\n"
+            "输入：\n"
+            f"goal={goal}\n"
+            f"cycleDays={cycle_days}\n"
+            f"sourceType={source.source_type.value}\n"
+            f"sourceSessionId={source.source_session_id}\n"
+            f"{topic_line}\n"
+        )
+
+    @staticmethod
+    def _parse_path_plan(text: str) -> tuple[str, str, list[dict[str, Any]]]:
+        payload = extract_json_payload(text)
+
+        title = payload.get("pathTitle") or payload.get("path_title") or payload.get("title")
+        summary = payload.get("pathSummary") or payload.get("path_summary") or payload.get("summary")
+        stages = payload.get("stages")
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("pathTitle 缺失")
+        if not isinstance(summary, str) or not summary.strip():
+            raise ValueError("pathSummary 缺失")
+        if not isinstance(stages, list) or not stages:
+            raise ValueError("stages 缺失")
+
+        normalized_stages: list[dict[str, Any]] = []
+        for raw_stage in stages[:20]:
+            if not isinstance(raw_stage, dict):
+                continue
+            stage_title = raw_stage.get("title")
+            stage_goal = raw_stage.get("goal")
+            stage_steps = raw_stage.get("steps")
+            if not isinstance(stage_title, str) or not stage_title.strip():
+                continue
+            if not isinstance(stage_goal, str) or not stage_goal.strip():
+                continue
+            if not isinstance(stage_steps, list) or not stage_steps:
+                continue
+
+            steps: list[dict[str, Any]] = []
+            for raw_step in stage_steps[:30]:
+                if not isinstance(raw_step, dict):
+                    continue
+                step_title = raw_step.get("title")
+                step_action = raw_step.get("action")
+                estimated = raw_step.get("estimatedMinutes") or raw_step.get("estimated_minutes")
+                if not isinstance(step_title, str) or not step_title.strip():
+                    continue
+                if not isinstance(step_action, str) or not step_action.strip():
+                    continue
+                step_payload: dict[str, Any] = {
+                    "title": step_title.strip(),
+                    "action": step_action.strip(),
+                }
+                if isinstance(estimated, (int, float)):
+                    step_payload["estimatedMinutes"] = int(estimated)
+                steps.append(step_payload)
+
+            if not steps:
+                continue
+
+            normalized_stages.append(
+                {
+                    "title": stage_title.strip(),
+                    "goal": stage_goal.strip(),
+                    "steps": steps,
+                }
+            )
+
+        if not normalized_stages:
+            raise ValueError("stages 为空")
+
+        return title.strip(), summary.strip(), normalized_stages
+
+    async def plan_path(
         self,
         *,
         source: LearningCoachSource,
         goal: str,
         cycle_days: int,
+        access_context=None,
     ) -> LearningPathPlanPayload:
         path_id = f"path_{hashlib.sha1((_now().isoformat() + goal).encode('utf-8')).hexdigest()[:20]}"
         days = max(1, int(cycle_days))
-        title = f"{days} 天学习路径：{goal}"
-        summary = "分阶段拆解目标，并提供可执行的行动项与复盘建议。"
-
-        stages = [
+        fallback_title = f"{days} 天学习路径：{goal}"
+        fallback_summary = "分阶段拆解目标，并提供可执行的行动项与复盘建议。"
+        fallback_stages = [
             {
                 "title": "第一阶段：打基础",
                 "goal": "把核心概念与方法串起来，能在典型题上稳定输出。",
@@ -512,23 +835,18 @@ class LearningCoachService:
                     {"title": "基础训练", "action": "完成 10 道基础题并整理错因", "estimatedMinutes": 45},
                 ],
             },
-            {
-                "title": "第二阶段：做变式",
-                "goal": "覆盖常见变式与陷阱点，提升解题稳定性。",
-                "steps": [
-                    {"title": "陷阱清单", "action": "总结 5 类常见错误并对照修正", "estimatedMinutes": 35},
-                    {"title": "小测巩固", "action": "做 1 套 5 题小测并复盘", "estimatedMinutes": 40},
-                ],
-            },
-            {
-                "title": "第三阶段：复盘强化",
-                "goal": "用错题本做 targeted drill，确保薄弱点被补齐。",
-                "steps": [
-                    {"title": "错题复盘", "action": "回看错题并重做 2 轮", "estimatedMinutes": 45},
-                    {"title": "最终自测", "action": "完成一次正式 quiz 并达到 90 分", "estimatedMinutes": 35},
-                ],
-            },
         ]
+
+        title = fallback_title
+        summary = fallback_summary
+        stages = fallback_stages
+
+        try:
+            prompt = self._build_path_prompt(source=source, goal=goal, cycle_days=days)
+            content = await self._generate_llm(prompt, stage="path", access_context=access_context)
+            title, summary, stages = self._parse_path_plan(content)
+        except Exception:
+            pass
 
         return LearningPathPlanPayload(
             path_id=path_id,
@@ -538,6 +856,31 @@ class LearningCoachService:
             version_no=1,
             stages=stages,  # type: ignore[arg-type]
         )
+
+    async def get_path(
+        self,
+        *,
+        path_id: str,
+        user_id: str,
+        access_context=None,
+    ) -> LearningPathPlanPayload:
+        """读取已保存的学习路径计划（用于刷新恢复与再次打开）。"""
+        try:
+            raw = await self._persistence_service.fetch_path_payload_json(
+                user_id=user_id,
+                source_result_id=path_id,
+                access_context=access_context,
+            )
+            payload = json.loads(raw)
+            return LearningPathPlanPayload.model_validate(payload)
+        except AppError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise AppError(
+                code="LEARNING_PATH_NOT_FOUND",
+                message="学习路径不存在或不可用",
+                status_code=404,
+            ) from exc
 
     async def save_path(
         self,
@@ -549,6 +892,10 @@ class LearningCoachService:
         persisted = False
         persisted_at = None
         try:
+            payload_json = json.dumps(
+                path.model_dump(mode="json", by_alias=True),
+                ensure_ascii=False,
+            )
             await self._persistence_service.persist_results(
                 LearningPersistenceRequest(
                     user_id=user_id,
@@ -563,6 +910,7 @@ class LearningCoachService:
                             updated_at=_now(),
                             path_title=path.path_title,
                             step_count=sum(len(stage.steps) for stage in path.stages),
+                            path_payload_json=payload_json,
                             analysis_summary=path.path_summary,
                             status=LearningResultStatus.COMPLETED,
                             detail_ref=path.path_id,
@@ -583,4 +931,3 @@ class LearningCoachService:
             persisted=persisted,
             persisted_at=persisted_at,
         )
-

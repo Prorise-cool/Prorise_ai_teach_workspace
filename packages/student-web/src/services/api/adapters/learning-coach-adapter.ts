@@ -53,6 +53,10 @@ type LearningPathSaveRequest = {
   path: LearningPathPlanPayload;
 };
 
+type LearningPathGetRequest = {
+  pathId: string;
+};
+
 export interface LearningCoachAdapter {
   getEntry(query: LearningCoachEntryQuery): Promise<LearningCoachEntryPayload>;
   generateCheckpoint(request: CheckpointGenerateRequest): Promise<CheckpointGeneratePayload>;
@@ -60,6 +64,7 @@ export interface LearningCoachAdapter {
   generateQuiz(request: QuizGenerateRequest): Promise<QuizGeneratePayload>;
   submitQuiz(request: QuizSubmitRequest): Promise<QuizSubmitPayload>;
   planPath(request: LearningPathPlanRequest): Promise<LearningPathPlanPayload>;
+  getPath(request: LearningPathGetRequest): Promise<LearningPathPlanPayload>;
   savePath(request: LearningPathSaveRequest): Promise<LearningPathSavePayload>;
 }
 
@@ -125,6 +130,13 @@ export function createRealLearningCoachAdapter(
       });
       return response.data.data;
     },
+    async getPath({ pathId }) {
+      const response = await client.request<TaskDataEnvelope<LearningPathPlanPayload>>({
+        url: `/api/v1/learning-coach/path/${encodeURIComponent(pathId)}`,
+        method: 'get',
+      });
+      return response.data.data;
+    },
     async savePath(request) {
       const response = await client.request<TaskDataEnvelope<LearningPathSavePayload>>({
         url: '/api/v1/learning-coach/path/save',
@@ -154,6 +166,9 @@ export function createMockLearningCoachAdapter(): LearningCoachAdapter {
       return Promise.resolve(learningCoachMockFixtures.quiz.submitSuccess.data);
     },
     planPath() {
+      return Promise.resolve(learningCoachMockFixtures.path.planSuccess.data);
+    },
+    getPath() {
       return Promise.resolve(learningCoachMockFixtures.path.planSuccess.data);
     },
     savePath() {

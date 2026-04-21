@@ -39,6 +39,8 @@ _VIDEO_LLM_STAGES = (
 )
 _TTS_STAGE = "tts"
 _COMPANION_STAGE = "companion"
+_LEARNING_COACH_MODULE = "learning"
+_LEARNING_COACH_STAGES = ("checkpoint", "quiz", "path", "recommendation")
 
 _DOUBAO_TTS_PROVIDER_TYPES = frozenset({"doubao-tts", "volcengine-tts", "bytedance-tts", "doubao"})
 _RUNTIME_PROVIDER_REGISTRATION_KEYS = (
@@ -107,6 +109,22 @@ class CompanionRuntimeAssembly:
     max_rounds: int = 10
     recent_rounds_to_keep: int = 3
     source: str = "settings"
+
+
+@dataclass(slots=True, frozen=True)
+class LearningCoachRuntimeAssembly:
+    """Learning Coach 模块 Provider 运行时装配结果。"""
+
+    llm_by_stage: Mapping[str, tuple[LLMProvider, ...]] = field(default_factory=dict)
+    default_llm: tuple[LLMProvider, ...] = field(default_factory=tuple)
+    source: str = "settings"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "llm_by_stage", MappingProxyType(dict(self.llm_by_stage)))
+
+    def llm_for(self, stage: str) -> tuple[LLMProvider, ...]:
+        """获取指定阶段的 LLM Provider 链。"""
+        return self.llm_by_stage.get(stage, self.default_llm)
 
 
 class ProviderRuntimeResolver:
@@ -241,6 +259,47 @@ class ProviderRuntimeResolver:
             logger.warning("Build companion runtime from RuoYi failed; fallback to settings", exc_info=exc)
             return fallback
 
+    async def resolve_learning_coach(
+        self,
+        *,
+        access_token: str | None = None,
+        client_id: str | None = None,
+    ) -> LearningCoachRuntimeAssembly:
+        """解析 Learning Coach 模块 Provider 配置。"""
+        fallback = self._build_learning_coach_from_settings()
+        runtime_source = _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower()
+        logger.info(
+            "resolve_learning_coach called  source=%s  has_token=%s",
+            runtime_source,
+            access_token is not None,
+        )
+        if runtime_source != "ruoyi":
+            return fallback
+
+        try:
+            module = await self._ruoyi_runtime_client.get_module_runtime(
+                _LEARNING_COACH_MODULE,
+                access_token=access_token,
+                client_id=client_id,
+            )
+            logger.info(
+                "RuoYi learning runtime response  bindings_count=%s",
+                len(module.bindings),
+            )
+        except (IntegrationError, Exception) as exc:
+            logger.warning("Resolve learning coach runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+
+        if not module.bindings:
+            logger.warning("RuoYi returned EMPTY bindings for learning module; fallback to settings")
+            return fallback
+
+        try:
+            return self._build_learning_coach_from_ruoyi(module.bindings, fallback=fallback)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Build learning coach runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+
     def _build_companion_from_settings(self) -> CompanionRuntimeAssembly:
         assembly = self._provider_factory.assemble_from_settings(self._settings)
         return CompanionRuntimeAssembly(llm=assembly.llm)
@@ -282,6 +341,58 @@ class ProviderRuntimeResolver:
             context_ttl_seconds=int(runtime_settings.get("context_ttl_seconds", 86400)),
             max_rounds=int(runtime_settings.get("max_rounds", 10)),
             recent_rounds_to_keep=int(runtime_settings.get("recent_rounds_to_keep", 3)),
+            source="ruoyi",
+        )
+
+    def _build_learning_coach_from_settings(self) -> LearningCoachRuntimeAssembly:
+        assembly = self._provider_factory.assemble_from_settings(self._settings)
+        return LearningCoachRuntimeAssembly(default_llm=assembly.llm)
+
+    def _build_learning_coach_from_ruoyi(
+        self,
+        bindings: Sequence[RuoYiAiRuntimeBinding],
+        *,
+        fallback: LearningCoachRuntimeAssembly,
+    ) -> LearningCoachRuntimeAssembly:
+        runtime_provider_factory = self._provider_factory.clone()
+        llm_config_map: dict[str, list[ProviderRuntimeConfig]] = {}
+
+        for binding in bindings:
+            if not binding.stage_code or not binding.provider_id:
+                continue
+            try:
+                capability = ProviderCapability(binding.capability)
+                config = self._build_runtime_config(binding)
+                self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
+            except (ProviderConfigurationError, ProviderNotFoundError, ValueError):
+                continue
+
+            if capability is not ProviderCapability.LLM:
+                continue
+
+            llm_config_map.setdefault(binding.stage_code, []).append(config)
+            if binding.is_default:
+                llm_config_map.setdefault("default", []).append(config)
+
+        llm_by_stage = {
+            stage: tuple(runtime_provider_factory.build_chain(ProviderCapability.LLM, configs))
+            for stage, configs in llm_config_map.items()
+            if stage != "default"
+        }
+
+        default_llm = self._resolve_default_llm(
+            runtime_provider_factory,
+            llm_by_stage,
+            llm_config_map,
+            fallback.default_llm,
+        )
+
+        for stage in _LEARNING_COACH_STAGES:
+            llm_by_stage.setdefault(stage, default_llm)
+
+        return LearningCoachRuntimeAssembly(
+            llm_by_stage=llm_by_stage,
+            default_llm=default_llm,
             source="ruoyi",
         )
 

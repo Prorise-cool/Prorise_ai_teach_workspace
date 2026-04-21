@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -86,5 +87,14 @@ public class XmPersistenceSyncController {
     @PostMapping("/learning/results")
     public R<XmPersistenceSyncVo.LearningResultBatchSyncVo> syncLearningResults(@RequestBody XmPersistenceSyncBo.LearningResultBatchSyncBo bo) {
         return R.ok(xmPersistenceSyncService.syncLearningResults(bo));
+    }
+
+    @GetMapping("/learning/paths/payload")
+    public R<XmPersistenceSyncVo.LearningPathPayloadVo> getLearningPathPayload(
+        @RequestParam String userId,
+        @RequestParam String sourceResultId
+    ) {
+        XmPersistenceSyncVo.LearningPathPayloadVo data = xmPersistenceSyncService.getLearningPathPayload(userId, sourceResultId);
+        return data == null ? R.fail("Learning path payload not found") : R.ok(data);
     }
 }

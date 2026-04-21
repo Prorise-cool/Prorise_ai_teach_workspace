@@ -27,6 +27,7 @@ class LearningService(RuoYiServiceMixin):
     _RESOURCE = "learning-result"
     _OPERATION = "persist-batch"
     _ENDPOINT = "/internal/xiaomai/learning/results"
+    _PATH_PAYLOAD_ENDPOINT = "/internal/xiaomai/learning/paths/payload"
 
     def __init__(self, client_factory=None) -> None:
         """初始化学习结果持久化服务。"""
@@ -107,6 +108,43 @@ class LearningService(RuoYiServiceMixin):
             }
         )
 
+    async def fetch_path_payload_json(
+        self,
+        *,
+        user_id: str,
+        source_result_id: str,
+        access_context: "AccessContext | None" = None,
+    ) -> str:
+        """读取指定学习路径的持久化 payload JSON。"""
+        async with self._resolve_authenticated_factory(access_context)() as client:
+            response = await client.get_single(
+                self._PATH_PAYLOAD_ENDPOINT,
+                resource=self._RESOURCE,
+                operation="path-payload",
+                params={
+                    "userId": user_id,
+                    "sourceResultId": source_result_id,
+                },
+            )
+
+        data = response.data
+        if not isinstance(data, Mapping):
+            raise self._invalid_response_error(
+                operation="path-payload",
+                endpoint=self._PATH_PAYLOAD_ENDPOINT,
+                reason="data is not an object",
+            )
+
+        value = data.get("pathPayloadJson") or data.get("path_payload_json")
+        if not isinstance(value, str) or not value.strip():
+            raise self._invalid_response_error(
+                operation="path-payload",
+                endpoint=self._PATH_PAYLOAD_ENDPOINT,
+                reason="pathPayloadJson missing",
+            )
+
+        return value
+
     def _normalize_record(
         self,
         user_id: str,
@@ -141,6 +179,7 @@ class LearningService(RuoYiServiceMixin):
             target_ref_id=record.target_ref_id,
             path_title=record.path_title,
             step_count=record.step_count,
+            path_payload_json=record.path_payload_json,
             analysis_summary=record.analysis_summary,
             status=record.status,
             detail_ref=detail_ref,
@@ -168,6 +207,7 @@ class LearningService(RuoYiServiceMixin):
             "targetRefId": record.target_ref_id,
             "pathTitle": record.path_title,
             "stepCount": record.step_count,
+            "pathPayloadJson": record.path_payload_json,
             "analysisSummary": record.analysis_summary,
             "status": record.status,
             "detailRef": record.detail_ref,
@@ -201,6 +241,7 @@ class LearningService(RuoYiServiceMixin):
             "target_ref_id": cls._first_present(item, "targetRefId", "target_ref_id"),
             "path_title": cls._first_present(item, "pathTitle", "path_title"),
             "step_count": cls._first_present(item, "stepCount", "step_count"),
+            "path_payload_json": cls._first_present(item, "pathPayloadJson", "path_payload_json"),
             "analysis_summary": cls._first_present(item, "analysisSummary", "analysis_summary"),
             "status": cls._first_present(item, "status"),
             "detail_ref": cls._first_present(item, "detailRef", "detail_ref"),

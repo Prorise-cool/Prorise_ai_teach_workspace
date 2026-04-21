@@ -186,4 +186,11 @@ public final class XmPersistenceSyncVo {
         private Map<String, String> tableSummary = new LinkedHashMap<>();
         private String traceabilityRule = "version-or-updated-at";
     }
+
+    @Data
+    public static class LearningPathPayloadVo {
+        private String userId;
+        private String sourceResultId;
+        private String pathPayloadJson;
+    }
 }

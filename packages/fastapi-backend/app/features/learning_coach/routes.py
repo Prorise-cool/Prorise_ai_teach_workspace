@@ -61,9 +61,10 @@ async def learning_checkpoint_generate(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> CheckpointGenerateEnvelope:
-    payload = service.generate_checkpoint(
+    payload = await service.generate_checkpoint(
         source=request.source,
         question_count=request.question_count,
+        access_context=access_context,
     )
     return CheckpointGenerateEnvelope(data=payload)
 
@@ -89,9 +90,10 @@ async def learning_quiz_generate(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> QuizGenerateEnvelope:
-    payload = service.generate_quiz(
+    payload = await service.generate_quiz(
         source=request.source,
         question_count=request.question_count,
+        access_context=access_context,
     )
     return QuizGenerateEnvelope(data=payload)
 
@@ -117,12 +119,27 @@ async def learning_path_plan(
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> LearningPathPlanEnvelope:
-    payload = service.plan_path(
+    payload = await service.plan_path(
         source=request.source,
         goal=request.goal,
         cycle_days=request.cycle_days,
+        access_context=access_context,
     )
     return LearningPathPlanEnvelope(data=payload)
+
+
+@router.get("/path/{path_id}", response_model=LearningPathPlanEnvelope)
+async def learning_path_get(
+    path_id: str,
+    access_context: AccessContext = Depends(get_access_context),
+    service: LearningCoachService = Depends(get_learning_coach_service),
+) -> LearningPathPlanEnvelope:
+    payload = await service.get_path(
+        path_id=path_id,
+        user_id=access_context.user_id,
+        access_context=access_context,
+    )
+    return LearningPathPlanEnvelope(msg="path 获取成功", data=payload)
 
 
 @router.post("/path/save", response_model=LearningPathSaveEnvelope)
@@ -137,4 +154,3 @@ async def learning_path_save(
         access_context=access_context,
     )
     return LearningPathSaveEnvelope(data=payload)
-

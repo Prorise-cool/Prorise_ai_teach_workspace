@@ -70,6 +70,7 @@ class LearningResultInput(BaseModel):
     target_ref_id: str | None = None
     path_title: str | None = None
     step_count: int | None = Field(default=None, ge=0)
+    path_payload_json: str | None = None
     analysis_summary: str | None = None
     status: LearningResultStatus = LearningResultStatus.COMPLETED
     detail_ref: str | None = None
@@ -107,6 +108,7 @@ class LearningPersistenceItem(BaseModel):
     target_ref_id: str | None = None
     path_title: str | None = None
     step_count: int | None = None
+    path_payload_json: str | None = None
     analysis_summary: str | None = None
     status: LearningResultStatus
     detail_ref: str | None = None

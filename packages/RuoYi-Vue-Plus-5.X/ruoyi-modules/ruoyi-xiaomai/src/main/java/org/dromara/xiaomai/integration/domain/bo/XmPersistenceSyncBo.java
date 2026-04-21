@@ -168,6 +168,7 @@ public final class XmPersistenceSyncBo {
         private String targetRefId;
         private String pathTitle;
         private Integer stepCount;
+        private String pathPayloadJson;
         private String analysisSummary;
         private String status;
         private String detailRef;

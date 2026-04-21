@@ -261,6 +261,28 @@ public class XmPersistenceSyncService {
         return response;
     }
 
+    public XmPersistenceSyncVo.LearningPathPayloadVo getLearningPathPayload(String userId, String sourceResultId) {
+        XmPersistenceSyncBo.LearningResultSyncItemBo aggregate = learningResultMapper.selectAggregateRecord(
+            userId,
+            "xm_learning_path",
+            sourceResultId
+        );
+        if (aggregate == null || aggregate.getRecordId() == null) {
+            return null;
+        }
+
+        XmPersistenceSyncBo.LearningResultSyncItemBo detail = learningResultMapper.selectPathRecordByRecordId(aggregate.getRecordId());
+        if (detail == null || StringUtils.isBlank(detail.getPathPayloadJson())) {
+            return null;
+        }
+
+        XmPersistenceSyncVo.LearningPathPayloadVo vo = new XmPersistenceSyncVo.LearningPathPayloadVo();
+        vo.setUserId(userId);
+        vo.setSourceResultId(sourceResultId);
+        vo.setPathPayloadJson(detail.getPathPayloadJson());
+        return vo;
+    }
+
     private XmPersistenceSyncVo.LearningResultSyncItemVo persistLearningRecord(String userId, XmPersistenceSyncBo.LearningResultSyncItemBo source) {
         XmPersistenceSyncBo.LearningResultSyncItemBo record = normalizeLearningRecord(userId, source);
         switch (record.getResultType()) {
@@ -413,6 +435,7 @@ public class XmPersistenceSyncService {
         record.setTargetRefId(source.getTargetRefId());
         record.setPathTitle(source.getPathTitle());
         record.setStepCount(source.getStepCount());
+        record.setPathPayloadJson(source.getPathPayloadJson());
         record.setAnalysisSummary(source.getAnalysisSummary());
         record.setStatus(StringUtils.isBlank(source.getStatus()) ? "completed" : source.getStatus());
         record.setDetailRef(StringUtils.isNotBlank(source.getDetailRef()) ? source.getDetailRef() : firstNotBlank(record.getSourceResultId(), source.getSourceSessionId()));
