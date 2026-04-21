@@ -278,6 +278,12 @@ function createRealProfileApi({
         return writeLocalProfile(mapProfilePayload(userId, payload));
       } catch (error) {
         if (shouldFallbackToLocal(error)) {
+          // 后端接口缺位或短暂失败：为避免 onboarding 被完全阻塞，读本地缓存
+          // 过一下 UI。务必把故障暴露到控制台，便于运维和监控上报。
+          console.warn(
+            '[profile-api] getCurrentProfile: backend unavailable, returning local snapshot',
+            error,
+          );
           return readLocalProfile(userId);
         }
 
@@ -344,6 +350,12 @@ function createRealProfileApi({
         return writeLocalProfile(mapProfilePayload(userId, payload));
       } catch (error) {
         if (shouldFallbackToLocal(error)) {
+          // 后端写失败但接口已知缺位或网络瞬断：先写本地缓存让 onboarding 可继续。
+          // 告知运维：这次保存并没有真正落库，下一次用户访问会用本地副本。
+          console.warn(
+            '[profile-api] saveProfile: backend unavailable, persisted locally only',
+            error,
+          );
           return writeLocalProfile(nextProfile);
         }
 
