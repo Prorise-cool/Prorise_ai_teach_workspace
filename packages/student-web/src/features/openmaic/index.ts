@@ -4,3 +4,4 @@
  */
 export { OpenMAICHomePage } from './pages/openmaic-home-page';
 export { OpenMAICClassroomPage } from './pages/openmaic-classroom-page';
+export { OpenMAICSettingsPage } from './pages/openmaic-settings-page';
