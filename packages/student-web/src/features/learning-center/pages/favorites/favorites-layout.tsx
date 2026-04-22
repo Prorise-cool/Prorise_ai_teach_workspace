@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Leaf } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { AppBrand } from '@/components/brand/app-brand';
 import { SurfaceDashboardDock } from '@/components/surface/surface-dashboard-dock';
 
 type FavoritesLayoutProps = {
@@ -22,17 +23,9 @@ export function FavoritesLayout({ sidebar, content, dialogs }: FavoritesLayoutPr
       </div>
 
       <header className="w-full max-w-6xl mx-auto mt-6 px-6 z-40 relative flex justify-between items-start pointer-events-none">
-        <Link
-          to="/"
-          className="font-bold text-lg flex items-center gap-3 pointer-events-auto hover:opacity-80 transition-opacity"
-        >
-          <div className="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
-            <Leaf className="w-4.5 h-4.5 text-bg-light dark:text-bg-dark" />
-          </div>
-          <span className="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block text-xl">
-            XiaoMai
-          </span>
-        </Link>
+        <div className="pointer-events-auto">
+          <AppBrand to="/" size="md" hideTextOnMobile />
+        </div>
 
         <div className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto">
           <Link

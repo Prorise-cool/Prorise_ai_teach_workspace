@@ -46,6 +46,26 @@ public interface LearningResultMapper {
 
     XmPersistenceSyncBo.LearningResultSyncItemBo selectQuizRecordByRecordId(@Param("recordId") Long recordId);
 
+    /**
+     * 通过 source_result_id 或 detail_ref 查找 quiz 记录，供 /results/quiz/{quizId} 回看使用。
+     */
+    XmPersistenceSyncBo.LearningResultSyncItemBo selectQuizBySourceResultId(@Param("sourceResultId") String sourceResultId);
+
+    /**
+     * 聚合：指定用户的平均 quiz 分（忽略 NULL score）。无数据返回 null。
+     */
+    Integer selectAverageQuizScore(@Param("userId") String userId);
+
+    /**
+     * 聚合：指定用户最新一条推荐记录。
+     */
+    XmPersistenceSyncBo.LearningResultSyncItemBo selectLatestRecommendation(@Param("userId") String userId);
+
+    /**
+     * 聚合：指定用户当前活跃（最新）学习路径，含 completed/total step counts。
+     */
+    XmPersistenceSyncBo.LearningResultSyncItemBo selectActiveLearningPath(@Param("userId") String userId);
+
     int updateQuizRecord(@Param("record") XmPersistenceSyncBo.LearningResultSyncItemBo record);
 
     XmPersistenceSyncBo.LearningResultSyncItemBo selectWrongbookRecordByRecordId(@Param("recordId") Long recordId);

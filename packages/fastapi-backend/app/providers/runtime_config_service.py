@@ -67,11 +67,36 @@ class VideoProviderRuntimeAssembly:
     tts_by_stage: Mapping[str, tuple[TTSProvider, ...]] = field(default_factory=dict)
     default_llm: tuple[LLMProvider, ...] = field(default_factory=tuple)
     default_tts: tuple[TTSProvider, ...] = field(default_factory=tuple)
+    # 每个 stage 的 retry_attempts（来自 xm_ai_module_binding.retry_attempts）
+    # 驱动如 manim_fix 的 patch retry 次数；缺失则 fallback 到 settings 或 0
+    retry_attempts_by_stage: Mapping[str, int] = field(default_factory=dict)
+    # 每个 stage 的 runtime_settings（来自 xm_ai_module_binding.runtime_settings_json）
+    # 驱动 pipeline 所有可调旋钮（feedbackRounds / maxFixBugTries / renderQuality 等）
+    runtime_settings_by_stage: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     source: str = "settings"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "llm_by_stage", MappingProxyType(dict(self.llm_by_stage)))
         object.__setattr__(self, "tts_by_stage", MappingProxyType(dict(self.tts_by_stage)))
+        object.__setattr__(
+            self, "retry_attempts_by_stage", MappingProxyType(dict(self.retry_attempts_by_stage))
+        )
+        frozen_settings = {
+            stage: MappingProxyType(dict(value))
+            for stage, value in self.runtime_settings_by_stage.items()
+        }
+        object.__setattr__(
+            self, "runtime_settings_by_stage", MappingProxyType(frozen_settings)
+        )
+
+    def retry_attempts_for(self, stage: str) -> int | None:
+        """获取指定 stage 的 retry_attempts；缺失返回 None 让调用方 fallback。"""
+        value = self.retry_attempts_by_stage.get(stage)
+        return int(value) if value is not None else None
+
+    def runtime_settings_for(self, stage: str) -> Mapping[str, Any]:
+        """获取指定 stage 的 runtime_settings；缺失返回空映射。"""
+        return self.runtime_settings_by_stage.get(stage, MappingProxyType({}))
 
     def llm_for(self, stage: str) -> tuple[LLMProvider, ...]:
         """获取指定阶段的 LLM Provider 链。"""
@@ -106,6 +131,18 @@ class CompanionRuntimeAssembly:
     context_ttl_seconds: int = 86400
     max_rounds: int = 10
     recent_rounds_to_keep: int = 3
+    source: str = "settings"
+
+
+@dataclass(slots=True, frozen=True)
+class LearningCoachRuntimeAssembly:
+    """学后陪练模块 Provider 运行时装配结果。
+
+    只聚合 LLM 链路 —— learning_coach 不直接驱动 TTS/视觉，
+    quiz/checkpoint/path/recommendation 等阶段共用同一条 LLM chain。
+    """
+
+    llm: tuple[LLMProvider, ...]
     source: str = "settings"
 
 
@@ -285,6 +322,98 @@ class ProviderRuntimeResolver:
             source="ruoyi",
         )
 
+    async def resolve_learning_coach(
+        self,
+        *,
+        access_token: str | None = None,
+        client_id: str | None = None,
+    ) -> LearningCoachRuntimeAssembly:
+        """解析学后陪练模块 Provider 配置。
+
+        模式完全对齐 resolve_companion：
+        - provider_runtime_source != 'ruoyi' -> 用 settings 默认链路；
+        - 无 access_token 且客户端要求显式鉴权 -> 同样走 settings；
+        - 拉取 RuoYi bindings 失败或为空 -> 降级回 settings；
+        - 正常情况下把所有 llm bindings 合并为一条 chain。
+        """
+        fallback = self._build_learning_coach_from_settings()
+        runtime_source = _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower()
+        logger.info(
+            "resolve_learning_coach called  source=%s  has_token=%s",
+            runtime_source,
+            access_token is not None,
+        )
+        if runtime_source != "ruoyi":
+            return fallback
+        if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
+            logger.info("Skip RuoYi learning_coach runtime lookup without explicit request auth; fallback to settings")
+            return fallback
+
+        try:
+            module = await self._ruoyi_runtime_client.get_module_runtime(
+                "learning_coach",
+                access_token=access_token,
+                client_id=client_id,
+            )
+            logger.info(
+                "RuoYi learning_coach runtime response  bindings_count=%s",
+                len(module.bindings),
+            )
+        except IntegrationError as exc:
+            logger.warning("Resolve learning_coach runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Resolve learning_coach runtime from RuoYi failed unexpectedly; fallback to settings", exc_info=exc)
+            return fallback
+
+        if not module.bindings:
+            logger.warning("RuoYi returned EMPTY bindings for learning_coach module; fallback to settings")
+            return fallback
+
+        try:
+            return self._build_learning_coach_from_ruoyi(module.bindings, fallback=fallback)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Build learning_coach runtime from RuoYi failed; fallback to settings", exc_info=exc)
+            return fallback
+
+    def _build_learning_coach_from_settings(self) -> LearningCoachRuntimeAssembly:
+        assembly = self._provider_factory.assemble_from_settings(self._settings)
+        return LearningCoachRuntimeAssembly(llm=assembly.llm, source="settings")
+
+    def _build_learning_coach_from_ruoyi(
+        self,
+        bindings: Sequence[RuoYiAiRuntimeBinding],
+        *,
+        fallback: LearningCoachRuntimeAssembly,
+    ) -> LearningCoachRuntimeAssembly:
+        runtime_provider_factory = self._provider_factory.clone()
+        llm_configs: list[ProviderRuntimeConfig] = []
+
+        for binding in bindings:
+            if not binding.stage_code or not binding.provider_id:
+                continue
+            try:
+                capability = ProviderCapability(binding.capability)
+                if capability is not ProviderCapability.LLM:
+                    continue
+                config = self._build_runtime_config(binding)
+                self._ensure_runtime_registration(runtime_provider_factory, capability, config, binding)
+            except (ProviderConfigurationError, ProviderNotFoundError, ValueError) as exc:
+                logger.warning(
+                    "Skip invalid learning_coach binding  provider_id=%s  stage=%s  error=%s",
+                    binding.provider_id, binding.stage_code, exc,
+                )
+                continue
+
+            llm_configs.append(config)
+
+        llm_chain = (
+            tuple(runtime_provider_factory.build_chain(ProviderCapability.LLM, llm_configs))
+            if llm_configs
+            else fallback.llm
+        )
+        return LearningCoachRuntimeAssembly(llm=llm_chain, source="ruoyi")
+
     def _build_from_settings(self) -> VideoProviderRuntimeAssembly:
         assembly = self._provider_factory.assemble_from_settings(self._settings)
         return VideoProviderRuntimeAssembly(
@@ -302,10 +431,29 @@ class ProviderRuntimeResolver:
         runtime_provider_factory = self._provider_factory.clone()
         llm_config_map: dict[str, list[ProviderRuntimeConfig]] = {}
         tts_config_map: dict[str, list[ProviderRuntimeConfig]] = {}
+        # stage → retry_attempts；同 stage 多条 binding 时取 is_default=Y 或最小 priority
+        retry_by_stage: dict[str, tuple[int, int, int]] = {}  # (priority, is_default_score, retry_attempts)
+        # stage → runtime_settings；同 stage 多条 binding 时同样按 (priority,-is_default) 排序取优胜者
+        settings_by_stage: dict[str, tuple[int, int, Mapping[str, Any]]] = {}
 
         for binding in bindings:
             if not binding.stage_code or not binding.provider_id:
                 continue
+
+            # 记录本条 binding 的 retry_attempts / runtime_settings
+            # 选优规则：priority 小者优先，同 priority 下 is_default=Y 优先
+            stage_code = binding.stage_code
+            priority = getattr(binding, "priority", 100) or 100
+            is_default_score = 1 if getattr(binding, "is_default", False) else 0
+            retry_value = int(getattr(binding, "retry_attempts", 0) or 0)
+            binding_settings = dict(getattr(binding, "runtime_settings", {}) or {})
+
+            current_retry = retry_by_stage.get(stage_code)
+            if current_retry is None or (priority, -is_default_score) < (current_retry[0], -current_retry[1]):
+                retry_by_stage[stage_code] = (priority, is_default_score, retry_value)
+            current_settings = settings_by_stage.get(stage_code)
+            if current_settings is None or (priority, -is_default_score) < (current_settings[0], -current_settings[1]):
+                settings_by_stage[stage_code] = (priority, is_default_score, binding_settings)
             try:
                 capability = ProviderCapability(binding.capability)
                 config = self._build_runtime_config(binding)
@@ -350,11 +498,20 @@ class ProviderRuntimeResolver:
             llm_by_stage.setdefault(stage, default_llm)
         tts_by_stage.setdefault(_TTS_STAGE, default_tts)
 
+        retry_attempts_by_stage = {
+            stage: retry for stage, (_, _, retry) in retry_by_stage.items()
+        }
+        runtime_settings_by_stage = {
+            stage: rt_settings for stage, (_, _, rt_settings) in settings_by_stage.items()
+        }
+
         return VideoProviderRuntimeAssembly(
             llm_by_stage=llm_by_stage,
             tts_by_stage=tts_by_stage,
             default_llm=default_llm,
             default_tts=default_tts,
+            retry_attempts_by_stage=retry_attempts_by_stage,
+            runtime_settings_by_stage=runtime_settings_by_stage,
             source="ruoyi",
         )
 

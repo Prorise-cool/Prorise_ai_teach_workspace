@@ -22,7 +22,6 @@ import {
   BookmarkPlus,
   ClipboardCheck,
   HelpCircle,
-  Leaf,
   Lightbulb,
   PanelRight,
   PlayCircle,
@@ -32,12 +31,22 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { AppBrand } from '@/components/brand/app-brand';
 import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
+import { RichBlock, RichInline } from '@/components/rich-content';
 import { SurfaceDock } from '@/components/surface/surface-dock';
 import { resolveLearningCoachAdapter } from '@/services/api/adapters/learning-coach-adapter';
-import type { LearningCoachJudgeItem, LearningCoachQuestion, LearningCoachSource } from '@/types/learning';
+import { useFeedback } from '@/shared/feedback';
+import type { CoachAskMessage } from '@/types/learning';
+import type {
+  LearningCoachGenerationSource,
+  LearningCoachJudgeItem,
+  LearningCoachQuestion,
+  LearningCoachSource,
+} from '@/types/learning';
 
 import { buildLearningCoachSource, buildLearningCoachSourceSearchParams } from '../utils/source';
+import { FallbackBanner } from './fallback-banner';
 
 type AssessmentMode = 'checkpoint' | 'quiz';
 
@@ -47,6 +56,7 @@ type AssessmentState = {
   questions: LearningCoachQuestion[];
   source: LearningCoachSource;
   expiresAt?: number | null;
+  generationSource?: LearningCoachGenerationSource;
 };
 
 type SubmitState = {
@@ -174,6 +184,12 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState | null>(null);
 
+  // Coach 对话（侧栏 AI 辅导）：消息历史、输入草稿、请求中状态
+  const { notify } = useFeedback();
+  const [coachMessages, setCoachMessages] = useState<CoachAskMessage[]>([]);
+  const [coachDraft, setCoachDraft] = useState('');
+  const [coachAsking, setCoachAsking] = useState(false);
+
   const toggleSidebar = () => {
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1280;
     if (isDesktop) {
@@ -233,6 +249,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
             questions: payload.questions,
             source: payload.source,
             expiresAt: Date.now() + payload.expiresInSeconds * 1000,
+            generationSource: payload.generationSource,
           });
         }
         return;
@@ -249,6 +266,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
           questions: payload.questions,
           source: payload.source,
           expiresAt: Date.now() + payload.expiresInSeconds * 1000,
+          generationSource: payload.generationSource,
         });
       }
     };
@@ -286,6 +304,60 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
     const params = buildLearningCoachSourceSearchParams(source);
     return `/coach/${encodeURIComponent(sessionId)}?${params.toString()}`;
   }, [sessionId, source]);
+
+  // 题目切换：用一条基于考点的开场白重置对话历史
+  useEffect(() => {
+    if (!currentQuestion) {
+      setCoachMessages([]);
+      return;
+    }
+    const opener = currentQuestion.tag
+      ? `这道题考的是「${currentQuestion.tag}」。遇到思路卡住可以问我，我可以帮你拆解、给提示或回看相关知识。`
+      : '遇到思路卡住可以问我。我可以帮你拆解题目、指出关键条件或回看相关知识点。';
+    setCoachMessages([{ role: 'coach', content: opener }]);
+    setCoachDraft('');
+  }, [currentQuestion?.questionId]);
+
+  const sendCoach = async (rawMessage: string) => {
+    const userMessage = rawMessage.trim();
+    if (!userMessage || !currentQuestion || coachAsking) return;
+    // 先把用户消息加入界面
+    const nextHistory: CoachAskMessage[] = [
+      ...coachMessages,
+      { role: 'user', content: userMessage },
+    ];
+    setCoachMessages(nextHistory);
+    setCoachDraft('');
+    setCoachAsking(true);
+    try {
+      const { reply } = await adapter.coachAsk({
+        quizId: mode === 'quiz' ? assessment?.assessmentId ?? null : null,
+        checkpointId: mode === 'checkpoint' ? assessment?.assessmentId ?? null : null,
+        questionId: currentQuestion.questionId,
+        questionStem: currentQuestion.stem,
+        questionOptions: currentQuestion.options.map((o) => `${o.label}: ${o.text}`),
+        userMessage,
+        history: coachMessages,  // 不含刚加的这条 user 消息，后端 prompt 里再拼上
+      });
+      setCoachMessages((prev) => [...prev, { role: 'coach', content: reply }]);
+    } catch (error) {
+      setCoachMessages((prev) => [
+        ...prev,
+        { role: 'coach', content: '抱歉刚刚出了点问题，可以换个问法再试一次？' },
+      ]);
+    } finally {
+      setCoachAsking(false);
+    }
+  };
+
+  const handleReplayVideo = () => {
+    const sid = assessment?.source?.sourceSessionId || source.sourceSessionId;
+    if (sid) {
+      void navigate(`/video/${encodeURIComponent(sid)}`);
+    } else {
+      notify({ tone: 'info', title: '暂无关联视频片段' });
+    }
+  };
 
   const handleSelectOption = (questionId: string, optionId: string) => {
     setAnswers((current) => ({
@@ -360,12 +432,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
       </div>
 
       <header className="relative z-20 w-full max-w-[1500px] mx-auto h-[72px] px-6 flex justify-between items-center shrink-0">
-        <Link to="/" className="font-bold text-lg flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
-            <Leaf className="w-4.5 h-4.5 text-bg-light dark:text-bg-dark" />
-          </div>
-          <span className="tracking-tight text-text-primary dark:text-text-primary-dark text-xl hidden sm:block">XiaoMai</span>
-        </Link>
+        <AppBrand to="/" size="md" hideTextOnMobile />
 
         <div className="flex items-center gap-3">
           <button
@@ -517,6 +584,8 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
             </div>
           ) : null}
 
+          {assessment?.generationSource === 'fallback' ? <FallbackBanner mode={mode} /> : null}
+
           <div
             id="question-content-container"
             className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-[24px] shadow-sm flex flex-col w-full question-transition relative overflow-hidden shrink-0"
@@ -539,7 +608,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
               </div>
 
               <div className="text-[17px] md:text-[19px] font-bold mb-8 leading-relaxed text-text-primary dark:text-text-primary-dark">
-                {currentQuestion?.stem ?? '题目加载中...'}
+                <RichBlock content={currentQuestion?.stem ?? ''} placeholder="题目加载中..." />
               </div>
 
               <div className="flex flex-col gap-3 md:gap-4 mb-10">
@@ -563,7 +632,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                           <span className="w-8 h-8 rounded-lg bg-white dark:bg-secondary border border-error/30 dark:border-error/20 flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                             {opt.label}
                           </span>
-                          <span className="font-mono text-[15px] md:text-[16px] font-bold">{opt.text}</span>
+                          <RichInline content={opt.text} className="font-mono text-[15px] md:text-[16px] font-bold" />
                         </div>
                         <X className="w-5 h-5 text-error shrink-0" />
                       </button>
@@ -582,7 +651,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                           <span className="w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                             {opt.label}
                           </span>
-                          <span className="font-mono text-[15px] md:text-[16px] font-bold">{opt.text}</span>
+                          <RichInline content={opt.text} className="font-mono text-[15px] md:text-[16px] font-bold" />
                         </div>
                         <Check className="w-6 h-6 text-success stroke-[3] shrink-0" />
                       </button>
@@ -607,7 +676,7 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                       <span className="w-8 h-8 rounded-lg bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
                         {opt.label}
                       </span>
-                      <span className="font-mono text-[15px] md:text-[16px]">{opt.text}</span>
+                      <RichInline content={opt.text} className="font-mono text-[15px] md:text-[16px]" />
                     </button>
                   );
                 })}
@@ -630,9 +699,11 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
                 </div>
                 <div className="text-[14px] text-text-primary/90 dark:text-text-primary-dark/90 leading-relaxed font-medium">
                   {submitState && currentQuestion ? (
-                    <p className="leading-relaxed">
-                      {judgeByQuestionId.get(currentQuestion.questionId)?.explanation ?? '暂无解析'}
-                    </p>
+                    <RichBlock
+                      content={judgeByQuestionId.get(currentQuestion.questionId)?.explanation ?? '暂无解析'}
+                      placeholder=""
+                      className="leading-relaxed"
+                    />
                   ) : (
                     <p className="leading-relaxed text-text-secondary dark:text-text-secondary-dark">
                       完成作答并提交后，将展示逐题解析与总结建议。
@@ -692,27 +763,53 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-6 bg-secondary/20 dark:bg-bg-dark/20">
-              <div className="flex flex-col items-start w-full">
-                <div className="flex items-center gap-2 mb-1.5 ml-1">
-                  <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
+            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-4 bg-secondary/20 dark:bg-bg-dark/20">
+              {coachMessages.map((msg, idx) => (
+                msg.role === 'coach' ? (
+                  <div key={idx} className="flex flex-col items-start w-full">
+                    <div className="flex items-center gap-2 mb-1.5 ml-1">
+                      <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
+                    </div>
+                    <div className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 rounded-[4px_20px_20px_20px] max-w-[92%] leading-relaxed shadow-sm font-medium">
+                      <RichBlock content={msg.content} placeholder="" />
+                    </div>
+                  </div>
+                ) : (
+                  <div key={idx} className="flex flex-col items-end w-full">
+                    <div className="flex items-center gap-2 mb-1.5 mr-1">
+                      <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">You</span>
+                    </div>
+                    <div className="bg-brand/90 dark:bg-brand text-surface-light text-[14px] px-4 py-3.5 rounded-[20px_4px_20px_20px] max-w-[92%] leading-relaxed shadow-sm font-medium whitespace-pre-wrap">
+                      {msg.content}
+                    </div>
+                  </div>
+                )
+              ))}
+              {coachAsking ? (
+                <div className="flex flex-col items-start w-full">
+                  <div className="flex items-center gap-2 mb-1.5 ml-1">
+                    <span className="text-[11px] font-bold text-text-secondary dark:text-text-secondary-dark">Coach</span>
+                  </div>
+                  <div className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-[13px] text-text-secondary dark:text-text-secondary-dark px-4 py-3 rounded-[4px_20px_20px_20px] leading-relaxed shadow-sm italic">
+                    思考中...
+                  </div>
                 </div>
-                <div className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark text-[14px] text-text-primary dark:text-text-primary-dark px-4 py-3.5 rounded-[4px_20px_20px_20px] max-w-[92%] leading-relaxed shadow-sm font-medium">
-                  如果你对这道题的链式法则没把握，我可以先帮你拆出“外层函数”和“内层函数”，再一步一步带你算。
-                </div>
-              </div>
+              ) : null}
             </div>
 
             <div className="p-4 bg-surface-light dark:bg-surface-dark border-t border-bordercolor-light/50 dark:border-bordercolor-dark/50 shrink-0">
               <div className="flex flex-col gap-2 mb-3">
                 <button
                   type="button"
-                  className="text-[12px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
+                  disabled={coachAsking || !currentQuestion}
+                  onClick={() => void sendCoach('帮我逐步拆解这道题的解题思路，但不要直接给出答案。')}
+                  className="text-[12px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
                   <HelpCircle className="w-4 h-4 text-brand" /> 先给我拆题思路
                 </button>
                 <button
                   type="button"
+                  onClick={handleReplayVideo}
                   className="text-[12px] font-bold bg-secondary/50 dark:bg-secondary/50 border border-bordercolor-light dark:border-bordercolor-dark px-3 py-2.5 rounded-xl text-left hover:border-brand text-text-primary dark:text-text-primary-dark transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <PlayCircle className="w-4 h-4 text-agent-efficient" /> 回看相关视频片段
@@ -721,15 +818,27 @@ export function LearningAssessmentPage({ mode }: { mode: AssessmentMode }) {
 
               <div className="bg-secondary/40 dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-xl focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand transition-all relative shadow-sm">
                 <textarea
-                  className="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed custom-scroll"
+                  className="w-full resize-none bg-transparent outline-none p-3 text-[14px] text-text-primary dark:text-text-primary-dark placeholder:text-text-secondary/50 dark:placeholder:text-text-secondary-dark/50 leading-relaxed custom-scroll disabled:opacity-60"
                   rows={2}
                   placeholder="或者直接问我问题..."
+                  value={coachDraft}
+                  maxLength={300}
+                  disabled={coachAsking}
+                  onChange={(e) => setCoachDraft(e.target.value.slice(0, 300))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendCoach(coachDraft);
+                    }
+                  }}
                 />
                 <div className="flex justify-between items-center px-3 pb-2 pt-1">
-                  <span className="text-[11px] font-medium text-text-secondary/50 font-mono">0 / 300</span>
+                  <span className="text-[11px] font-medium text-text-secondary/50 font-mono">{coachDraft.length} / 300</span>
                   <button
                     type="button"
-                    className="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center hover:bg-brand active:scale-95 transition-all shadow-md btn-hover-scale"
+                    disabled={coachAsking || !coachDraft.trim()}
+                    onClick={() => void sendCoach(coachDraft)}
+                    className="w-8 h-8 rounded-full bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark flex items-center justify-center hover:bg-brand active:scale-95 transition-all shadow-md btn-hover-scale disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ArrowRight className="w-4 h-4 rotate-[-90deg]" />
                   </button>

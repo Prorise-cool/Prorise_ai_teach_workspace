@@ -156,6 +156,10 @@ class _PipelineContext:
     work_dir: Path
     video_root: Path
     pipeline_started_at: float
+    # learning_coach 预生成 task，由 _run_design_stage 启动（understanding 后），
+    # _run_finalize 在 video upload 完成前 await 它。与 storyboard/manim/render/TTS
+    # 完全并行，视频通常 3-8min，preload 只需 20-40s，隐藏无痕。
+    preload_task: asyncio.Task[Any] | None = None
 
 
 @dataclass
@@ -748,6 +752,7 @@ class VideoPipelineService:
             knowledge_point=ctx.knowledge_point,
             work_dir=ctx.work_dir,
             bridge=bridge,
+            assembly=assembly,
         )
         self._bind_agent_section_callback(agent, loop, task, runtime)
         return _AgentSetup(assembly=assembly, bridge=bridge, agent=agent, loop=loop)
@@ -789,6 +794,23 @@ class VideoPipelineService:
             "解题摘要生成完成",
             progress_override=10,
             extra_context=self._preview_signal(preview_state),
+        )
+
+        # 并行预生成：inline asyncio task 真正跟 storyboard/manim/render 共同调度，
+        # _run_finalize 末尾会 await 它。不用 Dramatiq 消息（跨进程 + fire-and-forget
+        # 都不够可靠），直接在本 event loop 里并发跑。
+        topic_hint_for_preload = (
+            (understanding.topic_summary if understanding else None)
+            or preview_state.summary
+            or ctx.knowledge_point
+        )
+        ctx.preload_task = asyncio.create_task(
+            self._preload_learning_coach_inline(
+                task_id=ctx.task_id,
+                title=topic_hint_for_preload or "",
+                assembly=setup.assembly,
+            ),
+            name=f"learning_coach_preload:{ctx.task_id}",
         )
 
         duration_minutes = metadata.get(
@@ -1315,10 +1337,134 @@ class VideoPipelineService:
             render_successes,
             render_total,
         )
+
+        # 等待 learning_coach 预生成完成：_run_design_stage 启动的 inline task 与
+        # 整个管道并行跑，通常 20-40s 完成；到这里视频已渲染好（3-8min），预生成
+        # 大概率早已 done。await 最多等 90s —— 超时则不阻塞视频交付，用户点
+        # quiz 时降级到 entry-trigger 或实时 LLM 路径。
+        if ctx.preload_task is not None:
+            try:
+                await asyncio.wait_for(ctx.preload_task, timeout=90)
+                logger.info(
+                    "learning_coach.preload.synced_before_finalize  task_id=%s",
+                    ctx.task_id,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "learning_coach.preload.timeout_before_finalize  task_id=%s  "
+                    "video ready but quiz may need lazy LLM call",
+                    ctx.task_id,
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "learning_coach.preload.failed_before_finalize  task_id=%s",
+                    ctx.task_id,
+                    exc_info=True,
+                )
+
         return TaskResult.completed(
             message=completion_message,
             context=video_result.model_dump(mode="json", by_alias=True),
         )
+
+    async def _preload_learning_coach_inline(
+        self,
+        *,
+        task_id: str,
+        title: str,
+        assembly: VideoProviderRuntimeAssembly,
+    ) -> None:
+        """视频管道内的 inline 预生成：与 storyboard/manim/render/TTS 并行执行。
+
+        不走 Dramatiq actor —— 那是跨进程 fire-and-forget，不好观测。直接在当前
+        event loop 里以 asyncio.Task 形式跑，由 _run_finalize 末尾 await。
+        provider_chain 直接复用视频 pipeline 已经 resolve 好的 assembly.llm_for("solve")
+        （或任一 stage 的 LLM），避免再过一次 RuoYi runtime resolver。
+        """
+        try:
+            from app.features.learning_coach.schemas import (
+                LearningCoachSource,
+                LearningCoachSourceType,
+            )
+            from app.features.learning_coach.service import LearningCoachService
+
+            # assembly.llm_for("solve") 是通用 LLM 链（video 管道所有 stage 共享同一
+            # 来源：gemini-3-flash 或 RuoYi 运维配置的默认），拿它给 learning_coach 用
+            # 完全兼容。
+            llm_chain = assembly.llm_for("solve") or assembly.default_llm
+            if not llm_chain:
+                logger.warning(
+                    "learning_coach.preload_inline.no_llm_chain  task_id=%s",
+                    task_id,
+                )
+                return
+
+            source = LearningCoachSource(
+                source_type=LearningCoachSourceType.VIDEO,
+                source_session_id=task_id,
+                source_task_id=task_id,
+                topic_hint=title or None,
+            )
+            service = LearningCoachService(
+                runtime_store=self._runtime_store,
+                provider_chain=llm_chain,
+            )
+            logger.info(
+                "learning_coach.preload_inline.start  task_id=%s  title_len=%d",
+                task_id,
+                len(title or ""),
+            )
+            await service.preload_for_session(source)
+            logger.info(
+                "learning_coach.preload_inline.done  task_id=%s",
+                task_id,
+            )
+        except Exception:  # noqa: BLE001 — 预生成绝不影响视频主流程
+            logger.warning(
+                "learning_coach.preload_inline.failed  task_id=%s",
+                task_id,
+                exc_info=True,
+            )
+
+    def _schedule_learning_coach_preload(self, *, task_id: str, title: str) -> None:
+        """视频完成钩子：把 learning_coach 预生成委托给独立 Dramatiq actor。
+
+        复用视频任务创建时落到 Redis 的 access_token（load_video_runtime_auth），
+        把它作为消息参数传给 preload_learning_coach actor —— 该 actor 自己用
+        asyncio.run 跑 LLM 调用链，生命周期独立于本 orchestrator actor。
+        任何失败都只 warn 不抛，不影响视频完成语义。
+        """
+        try:
+            from app.features.video.runtime_auth import load_video_runtime_auth
+
+            auth = load_video_runtime_auth(self._runtime_store, task_id=task_id)
+            access_token = auth.access_token if auth else None
+            client_id = auth.client_id if auth else None
+
+            from app.worker import preload_learning_coach_actor  # lazy 避免循环依赖
+
+            if preload_learning_coach_actor is None:
+                logger.warning(
+                    "learning_coach.preload.actor_not_ready  task_id=%s", task_id
+                )
+                return
+
+            preload_learning_coach_actor.send(
+                task_id,
+                title or "",
+                access_token,
+                client_id,
+            )
+            logger.info(
+                "learning_coach.preload.scheduled  task_id=%s",
+                task_id,
+            )
+        except Exception:  # noqa: BLE001 — 预生成调度失败不得阻塞视频完成
+            logger.warning(
+                "learning_coach.preload.schedule_failed  task_id=%s",
+                task_id,
+                exc_info=True,
+            )
 
     # ── Story 6.7: Pipeline artifact persistence ──────────────────
 
@@ -1775,55 +1921,125 @@ class VideoPipelineService:
         )
         return preview_state
 
+    def _resolve_stage_knob(
+        self,
+        assembly: VideoProviderRuntimeAssembly | None,
+        stage: str,
+        key: str,
+        fallback: Any,
+    ) -> tuple[Any, str]:
+        """按 binding.runtime_settings > settings/default 三级 fallback 解析旋钮。
+
+        返回 (value, source)，source ∈ {"ruoyi-binding", "fallback"}。
+        """
+        if assembly is not None:
+            stage_settings = assembly.runtime_settings_for(stage) or {}
+            if key in stage_settings:
+                return stage_settings[key], "ruoyi-binding"
+        return fallback, "fallback"
+
     def _create_c2v_agent(
         self,
         knowledge_point: str,
         work_dir: Path,
         bridge: LLMBridge,
+        assembly: VideoProviderRuntimeAssembly | None = None,
     ) -> TeachingVideoAgent:
-        """创建 Code2Video agent，优先走 section 级生成/渲染路径。"""
-        cfg = RunConfig(
-            use_feedback=False,
-            use_assets=False,
-            api=bridge.text_api("manim_gen"),
-            feedback_rounds=0,
-            max_code_token_length=10000,
-            max_fix_bug_tries=1,
-            max_regenerate_tries=1,
-            max_feedback_gen_code_tries=0,
-            max_mllm_fix_bugs_tries=0,
-            layout_hint=getattr(self, "_layout_hint", None),
-            static_guard_max_passes=getattr(
-                self._settings, "video_static_guard_max_passes", 3
-            ),
-            patch_retry_max_retries=getattr(
-                self._settings, "video_patch_retry_max_retries", 1
-            ),
-            section_count=getattr(self, "_section_count", None),
-            section_codegen_max_tokens=getattr(
-                self._settings, "video_section_codegen_max_tokens", 4000
-            ),
-            section_codegen_max_completion_tokens=getattr(
-                self._settings,
-                "video_section_codegen_max_completion_tokens",
-                8000,
-            ),
-            section_codegen_concurrency=getattr(
-                self, "_section_codegen_concurrency", 1
-            ),
-            render_quality=getattr(
+        """创建 Code2Video agent，优先走 section 级生成/渲染路径。
+
+        所有可调旋钮优先级（高→低）：
+          1. RuoYi 后台 xm_ai_module_binding.runtime_settings_json（对应 stage）—— 运维可调
+          2. settings / env 兜底
+          3. 硬编码默认
+        agent.py 内再用 max/min 做硬安全边界。
+        """
+        # patch_retry_max_retries 走 retry_attempts 列（与 runtime_settings 分离）
+        patch_retry = None
+        if assembly is not None:
+            patch_retry = assembly.retry_attempts_for("manim_fix")
+        patch_retry_source = "ruoyi-binding" if patch_retry is not None else "fallback"
+        if patch_retry is None:
+            patch_retry = getattr(
+                self._settings, "video_patch_retry_max_retries", 2
+            )
+
+        # 其余旋钮走 binding.runtime_settings_json
+        feedback_rounds, fr_src = self._resolve_stage_knob(
+            assembly, "mllm_feedback", "feedbackRounds", 0
+        )
+        max_fix_bug_tries, mfb_src = self._resolve_stage_knob(
+            assembly, "manim_fix", "maxFixBugTries", 1
+        )
+        max_regenerate_tries, mrt_src = self._resolve_stage_knob(
+            assembly, "manim_gen", "maxRegenerateTries", 1
+        )
+        max_feedback_gen_code_tries, mfgct_src = self._resolve_stage_knob(
+            assembly, "mllm_feedback", "maxFeedbackGenCodeTries", 0
+        )
+        max_mllm_fix_bugs_tries, mmfbt_src = self._resolve_stage_knob(
+            assembly, "mllm_feedback", "maxMllmFixBugsTries", 0
+        )
+        static_guard_max_passes, sgmp_src = self._resolve_stage_knob(
+            assembly, "render_verify", "staticGuardMaxPasses",
+            getattr(self._settings, "video_static_guard_max_passes", 3),
+        )
+        section_codegen_max_tokens, scmt_src = self._resolve_stage_knob(
+            assembly, "manim_gen", "sectionCodegenMaxTokens",
+            getattr(self._settings, "video_section_codegen_max_tokens", 4000),
+        )
+        section_codegen_max_completion_tokens, scmct_src = self._resolve_stage_knob(
+            assembly, "manim_gen", "sectionCodegenMaxCompletionTokens",
+            getattr(self._settings, "video_section_codegen_max_completion_tokens", 8000),
+        )
+        section_codegen_concurrency, scc_src = self._resolve_stage_knob(
+            assembly, "manim_gen", "sectionCodegenConcurrency",
+            getattr(self, "_section_codegen_concurrency", 1),
+        )
+        render_quality, rq_src = self._resolve_stage_knob(
+            assembly, "render_verify", "renderQuality",
+            getattr(
                 self,
                 "_render_quality",
                 getattr(self._settings, "video_render_quality", "l"),
             ),
         )
-        logger.info(
-            "MLLM feedback DISABLED for section pipeline; patch_retry_max_retries=%d section_codegen_concurrency=%d layout_hint=%s render_quality=%s",
-            getattr(self._settings, "video_patch_retry_max_retries", 1),
-            getattr(self, "_section_codegen_concurrency", 1),
-            getattr(self, "_layout_hint", None),
-            getattr(self, "_render_quality", "l"),
+
+        cfg = RunConfig(
+            use_feedback=False,
+            use_assets=False,
+            api=bridge.text_api("manim_gen"),
+            feedback_rounds=int(feedback_rounds),
+            max_code_token_length=10000,
+            max_fix_bug_tries=int(max_fix_bug_tries),
+            max_regenerate_tries=int(max_regenerate_tries),
+            max_feedback_gen_code_tries=int(max_feedback_gen_code_tries),
+            max_mllm_fix_bugs_tries=int(max_mllm_fix_bugs_tries),
+            layout_hint=getattr(self, "_layout_hint", None),
+            static_guard_max_passes=int(static_guard_max_passes),
+            patch_retry_max_retries=int(patch_retry),
+            section_count=getattr(self, "_section_count", None),
+            section_codegen_max_tokens=int(section_codegen_max_tokens),
+            section_codegen_max_completion_tokens=int(section_codegen_max_completion_tokens),
+            section_codegen_concurrency=int(section_codegen_concurrency),
+            render_quality=str(render_quality),
         )
+        resolved_knobs = {
+            "feedback_rounds": (feedback_rounds, fr_src),
+            "max_fix_bug_tries": (max_fix_bug_tries, mfb_src),
+            "max_regenerate_tries": (max_regenerate_tries, mrt_src),
+            "max_feedback_gen_code_tries": (max_feedback_gen_code_tries, mfgct_src),
+            "max_mllm_fix_bugs_tries": (max_mllm_fix_bugs_tries, mmfbt_src),
+            "static_guard_max_passes": (static_guard_max_passes, sgmp_src),
+            "patch_retry_max_retries": (int(patch_retry), patch_retry_source),
+            "section_codegen_max_tokens": (section_codegen_max_tokens, scmt_src),
+            "section_codegen_max_completion_tokens": (
+                section_codegen_max_completion_tokens, scmct_src
+            ),
+            "section_codegen_concurrency": (section_codegen_concurrency, scc_src),
+            "render_quality": (render_quality, rq_src),
+            "layout_hint": (getattr(self, "_layout_hint", None), "metadata/settings"),
+        }
+        logger.info("pipeline knobs resolved: %s", resolved_knobs)
 
         return TeachingVideoAgent(
             idx=0,

@@ -96,6 +96,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         fill: true,
         playbackRates: PLAYBACK_RATES,
         poster: posterUrl,
+        // 自动播放：'muted' 表示静音自动播放（绕过浏览器 autoplay policy），
+        // 用户看到画面已经在动后会自行取消静音。直接 autoplay:true 在大多数浏览器
+        // 会被策略阻断，用户反而看到一个大播放按钮以为需要手动点。
+        autoplay: 'muted',
+        muted: true,
         sources: [
           {
             src: videoUrl,
@@ -107,6 +112,21 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       player.on('error', () => {
         console.warn('[VideoPlayer] Media load error:', player.error()?.message);
       });
+
+      // 首次用户交互自动解除静音：autoplay='muted' 进入页面时静音播放（绕过
+      // autoplay policy），用户点任何地方（包括 Dock 播放按钮）都会触发
+      // 'userinteract' 或 'play'，此时解除静音 + 把 volume 拉回 1
+      // 保证视频实际有声
+      const unmuteOnFirstInteract = () => {
+        if (player.muted()) {
+          player.muted(false);
+          if (player.volume() === 0) player.volume(1);
+        }
+      };
+      // 监听多个事件覆盖所有可能的首次交互：点击播放器区域、开始播放、点触屏
+      player.one("click", unmuteOnFirstInteract);
+      player.one("touchend", unmuteOnFirstInteract);
+      // 注意：不在 play 事件上 unmute，因为 autoplay='muted' 本身也会触发 play
 
       playerRef.current = player;
 

@@ -3,11 +3,14 @@
 import pytest
 from openai import AsyncOpenAI, OpenAI
 
+from types import SimpleNamespace
+
 from app.features.video.pipeline.engine.gpt_request import ProviderEndpoint
 from app.providers.llm.openai_client_factory import (
     client_from_endpoint,
     create_async_client,
     create_sync_client,
+    endpoint_from_provider,
 )
 
 
@@ -64,7 +67,7 @@ class TestClientFromEndpoint:
         assert isinstance(client, OpenAI)
 
     def test_minimum_timeout_enforced(self):
-        """timeout 至少 600s（照抄 ManimCat）。"""
+        """client_from_endpoint 仍保留 600s 硬下限（与 endpoint_from_provider 不同）。"""
         ep = ProviderEndpoint(
             base_url="https://api.example.com/v1",
             api_key="sk-test",
@@ -83,3 +86,31 @@ class TestClientFromEndpoint:
         )
         client = client_from_endpoint(ep)
         assert client.timeout == 900.0
+
+
+class TestEndpointFromProvider:
+    """endpoint_from_provider 应忠实反映 DB binding.timeout_seconds，
+    仅在非正数时才用 600s 兜底（DB = 权威来源）。"""
+
+    def _make_provider(self, timeout_seconds: float):
+        config = SimpleNamespace(
+            timeout_seconds=timeout_seconds,
+            settings={
+                "base_url": "https://api.example.com/v1",
+                "api_key": "sk-test",
+                "model_name": "gpt-4o",
+            },
+        )
+        return SimpleNamespace(config=config)
+
+    def test_binding_timeout_passes_through_when_positive(self):
+        ep = endpoint_from_provider(self._make_provider(120.0))
+        assert ep.timeout == 120.0
+
+    def test_binding_timeout_fallback_when_non_positive(self):
+        ep = endpoint_from_provider(self._make_provider(0.0))
+        assert ep.timeout == 600.0
+
+    def test_binding_timeout_large_value_passes_through(self):
+        ep = endpoint_from_provider(self._make_provider(900.0))
+        assert ep.timeout == 900.0

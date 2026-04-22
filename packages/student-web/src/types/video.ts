@@ -34,7 +34,7 @@ export type VideoSourcePayload =
 /* ---------- 字段约束常量 ---------- */
 
 /** 文本输入最小字符数。 */
-export const VIDEO_TEXT_MIN_LENGTH = 10;
+export const VIDEO_TEXT_MIN_LENGTH = 5;
 
 /** 文本输入最大字符数。 */
 export const VIDEO_TEXT_MAX_LENGTH = 5000;
@@ -79,8 +79,8 @@ export interface VideoTaskUserProfile {
   layoutHint: VideoLayoutHint;
 }
 
-/** 输入页默认质量预设。 */
-export const VIDEO_DEFAULT_QUALITY_PRESET: VideoQualityPreset = 'balanced';
+/** 输入页默认质量预设：fast（快速出片最低档），让用户最快跑完一次完整流程体验。 */
+export const VIDEO_DEFAULT_QUALITY_PRESET: VideoQualityPreset = 'fast';
 
 /** 质量预设对应的推荐参数。 */
 export const VIDEO_QUALITY_PRESET_DEFAULTS: Record<
@@ -88,7 +88,7 @@ export const VIDEO_QUALITY_PRESET_DEFAULTS: Record<
   VideoTaskUserProfile
 > = {
   fast: {
-    durationMinutes: 2,
+    durationMinutes: 1,
     sectionCount: 3,
     sectionConcurrency: 3,
     renderQuality: 'l',

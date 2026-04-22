@@ -6,9 +6,12 @@ import lombok.RequiredArgsConstructor;
 import org.dromara.common.core.exception.ServiceException;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo;
+import org.dromara.xiaomai.learning.mapper.LearningResultMapper;
 import org.dromara.xiaomai.learningcenter.domain.bo.LearningCenterActionBo;
 import org.dromara.xiaomai.learningcenter.domain.bo.LearningCenterQueryBo;
 import org.dromara.xiaomai.learningcenter.domain.vo.LearningCenterRecordVo;
+import org.dromara.xiaomai.learningcenter.domain.vo.LearningCenterSummaryVo;
 import org.dromara.xiaomai.learningcenter.mapper.LearningCenterMapper;
 import org.dromara.xiaomai.learningcenter.service.ILearningCenterService;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ import java.util.List;
 public class LearningCenterServiceImpl implements ILearningCenterService {
 
     private final LearningCenterMapper baseMapper;
+    private final LearningResultMapper learningResultMapper;
 
     @Override
     public TableDataInfo<LearningCenterRecordVo> queryLearningPage(LearningCenterQueryBo bo, PageQuery pageQuery) {
@@ -87,5 +91,42 @@ public class LearningCenterServiceImpl implements ILearningCenterService {
 
     private LearningCenterQueryBo copyQuery(LearningCenterQueryBo source) {
         return source == null ? new LearningCenterQueryBo() : BeanUtil.toBean(source, LearningCenterQueryBo.class);
+    }
+
+    @Override
+    public LearningCenterSummaryVo querySummary(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new ServiceException("userId 不能为空");
+        }
+        LearningCenterSummaryVo vo = new LearningCenterSummaryVo();
+        vo.setAverageQuizScore(learningResultMapper.selectAverageQuizScore(userId));
+
+        XmPersistenceSyncBo.LearningResultSyncItemBo latestRec = learningResultMapper.selectLatestRecommendation(userId);
+        if (latestRec != null) {
+            LearningCenterSummaryVo.LatestRecommendationVo latest = new LearningCenterSummaryVo.LatestRecommendationVo();
+            latest.setSummary(latestRec.getAnalysisSummary());
+            latest.setTargetRefId(latestRec.getTargetRefId());
+            latest.setSourceTime(latestRec.getOccurredAt());
+            if (latest.getSummary() != null && latest.getTargetRefId() != null && latest.getSourceTime() != null) {
+                vo.setLatestRecommendation(latest);
+            }
+        }
+
+        XmPersistenceSyncBo.LearningResultSyncItemBo activePath = learningResultMapper.selectActiveLearningPath(userId);
+        if (activePath != null) {
+            LearningCenterSummaryVo.ActiveLearningPathVo path = new LearningCenterSummaryVo.ActiveLearningPathVo();
+            path.setPathId(activePath.getGeneratedId() == null ? null : String.valueOf(activePath.getGeneratedId()));
+            path.setTitle(activePath.getPathTitle());
+            path.setCompletedStepCount(activePath.getCompletedStepCount());
+            path.setTotalStepCount(activePath.getTotalStepCount());
+            path.setVersionNo(activePath.getVersionNo());
+            if (path.getPathId() != null && path.getTitle() != null
+                && path.getCompletedStepCount() != null && path.getTotalStepCount() != null
+                && path.getVersionNo() != null) {
+                vo.setActiveLearningPath(path);
+            }
+        }
+
+        return vo;
     }
 }

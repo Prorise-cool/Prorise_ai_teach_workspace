@@ -52,7 +52,8 @@ def endpoint_from_provider(provider: Any) -> ProviderEndpoint:
         api_key=settings.get("api_key", ""),
         model_name=settings.get("model_name", ""),
         request_path=settings.get("request_path", "/v1/chat/completions"),
-        timeout=max(provider.config.timeout_seconds, 300.0),
+        # DB binding.timeout_seconds 是权威来源；非正数时退到 600s 作兜底
+        timeout=provider.config.timeout_seconds if provider.config.timeout_seconds > 0 else 600.0,
         extra_headers=dict(settings.get("headers", {})),
     )
 

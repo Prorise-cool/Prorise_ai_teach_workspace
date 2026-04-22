@@ -229,7 +229,7 @@ class Settings(BaseSettings):
         alias="FASTAPI_VIDEO_STATIC_GUARD_MAX_PASSES",
     )
     video_patch_retry_max_retries: int = Field(
-        default=1,
+        default=2,
         alias="FASTAPI_VIDEO_PATCH_RETRY_MAX_RETRIES",
     )
     video_designer_max_tokens: int = Field(
@@ -263,6 +263,10 @@ class Settings(BaseSettings):
     video_default_layout_hint: str = Field(
         default="center_stage",
         alias="FASTAPI_VIDEO_DEFAULT_LAYOUT_HINT",
+    )
+    diagnostics_allowlist: str = Field(
+        default="",
+        alias="FASTAPI_DIAGNOSTICS_ALLOWLIST",
     )
 
     model_config = SettingsConfigDict(

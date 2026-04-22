@@ -56,12 +56,35 @@ export interface LearningCoachAnswer {
   optionId: string;
 }
 
+export type LearningCoachGenerationSource = 'llm' | 'fallback';
+
+export interface CoachAskMessage {
+  role: 'user' | 'coach';
+  content: string;
+}
+
+export interface CoachAskRequest {
+  quizId?: string | null;
+  checkpointId?: string | null;
+  questionId: string;
+  questionStem: string;
+  questionOptions: string[];
+  userMessage: string;
+  history: CoachAskMessage[];
+}
+
+export interface CoachAskPayload {
+  reply: string;
+  generationSource: LearningCoachGenerationSource;
+}
+
 export interface CheckpointGeneratePayload {
   checkpointId: string;
   source: LearningCoachSource;
   questionTotal: number;
   questions: LearningCoachQuestion[];
   expiresInSeconds: number;
+  generationSource?: LearningCoachGenerationSource;
 }
 
 export interface LearningCoachJudgeItem {
@@ -86,6 +109,7 @@ export interface QuizGeneratePayload {
   questionTotal: number;
   questions: LearningCoachQuestion[];
   expiresInSeconds: number;
+  generationSource?: LearningCoachGenerationSource;
 }
 
 export interface QuizSubmitPayload {
@@ -96,6 +120,27 @@ export interface QuizSubmitPayload {
   summary: string;
   items: LearningCoachJudgeItem[];
   persisted: boolean;
+}
+
+export interface QuizHistoryItem {
+  questionId: string;
+  stem: string;
+  options: LearningCoachOption[];
+  selectedOptionId?: string | null;
+  correctOptionId?: string | null;
+  isCorrect: boolean;
+  explanation?: string | null;
+}
+
+export interface QuizHistoryPayload {
+  quizId: string;
+  source?: LearningCoachSourceType | null;
+  questionTotal: number;
+  correctTotal: number;
+  score: number;
+  summary?: string | null;
+  items: QuizHistoryItem[];
+  occurredAt?: string | null;
 }
 
 export interface LearningPathStep {
@@ -117,6 +162,7 @@ export interface LearningPathPlanPayload {
   pathSummary: string;
   versionNo: number;
   stages: LearningPathStage[];
+  generationSource?: LearningCoachGenerationSource;
 }
 
 export interface LearningPathPlanRequest {

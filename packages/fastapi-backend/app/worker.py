@@ -49,6 +49,7 @@ runtime_store: RuntimeStore | None = None
 broker: object = None
 video_metadata_service: VideoService | None = None
 task_actor: object = None
+preload_learning_coach_actor: object = None
 
 logger = get_logger("app.worker")
 
@@ -82,6 +83,20 @@ def _ensure_initialized() -> None:
             actor_options["time_limit"] = time_limit_ms
 
         task_actor = dramatiq.actor(**actor_options)(consume_task_message)
+
+        # 学后陪练预生成 actor：视频完成后发一条消息，由 worker 独立 asyncio loop 跑
+        # LLM 预生成（若直接在视频 actor 里 asyncio.create_task，loop 在 actor 返回
+        # 时关闭会导致后台任务被杀）。
+        preload_options = {
+            "queue_name": settings.dramatiq_queue_name,
+            "actor_name": "preload_learning_coach",
+            "max_retries": 1,
+            # 预生成 LLM 总耗时：2 次 LLM 调用 × ~20s + 余量 = 90s 足够
+            "time_limit": 90_000,
+        }
+        preload_learning_coach_actor = dramatiq.actor(**preload_options)(
+            _preload_learning_coach_message
+        )
 
         _initialized = True
 
@@ -202,6 +217,65 @@ def _emit_worker_timeout_snapshot(
             message=message,
             error_code=TaskErrorCode.EXECUTION_TIMEOUT,
             state=state,
+        )
+
+
+def _preload_learning_coach_message(
+    task_id: str,
+    title: str,
+    access_token: str | None = None,
+    client_id: str | None = None,
+) -> None:
+    """Dramatiq 消息处理器：视频完成后预生成 learning_coach 的 quiz + checkpoint。
+
+    为什么独立 actor：视频 orchestrator 本身是 async，若在完成时 asyncio.create_task
+    做 fire-and-forget，actor 返回时 asyncio loop 会立即关闭，后台任务被直接杀掉。
+    用独立 Dramatiq 消息让这段 LLM 调用有自己的生命周期。
+    失败吞异常且仅 warn，保证预生成状态不影响任何用户可见结果。
+    """
+    _ensure_initialized()
+    try:
+        from app.features.learning_coach.schemas import (
+            LearningCoachSource,
+            LearningCoachSourceType,
+        )
+        from app.features.learning_coach.service import LearningCoachService
+        from app.providers.factory import get_provider_factory
+        from app.providers.runtime_config_service import ProviderRuntimeConfigService
+
+        source = LearningCoachSource(
+            source_type=LearningCoachSourceType.VIDEO,
+            source_session_id=task_id,
+            source_task_id=task_id,
+            topic_hint=title or None,
+        )
+
+        async def _run() -> None:
+            resolver = ProviderRuntimeConfigService(
+                settings=settings,
+                provider_factory=get_provider_factory(),
+            )
+            assembly = await resolver.resolve_learning_coach(
+                access_token=access_token,
+                client_id=client_id,
+            )
+            service = LearningCoachService(
+                runtime_store=get_runtime_store(),
+                provider_chain=assembly.llm,
+            )
+            await service.preload_for_session(source)
+
+        asyncio.run(_run())
+        logger.info(
+            "learning_coach.preload.done  task_id=%s  title=%s",
+            task_id,
+            (title or "")[:40],
+        )
+    except Exception:  # noqa: BLE001 — 预生成失败不得阻塞视频完成
+        logger.warning(
+            "learning_coach.preload.failed  task_id=%s",
+            task_id,
+            exc_info=True,
         )
 
 

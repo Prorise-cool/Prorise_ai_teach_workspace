@@ -123,6 +123,11 @@ def test_runtime_resolver_builds_video_stage_chain_from_ruoyi_runtime_config() -
     assert assembly.llm_for("understanding")[0].provider_id == "openai-gemini-3_1-pro-high"
     assert assembly.llm_for("storyboard")[0].provider_id == "openai-gemini-3_1-pro-high"
     assert assembly.tts_for("tts")[0].provider_id == "volcengine-zh_female_yingyujiaoxue_uranus_bigtts"
+    # runtime_settings_json 穿透到 runtime_settings_by_stage
+    assert assembly.runtime_settings_for("understanding") == {"temperature": 0.2}
+    assert assembly.runtime_settings_for("tts") == {"speed_ratio": 1.0}
+    # 未知 stage 返回空映射
+    assert dict(assembly.runtime_settings_for("no_such_stage")) == {}
     assert voice_descriptors[0].voice_code == "zh_female_yingyujiaoxue_uranus_bigtts"
     assert voice_descriptors[0].voice_name == "tina老师 2.0"
     assert voice_descriptors[0].provider_id == "volcengine-zh_female_yingyujiaoxue_uranus_bigtts"
@@ -307,3 +312,46 @@ def test_runtime_resolver_keeps_runtime_provider_registration_scoped_per_request
 
     with pytest.raises(ProviderNotFoundError, match="shared-runtime-voice"):
         shared_factory.registry.get_registration(ProviderCapability.TTS, "shared-runtime-voice")
+
+
+def test_resolve_learning_coach_without_access_token_falls_back_on_empty_bindings() -> None:
+    """learning_coach 后台预生成入口（access_token=None）的路径验证。
+
+    选择的实现策略：不改 resolve_learning_coach 的 guard；视频完成钩子复用视频任务
+    Redis 里的 access_token（load_video_runtime_auth）来命中 RuoYi 路径。测试环境
+    requires_explicit_request_auth=False 时 None token 仍会打 RuoYi —— 拿到空 bindings
+    就降级回 settings，保证预生成永不崩。
+    """
+    hit_counter = {"value": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hit_counter["value"] += 1
+        return httpx.Response(200, json={"code": 200, "msg": "ok", "data": {"moduleCode": "learning_coach", "bindings": []}})
+
+    runtime_client = RuoYiAiRuntimeClient(
+        client_factory=lambda **kwargs: RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+            access_token=kwargs.get("access_token"),
+            client_id=kwargs.get("client_id"),
+        )
+    )
+    resolver = ProviderRuntimeResolver(
+        settings=SimpleNamespace(
+            provider_runtime_source="ruoyi",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+        ),
+        provider_factory=ProviderFactory(build_default_registry()),
+        ruoyi_runtime_client=runtime_client,
+    )
+
+    assembly = asyncio.run(resolver.resolve_learning_coach(access_token=None))
+
+    # 空 bindings 一定回退到 settings，source 标注清楚。
+    assert assembly.source == "settings"
+    # 当 requires_explicit_request_auth=False 时，会打一次 RuoYi 然后降级。
+    assert hit_counter["value"] == 1

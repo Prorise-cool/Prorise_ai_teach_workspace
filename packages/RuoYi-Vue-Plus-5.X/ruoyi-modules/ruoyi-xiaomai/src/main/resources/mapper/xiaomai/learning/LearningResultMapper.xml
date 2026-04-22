@@ -313,6 +313,7 @@
             score,
             analysis_summary,
             detail_ref,
+            question_items_json,
             source_time,
             version_no,
             create_time,
@@ -332,6 +333,7 @@
             #{record.score},
             #{record.analysisSummary},
             #{record.detailRef},
+            #{record.questionItemsJson},
             #{record.occurredAt},
             #{record.versionNo},
             #{record.updatedAt},
@@ -437,6 +439,8 @@
             path_title,
             path_summary,
             step_count,
+            completed_step_count,
+            total_step_count,
             detail_ref,
             source_time,
             status,
@@ -456,6 +460,15 @@
             #{record.pathTitle},
             #{record.analysisSummary},
             #{record.stepCount},
+            <choose>
+                <when test="record.completedStepCount != null">#{record.completedStepCount}</when>
+                <otherwise>0</otherwise>
+            </choose>,
+            <choose>
+                <when test="record.totalStepCount != null">#{record.totalStepCount}</when>
+                <when test="record.stepCount != null">#{record.stepCount}</when>
+                <otherwise>0</otherwise>
+            </choose>,
             #{record.detailRef},
             #{record.occurredAt},
             #{record.status},
@@ -498,12 +511,88 @@
             score AS score,
             analysis_summary AS analysisSummary,
             detail_ref AS detailRef,
+            question_items_json AS questionItemsJson,
             source_time AS occurredAt,
             update_time AS updatedAt,
             status AS status,
             version_no AS versionNo
         FROM xm_quiz_result
         WHERE record_id = #{recordId}
+        LIMIT 1
+    </select>
+
+    <select id="selectQuizBySourceResultId" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            quiz_result_id AS generatedId,
+            record_id AS recordId,
+            CAST(user_id AS CHAR) AS userId,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            question_total AS questionTotal,
+            correct_total AS correctTotal,
+            score AS score,
+            analysis_summary AS analysisSummary,
+            detail_ref AS detailRef,
+            question_items_json AS questionItemsJson,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_quiz_result
+        WHERE source_result_id = #{sourceResultId}
+           OR detail_ref = #{sourceResultId}
+        ORDER BY update_time DESC, quiz_result_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectAverageQuizScore" resultType="java.lang.Integer">
+        SELECT ROUND(AVG(score))
+        FROM xm_quiz_result
+        WHERE user_id = #{userId} AND score IS NOT NULL
+    </select>
+
+    <select id="selectLatestRecommendation" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            recommendation_id AS generatedId,
+            CAST(user_id AS CHAR) AS userId,
+            recommendation_reason AS analysisSummary,
+            target_type AS targetType,
+            target_ref_id AS targetRefId,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_learning_recommendation
+        WHERE user_id = #{userId}
+        ORDER BY source_time DESC, recommendation_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveLearningPath" resultType="org.dromara.xiaomai.integration.domain.bo.XmPersistenceSyncBo$LearningResultSyncItemBo">
+        SELECT
+            path_id AS generatedId,
+            CAST(user_id AS CHAR) AS userId,
+            result_type AS resultType,
+            source_type AS sourceType,
+            source_session_id AS sourceSessionId,
+            source_task_id AS sourceTaskId,
+            source_result_id AS sourceResultId,
+            path_title AS pathTitle,
+            path_summary AS analysisSummary,
+            step_count AS stepCount,
+            completed_step_count AS completedStepCount,
+            total_step_count AS totalStepCount,
+            detail_ref AS detailRef,
+            source_time AS occurredAt,
+            update_time AS updatedAt,
+            status AS status,
+            version_no AS versionNo
+        FROM xm_learning_path
+        WHERE user_id = #{userId}
+        ORDER BY source_time DESC, path_id DESC
         LIMIT 1
     </select>
 
@@ -519,6 +608,9 @@
             score = #{record.score},
             analysis_summary = #{record.analysisSummary},
             detail_ref = #{record.detailRef},
+            <if test="record.questionItemsJson != null">
+                question_items_json = #{record.questionItemsJson},
+            </if>
             source_time = #{record.occurredAt},
             version_no = #{record.versionNo},
             update_time = #{record.updatedAt},
@@ -623,6 +715,8 @@
             path_title AS pathTitle,
             path_summary AS analysisSummary,
             step_count AS stepCount,
+            completed_step_count AS completedStepCount,
+            total_step_count AS totalStepCount,
             detail_ref AS detailRef,
             source_time AS occurredAt,
             update_time AS updatedAt,
@@ -643,6 +737,12 @@
             path_title = #{record.pathTitle},
             path_summary = #{record.analysisSummary},
             step_count = #{record.stepCount},
+            <if test="record.completedStepCount != null">
+                completed_step_count = #{record.completedStepCount},
+            </if>
+            <if test="record.totalStepCount != null">
+                total_step_count = #{record.totalStepCount},
+            </if>
             detail_ref = #{record.detailRef},
             source_time = #{record.occurredAt},
             status = #{record.status},

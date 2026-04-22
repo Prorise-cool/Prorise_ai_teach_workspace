@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Mapping
 from app.core.errors import IntegrationError
 from app.features.learning.schemas import (
     LONG_TERM_TABLE_BY_RESULT_TYPE,
+    ActiveLearningPath,
+    LatestRecommendation,
     LearningBootstrapResponse,
+    LearningCenterAggregateResponse,
     LearningPersistenceItem,
     LearningPersistenceRequest,
     LearningPersistenceResponse,
@@ -57,6 +60,65 @@ class LearningService(RuoYiServiceMixin):
             user_id=request.user_id,
             records=records,
             table_summary=self.table_catalog()
+        )
+
+    async def fetch_quiz_history(
+        self,
+        quiz_id: str,
+        user_id: str,
+        *,
+        access_context: "AccessContext | None" = None,
+    ) -> dict[str, object] | None:
+        """从 RuoYi 读取 xm_quiz_result 历史答卷（只读）。
+
+        Args:
+            quiz_id: 测验 ID（对应 xm_quiz_result.source_result_id 或 detail_ref）。
+            user_id: 请求发起者 ID（用于权限校验日志，不参与 URL 拼接）。
+            access_context: 可选的已认证用户上下文，提供时使用用户 token。
+
+        Returns:
+            RuoYi 返回的原始 dict；当 RuoYi 返回 404 时返回 None。
+
+        Raises:
+            IntegrationError: RuoYi 非 404 的其他失败，status_code=503。
+        """
+        endpoint = f"/internal/xiaomai/learning/results/quiz/{quiz_id}"
+        try:
+            async with self._resolve_authenticated_factory(access_context)() as client:
+                result = await client.get_single(
+                    endpoint,
+                    resource="learning-result",
+                    operation="fetch-quiz-history",
+                )
+        except IntegrationError as error:
+            # RuoYi 明确 404 -> 历史不存在，交由调用方决定 404/空态；
+            # 其他错误统一上升为 503，避免把上游不稳定暴露为 500/502。
+            if error.status_code == 404:
+                return None
+            raise IntegrationError(
+                service="ruoyi",
+                resource="learning-result",
+                operation="fetch-quiz-history",
+                code="QUIZ_HISTORY_UPSTREAM_UNAVAILABLE",
+                message="历史答卷暂时无法获取",
+                status_code=503,
+                retryable=True,
+                details={
+                    "endpoint": endpoint,
+                    "user_id": user_id,
+                    "upstream_code": error.code,
+                    "upstream_status": error.status_code,
+                },
+            ) from error
+        data = result.data
+        if data is None:
+            return None
+        if isinstance(data, Mapping):
+            return dict(data)
+        raise self._invalid_response_error(
+            "quiz history data is not an object",
+            operation="fetch-quiz-history",
+            endpoint=endpoint,
         )
 
     async def persist_results(
@@ -144,7 +206,8 @@ class LearningService(RuoYiServiceMixin):
             analysis_summary=record.analysis_summary,
             status=record.status,
             detail_ref=detail_ref,
-            version_no=version_no
+            version_no=version_no,
+            question_items_json=record.question_items_json,
         )
 
     @staticmethod
@@ -171,7 +234,8 @@ class LearningService(RuoYiServiceMixin):
             "analysisSummary": record.analysis_summary,
             "status": record.status,
             "detailRef": record.detail_ref,
-            "versionNo": record.version_no
+            "versionNo": record.version_no,
+            "questionItemsJson": record.question_items_json,
         }
 
     @classmethod
@@ -205,10 +269,74 @@ class LearningService(RuoYiServiceMixin):
             "status": cls._first_present(item, "status"),
             "detail_ref": cls._first_present(item, "detailRef", "detail_ref"),
             "version_no": cls._first_present(item, "versionNo", "version_no"),
+            "question_items_json": cls._first_present(item, "questionItemsJson", "question_items_json"),
         }
 
+    @classmethod
+    def build_learning_center_aggregate(
+        cls,
+        payload: Mapping[str, object] | None,
+    ) -> LearningCenterAggregateResponse:
+        """从 RuoYi 聚合响应构造学习中心聚合响应（TASK-007）。
+
+        上游字段任一缺失 → 对应字段保持 None（不硬编码占位）。
+        接受 camelCase 与 snake_case 两种键名，优先 camelCase（RuoYi 默认）。
+        """
+        if not payload:
+            return LearningCenterAggregateResponse()
+
+        average_quiz_score = cls._first_present(
+            payload, "averageQuizScore", "average_quiz_score"
+        )
+
+        latest_raw = cls._first_present(
+            payload, "latestRecommendation", "latest_recommendation"
+        )
+        latest_recommendation: LatestRecommendation | None = None
+        if isinstance(latest_raw, Mapping):
+            summary = cls._first_present(latest_raw, "summary")
+            target_ref_id = cls._first_present(latest_raw, "targetRefId", "target_ref_id")
+            source_time = cls._first_present(latest_raw, "sourceTime", "source_time")
+            if summary is not None and target_ref_id is not None and source_time is not None:
+                latest_recommendation = LatestRecommendation.model_validate(
+                    {
+                        "summary": summary,
+                        "targetRefId": target_ref_id,
+                        "sourceTime": source_time,
+                    }
+                )
+
+        path_raw = cls._first_present(
+            payload, "activeLearningPath", "active_learning_path"
+        )
+        active_learning_path: ActiveLearningPath | None = None
+        if isinstance(path_raw, Mapping):
+            path_id = cls._first_present(path_raw, "pathId", "path_id")
+            title = cls._first_present(path_raw, "title")
+            completed = cls._first_present(
+                path_raw, "completedStepCount", "completed_step_count"
+            )
+            total = cls._first_present(path_raw, "totalStepCount", "total_step_count")
+            version_no = cls._first_present(path_raw, "versionNo", "version_no")
+            if all(v is not None for v in (path_id, title, completed, total, version_no)):
+                active_learning_path = ActiveLearningPath.model_validate(
+                    {
+                        "pathId": path_id,
+                        "title": title,
+                        "completedStepCount": completed,
+                        "totalStepCount": total,
+                        "versionNo": version_no,
+                    }
+                )
+
+        return LearningCenterAggregateResponse(
+            average_quiz_score=average_quiz_score if isinstance(average_quiz_score, int) else None,
+            latest_recommendation=latest_recommendation,
+            active_learning_path=active_learning_path,
+        )
+
     @staticmethod
-    def _first_present(payload: dict[str, object], *keys: str, default=None):
+    def _first_present(payload: Mapping[str, object], *keys: str, default=None):
         for key in keys:
             if key in payload and payload[key] is not None:
                 return payload[key]

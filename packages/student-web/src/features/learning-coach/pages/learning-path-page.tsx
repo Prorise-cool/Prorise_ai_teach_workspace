@@ -14,7 +14,6 @@ import {
   Check,
   CheckCircle2,
   LayoutTemplate,
-  Leaf,
   Loader2,
   MapPin,
   Moon,
@@ -23,6 +22,7 @@ import {
   Sun,
 } from 'lucide-react';
 
+import { AppBrand } from '@/components/brand/app-brand';
 import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { useFeedback } from '@/shared/feedback';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
@@ -30,6 +30,7 @@ import { resolveLearningCoachAdapter } from '@/services/api/adapters/learning-co
 import type { LearningCoachSource, LearningPathPlanPayload } from '@/types/learning';
 
 import { buildLearningCoachSource, buildLearningCoachSourceSearchParams } from '../utils/source';
+import { FallbackBanner } from './fallback-banner';
 
 const DEFAULT_CYCLE_DAYS = 3;
 const DEFAULT_GOAL = '微积分求导进阶攻坚';
@@ -257,12 +258,7 @@ export function LearningPathPage() {
 
       {/* ==================== 1. 悬浮全局导航 ==================== */}
       <header className="w-[94%] max-w-5xl mx-auto mt-6 sticky top-6 z-50 rounded-full flex justify-between items-center p-3 px-4 glass-nav border border-bordercolor-light dark:border-bordercolor-dark shadow-sm">
-        <Link to="/" className="font-bold text-lg flex items-center gap-3">
-          <div className="w-8 h-8 bg-text-primary dark:bg-text-primary-dark rounded-md flex items-center justify-center shadow-sm">
-            <Leaf className="w-4 h-4 text-bg-light dark:text-bg-dark" />
-          </div>
-          <span className="tracking-tight text-text-primary dark:text-text-primary-dark hidden sm:block">XiaoMai</span>
-        </Link>
+        <AppBrand to="/" size="sm" hideTextOnMobile />
 
         <nav className="hidden md:flex gap-1 p-1 rounded-full bg-secondary/80 dark:bg-surface-dark/80 border border-bordercolor-light dark:border-bordercolor-dark">
           <Link
@@ -421,6 +417,8 @@ export function LearningPathPage() {
           id="view-path"
           className={['w-full flex flex-col gap-6 md:gap-8', activeView === 'view-path' ? '' : 'view-hidden'].join(' ')}
         >
+          {plan?.generationSource === 'fallback' ? <FallbackBanner mode="path" /> : null}
+
           <div className="view-enter stagger-1 bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 shadow-sm">
             <div className="flex flex-col md:flex-row justify-between items-start gap-8">
               <div className="flex-1">

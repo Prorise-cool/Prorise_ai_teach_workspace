@@ -127,8 +127,11 @@ class TeachingVideoAgent:
         self.static_guard_max_passes = max(
             1, int(getattr(self.cfg, "static_guard_max_passes", 3))
         )
+        # patch retry 上限：保留非负下限，给出合理硬上限（5 次）防止无限重试，
+        # 中间值由 settings / DB binding 控制（原代码 min(1, ...) 硬钳制为 1，
+        # 导致管理后台/env 调高都无效；现解除限制到 0..5 区间）
         self.patch_retry_max_retries = max(
-            0, min(1, int(getattr(self.cfg, "patch_retry_max_retries", 1)))
+            0, min(5, int(getattr(self.cfg, "patch_retry_max_retries", 1)))
         )
         self.section_count = getattr(self.cfg, "section_count", None)
         self.section_duration_seconds = getattr(

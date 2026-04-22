@@ -311,6 +311,124 @@ def test_llm_generator_parses_markdown_fenced_json() -> None:
     assert len(payload["questions"]) == 2
 
 
+def _llm_recommendation_payload(
+    summary: str = "针对链式法则错题，先回看链式法则推导再做 3 道复合函数练习以巩固。",
+    target: str = "chain-rule",
+) -> str:
+    return json.dumps({"analysis_summary": summary, "target_ref_id": target})
+
+
+@pytest.mark.asyncio
+async def test_generate_recommendation_via_llm_parses_valid_json(
+    source: LearningCoachSource,
+) -> None:
+    provider = _StubLLMProvider(responses=[_llm_recommendation_payload()])
+    summary, target = await llm_generator.generate_recommendation_via_llm(
+        source,
+        ["链式法则"],
+        source.topic_hint,
+        provider_chain=[provider],
+    )
+    assert "链式法则" in summary
+    assert target == "chain-rule"
+
+
+@pytest.mark.asyncio
+async def test_generate_recommendation_via_llm_rejects_placeholder(
+    source: LearningCoachSource,
+) -> None:
+    provider = _StubLLMProvider(
+        responses=[_llm_recommendation_payload(summary="...", target="chain-rule")]
+    )
+    with pytest.raises(llm_generator.LLMGenerationError):
+        await llm_generator.generate_recommendation_via_llm(
+            source,
+            ["链式法则"],
+            source.topic_hint,
+            provider_chain=[provider],
+        )
+
+
+@pytest.mark.asyncio
+async def test_submit_quiz_uses_llm_recommendation_when_provider_chain_set(
+    source: LearningCoachSource,
+) -> None:
+    provider = _StubLLMProvider(
+        responses=[
+            _llm_questions_payload(count=2),
+            _llm_recommendation_payload(
+                summary="建议先回看链式法则推导再完成 3 道复合函数练习以巩固薄弱点。",
+                target="chain-rule",
+            ),
+        ]
+    )
+    persistence = _PersistenceStub()
+    service = LearningCoachService(
+        runtime_store=_InMemoryRuntimeStore(),
+        persistence_service=persistence,  # type: ignore[arg-type]
+        provider_chain=[provider],
+    )
+    generated = await service.generate_quiz(source=source, question_count=2)
+
+    # 答错两题 → 触发推荐
+    await service.submit_quiz(
+        quiz_id=generated.quiz_id,
+        answers=[(q.question_id, "A") for q in generated.questions],
+        user_id="user-001",
+    )
+    # 找到 recommendation 记录
+    rec_calls = [
+        request for result_type, request in persistence.calls if result_type == "quiz"
+    ]
+    assert rec_calls, "quiz 持久化调用缺失"
+    records = rec_calls[0].records
+    rec_record = next(
+        (r for r in records if getattr(r.result_type, "value", r.result_type) == "recommendation"),
+        None,
+    )
+    assert rec_record is not None
+    assert "链式法则" in (rec_record.analysis_summary or "")
+    assert rec_record.target_ref_id == "chain-rule"
+
+
+@pytest.mark.asyncio
+async def test_submit_quiz_falls_back_to_default_when_llm_fails(
+    source: LearningCoachSource,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # 第 1 次响应用于 generate_quiz，第 2 次（推荐）响应缺失 → 触发 LLMGenerationError
+    provider = _StubLLMProvider(responses=[_llm_questions_payload(count=2)])
+    persistence = _PersistenceStub()
+    service = LearningCoachService(
+        runtime_store=_InMemoryRuntimeStore(),
+        persistence_service=persistence,  # type: ignore[arg-type]
+        provider_chain=[provider],
+    )
+    generated = await service.generate_quiz(source=source, question_count=2)
+
+    caplog.clear()
+    await service.submit_quiz(
+        quiz_id=generated.quiz_id,
+        answers=[(q.question_id, "A") for q in generated.questions],
+        user_id="user-001",
+    )
+    quiz_calls = [
+        request for result_type, request in persistence.calls if result_type == "quiz"
+    ]
+    assert quiz_calls
+    records = quiz_calls[0].records
+    rec_record = next(
+        (r for r in records if getattr(r.result_type, "value", r.result_type) == "recommendation"),
+        None,
+    )
+    assert rec_record is not None
+    assert rec_record.analysis_summary == "推荐：先回看错题对应知识点，再完成一次 5 题小测巩固。"
+    assert any(
+        "learning_coach.quiz.recommendation_llm_fallback" in record.message
+        for record in caplog.records
+    )
+
+
 def test_llm_generator_parses_questions_rejects_short_result() -> None:
     payload = json.loads(_llm_questions_payload(count=2))
     with pytest.raises(llm_generator.LLMGenerationError):

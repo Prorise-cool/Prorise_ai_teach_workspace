@@ -44,8 +44,8 @@ describe('VideoTaskCreateRequest schema 字段契约', () => {
     expect(VIDEO_INPUT_TYPE_VALUES).toEqual(['text', 'image']);
   });
 
-  it('文本约束为 10-5000 字符', () => {
-    expect(VIDEO_TEXT_MIN_LENGTH).toBe(10);
+  it('文本约束为 5-5000 字符', () => {
+    expect(VIDEO_TEXT_MIN_LENGTH).toBe(5);
     expect(VIDEO_TEXT_MAX_LENGTH).toBe(5000);
   });
 

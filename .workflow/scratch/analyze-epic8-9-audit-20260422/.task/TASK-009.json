@@ -1,0 +1,53 @@
+{
+  "id": "TASK-009",
+  "title": "RuoYi Java 侧学习中心聚合扩字段 + 测验历史端点 + DB migration",
+  "description": "TASK-005 在 FastAPI 侧落地了 /learning-coach/quiz/history 但 RuoYi Java 端 GET /internal/xiaomai/learning/results/quiz/{quiz_id} 未实现，导致 503。TASK-007 在 FastAPI 侧扩了聚合响应 3 字段但 RuoYi 端聚合没返回这些字段。本 task 把两侧的 RuoYi Java/DB 侧全部补齐，并让 FastAPI 的 submit_quiz 写入每题明细到 xm_quiz_result.question_items_json 以供历史回看。",
+  "type": "feature",
+  "priority": "high",
+  "effort": "large",
+  "action": "1) DB migration: ALTER xm_learning_path ADD completed_step_count INT DEFAULT 0 + total_step_count INT DEFAULT 0；ALTER xm_quiz_result ADD question_items_json JSON NULL。同步更新 packages/RuoYi-Vue-Plus-5.X/script/sql/xm_dev.sql。2) RuoYi Java: XmLearningResultController 新增 @GetMapping('/internal/xiaomai/learning/results/quiz/{quizId}') 根据 source_result_id 查 xm_quiz_result 返回 VO（含 questionItemsJson 解析）。3) RuoYi Java: XmLearningCenterController 的聚合接口响应 VO 扩三字段 averageQuizScore/latestRecommendation/activeLearningPath，对应 Mapper SQL 聚合 SELECT AVG(score) FROM xm_quiz_result + SELECT * FROM xm_learning_recommendation ORDER BY source_time DESC LIMIT 1 + SELECT * FROM xm_learning_path ORDER BY source_time DESC LIMIT 1。4) FastAPI: submit_quiz 持久化时把 items（含题干/选项/用户答/正解/解析）序列化为 JSON 写入 xm_quiz_result.question_items_json（通过 learning/service.py 的 _to_ruoyi_record 加 questionItemsJson 字段）。5) FastAPI 的 LearningService.fetch_quiz_history 把 RuoYi 返回的 questionItemsJson 反序列化为 items 列表。",
+  "status": "completed",
+  "scope": "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai packages/fastapi-backend/app/features",
+  "read_first": [
+    "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learning/controller",
+    "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/java/org/dromara/xiaomai/learningcenter/controller/XmLearningCenterController.java",
+    "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/learning/LearningResultMapper.xml",
+    "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/learningcenter/LearningCenterMapper.xml",
+    "packages/RuoYi-Vue-Plus-5.X/script/sql/xm_dev.sql",
+    "packages/fastapi-backend/app/features/learning/service.py",
+    "packages/fastapi-backend/app/features/learning_coach/service.py"
+  ],
+  "depends_on": [],
+  "wave": 3,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "docker exec dev-mysql mysql -uroot -proot -e \"DESC xm_dev.xm_learning_path\" shows 'completed_step_count' and 'total_step_count' columns",
+      "docker exec dev-mysql mysql -uroot -proot -e \"DESC xm_dev.xm_quiz_result\" shows 'question_items_json' column",
+      "packages/RuoYi-Vue-Plus-5.X/script/sql/xm_dev.sql contains 'completed_step_count' and 'question_items_json'",
+      "RuoYi Java code contains a new endpoint pattern matching '/internal/xiaomai/learning/results/quiz/' with path variable",
+      "packages/fastapi-backend/app/features/learning/service.py _to_ruoyi_record contains 'questionItemsJson' OR equivalent",
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning tests/unit/learning_coach -x exits 0"
+    ],
+    "verification": "mysql DESC 显示新列；FastAPI 跑 /learning-coach/quiz/history/{test_id} 不再 503；聚合接口返回三字段",
+    "definition_of_done": "RuoYi 侧三表 + 两端点就绪；FastAPI 能完整读写；TASK-008 前端可基于真字段渲染"
+  },
+  "implementation": [
+    "连接 docker dev-mysql (root/root) xm_dev 执行 ALTER 加列",
+    "同步更新 xm_dev.sql 文件（追加 ALTER 或改 CREATE TABLE）",
+    "找到 LearningResultMapper.xml + 对应 Java entity/VO，加 questionItemsJson 字段",
+    "新增或扩展 Controller：GET /internal/xiaomai/learning/results/quiz/{quizId}，根据 source_result_id = quizId 或 detail_ref = quizId 查询，返回包含 questionItemsJson 解析的 VO",
+    "XmLearningCenterController 聚合响应 VO 扩三字段，Mapper SQL 加聚合子查询（averageQuizScore/latestRecommendation/activeLearningPath）",
+    "FastAPI learning/service.py 的 LearningPersistenceItem schema 加 question_items_json 字段，_to_ruoyi_record 输出 questionItemsJson",
+    "FastAPI learning_coach/service.py submit_quiz 在构造 quiz record 时把 items 序列化传入",
+    "FastAPI learning/service.py fetch_quiz_history 解析 questionItemsJson 反序列化",
+    "跑 pytest 确认无回归；手工 curl /api/v1/learning-coach/quiz/history/{id} 确认 200"
+  ],
+  "test": {
+    "commands": [
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning tests/unit/learning_coach -x",
+      "docker exec dev-mysql mysql -uroot -proot -e \"DESC xm_dev.xm_quiz_result; DESC xm_dev.xm_learning_path;\""
+    ]
+  },
+  "meta": {"estimated_time": "4h", "risk": "high", "autonomous": true, "checkpoint": true}
+}

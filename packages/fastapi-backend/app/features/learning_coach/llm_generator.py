@@ -377,6 +377,70 @@ async def generate_learning_path_via_llm(
     return _parse_path(payload)
 
 
+def _build_recommendation_prompt(
+    source: LearningCoachSource,
+    wrong_question_tags: Sequence[str],
+    topic_hint: str | None,
+) -> str:
+    topic = (topic_hint or "").strip() or "（未指定具体知识点）"
+    tags_text = (
+        "、".join(tag for tag in wrong_question_tags if tag)
+        or "（本次没有错题，推荐下一步巩固方向）"
+    )
+    source_line = f"来源：{source.source_type} / session={source.source_session_id}"
+    if source.source_task_id:
+        source_line += f" / task={source.source_task_id}"
+    return (
+        "你是学习教练，需要根据学习者刚完成的 quiz 结果给出个性化『下一步建议』。\n\n"
+        "上下文：\n"
+        f"- {source_line}\n"
+        f"- 当前主题：{topic}\n"
+        f"- 错题涉及的知识点标签：{tags_text}\n\n"
+        "要求：\n"
+        "1. analysis_summary 40-80 字中文，明确『下一步学什么』与『为什么这样学』，必须针对上述错题标签或主题。\n"
+        "2. target_ref_id 为知识点 slug：简短英文或拼音短语（2-24 字符），不得为空。\n"
+        "3. 严格输出 JSON 对象，不要 Markdown 代码块、不要其他说明文字。\n\n"
+        "JSON Schema：\n"
+        "{\n"
+        '  "analysis_summary": "<必填：40-80 字建议>",\n'
+        '  "target_ref_id": "<必填：知识点 slug>"\n'
+        "}\n\n"
+        "仅输出 JSON。字段值必须是实际内容，禁止返回占位符。"
+    )
+
+
+def _parse_recommendation(payload: object) -> tuple[str, str]:
+    if not isinstance(payload, dict):
+        raise LLMGenerationError("LLM recommendation JSON 根节点必须是对象")
+    summary = str(payload.get("analysis_summary") or payload.get("analysisSummary") or "").strip()
+    target = str(payload.get("target_ref_id") or payload.get("targetRefId") or "").strip()
+    if not summary or _looks_like_placeholder(summary):
+        raise LLMGenerationError(f"LLM 返回了无效 analysis_summary: {summary!r}")
+    if not target or _looks_like_placeholder(target):
+        raise LLMGenerationError(f"LLM 返回了无效 target_ref_id: {target!r}")
+    return summary, target
+
+
+async def generate_recommendation_via_llm(
+    source: LearningCoachSource,
+    wrong_question_tags: Sequence[str],
+    topic_hint: str | None,
+    *,
+    provider_chain: Sequence[LLMProvider],
+) -> tuple[str, str]:
+    """调 LLM 生成 quiz 完成后的个性化推荐。
+
+    返回 (analysis_summary, target_ref_id)；失败抛 `LLMGenerationError`。
+    """
+    prompt = _build_recommendation_prompt(source, wrong_question_tags, topic_hint)
+    raw = await _call_with_failover(prompt, provider_chain)
+    try:
+        payload = json.loads(_extract_json_text(raw))
+    except json.JSONDecodeError as error:
+        raise LLMGenerationError(f"LLM JSON 解析失败：{error}") from error
+    return _parse_recommendation(payload)
+
+
 async def extract_knowledge_points_via_llm(
     source: LearningCoachSource,
     *,
@@ -389,3 +453,69 @@ async def extract_knowledge_points_via_llm(
     except json.JSONDecodeError as error:
         raise LLMGenerationError(f"LLM JSON 解析失败：{error}") from error
     return _parse_knowledge_points(payload)
+
+
+# ── Coach chat（quiz 侧栏 AI 辅导对话） ─────────────────────────────
+
+def _build_coach_ask_prompt(
+    *,
+    question_stem: str,
+    question_options: Sequence[str],
+    user_message: str,
+    history: Sequence[dict[str, str]],
+) -> str:
+    """构造 quiz 辅导对话的 prompt。自由文本回复，不要求 JSON。"""
+    options_block = ""
+    if question_options:
+        numbered = "\n".join(f"- {opt}" for opt in question_options if opt)
+        options_block = f"\n选项：\n{numbered}\n"
+
+    history_block = ""
+    if history:
+        lines = []
+        for msg in history[-10:]:  # 最多保留最近 10 条，避免 prompt 过长
+            role = msg.get("role") or "user"
+            content = (msg.get("content") or "").strip()
+            if not content:
+                continue
+            speaker = "用户" if role == "user" else "教练"
+            lines.append(f"{speaker}：{content}")
+        if lines:
+            history_block = "\n以下是之前的对话（供你保持语气与上下文一致）：\n" + "\n".join(lines) + "\n"
+
+    return (
+        "你是一位耐心、启发式的测验辅导教练。学生正在做一道单选题，现在向你提问。\n"
+        "核心原则：\n"
+        "1. 不要直接告诉答案选项（A/B/C/D）是什么，除非学生明确已经做出选择并问 '我对吗'。\n"
+        "2. 优先通过分步引导、提出反问、指出已知条件之间的关系，帮助学生自己推导。\n"
+        "3. 如果学生说 '拆题思路' 或 '帮我分析'，按步骤输出：已知条件 → 目标 → 关键方法 → 常见陷阱。\n"
+        "4. 数学/公式用 LaTeX 行内（`$...$`）或块级（`$$...$$`）表示；段落可用 Markdown。\n"
+        "5. 回答控制在 80-250 字，条理清晰、语气友好。\n\n"
+        f"题目：{question_stem}\n"
+        f"{options_block}"
+        f"{history_block}"
+        f"\n学生当前提问：{user_message}\n\n"
+        "请作出回答："
+    )
+
+
+async def coach_ask_via_llm(
+    *,
+    question_stem: str,
+    question_options: Sequence[str],
+    user_message: str,
+    history: Sequence[dict[str, str]],
+    provider_chain: Sequence[LLMProvider],
+) -> str:
+    """调 LLM 生成辅导回复，返回自由文本；失败抛 LLMGenerationError。"""
+    prompt = _build_coach_ask_prompt(
+        question_stem=question_stem,
+        question_options=question_options,
+        user_message=user_message,
+        history=history,
+    )
+    raw = await _call_with_failover(prompt, provider_chain)
+    cleaned = (raw or "").strip()
+    if not cleaned:
+        raise LLMGenerationError("LLM 返回为空")
+    return cleaned

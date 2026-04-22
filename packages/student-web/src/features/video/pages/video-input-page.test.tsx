@@ -482,7 +482,7 @@ describe('VideoInputPage', () => {
 
 		await waitFor(() => {
 			expect(screen.getByRole('alert')).toBeInTheDocument();
-			expect(screen.getByText(/请输入至少 10 个字符/)).toBeInTheDocument();
+			expect(screen.getByText(/请输入至少 5 个字符/)).toBeInTheDocument();
 		});
 	});
 
@@ -638,7 +638,7 @@ describe('VideoInputPage', () => {
 		);
 
 		await user.click(screen.getByRole('button', { name: /生成视频/ }));
-		expect(screen.getByText(/请输入至少 10 个字符/)).toBeInTheDocument();
+		expect(screen.getByText(/请输入至少 5 个字符/)).toBeInTheDocument();
 
 		const file = new File(['binary'], 'algebra.png', { type: 'image/png' });
 		const uploadInput = screen
@@ -648,7 +648,7 @@ describe('VideoInputPage', () => {
 		await user.upload(uploadInput, file);
 
 		await waitFor(() => {
-			expect(screen.queryByText(/请输入至少 10 个字符/)).not.toBeInTheDocument();
+			expect(screen.queryByText(/请输入至少 5 个字符/)).not.toBeInTheDocument();
 			expect(screen.getByText('algebra.png')).toBeInTheDocument();
 		});
 	});

@@ -3,7 +3,7 @@
  * 头像与 `UserAvatarMenu` 保持同一规则：直接读 auth session，
  * 加载失败或缺图时降级为昵称首字母，避免回到 pravatar 外网占位。
  */
-import { BookOpen, Globe, LayoutTemplate, Moon, PlaySquare, Sun } from 'lucide-react';
+import { BookOpen, Globe, Moon, PlaySquare, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -18,7 +18,6 @@ export type SurfaceDashboardDockActive = 'learning' | 'settings';
 export type SurfaceDashboardDockProps = {
   active: SurfaceDashboardDockActive;
   videoTo?: string | null;
-  classroomTo?: string | null;
   learningCenterTo?: string | null;
   settingsTo?: string | null;
 };
@@ -26,7 +25,6 @@ export type SurfaceDashboardDockProps = {
 export function SurfaceDashboardDock({
   active,
   videoTo = '/video/input',
-  classroomTo = '/classroom/input',
   learningCenterTo = '/learning',
   settingsTo = '/profile',
 }: SurfaceDashboardDockProps) {
@@ -77,26 +75,7 @@ export function SurfaceDashboardDock({
           )}
         </div>
 
-        <div className="dock-icon-wrapper w-10">
-          <div className="dock-tooltip bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark px-2.5 py-1 rounded shadow-md border border-transparent dark:border-bordercolor-dark text-[11px] font-bold">
-            {t('learningCenter.dock.classroom')}
-          </div>
-          {classroomTo ? (
-            <Link
-              to={classroomTo}
-              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
-            >
-              <LayoutTemplate className="w-5 h-5" />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className="dock-icon w-10 h-10 rounded-[12px] bg-transparent flex items-center justify-center text-text-secondary dark:text-text-secondary-dark hover:bg-secondary hover:text-text-primary dark:hover:bg-bg-dark dark:hover:text-text-primary-dark btn-transition"
-            >
-              <LayoutTemplate className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+        {/* 「主题课堂」dock 入口已下线（/classroom/input 路由保留）。 */}
 
         <div className="dock-icon-wrapper w-10 relative">
           {learningActive ? (

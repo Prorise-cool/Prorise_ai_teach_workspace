@@ -1,0 +1,97 @@
+{
+  "id": "TASK-005",
+  "title": "新增测验历史回看后端接口 GET /learning-coach/quiz/history/{quiz_id}",
+  "description": "当前前端 history-record-card-quiz.tsx:46 的『回看』按钮会 navigate 到 /quiz/:sessionId 重新触发 quiz/generate，无法真正回看历史答卷。需要后端提供只读查询接口，按 quiz_id 从 RuoYi 的 xm_quiz_result 表拉取答题记录（含题目、用户选项、正确答案、解析、得分）。只读，不触发任何生成。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "在 packages/fastapi-backend/app/features/learning_coach/service.py 新增 async fetch_quiz_history(quiz_id, user_id, access_context) -> QuizHistoryPayload；通过 LearningService 或新增方法调 RuoYi GET /internal/xiaomai/learning/results/quiz/{quiz_id}（RuoYi 侧需实现该接口 — 本 task 仅建 FastAPI 端占位 + 接入，RuoYi 端接口实现放到 TASK-005 扩展说明，若 RuoYi 接口未就绪则 FastAPI 层先 raise 503 不崩）。路由 GET /learning-coach/quiz/history/{quiz_id}。schema 定义 QuizHistoryPayload { quiz_id, source, question_total, correct_total, score, summary, items: [{question_id, stem, options, selected_option_id, correct_option_id, is_correct, explanation}], occurred_at }。",
+  "status": "completed",
+  "scope": "packages/fastapi-backend/app/features/learning_coach",
+  "focus_paths": [
+    "packages/fastapi-backend/app/features/learning_coach/schemas.py",
+    "packages/fastapi-backend/app/features/learning_coach/service.py",
+    "packages/fastapi-backend/app/features/learning_coach/routes.py",
+    "packages/fastapi-backend/app/features/learning/service.py"
+  ],
+  "read_first": [
+    "packages/fastapi-backend/app/features/learning_coach/schemas.py",
+    "packages/fastapi-backend/app/features/learning_coach/service.py",
+    "packages/fastapi-backend/app/features/learning_coach/routes.py",
+    "packages/fastapi-backend/app/features/learning/service.py",
+    "packages/RuoYi-Vue-Plus-5.X/ruoyi-modules/ruoyi-xiaomai/src/main/resources/mapper/xiaomai/learningcenter"
+  ],
+  "depends_on": [],
+  "wave": 2,
+  "parallel_group": "wave2",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "packages/fastapi-backend/app/features/learning_coach/schemas.py contains 'class QuizHistoryPayload'",
+      "packages/fastapi-backend/app/features/learning_coach/schemas.py contains 'class QuizHistoryItem'",
+      "packages/fastapi-backend/app/features/learning_coach/service.py contains 'async def fetch_quiz_history'",
+      "packages/fastapi-backend/app/features/learning_coach/routes.py contains '@router.get(\"/quiz/history/{quiz_id}\"'",
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x exits 0"
+    ],
+    "verification": "pytest 绿；mock RuoYi 返回测试数据验证 payload 结构；RuoYi 不可达时返回 503 且不传播异常",
+    "definition_of_done": "前端可通过该端点拿到只读历史答卷，不触发任何生成"
+  },
+  "files": [
+    {
+      "path": "packages/fastapi-backend/app/features/learning_coach/schemas.py",
+      "action": "modify",
+      "target": "新增 QuizHistoryPayload / QuizHistoryItem / QuizHistoryEnvelope",
+      "change": "pydantic 模型，字段如 description 所列；Envelope 包裹 data"
+    },
+    {
+      "path": "packages/fastapi-backend/app/features/learning_coach/service.py",
+      "action": "modify",
+      "target": "LearningCoachService 新增方法 fetch_quiz_history",
+      "change": "调 self._persistence_service.fetch_quiz_history（新增）读 RuoYi，组装返回"
+    },
+    {
+      "path": "packages/fastapi-backend/app/features/learning/service.py",
+      "action": "modify",
+      "target": "LearningService 新增方法 fetch_quiz_history",
+      "change": "调 RuoYiClient.get(/internal/xiaomai/learning/results/quiz/{quiz_id}) 读历史；RuoYi 接口未就绪时 raise IntegrationError(status=503)"
+    },
+    {
+      "path": "packages/fastapi-backend/app/features/learning_coach/routes.py",
+      "action": "modify",
+      "target": "新增 @router.get('/quiz/history/{quiz_id}')",
+      "change": "路由函数 fetch_quiz_history_route，鉴权 get_access_context，调 service.fetch_quiz_history"
+    }
+  ],
+  "implementation": [
+    "schemas.py：新增 QuizHistoryItem(question_id, stem, options, selected_option_id, correct_option_id, is_correct, explanation)",
+    "schemas.py：新增 QuizHistoryPayload(quiz_id, source, question_total, correct_total, score, summary, items, occurred_at) + QuizHistoryEnvelope",
+    "learning/service.py：新增 async fetch_quiz_history(quiz_id, user_id, access_context) -> dict；用 RuoYiClient async with 调 GET /internal/xiaomai/learning/results/quiz/{quiz_id}；捕获 404 返回 None；捕获其他异常 raise IntegrationError(status_code=503)",
+    "learning_coach/service.py：新增 async fetch_quiz_history(quiz_id, user_id, access_context) -> QuizHistoryPayload；调 persistence_service.fetch_quiz_history；转换 RuoYi 字段为 QuizHistoryPayload；若 None raise AppError(code='QUIZ_HISTORY_NOT_FOUND', status=404)",
+    "routes.py：@router.get('/quiz/history/{quiz_id}', response_model=QuizHistoryEnvelope) async def fetch_quiz_history_route(quiz_id: str, access_context = Depends(get_access_context), service = Depends(get_learning_coach_service))",
+    "编写 unit test：mock persistence 返回 dict → 断言 QuizHistoryPayload 字段正确；mock 返回 None → 断言 404；mock RuoYi 503 → 断言 503 传播",
+    "给 LearningService 也加 unit test：mock RuoYiClient 的各种响应"
+  ],
+  "test": {
+    "commands": ["cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach tests/unit/learning -x"],
+    "unit": [
+      "test_fetch_quiz_history_returns_payload",
+      "test_fetch_quiz_history_returns_404_when_missing",
+      "test_fetch_quiz_history_returns_503_when_ruoyi_down",
+      "test_learning_service_fetch_quiz_history_calls_correct_endpoint"
+    ]
+  },
+  "reference": {
+    "pattern": "LearningService.persist_results 与 learning_coach/routes.py 其他 POST 路由的结构",
+    "files": ["packages/fastapi-backend/app/features/learning/service.py", "packages/fastapi-backend/app/features/learning_coach/routes.py"]
+  },
+  "rationale": {
+    "chosen_approach": "FastAPI 先落地接口与 schema；RuoYi 侧接口若未就绪可以先 mock 响应，后续让 Java 同学补实现（通过 issue 跟踪）",
+    "decision_factors": ["前端可基于 schema 先做页面", "RuoYi 侧实现解耦"]
+  },
+  "risks": [
+    {"risk": "RuoYi 侧接口未就绪", "mitigation": "本 task 落地 FastAPI 调用层；RuoYi 侧用 issue 单独追踪；前端 TASK-006 调这个接口时若 503 展示『历史数据暂不可用』"}
+  ],
+  "meta": {"estimated_time": "2h", "risk": "medium", "autonomous": true, "checkpoint": false}
+}

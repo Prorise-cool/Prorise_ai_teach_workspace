@@ -26,6 +26,8 @@ export interface ResultHeaderProps {
   publishLoading?: boolean;
   /** 点击公开发布。 */
   onPublish?: () => void;
+  /** 点击取消公开（已发布时）。 */
+  onUnpublish?: () => void;
   /** 侧栏是否展开。 */
   sidebarOpen: boolean;
   /** 切换侧栏。 */
@@ -52,6 +54,7 @@ export function ResultHeader({
   published = false,
   publishLoading = false,
   onPublish,
+  onUnpublish,
   sidebarOpen,
   onToggleSidebar,
   className,
@@ -124,6 +127,16 @@ export function ResultHeader({
             >
               {publishLoading && <Loader2 className="w-3 h-3 animate-spin" />}
               {t('video.result.publishAction')}
+            </button>
+          )}
+          {!readOnly && published && onUnpublish && (
+            <button
+              className="xm-result-header__action-btn xm-result-header__action-btn--outline"
+              onClick={onUnpublish}
+              disabled={publishLoading}
+            >
+              {publishLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+              {t('video.result.unpublishAction')}
             </button>
           )}
           {!readOnly ? (

@@ -172,5 +172,18 @@ public final class XmPersistenceSyncBo {
         private String status;
         private String detailRef;
         private Integer versionNo;
+        /**
+         * quiz 提交时刻的每题答卷明细 JSON（仅 quiz 记录使用）。
+         * 落表于 xm_quiz_result.question_items_json。
+         */
+        private String questionItemsJson;
+        /**
+         * 学习路径已完成步骤数（仅 path 记录使用）。
+         */
+        private Integer completedStepCount;
+        /**
+         * 学习路径总步骤数（仅 path 记录使用）。
+         */
+        private Integer totalStepCount;
     }
 }

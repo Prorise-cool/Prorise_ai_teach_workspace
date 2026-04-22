@@ -2,22 +2,43 @@ import { Link } from 'react-router-dom';
 import { Compass } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import type { ActiveLearningPath } from '@/types/learning-center';
 
-// TODO(epic-9): 当前卡片展示的标题 (pathFallbackTitleLine1/2 "微积分求导/进阶攻坚")
-// 是 i18n 占位文案，不是当前用户活跃路径。进度 0/0 也因为 LearningPathPlanPayload
-// 还没有 completedStepCount / totalStepCount 字段，统一展示 0% 避免误导。
-// 后续 Story 应从 xm_learning_path 按 user_id 最新一条拉取 path_title + 真实进度字段。
-const COMPLETED_STEP_COUNT = 0;
-const TOTAL_STEP_COUNT = 0;
+type LearningCenterSidebarPathCardProps = {
+  path: ActiveLearningPath | null;
+};
 
-export function LearningCenterSidebarPathCard() {
+export function LearningCenterSidebarPathCard({ path }: LearningCenterSidebarPathCardProps) {
   const { t } = useAppTranslation();
 
+  if (!path) {
+    return (
+      <Link
+        to="/history?resultType=path"
+        className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 hover:shadow-lg transition-shadow relative overflow-hidden block shadow-md"
+      >
+        <div className="absolute -right-6 -top-6 opacity-[0.08]">
+          <Compass className="w-32 h-32 text-surface-light dark:text-brand" />
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-surface-light/70 dark:text-text-secondary-dark mb-6">
+            {t('learningCenter.page.currentPathSectionTitle')}
+          </h2>
+          <h3 className="text-xl md:text-2xl font-black mb-3 tracking-tight">
+            还没有学习路径
+          </h3>
+          <p className="text-[13px] font-medium text-surface-light/70 dark:text-text-secondary-dark leading-relaxed">
+            去规划一条，让小麦陪你一步步攻坚。
+          </p>
+        </div>
+      </Link>
+    );
+  }
+
+  const { completedStepCount, totalStepCount, title } = path;
   const progressPercent =
-    TOTAL_STEP_COUNT > 0
-      ? Math.round((COMPLETED_STEP_COUNT / TOTAL_STEP_COUNT) * 100)
-      : 0;
-  const progressRatio = `${COMPLETED_STEP_COUNT}/${TOTAL_STEP_COUNT}`;
+    totalStepCount > 0 ? Math.round((completedStepCount / totalStepCount) * 100) : 0;
+  const progressRatio = `${completedStepCount}/${totalStepCount}`;
 
   return (
     <Link
@@ -37,9 +58,7 @@ export function LearningCenterSidebarPathCard() {
           </span>
         </div>
         <h3 className="text-2xl md:text-3xl font-black mb-8 tracking-tight">
-          {t('learningCenter.page.pathFallbackTitleLine1')}
-          <br />
-          {t('learningCenter.page.pathFallbackTitleLine2')}
+          {title}
         </h3>
         <div className="flex justify-between text-xs font-bold mb-3 text-surface-light/80 dark:text-text-secondary-dark">
           <span>{t('learningCenter.page.pathProgressLabel')}</span>
@@ -55,4 +74,3 @@ export function LearningCenterSidebarPathCard() {
     </Link>
   );
 }
-

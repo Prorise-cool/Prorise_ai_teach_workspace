@@ -9,12 +9,15 @@ import type { TaskDataEnvelope } from '@/types/task';
 import type {
   CheckpointGeneratePayload,
   CheckpointSubmitPayload,
+  CoachAskPayload,
+  CoachAskRequest,
   LearningCoachEntryPayload,
   LearningCoachSource,
   LearningPathPlanPayload,
   LearningPathPlanRequest,
   LearningPathSavePayload,
   QuizGeneratePayload,
+  QuizHistoryPayload,
   QuizSubmitPayload,
 } from '@/types/learning';
 
@@ -49,6 +52,10 @@ type QuizSubmitRequest = {
   answers: { questionId: string; optionId: string }[];
 };
 
+type QuizHistoryQuery = {
+  quizId: string;
+};
+
 type LearningPathSaveRequest = {
   path: LearningPathPlanPayload;
 };
@@ -59,8 +66,10 @@ export interface LearningCoachAdapter {
   submitCheckpoint(request: CheckpointSubmitRequest): Promise<CheckpointSubmitPayload>;
   generateQuiz(request: QuizGenerateRequest): Promise<QuizGeneratePayload>;
   submitQuiz(request: QuizSubmitRequest): Promise<QuizSubmitPayload>;
+  getQuizHistory(query: QuizHistoryQuery): Promise<QuizHistoryPayload>;
   planPath(request: LearningPathPlanRequest): Promise<LearningPathPlanPayload>;
   savePath(request: LearningPathSaveRequest): Promise<LearningPathSavePayload>;
+  coachAsk(request: CoachAskRequest): Promise<CoachAskPayload>;
 }
 
 function toQueryString(source: LearningCoachSource) {
@@ -117,6 +126,13 @@ export function createRealLearningCoachAdapter(
       });
       return response.data.data;
     },
+    async getQuizHistory({ quizId }) {
+      const response = await client.request<TaskDataEnvelope<QuizHistoryPayload>>({
+        url: `/api/v1/learning-coach/quiz/history/${encodeURIComponent(quizId)}`,
+        method: 'get',
+      });
+      return response.data.data;
+    },
     async planPath(request) {
       const response = await client.request<TaskDataEnvelope<LearningPathPlanPayload>>({
         url: '/api/v1/learning-coach/path/plan',
@@ -128,6 +144,14 @@ export function createRealLearningCoachAdapter(
     async savePath(request) {
       const response = await client.request<TaskDataEnvelope<LearningPathSavePayload>>({
         url: '/api/v1/learning-coach/path/save',
+        method: 'post',
+        data: request,
+      });
+      return response.data.data;
+    },
+    async coachAsk(request) {
+      const response = await client.request<TaskDataEnvelope<CoachAskPayload>>({
+        url: '/api/v1/learning-coach/coach-ask',
         method: 'post',
         data: request,
       });
@@ -153,11 +177,21 @@ export function createMockLearningCoachAdapter(): LearningCoachAdapter {
     submitQuiz() {
       return Promise.resolve(learningCoachMockFixtures.quiz.submitSuccess.data);
     },
+    getQuizHistory({ quizId }) {
+      return Promise.resolve(learningCoachMockFixtures.quiz.historySuccess({ quizId }));
+    },
     planPath() {
       return Promise.resolve(learningCoachMockFixtures.path.planSuccess.data);
     },
     savePath() {
       return Promise.resolve(learningCoachMockFixtures.path.saveSuccess.data);
+    },
+    coachAsk(request) {
+      // mock：简单回复包含题目 id，便于前端调试切换
+      return Promise.resolve({
+        reply: `（Mock）收到「${request.userMessage}」。题目 ${request.questionId} 的解题思路：先看已知条件，再匹配选项。`,
+        generationSource: 'fallback' as const,
+      });
     },
   };
 }

@@ -37,3 +37,29 @@ export interface LearningCenterFavoriteFolderState {
   folders: LearningCenterFavoriteFolder[];
   assignments: Record<string, string>;
 }
+
+/**
+ * 学习中心聚合响应（TASK-007）。
+ * FastAPI `/learning-center/aggregate` 返回，覆盖三张 sidebar 卡需要的真实数据。
+ * 上游 RuoYi 未就绪时对应字段为 null，前端按空态渲染，不硬编码占位。
+ */
+export interface LatestRecommendation {
+  summary: string;
+  targetRefId: string;
+  /** ISO-8601 时间戳 */
+  sourceTime: string;
+}
+
+export interface ActiveLearningPath {
+  pathId: string;
+  title: string;
+  completedStepCount: number;
+  totalStepCount: number;
+  versionNo: number;
+}
+
+export interface LearningCenterAggregateResponse {
+  averageQuizScore: number | null;
+  latestRecommendation: LatestRecommendation | null;
+  activeLearningPath: ActiveLearningPath | null;
+}

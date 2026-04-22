@@ -185,6 +185,39 @@ class QuizSubmitEnvelope(CamelCaseModel):
     data: QuizSubmitPayload
 
 
+class QuizHistoryItem(CamelCaseModel):
+    """历史答卷中的单道题记录（只读回看）。"""
+
+    question_id: str = Field(min_length=1, max_length=128)
+    stem: str = Field(min_length=1, max_length=2000)
+    options: list[LearningCoachOption] = Field(default_factory=list, max_length=6)
+    selected_option_id: str | None = Field(default=None, max_length=64)
+    correct_option_id: str | None = Field(default=None, max_length=64)
+    is_correct: bool = False
+    explanation: str | None = Field(default=None, max_length=4000)
+
+
+class QuizHistoryPayload(CamelCaseModel):
+    """测验历史回看 payload，来自 RuoYi xm_quiz_result。"""
+
+    model_config = ConfigDict(use_enum_values=True)
+
+    quiz_id: str = Field(min_length=1, max_length=128)
+    source: LearningCoachSourceType | None = None
+    question_total: int = Field(default=0, ge=0, le=200)
+    correct_total: int = Field(default=0, ge=0, le=200)
+    score: int = Field(default=0, ge=0, le=100)
+    summary: str | None = Field(default=None, max_length=2000)
+    items: list[QuizHistoryItem] = Field(default_factory=list)
+    occurred_at: datetime | None = None
+
+
+class QuizHistoryEnvelope(CamelCaseModel):
+    code: int = 200
+    msg: str = "quiz 历史加载成功"
+    data: QuizHistoryPayload
+
+
 class LearningPathPlanRequest(CamelCaseModel):
     source: LearningCoachSource
     goal: str = Field(min_length=1, max_length=200)
@@ -235,3 +268,31 @@ class LearningPathSaveEnvelope(CamelCaseModel):
     msg: str = "path 保存成功"
     data: LearningPathSavePayload
 
+
+
+# ── Coach chat（quiz 侧栏 AI 辅导对话） ─────────────────────────────
+
+class CoachAskMessage(CamelCaseModel):
+    role: str = Field(pattern="^(user|coach)$")
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class CoachAskRequest(CamelCaseModel):
+    quiz_id: str | None = Field(default=None, max_length=128)
+    checkpoint_id: str | None = Field(default=None, max_length=128)
+    question_id: str = Field(min_length=1, max_length=128)
+    question_stem: str = Field(min_length=1, max_length=4000)
+    question_options: list[str] = Field(default_factory=list, max_length=10)
+    user_message: str = Field(min_length=1, max_length=1000)
+    history: list[CoachAskMessage] = Field(default_factory=list, max_length=20)
+
+
+class CoachAskPayload(CamelCaseModel):
+    reply: str = Field(min_length=1, max_length=4000)
+    generation_source: str = Field(default="llm", pattern="^(llm|fallback)$")
+
+
+class CoachAskEnvelope(CamelCaseModel):
+    code: int = 200
+    msg: str = "coach 回复成功"
+    data: CoachAskPayload

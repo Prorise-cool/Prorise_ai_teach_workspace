@@ -8,6 +8,7 @@ import { ApiClientError } from '@/services/api/client';
 import { ruoyiClient } from '@/services/api/ruoyi-client';
 import type { RuoyiEnvelope } from '@/types/auth';
 import type {
+  LearningCenterAggregateResponse,
   LearningCenterFavoriteFolder,
   LearningCenterFavoriteFolderState,
   LearningCenterPage,
@@ -46,6 +47,7 @@ export interface LearningCenterAdapter {
   createFavoriteFolder(action: { userId: string; folderName: string }): Promise<LearningCenterFavoriteFolder>;
   assignFavoriteFolder(action: { userId: string; recordId: string; folderId: string | null }): Promise<void>;
   removeFavoriteFolder(action: { userId: string; folderId: string }): Promise<void>;
+  getLearningCenterSummary(query: { userId: string }): Promise<LearningCenterAggregateResponse>;
 }
 
 type ResolveLearningCenterAdapterOptions = {
@@ -168,12 +170,19 @@ export function createRealLearningCenterAdapter(
       unwrapRuoyiEnvelope(response.data, response.status);
     },
     async getFavoriteFolderState({ userId }) {
-      const response = await client.request<RuoyiEnvelope<LearningCenterFavoriteFolderState>>({
-        url: `/xiaomai/learning-center/favorite-folders?userId=${encodeURIComponent(userId)}`,
-        method: 'get',
-      });
+      // 收藏文件夹是非关键侧边数据，服务端错误（如表缺失、SQL 语法）不应阻断页面或
+      // 把原始 SQL 错误文本弹给用户。静默降级为空状态，并把详细错误写进 console。
+      try {
+        const response = await client.request<RuoyiEnvelope<LearningCenterFavoriteFolderState>>({
+          url: `/xiaomai/learning-center/favorite-folders?userId=${encodeURIComponent(userId)}`,
+          method: 'get',
+        });
 
-      return unwrapRuoyiEnvelope(response.data, response.status);
+        return unwrapRuoyiEnvelope(response.data, response.status);
+      } catch (error) {
+        console.warn('[learning-center] getFavoriteFolderState failed, falling back to empty state', error);
+        return { folders: [], assignments: {} };
+      }
     },
     async createFavoriteFolder(action) {
       const response = await client.request<RuoyiEnvelope<LearningCenterFavoriteFolder>>({
@@ -201,6 +210,14 @@ export function createRealLearningCenterAdapter(
       });
 
       unwrapRuoyiEnvelope(response.data, response.status);
+    },
+    async getLearningCenterSummary({ userId }) {
+      const response = await client.request<RuoyiEnvelope<LearningCenterAggregateResponse>>({
+        url: `/xiaomai/learning-center/summary?userId=${encodeURIComponent(userId)}`,
+        method: 'get',
+      });
+
+      return unwrapRuoyiEnvelope<LearningCenterAggregateResponse>(response.data, response.status);
     },
   };
 }
@@ -236,6 +253,23 @@ export function createMockLearningCenterAdapter(): LearningCenterAdapter {
     },
     removeFavoriteFolder() {
       return Promise.resolve();
+    },
+    getLearningCenterSummary() {
+      return Promise.resolve<LearningCenterAggregateResponse>({
+        averageQuizScore: 82,
+        latestRecommendation: {
+          summary: '生成单题讲解：隐函数求导的几何推导过程',
+          targetRefId: 'mock-rec-001',
+          sourceTime: new Date().toISOString(),
+        },
+        activeLearningPath: {
+          pathId: 'mock-path-001',
+          title: '微积分求导·进阶攻坚',
+          completedStepCount: 3,
+          totalStepCount: 8,
+          versionNo: 1,
+        },
+      });
     },
   };
 }

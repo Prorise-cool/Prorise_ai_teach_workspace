@@ -4,7 +4,9 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Leaf, PanelRight, Sparkles, Zap, ClipboardCheck, Target, Layers, Map, Bot, X, ArrowRight, LayoutTemplate } from 'lucide-react';
+import { PanelRight, Sparkles, Zap, ClipboardCheck, Target, Layers, Map, Bot, X, ArrowRight, LayoutTemplate } from 'lucide-react';
+
+import { AppBrand } from '@/components/brand/app-brand';
 
 import { UserAvatarMenu } from '@/components/navigation/user-avatar-menu';
 import { SurfaceDock } from '@/components/surface/surface-dock';
@@ -96,12 +98,7 @@ export function LearningCoachEntryPage() {
 
       {/* 顶部导航栏 */}
       <header className="relative z-20 w-full max-w-[1400px] mx-auto h-[72px] px-6 flex justify-between items-center shrink-0">
-        <Link to="/" className="font-bold text-lg flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="w-9 h-9 bg-text-primary dark:bg-text-primary-dark rounded-xl flex items-center justify-center shadow-sm">
-            <Leaf className="w-4.5 h-4.5 text-bg-light dark:text-bg-dark" />
-          </div>
-          <span className="tracking-tight text-text-primary dark:text-text-primary-dark text-xl">XiaoMai</span>
-        </Link>
+        <AppBrand to="/" size="md" />
 
         <div className="flex items-center gap-3">
           <button

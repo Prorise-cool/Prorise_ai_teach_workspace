@@ -1,0 +1,76 @@
+{
+  "id": "TASK-002",
+  "title": "前端在 generation_source=fallback 时展示显式警示条",
+  "description": "后端 QuizGeneratePayload / CheckpointGeneratePayload / LearningPathPlanPayload 已经有 generation_source 字段（值为 'llm' 或 'fallback'），前端目前完全忽略。当 fallback 时，用户看到的是静默降级内容（TASK-001 改造后是元学习题而非错领域题），需要在 UI 上明确提示『AI 出题暂不可用，已切换为通用热身题』，避免用户误以为是针对其学习内容的 quiz。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "small",
+  "action": "在 packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx 的 quiz/checkpoint 卡片顶部新增一条提示组件，当 API 返回的 generation_source === 'fallback' 时渲染黄色警示条，文案：『AI 出题服务暂不可用，当前是通用学习反思题，可稍后重试获取针对性题目』。同样逻辑应用到 learning-path-page.tsx（path 规划同样有 fallback）。警示条用现有 surface tokens（不允许写死色值）。",
+  "status": "completed",
+  "scope": "packages/student-web/src/features/learning-coach",
+  "focus_paths": [
+    "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx",
+    "packages/student-web/src/features/learning-coach/pages/learning-path-page.tsx"
+  ],
+  "read_first": [
+    "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx",
+    "packages/student-web/src/features/learning-coach/pages/learning-path-page.tsx",
+    "packages/student-web/src/types/learning.ts",
+    ".workflow/scratch/analyze-epic8-9-audit-20260422/context.md"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx contains 'generationSource' OR 'generation_source'",
+      "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx contains 'fallback'",
+      "packages/student-web/src/features/learning-coach/pages/learning-path-page.tsx contains 'generationSource' OR 'generation_source'",
+      "grep -r 'AI 出题服务暂不可用' packages/student-web/src finds >= 1 match",
+      "cd packages/student-web && pnpm typecheck exits 0"
+    ],
+    "verification": "typecheck 通过；手工 mock generation_source=fallback 响应，看 UI 是否展示警示条；mock 为 llm 时警示条不出现",
+    "definition_of_done": "fallback 状态对用户可见且明确，不再静默展示占位内容"
+  },
+  "files": [
+    {
+      "path": "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx",
+      "action": "modify",
+      "target": "卡片顶部",
+      "change": "从 payload 读 generationSource 字段；若 === 'fallback'，在 quiz 题目列表最上方渲染黄色提示条（用 tailwind bg-warn/10 border-warn 之类现有 token）"
+    },
+    {
+      "path": "packages/student-web/src/features/learning-coach/pages/learning-path-page.tsx",
+      "action": "modify",
+      "target": "路径展示区顶部",
+      "change": "同上，path.generationSource === 'fallback' 时展示警示条"
+    }
+  ],
+  "implementation": [
+    "检查 packages/student-web/src/types/learning.ts 确认 QuizGeneratePayload/CheckpointGeneratePayload/LearningPathPlanPayload 的 generationSource 字段名与类型",
+    "若 TS type 里缺 generationSource 字段，补齐（字面量类型 'llm' | 'fallback'）",
+    "在 learning-assessment-page.tsx 的 quiz 渲染块顶部加条件渲染组件：`{payload?.generationSource === 'fallback' && <FallbackBanner mode={mode} />}`",
+    "抽出 FallbackBanner 组件（可放同目录或 components 下），内容：图标 + 『AI 出题服务暂不可用，当前是通用学习反思题』",
+    "learning-path-page.tsx 同样处理，文案改为 『AI 路径规划暂不可用，当前是基线模板』",
+    "复用现有 feedback/warn surface tokens，不写死颜色",
+    "运行 pnpm typecheck 确认无类型错误"
+  ],
+  "test": {
+    "commands": ["cd packages/student-web && pnpm typecheck"],
+    "unit": [],
+    "success_metrics": ["mock fallback 响应时页面展示警示条，mock llm 响应时不展示"]
+  },
+  "reference": {
+    "pattern": "现有 useFeedback notify 警告 tone 可做视觉参考",
+    "files": ["packages/student-web/src/shared/feedback"]
+  },
+  "rationale": {
+    "chosen_approach": "Banner 而非 toast——降级持续整个会话，toast 会闪过",
+    "decision_factors": ["用户需要持续感知『这不是 AI 出的题』"]
+  },
+  "risks": [],
+  "meta": {"estimated_time": "30m", "risk": "low", "autonomous": true, "checkpoint": false}
+}

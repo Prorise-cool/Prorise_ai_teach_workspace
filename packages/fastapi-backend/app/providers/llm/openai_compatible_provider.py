@@ -37,7 +37,8 @@ class OpenAICompatibleLLMProvider:
         self._client = create_async_client(
             base_url=normalized_url,
             api_key=self._api_key,
-            timeout=max(config.timeout_seconds, 600.0),
+            # DB binding.timeout_seconds 是权威来源；非正数时退到 600s 作兜底
+            timeout=config.timeout_seconds if config.timeout_seconds > 0 else 600.0,
             extra_headers=dict(extra_headers) if isinstance(extra_headers, Mapping) else None,
         )
 

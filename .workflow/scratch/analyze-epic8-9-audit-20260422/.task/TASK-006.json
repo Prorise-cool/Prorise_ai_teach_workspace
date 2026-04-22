@@ -1,0 +1,106 @@
+{
+  "id": "TASK-006",
+  "title": "测验回看前端页 + history 卡片拆双按钮",
+  "description": "改造 packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx 第 46 行的单『回看』按钮为两个：『查看原卷』（调 TASK-005 新接口展示只读历史答卷）与『基于此视频再测一次』（走 coach entry 重新生成）。新增 /quiz/:sessionId/review/:quizId 只读页面 learning-quiz-review-page.tsx。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "medium",
+  "action": "1) 新增页面 packages/student-web/src/features/learning-coach/pages/learning-quiz-review-page.tsx：读 useParams 的 quizId，调 learningCoachAdapter.getQuizHistory(quizId) 拉数据，只读展示题目/选项/用户答案/正解/解析/得分总结；2) 在 packages/student-web/src/app/routes/index.tsx 注册新路由 /quiz/:sessionId/review/:quizId；3) 修改 history-record-card-quiz.tsx：把单个 Link 改成两个按钮，『查看原卷』 Link to=/quiz/{sessionId}/review/{quizId}，『再测一次』 Link to=/coach/{sessionId}?sourceType=quiz&sourceSessionId={sessionId}&topicHint={tag}&returnTo=/history 4) 在 packages/student-web/src/services/api/adapters/learning-coach-adapter.ts 新增 getQuizHistory 方法与 mock 实现。",
+  "status": "completed",
+  "scope": "packages/student-web/src/features/learning-coach packages/student-web/src/features/learning-center/pages/history",
+  "focus_paths": [
+    "packages/student-web/src/features/learning-coach/pages/learning-quiz-review-page.tsx",
+    "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx",
+    "packages/student-web/src/app/routes/index.tsx",
+    "packages/student-web/src/services/api/adapters/learning-coach-adapter.ts"
+  ],
+  "read_first": [
+    "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx",
+    "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx",
+    "packages/student-web/src/app/routes/index.tsx",
+    "packages/student-web/src/services/api/adapters/learning-coach-adapter.ts",
+    "packages/student-web/src/features/video/pages/video-result-page.tsx"
+  ],
+  "depends_on": ["TASK-005"],
+  "wave": 2,
+  "parallel_group": null,
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "packages/student-web/src/features/learning-coach/pages/learning-quiz-review-page.tsx exists",
+      "packages/student-web/src/features/learning-coach/pages/learning-quiz-review-page.tsx contains 'getQuizHistory'",
+      "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx contains '查看原卷'",
+      "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx contains '再测一次'",
+      "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx contains '/coach/'",
+      "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx does NOT contain the raw pattern /quiz/\\${record.sourceSessionId} without /review/",
+      "packages/student-web/src/app/routes/index.tsx contains '/quiz/:sessionId/review/:quizId' OR 'quiz-review'",
+      "packages/student-web/src/services/api/adapters/learning-coach-adapter.ts contains 'getQuizHistory'",
+      "cd packages/student-web && pnpm typecheck exits 0"
+    ],
+    "verification": "typecheck 绿；跑 dev server 进 /history 页面看到两个按钮；点『查看原卷』进入只读页并显示答卷；点『再测一次』走 coach entry 再进 quiz",
+    "definition_of_done": "学习中心历史不再误触发新 quiz 生成；『再测一次』入口对齐视频结果页的 coach entry 语义"
+  },
+  "files": [
+    {
+      "path": "packages/student-web/src/features/learning-coach/pages/learning-quiz-review-page.tsx",
+      "action": "create",
+      "target": "新页面",
+      "change": "只读回看页；从 route param 拿 quizId；调 adapter.getQuizHistory；渲染题目、用户答案、正解、得分"
+    },
+    {
+      "path": "packages/student-web/src/features/learning-center/pages/history/history-record-card-quiz.tsx",
+      "action": "modify",
+      "target": "按钮区（第 44-60 行）",
+      "change": "把单个 Link 换成两个：查看原卷（/quiz/:sessionId/review/:quizId）+ 再测一次（/coach/:sessionId?sourceType=quiz&sourceSessionId=...&topicHint=...&returnTo=/history）"
+    },
+    {
+      "path": "packages/student-web/src/app/routes/index.tsx",
+      "action": "modify",
+      "target": "路由注册",
+      "change": "在 /quiz/:sessionId 路由旁加 /quiz/:sessionId/review/:quizId 路由，lazy 加载 LearningQuizReviewPage"
+    },
+    {
+      "path": "packages/student-web/src/services/api/adapters/learning-coach-adapter.ts",
+      "action": "modify",
+      "target": "adapter 接口",
+      "change": "新增 getQuizHistory({quizId}) 方法；real 实现调 GET /api/v1/learning-coach/quiz/history/{quizId}；mock 返回 fixture"
+    }
+  ],
+  "implementation": [
+    "先读 learning-assessment-page.tsx 了解题目展示的组件与样式",
+    "新建 learning-quiz-review-page.tsx，从 useParams 拿 sessionId/quizId，useEffect 调 adapter.getQuizHistory({quizId})，loading/error/ready 三态",
+    "UI 按 learning-assessment-page 相似布局：题目列表、每题展示用户选项（高亮）、正确选项（高亮绿色）、解析、总分汇总，但全部 disabled 状态无法提交",
+    "learning-coach-adapter.ts：在 LearningCoachAdapter type 加 getQuizHistory(query: {quizId: string}): Promise<QuizHistoryPayload>；real 实现用 client.request GET 相应端点；mock 实现返回 fixtures/learning-coach.ts 里的占位数据（可直接从现有 fixture 改造）",
+    "types/learning.ts 定义 QuizHistoryPayload / QuizHistoryItem 类型与后端保持一致",
+    "history-record-card-quiz.tsx：从 record 里取 detailRef 或 sourceResultId 作为 quizId（视 LearningCenterRecord schema 而定；可能需要新加字段）；按钮区改为 flex gap-2 两个 Link 并列",
+    "『再测一次』Link 构造 URLSearchParams 带 sourceType=quiz sourceSessionId={record.sourceSessionId} topicHint={record.displayTitle || summary} returnTo=/history；参考 video-result-page.tsx:97-110 的 learningCoachTo 构造",
+    "routes/index.tsx：在现有 /quiz/:sessionId 路由旁注册 /quiz/:sessionId/review/:quizId",
+    "跑 pnpm typecheck 确认无类型错误"
+  ],
+  "test": {
+    "commands": ["cd packages/student-web && pnpm typecheck"],
+    "unit": [],
+    "success_metrics": [
+      "history 页 quiz 卡片出现两个按钮",
+      "『查看原卷』进入只读页显示答卷",
+      "『再测一次』走 /coach/ 流程"
+    ]
+  },
+  "reference": {
+    "pattern": "video-result-page.tsx 的 learningCoachTo 构造 + learning-assessment-page 的题目展示",
+    "files": [
+      "packages/student-web/src/features/video/pages/video-result-page.tsx",
+      "packages/student-web/src/features/learning-coach/pages/learning-assessment-page.tsx"
+    ]
+  },
+  "rationale": {
+    "chosen_approach": "新页面而非复用 assessment 页的 replay=true 模式——只读语义差异大，独立页面更清晰",
+    "decision_factors": ["避免 assessment 页的状态机变得复杂", "路由语义 /review/ 对用户也更直观"]
+  },
+  "risks": [
+    {"risk": "LearningCenterRecord 可能没有 quizId 字段", "mitigation": "若缺，把 detailRef 或 sourceResultId 当 quizId；必要时后端扩字段"}
+  ],
+  "meta": {"estimated_time": "3h", "risk": "medium", "autonomous": true, "checkpoint": true}
+}

@@ -9,17 +9,18 @@ import { SurfaceDashboardDock } from '@/components/surface/surface-dashboard-doc
 import { resolveLearningCenterAdapter } from '@/services/api/adapters/learning-center-adapter';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
-import type { LearningCenterRecord } from '@/types/learning-center';
+import type { LearningCenterAggregateResponse, LearningCenterRecord } from '@/types/learning-center';
 
 import { LearningCenterContinueCard } from './learning-center-continue-card';
 import { LearningCenterLibrary } from './learning-center-library';
 import { LearningCenterOverview } from './learning-center-overview';
 import { LearningCenterPageHeader } from './learning-center-page-header';
 import { LearningCenterRecentActivity } from './learning-center-recent-activity';
+import { isRecordDeleted } from './learning-center-record-filter';
 import { LearningCenterSidebarPathCard } from './learning-center-sidebar-path-card';
 import { LearningCenterSidebarQuizHealth } from './learning-center-sidebar-quiz-health';
 import { LearningCenterSidebarRecommendation } from './learning-center-sidebar-recommendation';
-import { extractFirstNumber, safeParseSourceTime } from './learning-center-utils';
+import { safeParseSourceTime } from './learning-center-utils';
 
 type ViewStatus = 'loading' | 'ready' | 'error' | 'permission-denied';
 
@@ -33,6 +34,7 @@ export function LearningCenterPage() {
   const [records, setRecords] = useState<LearningCenterRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [favoritesTotal, setFavoritesTotal] = useState<number | null>(null);
+  const [summary, setSummary] = useState<LearningCenterAggregateResponse | null>(null);
 
   const avatarUrl = session?.user.avatarUrl ?? null;
 
@@ -46,11 +48,13 @@ export function LearningCenterPage() {
     let cancelled = false;
     setViewStatus('loading');
     setFavoritesTotal(null);
+    setSummary(null);
 
     void (async () => {
-      const [learningResult, favoritesResult] = await Promise.allSettled([
+      const [learningResult, favoritesResult, summaryResult] = await Promise.allSettled([
         adapter.getLearningPage({ userId, pageNum: 1, pageSize: 20 }),
         adapter.getFavoritesPage({ userId, pageNum: 1, pageSize: 1 }),
+        adapter.getLearningCenterSummary({ userId }),
       ]);
 
       if (cancelled) return;
@@ -71,6 +75,10 @@ export function LearningCenterPage() {
 
       if (favoritesResult.status === 'fulfilled') {
         setFavoritesTotal(favoritesResult.value.total ?? 0);
+      }
+
+      if (summaryResult.status === 'fulfilled') {
+        setSummary(summaryResult.value);
       }
     })();
 
@@ -96,33 +104,42 @@ export function LearningCenterPage() {
     return `/history?resultType=${encodeURIComponent(record.resultType)}`;
   };
 
+  // 已删除记录全局过滤一道 —— 它们不应污染 continue card、概览计数、最近动态，
+  // 后端 xm_learning_record.deleted_flag 同步不稳定时前端兜底。
+  const visibleRecords = useMemo(
+    () => records.filter((record) => !isRecordDeleted(record)),
+    [records],
+  );
+
   const latestRecord = useMemo(() => {
-    const sorted = [...records].sort((a, b) => {
+    const sorted = [...visibleRecords].sort((a, b) => {
       const aTime = safeParseSourceTime(a.sourceTime)?.getTime() ?? 0;
       const bTime = safeParseSourceTime(b.sourceTime)?.getTime() ?? 0;
       return bTime - aTime;
     });
     return sorted[0] ?? null;
-  }, [records]);
+  }, [visibleRecords]);
 
   const countByType = useMemo(() => {
     const counts = new Map<string, number>();
-    records.forEach((record) => {
+    visibleRecords.forEach((record) => {
       counts.set(record.resultType, (counts.get(record.resultType) ?? 0) + 1);
     });
     return counts;
-  }, [records]);
+  }, [visibleRecords]);
 
-  // TODO(epic-9): 此处 fallback 86 是占位分，没找到 quiz 记录或 summary 里无数字时使用。
-  // 后续 Story 应改为后端直接返回 averageQuizScore 字段（从 xm_quiz_result 真实聚合），
-  // 无真实数据时应显示空态而非 86。
-  const quizScore = useMemo(() => {
-    const quiz = records.find((record) => record.resultType === 'quiz');
-    if (!quiz) return 86;
-    return extractFirstNumber(quiz.summary) ?? 86;
-  }, [records]);
-
-  const recentActivity = useMemo(() => records.slice(0, 2), [records]);
+  // 最近动态只展示"交互式学习事件"——视频/课堂/伴学/证据问答。
+  // Coach 产出类（path/quiz/wrongbook/recommendation）有专属 sidebar 卡和 library
+  // 入口，不再放进"动态"避免语义混淆。
+  const recentActivity = useMemo(
+    () =>
+      visibleRecords
+        .filter((record) =>
+          ['video', 'classroom', 'companion', 'evidence'].includes(record.resultType),
+        )
+        .slice(0, 2),
+    [visibleRecords],
+  );
 
   const continueTo = latestRecord ? resolveDetailTo(latestRecord) : '/history';
 
@@ -164,9 +181,9 @@ export function LearningCenterPage() {
         </div>
 
         <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8 pt-2">
-          <LearningCenterSidebarPathCard />
-          <LearningCenterSidebarQuizHealth quizScore={quizScore} />
-          <LearningCenterSidebarRecommendation />
+          <LearningCenterSidebarPathCard path={summary?.activeLearningPath ?? null} />
+          <LearningCenterSidebarQuizHealth averageQuizScore={summary?.averageQuizScore ?? null} />
+          <LearningCenterSidebarRecommendation recommendation={summary?.latestRecommendation ?? null} />
         </div>
       </main>
 

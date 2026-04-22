@@ -286,6 +286,19 @@ async function loadLearningQuizRoute() {
 }
 
 /**
+ * 按需加载 Learning Coach Quiz 只读回看页（Epic 8/9，Decision 1）。
+ */
+async function loadLearningQuizReviewRoute() {
+  const { LearningQuizReviewPage } = await import(
+    '@/features/learning-coach/pages/learning-quiz-review-page'
+  );
+
+  return {
+    Component: LearningQuizReviewPage
+  };
+}
+
+/**
  * 按需加载 Learning Coach 学习路径页。
  */
 async function loadLearningPathRoute() {
@@ -401,6 +414,10 @@ export function createAppRouter() {
             {
               path: 'quiz/:sessionId',
               lazy: loadLearningQuizRoute
+            },
+            {
+              path: 'quiz/:sessionId/review/:quizId',
+              lazy: loadLearningQuizReviewRoute
             },
             {
               path: 'path',

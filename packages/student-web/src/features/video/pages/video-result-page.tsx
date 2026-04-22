@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMatch, useParams } from 'react-router-dom';
-import { AlertCircle, RefreshCw, ShieldAlert, VideoOff } from 'lucide-react';
+import { AlertCircle, RefreshCw, ShieldAlert, Trash2, VideoOff, VolumeX } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,9 @@ export function VideoResultPage() {
     durationSeconds: 0,
   });
   const [bannerVisible, setBannerVisible] = useState(true);
+  // 静音提示：autoplay 策略要求无声播放，视频实际自带音频。监听播放器静音
+  // 状态，静音时显示一个右下角小 tip 提示用户点击解除，用户点击后自动隐藏。
+  const [mutedTipVisible, setMutedTipVisible] = useState(false);
 
   const handleReturn = () => void window.history.back();
 
@@ -65,6 +68,17 @@ export function VideoResultPage() {
     seconds: playbackState.currentTimeSeconds,
     sectionTitle: activeSection?.title,
   }), [lookupId, playbackState.currentTimeSeconds, activeSection?.title]);
+
+  useEffect(() => {
+    if (!data?.result) return;
+    const pollMuted = () => {
+      const player = playerRef.current?.getPlayer();
+      if (player) setMutedTipVisible(player.muted() === true);
+    };
+    // 视频加载后每 400ms 检查静音状态；用户点击解除后状态变 false → 提示消失
+    const timer = window.setInterval(pollMuted, 400);
+    return () => window.clearInterval(timer);
+  }, [data?.result]);
 
   useEffect(() => {
     if (!data?.result) {
@@ -127,6 +141,25 @@ export function VideoResultPage() {
             icon={ShieldAlert}
             title={t('video.result.permissionDeniedTitle')}
             message={t('video.result.permissionDeniedMessage')}
+            action={
+              <Button variant="default" onClick={handleReturn}>
+                {t('video.common.createNew')}
+              </Button>
+            }
+          />
+        </main>
+      </div>
+    );
+  }
+
+  if (viewStatus === 'deleted') {
+    return (
+      <div className="xm-video-result">
+        <main className="xm-video-result__canvas">
+          <ResultErrorView
+            icon={Trash2}
+            title="该视频任务已删除"
+            message="此任务已被你或平台从学习中心移除，无法再进行回看。"
             action={
               <Button variant="default" onClick={handleReturn}>
                 {t('video.common.createNew')}
@@ -219,6 +252,7 @@ export function VideoResultPage() {
           published={result.published}
           publishLoading={publishLoading}
           onPublish={publish}
+          onUnpublish={unpublish}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={toggleSidebar}
           readOnly={isPublicView}
@@ -256,6 +290,16 @@ export function VideoResultPage() {
                   hideControls
                   className="xm-video-result__player"
                 />
+                {mutedTipVisible ? (
+                  <div
+                    className="absolute bottom-3 right-3 z-20 pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 text-white text-xs font-medium backdrop-blur-sm shadow-lg animate-pulse"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <VolumeX className="w-3.5 h-3.5" />
+                    <span>点击视频解除静音</span>
+                  </div>
+                ) : null}
               </div>
 
               <VideoDock playerRef={playerRef} />

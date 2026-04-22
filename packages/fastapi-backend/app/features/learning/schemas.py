@@ -74,6 +74,9 @@ class LearningResultInput(BaseModel):
     status: LearningResultStatus = LearningResultStatus.COMPLETED
     detail_ref: str | None = None
     version_no: int | None = Field(default=None, ge=1)
+    # quiz 提交时刻的每题答卷明细 JSON 字符串（仅 quiz 记录使用），
+    # 由 learning_coach.submit_quiz 写入，RuoYi 侧落 xm_quiz_result.question_items_json。
+    question_items_json: str | None = None
 
 
 class LearningPersistenceRequest(BaseModel):
@@ -111,6 +114,7 @@ class LearningPersistenceItem(BaseModel):
     status: LearningResultStatus
     detail_ref: str | None = None
     version_no: int | None = None
+    question_items_json: str | None = None
 
 
 class LearningPersistenceResponse(BaseModel):
@@ -121,3 +125,39 @@ class LearningPersistenceResponse(BaseModel):
     records: list[LearningPersistenceItem]
     table_summary: dict[str, str]
     traceability_rule: str = "version-or-updated-at"
+
+
+class LatestRecommendation(BaseModel):
+    """学习中心聚合响应 —— 最新推荐项（来自 xm_learning_recommendation）。"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    summary: str = Field(alias="summary")
+    target_ref_id: str = Field(alias="targetRefId")
+    source_time: datetime = Field(alias="sourceTime")
+
+
+class ActiveLearningPath(BaseModel):
+    """学习中心聚合响应 —— 当前活跃的学习路径（来自 xm_learning_path）。"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    path_id: str = Field(alias="pathId")
+    title: str = Field(alias="title")
+    completed_step_count: int = Field(alias="completedStepCount", ge=0)
+    total_step_count: int = Field(alias="totalStepCount", ge=0)
+    version_no: int = Field(alias="versionNo", ge=1)
+
+
+class LearningCenterAggregateResponse(BaseModel):
+    """学习中心聚合响应（TASK-007）。
+
+    前端学习中心页一次取齐三张 sidebar 卡需要的数据：
+    - averageQuizScore：聚合 xm_quiz_result 的平均分
+    - latestRecommendation：xm_learning_recommendation 最新 1 条
+    - activeLearningPath：xm_learning_path 最新 1 条 + 步骤进度
+    上游 RuoYi 未就绪时三字段均为 None，前端按空态渲染，不硬编码占位。
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    average_quiz_score: int | None = Field(default=None, alias="averageQuizScore", ge=0, le=100)
+    latest_recommendation: LatestRecommendation | None = Field(default=None, alias="latestRecommendation")
+    active_learning_path: ActiveLearningPath | None = Field(default=None, alias="activeLearningPath")

@@ -467,7 +467,12 @@
             #{record.displayTitle},
             #{record.sourceType},
             #{record.sourceTable},
-            #{record.sourceSessionId},
+            <!--
+                source_session_id 在 DB 已改为 NULLABLE，但视频/图片输入任务的
+                source_session_id 可能本来就是 NULL。这里再做一道 COALESCE 兜底
+                到 source_result_id，避免未来若列被误改回 NOT NULL 也不会炸。
+            -->
+            COALESCE(#{record.sourceSessionId}, #{record.sourceResultId}),
             #{record.sourceResultId},
             #{record.sourceTime},
             #{record.status},
@@ -480,7 +485,7 @@
         ON DUPLICATE KEY UPDATE
             display_title = VALUES(display_title),
             source_type = VALUES(source_type),
-            source_session_id = VALUES(source_session_id),
+            source_session_id = COALESCE(VALUES(source_session_id), source_session_id),
             source_time = VALUES(source_time),
             status = VALUES(status),
             analysis_summary = VALUES(analysis_summary),

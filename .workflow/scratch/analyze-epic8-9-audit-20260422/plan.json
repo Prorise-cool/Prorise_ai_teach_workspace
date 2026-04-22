@@ -1,0 +1,65 @@
+{
+  "summary": "修复 Epic 8/9 在 master 上已合但未接真 LLM 的 mock 占位问题，并重构测验入口流程（history『回看』拆为只读查看+走 coach entry 再测一次）。",
+  "approach": "3 波推进：Wave 1 基础设施（降级语义重写 + 前端 fallback 可见性 + 诊断端点），Wave 2 流程与推荐 LLM 化（推荐改 LLM 生成 + 测验历史只读回看 + history 卡片拆双按钮），Wave 3 学习中心真数据接入（聚合接口扩字段 + 三张 sidebar 接真数据 + 去除 86 硬编码）。",
+  "task_ids": ["TASK-001", "TASK-002", "TASK-003", "TASK-004", "TASK-005", "TASK-006", "TASK-007", "TASK-008"],
+  "task_count": 8,
+  "complexity": "medium",
+  "estimated_time": "14h",
+  "recommended_execution": "Agent",
+  "waves": [
+    {
+      "wave": 1,
+      "description": "基础设施：让降级可见且不再领域错配，新增诊断端点避免『跑的是 stub 却不知道』",
+      "tasks": ["TASK-001", "TASK-002", "TASK-003"]
+    },
+    {
+      "wave": 2,
+      "description": "流程修正与推荐 LLM 化：推荐从硬编码变真 LLM，测验历史回看拆出独立只读路径",
+      "tasks": ["TASK-004", "TASK-005", "TASK-006"]
+    },
+    {
+      "wave": 3,
+      "description": "学习中心真数据接入：聚合接口扩三字段，前端 sidebar 全部从硬编码切到 props 驱动",
+      "tasks": ["TASK-007", "TASK-008"]
+    }
+  ],
+  "data_flow": {
+    "diagram": null,
+    "stages": [
+      "Wave 1: 后端 fallback 通用化 + 诊断端点上线 → 前端感知 fallback",
+      "Wave 2: LLM 真产出推荐 + 只读历史回看 → 用户不再被误导进新 quiz 生成",
+      "Wave 3: 聚合接口输出真字段 → 学习中心全面真数据化"
+    ]
+  },
+  "design_decisions": [
+    {"title": "fallback 题库通用化而非禁用降级", "rationale": "错配题目的危害 > 降级提示；元学习题不论学科都适用"},
+    {"title": "quiz 回看用独立路由 /quiz/:sessionId/review/:quizId", "rationale": "只读语义与 assessment 差异大，独立页面更清晰"},
+    {"title": "学习中心聚合接口一次拿齐三字段", "rationale": "聚合页一次渲染完，减少并发请求"},
+    {"title": "推荐 LLM 同步调用而非异步补齐", "rationale": "用户提交 quiz 后立即看到推荐，异步补齐体验差"}
+  ],
+  "shared_context": {
+    "patterns": [
+      "llm_generator.py 的『prompt 构造 → _call_with_failover → _extract_json_text → _parse_* → 校验占位符』模板",
+      "learning_coach/service.py 的『provider_chain 非空先 LLM 失败走 fallback』模板",
+      "adapter pickAdapterImplementation(mock, real) 的双实现模板"
+    ],
+    "conventions": [
+      "前端不写死色值，用 surface tokens",
+      "FastAPI API 前缀 /api/v1/",
+      "generation_source 字段透传到前端"
+    ],
+    "dependencies": [
+      "TASK-006 依赖 TASK-005 的后端接口",
+      "TASK-008 依赖 TASK-007 的 schema 字段",
+      "TASK-007 依赖 TASK-004 产出的真实 recommendation 数据"
+    ]
+  },
+  "_metadata": {
+    "timestamp": "2026-04-22T00:00:00+08:00",
+    "source": "maestro-plan (inline, context-driven)",
+    "planning_mode": "full",
+    "plan_type": "refactor",
+    "schema_version": "2.0",
+    "git_commit": null
+  }
+}

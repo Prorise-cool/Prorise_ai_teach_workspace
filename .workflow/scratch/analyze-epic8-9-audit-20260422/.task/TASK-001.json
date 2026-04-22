@@ -1,0 +1,75 @@
+{
+  "id": "TASK-001",
+  "title": "重写 _fallback_question_bank 为通用元学习题并尊重 topic_hint",
+  "description": "当前 learning_coach/service.py:79-151 的 _fallback_question_bank 主动丢弃 topic_hint（`_ = topic_hint`），无论用户学什么都返回 5 道链式法则/导数题。改为：保留 topic_hint 作为输入，fallback 题目改为通用元学习/自我检查题（例如：『刚学的内容里你觉得最核心的概念是什么？』『哪一步的推导你还不太确定？』），这样即便降级也不会产生领域错配的假知识题。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "refactor",
+  "priority": "high",
+  "effort": "small",
+  "action": "修改 packages/fastapi-backend/app/features/learning_coach/service.py:79-151 的 _fallback_question_bank。删除 `_ = topic_hint` 丢弃行；改为通用元学习题库，题干形如：q1='刚才这段学习里，最核心的概念或方法是什么？'、q2='下面哪种做法最能帮助你巩固记忆？'、q3='遇到不确定的知识点时，你倾向先做什么？'、q4='完整复现一次刚学的推导/步骤，你最可能卡在？'、q5='如果让你用一句话教别人刚学的内容，你会先讲什么？'。每题 4 个通用选项（没有唯一正确答案，但必须设一个『推荐答案』代表教学上最佳做法），explanation 说明为什么推荐该选项。函数签名与返回结构（QuestionTuple list）保持不变，确保 _build_questions_from_bank 的消费端不改。",
+  "status": "completed",
+  "completed_at": "2026-04-22T00:00:00Z",
+  "scope": "packages/fastapi-backend/app/features/learning_coach",
+  "focus_paths": ["packages/fastapi-backend/app/features/learning_coach/service.py"],
+  "read_first": [
+    "packages/fastapi-backend/app/features/learning_coach/service.py",
+    "packages/fastapi-backend/app/features/learning_coach/llm_generator.py",
+    ".workflow/scratch/analyze-epic8-9-audit-20260422/context.md"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "packages/fastapi-backend/app/features/learning_coach/service.py does NOT contain '_ = topic_hint'",
+      "packages/fastapi-backend/app/features/learning_coach/service.py does NOT contain '链式法则' in _fallback_question_bank body",
+      "packages/fastapi-backend/app/features/learning_coach/service.py does NOT contain 'y = sin(x^2)'",
+      "packages/fastapi-backend/app/features/learning_coach/service.py contains 'def _fallback_question_bank(topic_hint: str | None)'",
+      "packages/fastapi-backend/app/features/learning_coach/service.py contains '刚才' OR '核心' in _fallback_question_bank strings (通用元学习题)",
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x exits 0"
+    ],
+    "verification": "grep 检查链式法则关键词已删除；pytest learning_coach 全绿；手工构造 provider_chain=() 调 generate_checkpoint 确认返回的题干是元学习题而非微积分题",
+    "definition_of_done": "fallback 路径不再输出错领域题目；降级后题库与实际学习主题无关的风险被消除"
+  },
+  "files": [
+    {
+      "path": "packages/fastapi-backend/app/features/learning_coach/service.py",
+      "action": "modify",
+      "target": "_fallback_question_bank",
+      "change": "删除 79-151 行的硬编码链式法则题；替换为 5 道通用元学习题；移除 `_ = topic_hint` 丢弃行；若 topic_hint 非空可在题干里拼一句『针对「{topic}」这段学习』作为前缀（但题目本身仍通用）"
+    }
+  ],
+  "implementation": [
+    "打开 packages/fastapi-backend/app/features/learning_coach/service.py 79-151 行",
+    "删除 `_ = topic_hint` 这一行",
+    "在函数开头加 `topic_prefix = f'针对「{topic_hint.strip()}」这段学习，' if topic_hint and topic_hint.strip() else ''`",
+    "把 5 道硬编码题完全替换为 5 道元学习题，题干里可选用 topic_prefix 做自然拼接",
+    "每题选项 A/B/C/D 代表不同学习行为（例如：复述/做题/讨论/跳过），推荐选项是教学上最佳做法",
+    "explanation 字段说明为什么推荐该选项（例如：『主动复述是巩固记忆最有效的方式』）",
+    "保持函数签名、返回类型、QuestionTuple 结构完全一致，避免改动上游消费者",
+    "运行 `cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x` 确认无回归"
+  ],
+  "test": {
+    "commands": [
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x"
+    ],
+    "unit": [
+      "测试 _fallback_question_bank(topic_hint=None) 返回 5 道题且不含 '链式法则'",
+      "测试 _fallback_question_bank(topic_hint='傅里叶级数') 返回题干里包含 '傅里叶级数'"
+    ]
+  },
+  "reference": {
+    "pattern": "现有 _fallback_path_payload (service.py:154-185) 的降级结构可做参考",
+    "files": ["packages/fastapi-backend/app/features/learning_coach/service.py"]
+  },
+  "rationale": {
+    "chosen_approach": "用通用元学习题替代硬编码数学题，避免降级时给用户错配领域知识",
+    "decision_factors": ["误导性比'降级提示'危害更大", "元学习题对任何学科都适用"]
+  },
+  "risks": [
+    {"risk": "现有 unit test 可能硬断言链式法则题干", "mitigation": "pytest 跑一遍，有硬断言就一并改"}
+  ],
+  "meta": {"estimated_time": "45m", "risk": "low", "autonomous": true, "checkpoint": false}
+}

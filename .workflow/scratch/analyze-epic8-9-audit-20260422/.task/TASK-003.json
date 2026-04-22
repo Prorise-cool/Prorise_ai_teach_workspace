@@ -1,0 +1,74 @@
+{
+  "id": "TASK-003",
+  "title": "新增 LLM provider chain 诊断端点 /learning-coach/_diagnostics",
+  "description": "当前运行时不知道 provider_chain 是否真的是真实 LLM（可能默默跑 stub-llm），context.md 提到的『跑起来了但实际用的是 stub』隐蔽风险需要一个显式诊断入口。新增 GET /learning-coach/_diagnostics 端点（仅限内部/管理员访问），返回当前 provider chain 的长度、每个 provider 的 id 与类型，以及可选的真实 echo 调用结果（调一次 3-token 以内的轻量生成验证活性）。",
+  "issue_id": null,
+  "issue_refs": [],
+  "type": "feature",
+  "priority": "high",
+  "effort": "small",
+  "action": "在 packages/fastapi-backend/app/features/learning_coach/routes.py 新增 @router.get('/_diagnostics') 端点。Query 参数 `probe: bool = False`——若 True 则对链路第一个 provider 调一次 provider.generate('回复 OK') 并记录耗时；若 False 只返回 chain 静态信息。鉴权：复用 get_access_context 但加角色检查（仅 admin 可访问），或简单地要求请求头 X-Maestro-Diag 与 settings.diag_token 匹配（按现有项目习惯选）。返回结构 { chainLength: int, providers: [{id, typeName, priority}], probe: {ok, latencyMs, content} | null }。",
+  "status": "completed",
+  "scope": "packages/fastapi-backend/app/features/learning_coach",
+  "focus_paths": ["packages/fastapi-backend/app/features/learning_coach/routes.py"],
+  "read_first": [
+    "packages/fastapi-backend/app/features/learning_coach/routes.py",
+    "packages/fastapi-backend/app/features/learning_coach/llm_generator.py",
+    "packages/fastapi-backend/app/providers/llm/factory.py",
+    "packages/fastapi-backend/app/core/security.py",
+    "packages/fastapi-backend/app/core/config.py"
+  ],
+  "depends_on": [],
+  "wave": 1,
+  "parallel_group": "wave1",
+  "executor": "agent",
+  "convergence": {
+    "criteria": [
+      "packages/fastapi-backend/app/features/learning_coach/routes.py contains '@router.get(\"/_diagnostics\"'",
+      "packages/fastapi-backend/app/features/learning_coach/routes.py contains 'chainLength'",
+      "packages/fastapi-backend/app/features/learning_coach/routes.py contains 'probe'",
+      "cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x exits 0",
+      "curl -s http://localhost:8090/api/v1/learning-coach/_diagnostics?probe=false returns JSON with 'chainLength' key"
+    ],
+    "verification": "pytest 绿；启动 FastAPI 后 curl 端点返回预期结构；probe=true 时能看到 stub-llm 与真实 provider 的差别",
+    "definition_of_done": "运维/开发可以通过该端点一眼看出当前学习 coach 跑的是 stub 还是真 LLM，避免隐蔽降级"
+  },
+  "files": [
+    {
+      "path": "packages/fastapi-backend/app/features/learning_coach/routes.py",
+      "action": "modify",
+      "target": "router",
+      "change": "在文件尾部新增 @router.get('/_diagnostics') 路由函数 learning_coach_diagnostics"
+    }
+  ],
+  "implementation": [
+    "打开 routes.py，在文件末尾加新路由函数 learning_coach_diagnostics",
+    "参数：access_context: AccessContext = Depends(get_access_context), service: LearningCoachService = Depends(get_learning_coach_service), probe: bool = False",
+    "鉴权：检查 access_context.user_id 是否在 admin 白名单（或调用 access_context.has_role('admin')，按项目现有 API 决定），否则 raise HTTPException(403)",
+    "主体：providers = service._provider_chain；构造 providers_info = [{'id': p.provider_id, 'typeName': type(p).__name__, 'priority': getattr(p, 'priority', None)} for p in providers]",
+    "若 probe=True 且 providers 非空：try { t0 = time.perf_counter(); result = await providers[0].generate('请回复 OK'); latency_ms = int((time.perf_counter()-t0)*1000); probe = {'ok': True, 'latencyMs': latency_ms, 'content': result.content[:200]} } except Exception as e: probe = {'ok': False, 'error': str(e)}",
+    "返回 {'chainLength': len(providers), 'providers': providers_info, 'probe': probe_result}",
+    "新增 unit test packages/fastapi-backend/tests/unit/learning_coach/test_routes_diagnostics.py：mock service with empty chain 返回 chainLength=0；mock 非空 chain 返回正确结构；probe=true 时调用 provider.generate"
+  ],
+  "test": {
+    "commands": ["cd packages/fastapi-backend && uv run pytest tests/unit/learning_coach -x"],
+    "unit": [
+      "test_diagnostics_empty_chain",
+      "test_diagnostics_with_probe_success",
+      "test_diagnostics_with_probe_failure",
+      "test_diagnostics_requires_admin"
+    ]
+  },
+  "reference": {
+    "pattern": "其他 routes.py 里已经有 get_learning_coach_service DI 依赖注入结构可复用",
+    "files": ["packages/fastapi-backend/app/features/learning_coach/routes.py"]
+  },
+  "rationale": {
+    "chosen_approach": "端点而非 CLI 命令——运维场景通常通过 API 诊断",
+    "decision_factors": ["与现有 FastAPI 诊断习惯一致", "可被监控系统定期调用"]
+  },
+  "risks": [
+    {"risk": "probe=true 会真实消耗 LLM token", "mitigation": "默认 false，且返回内容截断至 200 字符；admin-only 访问限流"}
+  ],
+  "meta": {"estimated_time": "1h", "risk": "low", "autonomous": true, "checkpoint": false}
+}

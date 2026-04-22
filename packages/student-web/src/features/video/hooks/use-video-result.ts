@@ -14,6 +14,7 @@ import {
 export type VideoResultViewStatus =
   | 'loading'
   | 'success'
+  | 'deleted'
   | 'video-missing'
   | 'permission-denied'
   | 'error';
@@ -79,7 +80,16 @@ export function useVideoResult(
       viewStatus = 'error';
     }
   } else if (data) {
-    if (data.result && data.result.videoUrl) {
+    const status = String(data.status ?? '').toLowerCase();
+    const summary = String((data.result as { summary?: string } | null | undefined)?.summary ?? '');
+    const isDeleted =
+      status === 'deleted' ||
+      status === 'cancelled' ||
+      status === 'canceled' ||
+      summary === '任务已删除';
+    if (isDeleted) {
+      viewStatus = 'deleted';
+    } else if (data.result && data.result.videoUrl) {
       viewStatus = 'success';
     } else if (data.status === 'completed' && (!data.result || !data.result.videoUrl)) {
       viewStatus = 'video-missing';
