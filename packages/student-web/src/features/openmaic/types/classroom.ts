@@ -38,12 +38,29 @@ export interface AgentSummary {
   color: string;
 }
 
-/** 后端任务状态 */
-export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
+/** 后端任务状态（与 FastAPI openmaic job_runner.py 对齐） */
+export type JobStatus =
+  | 'pending'
+  | 'generating_outline'
+  | 'generating_scenes'
+  | 'running'
+  | 'ready'
+  | 'completed'
+  | 'failed';
 
 export interface ClassroomJobResponse {
   jobId: string;
   status: JobStatus;
+  /** 完成状态下后端回传的完整课堂 JSON（含 scenes / agents / outline 等）。 */
+  classroom?: Record<string, unknown> & {
+    id?: string;
+    name?: string;
+    requirement?: string;
+    generatedAt?: number;
+    scenes?: unknown[];
+    agents?: unknown[];
+  };
+  /** 历史字段，保留兼容。 */
   classroomId?: string;
   progress?: number;
   message?: string;
