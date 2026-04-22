@@ -189,7 +189,11 @@ def _read_image_as_base64(image_ref: str) -> tuple[str, str] | None:
         return None
     relative_path = image_ref.removeprefix("local://")
     settings = get_settings()
-    base_dir = Path(getattr(settings, "video_asset_root", "."))
+    # 与 LocalImageStorage 写入根一致；历史上误用了 video_asset_root 导致
+    # understanding 阶段 vision 永远读不到用户上传的图，静默退化为纯文本。
+    base_dir = Path(
+        getattr(settings, "video_image_storage_root", "data/uploads/video")
+    )
     full_path = base_dir / relative_path
     if not full_path.exists():
         return None

@@ -14,7 +14,7 @@ def test_read_image_as_base64_reads_jpeg(tmp_path, monkeypatch):
     from app.core.config import get_settings
 
     class MockSettings:
-        video_asset_root = str(tmp_path)
+        video_image_storage_root = str(tmp_path)
 
     monkeypatch.setattr("app.features.video.pipeline.services.get_settings", lambda: MockSettings())
 
@@ -32,7 +32,7 @@ def test_read_image_as_base64_reads_png(tmp_path, monkeypatch):
     from app.features.video.pipeline.services import get_settings
 
     class MockSettings:
-        video_asset_root = str(tmp_path)
+        video_image_storage_root = str(tmp_path)
 
     monkeypatch.setattr("app.features.video.pipeline.services.get_settings", lambda: MockSettings())
 

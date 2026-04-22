@@ -234,7 +234,9 @@ class PreprocessService:
     ) -> None:
         """初始化预处理服务。"""
         resolved_environment = normalize_preprocess_environment(environment or get_settings().environment)
-        resolved_image_storage = image_storage or LocalImageStorage()
+        resolved_image_storage = image_storage or LocalImageStorage(
+            base_dir=get_settings().video_image_storage_root
+        )
         resolved_ocr_provider = ocr_provider or MockOcrProvider()
 
         validate_preprocess_provider_gate(

@@ -191,6 +191,15 @@ class Settings(BaseSettings):
         default=str(PROJECT_ROOT / ".runtime" / "video-assets"),
         alias="FASTAPI_VIDEO_ASSET_ROOT",
     )
+    # 用户上传图片的本地存储根目录。与 video_asset_root 独立：前者用于用户
+    # 上传原图（LocalImageStorage 写入、后续 vision/OCR 读取），后者用于
+    # 渲染管线中间产物（CASES/、assets/、json_files/）。
+    # 历史默认为相对路径 "data/uploads/video"，依赖进程 CWD = 仓库根；这里
+    # 固化为绝对路径，避免 worker 与 fastapi 因 CWD 差异导致 vision 读不到图。
+    video_image_storage_root: str = Field(
+        default=str(PROJECT_ROOT.parents[1] / "data" / "uploads" / "video"),
+        alias="FASTAPI_VIDEO_IMAGE_STORAGE_ROOT",
+    )
     video_render_quality: str = Field(default="l", alias="FASTAPI_VIDEO_RENDER_QUALITY")
     video_fix_max_attempts: int = Field(
         default=2, alias="FASTAPI_VIDEO_FIX_MAX_ATTEMPTS"

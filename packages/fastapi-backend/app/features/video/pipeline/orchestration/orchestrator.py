@@ -718,7 +718,11 @@ class VideoPipelineService:
         if isinstance(multi, list):
             refs.extend(r for r in multi if isinstance(r, str) and r)
 
-        base_dir = Path(getattr(self._settings, "video_asset_root", "."))
+        # imageRef 由 LocalImageStorage 写入 video_image_storage_root（默认
+        # data/uploads/video），与管道中间产物根 video_asset_root 不同。
+        base_dir = Path(
+            getattr(self._settings, "video_image_storage_root", "data/uploads/video")
+        )
         resolved: list[Path] = []
         for ref in refs:
             if not ref.startswith("local://"):
