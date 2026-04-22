@@ -2,10 +2,11 @@
  * 文件说明：学习中心聚合页（Epic 9）。
  * 视觉结构直接对齐 Ux 成品页：12-学习中心页/01-learning.html
  */
+import { ChevronRight, Flame } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { SurfaceDashboardDock } from '@/components/surface/surface-dashboard-dock';
+import { GlobalTopNav, type WorkspaceRoute } from '@/components/navigation/global-top-nav';
 import { resolveLearningCenterAdapter } from '@/services/api/adapters/learning-center-adapter';
 import { useFeedback } from '@/shared/feedback';
 import { useAuthSessionStore } from '@/stores/auth-session-store';
@@ -14,7 +15,6 @@ import type { LearningCenterAggregateResponse, LearningCenterRecord } from '@/ty
 import { LearningCenterContinueCard } from './learning-center-continue-card';
 import { LearningCenterLibrary } from './learning-center-library';
 import { LearningCenterOverview } from './learning-center-overview';
-import { LearningCenterPageHeader } from './learning-center-page-header';
 import { LearningCenterRecentActivity } from './learning-center-recent-activity';
 import { isRecordDeleted } from './learning-center-record-filter';
 import { LearningCenterSidebarPathCard } from './learning-center-sidebar-path-card';
@@ -151,6 +151,20 @@ export function LearningCenterPage() {
     );
   }
 
+  const workspaceRoutes = t('entryNav.workspaceRoutes', { returnObjects: true }) as WorkspaceRoute[];
+  const streakBadge = (
+    <button
+      type="button"
+      className="hidden md:inline-flex items-center gap-2 rounded-full border border-transparent bg-text-primary dark:bg-surface-dark px-4 py-2 text-sm font-bold text-surface-light dark:text-text-primary-dark dark:border-bordercolor-dark shadow-sm transition-transform duration-200 hover:scale-[1.02]"
+    >
+      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand/20 dark:bg-brand/10">
+        <Flame className="h-3 w-3 fill-brand text-brand" />
+      </span>
+      <span>{t('learningCenter.page.streakLabel')}</span>
+      <ChevronRight className="h-3.5 w-3.5 opacity-50" />
+    </button>
+  );
+
   return (
     <div className="min-h-screen flex flex-col relative overflow-y-auto custom-scroll overflow-x-hidden surface-dashboard">
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
@@ -158,9 +172,18 @@ export function LearningCenterPage() {
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[400px] rounded-[100%] bg-brand/10 dark:bg-brand/5 blur-[120px] mix-blend-multiply dark:mix-blend-screen transition-colors duration-500" />
       </div>
 
-      <LearningCenterPageHeader />
+      <GlobalTopNav
+        links={[]}
+        variant="workspace"
+        workspaceRoutes={workspaceRoutes}
+        workspaceUtilitySlot={streakBadge}
+        showBrandIcon
+        showAuthAction
+        showLocaleToggle
+        className="xm-landing-glass-nav"
+      />
 
-      <main className="w-[94%] max-w-6xl mx-auto mt-10 mb-8 pb-32 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 relative z-10">
+      <main className="w-[94%] max-w-6xl mx-auto mt-10 mb-8 pb-16 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 relative z-10">
         <div className="lg:col-span-8 flex flex-col gap-6 md:gap-8">
           <section className="view-enter stagger-1 bg-transparent flex flex-col justify-center gap-1 mt-4 mb-2">
             <h1 className="text-[28px] md:text-3xl font-black text-text-primary dark:text-text-primary-dark tracking-tight">
@@ -186,8 +209,6 @@ export function LearningCenterPage() {
           <LearningCenterSidebarRecommendation recommendation={summary?.latestRecommendation ?? null} />
         </div>
       </main>
-
-      <SurfaceDashboardDock active="learning" />
     </div>
   );
 }
