@@ -249,20 +249,6 @@ export const zhCnEntryPageResources = {
 		    },
 		    suggestionsLabel: '试试这些题目',
 	    suggestions: ['证明洛必达法则', '求解偏导数方程', '解释傅里叶变换'],
-    guideCards: [
-      {
-        title: '没找到合适讲解？',
-        desc: '如果推荐区里暂时没有相似内容，也不会影响你继续拍题、粘贴题目或直接生成新视频。'
-      },
-      {
-        title: '登录后看更多',
-        desc: '登录即可解锁更多公开讲解。即使暂未登录，主流程仍然照常可用，绝不卡点。'
-      },
-      {
-        title: '网络不稳也能继续',
-        desc: '推荐内容加载慢时，先继续做题更高效。推荐区变慢不影响核心的题目分析与生成。'
-      }
-    ],
     feedTitle: '题目讲解视频浏览区',
     feedDesc: '先查看你自己的历史题目视频，再浏览其他同学生成的优质 Manim 动画讲解。',
     feedPrivateTitle: '我的题目',
@@ -271,7 +257,6 @@ export const zhCnEntryPageResources = {
     feedPrivateEmptyDesc: '完成生成后，最近的视频结果会自动出现在这里，方便你继续回看。',
     feedPublicTitle: '热门题目讲解视频',
     feedPublicDesc: '浏览其他同学生成的优质 Manim 动画讲解',
-    feedCategories: ['最近高分', '高等数学', '大学物理'],
     feedLoadMore: '加载更多解题视频',
     feedLoading: '正在拉取数据...',
     feedEmptyTitle: '暂无公开视频，快来创建第一个',
@@ -304,23 +289,8 @@ export const zhCnEntryPageResources = {
     submitLabel: '生成课堂',
     suggestionsLabel: 'Try These',
     suggestions: ['二叉树原理图解', '泰勒展开式推导', '微积分链式法则'],
-    guideCards: [
-      {
-        title: '没找到合适讲解？',
-        desc: '如果推荐区里暂时没有相似内容，也不会影响你继续上传课件或直接生成新课堂。'
-      },
-      {
-        title: '登录后看更多',
-        desc: '登录即可解锁更多公开课件。即使暂未登录，主流程仍然照常可用，绝不卡点。'
-      },
-      {
-        title: '网络不稳也能继续',
-        desc: '推荐内容加载慢时，先继续构思更高效。推荐区变慢不影响核心的课程生成。'
-      }
-    ],
     feedTitle: '探索优质课堂案例',
     feedDesc: '看看大家都在用小麦学什么系统课程',
-    feedCategories: ['推荐精选', '理工科', '经管文法'],
     feedLoadMore: '加载更多案例',
     feedLoading: '正在为您检索课程...'
   },
@@ -1022,20 +992,6 @@ export const enUsEntryPageResources = {
       'Solve partial differential equations',
       'Explain Fourier transform'
     ],
-    guideCards: [
-      {
-        title: 'No matching explainer?',
-        desc: "If similar content isn't available yet, you can still snap a problem, paste text, or generate a new video directly."
-      },
-      {
-        title: 'Sign in for more',
-        desc: 'Sign in to unlock more public explainers. The core flow works without an account — no blockers.'
-      },
-      {
-        title: 'Unstable network? Keep going',
-        desc: 'If recommendations load slowly, focus on your problem first. A slow feed never blocks core analysis and generation.'
-      }
-    ],
     feedTitle: 'Problem Video Library',
     feedDesc: 'Review your own recent videos first, then browse high-quality Manim animation explainers created by other students.',
     feedPrivateTitle: 'My Problems',
@@ -1044,7 +1000,6 @@ export const enUsEntryPageResources = {
     feedPrivateEmptyDesc: 'Once a video finishes generating, the latest results appear here for quick review.',
     feedPublicTitle: 'Trending Problem Explainers',
     feedPublicDesc: 'Browse high-quality Manim animation explainers created by other students',
-    feedCategories: ['Top Rated', 'Calculus', 'College Physics'],
     feedLoadMore: 'Load more explainers',
     feedLoading: 'Fetching data...',
     feedEmptyTitle: 'No public explainers yet. Be the first to create one.',
@@ -1081,23 +1036,8 @@ export const enUsEntryPageResources = {
       'Taylor expansion derivation',
       'Chain rule in calculus'
     ],
-    guideCards: [
-      {
-        title: 'No matching explainer?',
-        desc: "If similar content isn't available yet, you can still upload courseware or generate a new classroom directly."
-      },
-      {
-        title: 'Sign in for more',
-        desc: 'Sign in to unlock more public courseware. The core flow works without an account — no blockers.'
-      },
-      {
-        title: 'Unstable network? Keep going',
-        desc: 'If recommendations load slowly, keep brainstorming. A slow feed never blocks core classroom generation.'
-      }
-    ],
     feedTitle: 'Explore Quality Classrooms',
     feedDesc: 'See what systematic courses others are learning with XiaoMai',
-    feedCategories: ['Featured', 'STEM', 'Business & Liberal Arts'],
     feedLoadMore: 'Load more classrooms',
     feedLoading: 'Searching courses...'
   },

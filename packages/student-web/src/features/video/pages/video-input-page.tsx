@@ -11,8 +11,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import {
-	type GuideCardItem,
-	INPUT_PAGE_GUIDE_CARD_ICONS,
 	type InputWorkspaceNavLink,
 	type InputWorkspaceRoute,
 	WorkspaceInputShell,
@@ -188,9 +186,6 @@ export function VideoInputPage() {
 
 	const feedTitle = t('videoInput.feedTitle');
 	const feedDesc = t('videoInput.feedDesc');
-	const feedCategories = t('videoInput.feedCategories', {
-		returnObjects: true
-	}) as string[];
 	const feedPrivateTitle = t('videoInput.feedPrivateTitle');
 	const feedPrivateDesc = t('videoInput.feedPrivateDesc');
 	const feedPrivateEmptyTitle = t('videoInput.feedPrivateEmptyTitle');
@@ -211,16 +206,6 @@ export function VideoInputPage() {
 	const feedReuseAction = t('videoInput.feedReuseAction');
 	const feedReuseToastTitle = t('videoInput.feedReuseToastTitle');
 	const feedReuseToastDesc = t('videoInput.feedReuseToastDesc');
-
-	const guideCardsData = t('videoInput.guideCards', {
-		returnObjects: true
-	}) as Array<{ title: string; desc: string }>;
-
-	const guideCards: GuideCardItem[] = guideCardsData.map((card, i) => ({
-		icon: INPUT_PAGE_GUIDE_CARD_ICONS[i],
-		title: card.title,
-		desc: card.desc
-	}));
 
 	const onFormSubmit = useCallback(
 		(values: VideoInputFormValues) => {
@@ -428,10 +413,8 @@ export function VideoInputPage() {
 					setValue('inputType', 'text');
 				}
 			}}
-			guideCards={guideCards}
 			feedTitle={feedTitle}
 			feedDescription={feedDesc}
-			feedCategories={feedCategories}
 			feedCards={[]}
 			feedLoadMoreLabel={feedLoadMore}
 			feedLoadingLabel={feedLoading}
@@ -439,7 +422,6 @@ export function VideoInputPage() {
 				<VideoPublicFeed
 					title={feedTitle}
 					description={feedDesc}
-					categories={feedCategories}
 					privateTitle={feedPrivateTitle}
 					privateDescription={feedPrivateDesc}
 					privateEmptyTitle={feedPrivateEmptyTitle}

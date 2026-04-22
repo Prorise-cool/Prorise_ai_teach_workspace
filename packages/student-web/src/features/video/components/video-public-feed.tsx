@@ -1,14 +1,21 @@
 /**
- * 文件说明：视频输入页视频浏览区。
- * 通过 tabs 在“我的题目（私有）”与“公开题目”之间切换浏览。
+ * 文件说明：视频输入页的作品展示区。
+ *
+ * 布局：
+ *   - 顶部标题/简介。
+ *   - 一条 Tabs：我的题目 / 公开题目（默认进入「公开」，若有历史私有视频自动切到「我的」）。
+ *   - 卡片风格参考 OpenMAIC 首页 "Recent classrooms"：
+ *       · 纯缩略图容器，无边框无阴影
+ *       · 16:9 圆角 rounded-2xl，hover 时 scale-[1.02]
+ *       · 信息放在缩略图外面（胶囊徽章 + 标题 + 次级元信息）
+ *   - 配色严格使用全局 token：bg-secondary / bg-primary/10 / text-primary ...
  */
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
-import { Clock3, Eye, Globe2, LockKeyhole } from 'lucide-react';
+import { Clock3, Eye, Globe2, LockKeyhole, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { VideoWorkspaceTaskItem } from '@/features/video/components/video-workspace-task-shared';
 import { usePublicVideos } from '@/features/video/hooks/use-public-videos';
@@ -24,7 +31,6 @@ type DiscoveryTab = 'private' | 'public';
 type VideoPublicFeedProps = {
   title: string;
   description: string;
-  categories: string[];
   privateTitle: string;
   privateDescription: string;
   privateEmptyTitle: string;
@@ -60,22 +66,15 @@ type DiscoveryCard = {
 
 function formatDateLabel(value: string) {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
+  if (Number.isNaN(parsed.getTime())) return value;
   return `${parsed.getFullYear()}.${String(parsed.getMonth() + 1).padStart(2, '0')}.${String(parsed.getDate()).padStart(2, '0')}`;
 }
 
 function formatDurationLabel(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds <= 0) {
-    return null;
-  }
-
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
   const normalizedSeconds = Math.floor(seconds);
   const minutes = Math.floor(normalizedSeconds / 60);
   const remainingSeconds = normalizedSeconds % 60;
-
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
@@ -84,7 +83,6 @@ function buildPublicDiscoveryCard(
   visibilityLabel: string,
 ): DiscoveryCard {
   const routeId = card.resultId ?? card.videoId;
-
   return {
     id: routeId,
     title: card.title,
@@ -98,182 +96,143 @@ function buildPublicDiscoveryCard(
   };
 }
 
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function CardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="xm-video-discovery__state xm-video-discovery__state--empty"
-      role="status"
-    >
-      <p className="xm-video-discovery__state-title">{title}</p>
-      <p className="xm-video-discovery__state-description">{description}</p>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8">
+      {children}
     </div>
   );
 }
 
-function ErrorState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div
-      className="xm-video-discovery__state xm-video-discovery__state--error"
-      role="status"
-    >
-      <p className="xm-video-discovery__state-title">{title}</p>
-      <p className="xm-video-discovery__state-description">{description}</p>
-    </div>
-  );
-}
-
-function DiscoverySkeletonGrid({ count }: { count: number }) {
-  return (
-    <div className="xm-video-discovery__grid" aria-hidden="true">
-      {Array.from({ length: count }).map((_, index) => (
-        <article
-          key={`video-discovery-skeleton-${index}`}
-          className="xm-video-discovery__card xm-video-discovery__card--skeleton"
-        >
-          <div className="xm-video-discovery__card-media" />
-          <div className="xm-video-discovery__card-body">
-            <div className="xm-video-discovery__card-line xm-video-discovery__card-line--short" />
-            <div className="xm-video-discovery__card-line" />
-            <div className="xm-video-discovery__card-line xm-video-discovery__card-line--muted" />
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function VideoDiscoveryCard({
+function DiscoveryCardItem({
   card,
-  visibilityTone,
   actionLabel,
   onReuse,
   reuseLabel,
   publishedBadgeLabel,
+  tone,
 }: {
   card: DiscoveryCard;
-  visibilityTone: 'private' | 'public';
   actionLabel: string;
   onReuse?: () => void;
   reuseLabel?: string;
   publishedBadgeLabel?: string;
+  tone: 'public' | 'private';
 }) {
   return (
-    <article
-      className={cn(
-        'xm-video-discovery__card',
-        visibilityTone === 'private' && 'xm-video-discovery__card--private',
-      )}
-    >
-      <Link
-        className="xm-video-discovery__card-link"
-        to={card.routeTo}
-        aria-label={`${actionLabel}：${card.title}`}
-      >
-        <div className="xm-video-discovery__card-media">
+    <article className="group">
+      <Link to={card.routeTo} aria-label={actionLabel} className="block">
+        <div className="relative w-full aspect-[16/9] rounded-2xl bg-secondary/60 overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]">
           {card.coverUrl ? (
-            <img src={card.coverUrl} alt={card.title} loading="lazy" />
+            <img
+              src={card.coverUrl}
+              alt={card.title}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <div className="xm-video-discovery__card-fallback">
-              <span>{card.title}</span>
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <span className="text-center text-xs font-medium text-muted-foreground line-clamp-4">
+                {card.title}
+              </span>
             </div>
           )}
+
           {card.published && publishedBadgeLabel ? (
-            <Badge
-              variant="secondary"
-              className="xm-video-discovery__card-published"
-            >
+            <span className="absolute bottom-2 left-2 inline-flex items-center rounded-full bg-[color:var(--xm-color-success)]/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
               {publishedBadgeLabel}
-            </Badge>
+            </span>
           ) : null}
+
+          {onReuse && reuseLabel ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onReuse();
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-background/85 hover:bg-primary text-foreground hover:text-primary-foreground border border-border/60 backdrop-blur-sm text-[11px] font-medium px-2.5 py-1"
+            >
+              {reuseLabel}
+            </button>
+          ) : null}
+
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <PlayCircle className="size-12 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]" />
+          </div>
         </div>
       </Link>
 
-      <div className="xm-video-discovery__card-body">
-        <div className="xm-video-discovery__card-badges">
-          <Badge variant="outline" className="xm-video-discovery__card-visibility">
-            {card.visibilityLabel}
-          </Badge>
-        </div>
-
-        <Link className="xm-video-discovery__card-link" to={card.routeTo}>
-          <h3 className="xm-video-discovery__card-title">{card.title}</h3>
+      <div className="mt-2.5 px-1 flex items-center gap-2 min-w-0">
+        <span
+          className={cn(
+            'shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
+            tone === 'public'
+              ? 'bg-primary/12 text-primary'
+              : 'bg-secondary text-muted-foreground',
+          )}
+        >
+          {card.updatedAtLabel}
+          {card.durationLabel ? ` · ${card.durationLabel}` : ''}
+        </span>
+        <Link
+          to={card.routeTo}
+          className="font-medium text-[15px] truncate text-foreground/90 hover:text-foreground min-w-0"
+        >
+          {card.title}
         </Link>
+      </div>
 
-        <div className="xm-video-discovery__card-meta">
-          <span>{card.updatedAtLabel}</span>
-          {card.durationLabel ? (
-            <span>
-              <Clock3 className="h-3.5 w-3.5" />
-              {card.durationLabel}
-            </span>
-          ) : null}
+      {card.authorName || typeof card.viewCount === 'number' ? (
+        <div className="mt-1 px-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+          {card.authorName ? <span className="truncate">{card.authorName}</span> : null}
           {typeof card.viewCount === 'number' ? (
-            <span>
-              <Eye className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Eye className="size-3" />
               {card.viewCount}
             </span>
           ) : null}
         </div>
-
-        {card.authorName ? (
-          <p className="xm-video-discovery__card-author">{card.authorName}</p>
-        ) : null}
-
-        <div className="xm-video-discovery__card-actions">
-          <Button asChild variant="outline" size="sm">
-            <Link to={card.routeTo}>{actionLabel}</Link>
-          </Button>
-          {onReuse && reuseLabel ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onReuse}>
-              {reuseLabel}
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      ) : null}
     </article>
   );
 }
 
-function SectionHeader({
-  icon,
-  title,
-  description,
-  count,
-  trailing,
-}: {
-  icon: 'private' | 'public';
-  title: string;
-  description: string;
-  count: number;
-  trailing?: ReactNode;
-}) {
-  const Icon = icon === 'private' ? LockKeyhole : Globe2;
-
+function SkeletonGrid({ count }: { count: number }) {
   return (
-    <div className="xm-video-discovery__section-header">
-      <div className="xm-video-discovery__section-copy">
-        <div className="xm-video-discovery__section-kicker">
-          <Icon className="h-3.5 w-3.5" />
-          <span>{title}</span>
-          <span className="xm-video-discovery__section-count">{count}</span>
+    <CardGrid>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={`video-discovery-skeleton-${i}`}
+          data-testid="video-feed-skeleton"
+          className="animate-pulse"
+        >
+          <div className="w-full aspect-[16/9] rounded-2xl bg-secondary/60" />
+          <div className="mt-2.5 px-1 flex items-center gap-2">
+            <div className="h-4 w-16 rounded-full bg-secondary/60" />
+            <div className="h-4 flex-1 rounded-md bg-secondary/60" />
+          </div>
         </div>
-        <p className="xm-video-discovery__section-description">{description}</p>
-      </div>
-      {trailing ? (
-        <div className="xm-video-discovery__section-trailing">{trailing}</div>
-      ) : null}
+      ))}
+    </CardGrid>
+  );
+}
+
+function EmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="py-10 text-center">
+      <p className="text-sm font-semibold text-foreground/80">{title}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function ErrorState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="py-10 text-center">
+      <p className="text-sm font-semibold text-destructive">{title}</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -281,7 +240,6 @@ function SectionHeader({
 export function VideoPublicFeed({
   title,
   description,
-  categories,
   privateTitle,
   privateDescription,
   privateEmptyTitle,
@@ -322,14 +280,11 @@ export function VideoPublicFeed({
     })),
   });
 
-  const privateCards = useMemo(
+  const privateCards = useMemo<DiscoveryCard[]>(
     () =>
       privateTasks.flatMap((task, index) => {
         const result = privateResultQueries[index]?.data?.result;
-        if (!result) {
-          return [];
-        }
-
+        if (!result) return [];
         return [
           {
             id: task.taskId,
@@ -340,7 +295,7 @@ export function VideoPublicFeed({
             updatedAtLabel: formatDateLabel(result.completedAt || task.updatedAt),
             durationLabel: formatDurationLabel(result.duration),
             published: result.published,
-          } satisfies DiscoveryCard,
+          },
         ];
       }),
     [privateResultQueries, privateTasks, privateVisibilityLabel],
@@ -348,10 +303,7 @@ export function VideoPublicFeed({
 
   const publicSourceCards = publicVideosQuery.data?.items ?? [];
   const publicCards = useMemo(
-    () =>
-      publicSourceCards.map((card) =>
-        buildPublicDiscoveryCard(card, publicVisibilityLabel),
-      ),
+    () => publicSourceCards.map((card) => buildPublicDiscoveryCard(card, publicVisibilityLabel)),
     [publicSourceCards, publicVisibilityLabel],
   );
 
@@ -362,18 +314,17 @@ export function VideoPublicFeed({
   const preferredTab: DiscoveryTab = privateTasks.length > 0 ? 'private' : 'public';
 
   useEffect(() => {
-    if (hasManualTabSelection) {
-      return;
-    }
-
+    if (hasManualTabSelection) return;
     setActiveTab(preferredTab);
   }, [hasManualTabSelection, preferredTab]);
 
   return (
-    <section className="xm-video-discovery">
-      <div className="xm-video-discovery__intro">
-        <h2 className="xm-video-discovery__title">{title}</h2>
-        <p className="xm-video-discovery__description">{description}</p>
+    <section className="relative z-10 w-full max-w-6xl mx-auto px-4 flex flex-col gap-6">
+      <div className="text-center">
+        <h2 className="text-2xl md:text-[28px] font-black tracking-tight text-foreground">
+          {title}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
       </div>
 
       <Tabs
@@ -382,117 +333,90 @@ export function VideoPublicFeed({
           setHasManualTabSelection(true);
           setActiveTab(value as DiscoveryTab);
         }}
-        className="xm-video-discovery__tabs"
+        className="w-full"
       >
-        <TabsList className="xm-video-discovery__tabs-list">
-          <TabsTrigger
-            value="private"
-            className="xm-video-discovery__tabs-trigger after:hidden"
-          >
-            <LockKeyhole className="h-3.5 w-3.5" />
-            <span>{privateTitle}</span>
-            <span className="xm-video-discovery__tabs-count">{privateTasks.length}</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="public"
-            className="xm-video-discovery__tabs-trigger after:hidden"
-          >
-            <Globe2 className="h-3.5 w-3.5" />
-            <span>{publicTitle}</span>
-            <span className="xm-video-discovery__tabs-count">{publicCards.length}</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          {/* 极轻量切换：纯文本 + 斜杠分隔，激活项用 brand 色加下划线，没有胶囊/盒子 */}
+          <TabsList className="h-auto inline-flex items-center gap-2 bg-transparent p-0 text-[13px]">
+            <TabsTrigger
+              value="private"
+              className="group inline-flex items-center gap-1.5 rounded-none px-0 py-1 font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:text-primary data-[state=active]:font-semibold"
+            >
+              <LockKeyhole className="size-3.5" />
+              <span>{privateTitle}</span>
+              <span className="text-[11px] tabular-nums opacity-60 group-data-[state=active]:opacity-90">
+                {privateTasks.length}
+              </span>
+            </TabsTrigger>
+            <span aria-hidden="true" className="select-none text-muted-foreground/40">/</span>
+            <TabsTrigger
+              value="public"
+              className="group inline-flex items-center gap-1.5 rounded-none px-0 py-1 font-medium text-muted-foreground transition-colors hover:text-foreground data-[state=active]:text-primary data-[state=active]:font-semibold"
+            >
+              <Globe2 className="size-3.5" />
+              <span>{publicTitle}</span>
+              <span className="text-[11px] tabular-nums opacity-60 group-data-[state=active]:opacity-90">
+                {publicCards.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="private" className="xm-video-discovery__tabs-content">
-          <div className="xm-video-discovery__section">
-            <SectionHeader
-              icon="private"
-              title={privateTitle}
-              description={privateDescription}
-              count={privateTasks.length}
-            />
-
-            {isPrivateLoading ? (
-              <DiscoverySkeletonGrid count={PRIVATE_SECTION_SKELETON_COUNT} />
-            ) : null}
-
-            {!isPrivateLoading && privateCards.length === 0 ? (
-              <EmptyState
-                title={privateEmptyTitle}
-                description={privateEmptyDescription}
-              />
-            ) : null}
-
-            {!isPrivateLoading && privateCards.length > 0 ? (
-              <div className="xm-video-discovery__grid">
-                {privateCards.map((card) => (
-                  <VideoDiscoveryCard
-                    key={card.id}
+        <TabsContent value="private" className="mt-8">
+          <p className="text-center text-xs text-muted-foreground mb-6">{privateDescription}</p>
+          {isPrivateLoading ? (
+            <SkeletonGrid count={PRIVATE_SECTION_SKELETON_COUNT} />
+          ) : privateCards.length === 0 ? (
+            <EmptyState title={privateEmptyTitle} description={privateEmptyDescription} />
+          ) : (
+            <CardGrid>
+              {privateCards.map((card, index) => (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04, duration: 0.35, ease: 'easeOut' }}
+                >
+                  <DiscoveryCardItem
                     card={card}
-                    visibilityTone="private"
+                    tone="private"
                     actionLabel={privateViewActionLabel}
                     publishedBadgeLabel={publishedBadgeLabel}
                   />
-                ))}
-              </div>
-            ) : null}
-          </div>
+                </motion.div>
+              ))}
+            </CardGrid>
+          )}
         </TabsContent>
 
-        <TabsContent value="public" className="xm-video-discovery__tabs-content">
-          <div className="xm-video-discovery__section xm-video-discovery__section--public">
-            <SectionHeader
-              icon="public"
-              title={publicTitle}
-              description={publicDescription}
-              count={publicCards.length}
-              trailing={
-                categories.length > 0 ? (
-                  <div className="xm-video-discovery__chips">
-                    {categories.map((category) => (
-                      <span
-                        key={category}
-                        className="xm-video-discovery__chip"
-                      >
-                        {category}
-                      </span>
-                    ))}
-                  </div>
-                ) : null
-              }
-            />
-
-            {publicVideosQuery.isLoading ? (
-              <DiscoverySkeletonGrid count={PUBLIC_SECTION_SKELETON_COUNT} />
-            ) : null}
-
-            {!publicVideosQuery.isLoading && publicVideosQuery.isError ? (
-              <ErrorState title={errorTitle} description={errorDescription} />
-            ) : null}
-
-            {!publicVideosQuery.isLoading &&
-            !publicVideosQuery.isError &&
-            publicCards.length === 0 ? (
-              <EmptyState title={emptyTitle} description={emptyDescription} />
-            ) : null}
-
-            {!publicVideosQuery.isLoading &&
-            !publicVideosQuery.isError &&
-            publicCards.length > 0 ? (
-              <div className="xm-video-discovery__grid">
-                {publicCards.map((card, index) => (
-                  <VideoDiscoveryCard
-                    key={card.id}
+        <TabsContent value="public" className="mt-8">
+          <p className="text-center text-xs text-muted-foreground mb-6">{publicDescription}</p>
+          {publicVideosQuery.isLoading ? (
+            <SkeletonGrid count={PUBLIC_SECTION_SKELETON_COUNT} />
+          ) : publicVideosQuery.isError ? (
+            <ErrorState title={errorTitle} description={errorDescription} />
+          ) : publicCards.length === 0 ? (
+            <EmptyState title={emptyTitle} description={emptyDescription} />
+          ) : (
+            <CardGrid>
+              {publicCards.map((card, index) => (
+                <motion.div
+                  key={card.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04, duration: 0.35, ease: 'easeOut' }}
+                >
+                  <DiscoveryCardItem
                     card={card}
-                    visibilityTone="public"
+                    tone="public"
                     actionLabel={viewActionLabel}
                     reuseLabel={reuseActionLabel}
                     onReuse={() => onReuseSourceText(publicSourceCards[index])}
                   />
-                ))}
-              </div>
-            ) : null}
-          </div>
+                </motion.div>
+              ))}
+            </CardGrid>
+          )}
         </TabsContent>
       </Tabs>
     </section>

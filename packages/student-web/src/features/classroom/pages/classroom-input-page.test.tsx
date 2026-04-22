@@ -55,17 +55,6 @@ describe('ClassroomInputPage', () => {
     expect(screen.getByText('二叉树原理图解')).toBeInTheDocument();
   });
 
-  it('renders three guide cards', async () => {
-    await seedMockAuthSession();
-    const router = createClassroomRouter();
-
-    renderWithApp(<RouterProvider router={router} />);
-
-    expect(screen.getByText('没找到合适讲解？')).toBeInTheDocument();
-    expect(screen.getByText('登录后看更多')).toBeInTheDocument();
-    expect(screen.getByText('网络不稳也能继续')).toBeInTheDocument();
-  });
-
   it('renders the community feed with at least 6 cards', async () => {
     await seedMockAuthSession();
     const router = createClassroomRouter();

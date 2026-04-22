@@ -203,26 +203,6 @@ describe('VideoInputPage', () => {
 		expect(screen.getByText('证明洛必达法则')).toBeInTheDocument();
 	});
 
-	it('renders three guide cards', async () => {
-		const session = await mockAuthService.login({
-			username: 'admin',
-			password: 'admin123'
-		});
-
-		useAuthSessionStore.getState().setSession(session);
-		const router = createVideoRouter();
-
-		render(
-			<AppProvider>
-				<RouterProvider router={router} />
-			</AppProvider>
-		);
-
-		expect(screen.getByText('没找到合适讲解？')).toBeInTheDocument();
-		expect(screen.getByText('登录后看更多')).toBeInTheDocument();
-		expect(screen.getByText('网络不稳也能继续')).toBeInTheDocument();
-	});
-
 	it('renders the public video feed with at least 6 cards', async () => {
 		const session = await mockAuthService.login({
 			username: 'admin',
@@ -344,7 +324,7 @@ describe('VideoInputPage', () => {
 
 		expect(screen.getByText('已公开')).toBeInTheDocument();
 		expect(
-			screen.getByRole('link', { name: '查看结果：导数定义的动画直觉' }),
+			screen.getByRole('link', { name: '查看结果' }),
 		).toHaveAttribute('href', '/video/vtask_completed_private_001');
 		expect(screen.queryByText('洛必达法则的完整推导')).not.toBeInTheDocument();
 
@@ -456,7 +436,7 @@ describe('VideoInputPage', () => {
 		);
 
 		expect(
-			container.querySelectorAll('.xm-video-discovery__card--skeleton'),
+			container.querySelectorAll('[data-testid="video-feed-skeleton"]'),
 		).toHaveLength(6);
 		expect(screen.queryByText('洛必达法则的完整推导')).not.toBeInTheDocument();
 	});

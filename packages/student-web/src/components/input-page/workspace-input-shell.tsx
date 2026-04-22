@@ -13,10 +13,6 @@ import { CommunityFeed } from '@/components/community-feed';
 import type { CommunityWorkCard } from '@/components/community-feed/community-feed-types';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 
-import {
-	InputPageGuideCards,
-	type GuideCardItem,
-} from './input-page-guide-cards';
 import { InputPageHeader } from './input-page-header';
 import { InputPageSuggestions } from './input-page-suggestions';
 
@@ -69,14 +65,10 @@ type WorkspaceInputShellProps = {
 	suggestions: string[];
 	/** 点击建议标签时的回调。 */
 	onSuggestionSelect?: (pill: string) => void;
-	/** 引导卡片列表。 */
-	guideCards: GuideCardItem[];
 	/** 社区瀑布流标题。 */
 	feedTitle: string;
 	/** 社区瀑布流描述。 */
 	feedDescription: string;
-	/** 社区分类。 */
-	feedCategories: string[];
 	/** 社区卡片列表。 */
 	feedCards: CommunityWorkCard[];
 	/** 顶栏右侧功能插槽。 */
@@ -128,10 +120,8 @@ export function WorkspaceInputShell({
 	suggestionsLabel,
 	suggestions,
 	onSuggestionSelect,
-	guideCards,
 	feedTitle,
 	feedDescription,
-	feedCategories,
 	feedCards,
 	workspaceUtilitySlot,
 	feedLoadMoreLabel,
@@ -204,16 +194,11 @@ export function WorkspaceInputShell({
 				<div className={content.className}>{contentSections}</div>
 			)}
 
-			<motion.div variants={itemVariants} className="w-full flex justify-center">
-				<InputPageGuideCards cards={guideCards} />
-			</motion.div>
-
 			<motion.div variants={itemVariants} className="w-full max-w-7xl mx-auto">
 				{feedSlot ?? (
 					<CommunityFeed
 						title={feedTitle}
 						description={feedDescription}
-						categories={feedCategories}
 						cards={feedCards}
 						loadMoreLabel={feedLoadMoreLabel}
 						loadingLabel={feedLoadingLabel}

@@ -10,12 +10,10 @@ import {
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import {
-	INPUT_PAGE_GUIDE_CARD_ICONS,
 	type InputWorkspaceNavLink,
 	type InputWorkspaceRoute,
 	useFileDropzone,
 	useBrowserAsr,
-	type GuideCardItem,
 	WorkspaceInputShell
 } from '@/components/input-page';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
@@ -77,21 +75,8 @@ export function ClassroomInputPage() {
 
 	const feedTitle = t('classroomInput.feedTitle');
 	const feedDesc = t('classroomInput.feedDesc');
-	const feedCategories = t('classroomInput.feedCategories', {
-		returnObjects: true
-	}) as string[];
 	const feedLoadMore = t('classroomInput.feedLoadMore');
 	const feedLoading = t('classroomInput.feedLoading');
-
-	const guideCardsData = t('classroomInput.guideCards', {
-		returnObjects: true
-	}) as Array<{ title: string; desc: string }>;
-
-	const guideCards: GuideCardItem[] = guideCardsData.map((card, i) => ({
-		icon: INPUT_PAGE_GUIDE_CARD_ICONS[i],
-		title: card.title,
-		desc: card.desc
-	}));
 
 	return (
 		<WorkspaceInputShell
@@ -146,10 +131,8 @@ export function ClassroomInputPage() {
 			onSuggestionSelect={pill => {
 				console.log(`[ClassroomInput] 建议: ${pill}`);
 			}}
-			guideCards={guideCards}
 			feedTitle={feedTitle}
 			feedDescription={feedDesc}
-			feedCategories={feedCategories}
 			feedCards={CLASSROOM_FEED_MOCK_CARDS}
 			feedLoadMoreLabel={feedLoadMore}
 			feedLoadingLabel={feedLoading}

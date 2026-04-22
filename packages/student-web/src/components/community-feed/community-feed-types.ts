@@ -37,8 +37,6 @@ export type CommunityFeedProps = {
   title: string;
   /** 瀑布流副标题。 */
   description: string;
-  /** 分类标签列表。 */
-  categories: string[];
   /** 作品卡片数据。 */
   cards: CommunityWorkCard[];
   /** "加载更多"按钮文案（不传则不显示按钮）。 */
