@@ -338,6 +338,19 @@ async function loadOpenMAICClassroomRoute() {
 }
 
 /**
+ * 按需加载 OpenMAIC 设置页（Provider 偏好 / Web 搜索开关）。
+ */
+async function loadOpenMAICSettingsRoute() {
+	const { OpenMAICSettingsPage } = await import(
+		'@/features/openmaic/pages/openmaic-settings-page'
+	);
+
+	return {
+		Component: OpenMAICSettingsPage
+	};
+}
+
+/**
  * 按需加载公开视频结果详情页路由。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -456,6 +469,10 @@ export function createAppRouter() {
 						{
 							path: 'openmaic/classroom/:classroomId',
 							lazy: loadOpenMAICClassroomRoute
+						},
+						{
+							path: 'openmaic/settings',
+							lazy: loadOpenMAICSettingsRoute
 						}
 					]
 				},

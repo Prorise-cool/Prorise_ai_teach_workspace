@@ -22,7 +22,7 @@ def _make_job_store():
     return JobStore(get_runtime_store())
 
 
-@dramatiq.actor(queue_name="openmaic-jobs", max_retries=0, time_limit=30 * 60 * 1000)
+@dramatiq.actor(max_retries=0, time_limit=30 * 60 * 1000)
 def run_classroom_generation(
     job_id: str,
     requirement: str,
