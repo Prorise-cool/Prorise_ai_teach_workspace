@@ -225,10 +225,13 @@ def test_understanding_service_parses_json_and_persists_runtime() -> None:
     assert persisted.topic_summary == result.topic_summary
     prompt = service.failover_service.generate_calls[0]["prompt"]
     assert "请严格返回一个 JSON 对象" in prompt
-    assert "你的目标不是写学术摘要" in prompt
-    assert "4-6 句老师式快速讲解" in prompt
-    assert "不要写成论文摘要、证明提纲" in prompt
-    assert "Markdown 或 LaTeX 公式" in prompt
+    assert "信息密度优先" in prompt
+    assert "复原题面" in prompt
+    assert "点出题眼" in prompt
+    assert "给出主线" in prompt
+    assert "LaTeX" in prompt
+    # 禁令：不能继续退化为纯苏格拉底提问
+    assert "不许通篇靠" in prompt
 
 
 def test_understanding_service_parses_fenced_json_payload() -> None:
