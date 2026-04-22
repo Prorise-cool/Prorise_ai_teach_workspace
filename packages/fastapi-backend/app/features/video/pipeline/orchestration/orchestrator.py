@@ -156,6 +156,9 @@ class _PipelineContext:
     work_dir: Path
     video_root: Path
     pipeline_started_at: float
+    # 用户上传图片（local:// 解析后的绝对路径）。分镜设计阶段会喂给多模态模型，
+    # 让 LLM 真正"看见"图片内容，而不是只吃 understanding 抽取的文字摘要。
+    reference_images: list[Path] = field(default_factory=list)
     # learning_coach 预生成 task，由 _run_design_stage 启动（understanding 后），
     # _run_finalize 在 video upload 完成前 await 它。与 storyboard/manim/render/TTS
     # 完全并行，视频通常 3-8min，preload 只需 20-40s，隐藏无痕。
@@ -682,7 +685,14 @@ class VideoPipelineService:
         ref_mapping = video_root / "json_files" / "long_video_ref_mapping.json"
         if not ref_mapping.exists():
             ref_mapping.write_text("{}", encoding="utf-8")
-        logger.info("Pipeline start  task_id=%s  work_dir=%s", task_id, work_dir)
+
+        reference_images = self._resolve_reference_images(source_payload)
+        logger.info(
+            "Pipeline start  task_id=%s  work_dir=%s  reference_images=%d",
+            task_id,
+            work_dir,
+            len(reference_images),
+        )
 
         return _PipelineContext(
             task_id=task_id,
@@ -690,7 +700,35 @@ class VideoPipelineService:
             work_dir=work_dir,
             video_root=video_root,
             pipeline_started_at=time.monotonic(),
+            reference_images=reference_images,
         )
+
+    def _resolve_reference_images(
+        self, source_payload: dict[str, Any]
+    ) -> list[Path]:
+        """Resolve local:// imageRef(s) in source_payload into absolute Paths.
+
+        前端目前只上传单张，但留出 list 接口以便后续扩展。
+        """
+        refs: list[str] = []
+        single = source_payload.get("imageRef")
+        if isinstance(single, str) and single:
+            refs.append(single)
+        multi = source_payload.get("imageRefs")
+        if isinstance(multi, list):
+            refs.extend(r for r in multi if isinstance(r, str) and r)
+
+        base_dir = Path(getattr(self._settings, "video_asset_root", "."))
+        resolved: list[Path] = []
+        for ref in refs:
+            if not ref.startswith("local://"):
+                continue
+            full_path = base_dir / ref.removeprefix("local://")
+            if full_path.exists():
+                resolved.append(full_path)
+            else:
+                logger.warning("Reference image not found on disk: %s", full_path)
+        return resolved
 
     # ── Stage 2: Resolve providers & create agent ──────────────────
 
@@ -753,6 +791,7 @@ class VideoPipelineService:
             work_dir=ctx.work_dir,
             bridge=bridge,
             assembly=assembly,
+            reference_images=ctx.reference_images,
         )
         self._bind_agent_section_callback(agent, loop, task, runtime)
         return _AgentSetup(assembly=assembly, bridge=bridge, agent=agent, loop=loop)
@@ -1944,6 +1983,7 @@ class VideoPipelineService:
         work_dir: Path,
         bridge: LLMBridge,
         assembly: VideoProviderRuntimeAssembly | None = None,
+        reference_images: list[Path] | None = None,
     ) -> TeachingVideoAgent:
         """创建 Code2Video agent，优先走 section 级生成/渲染路径。
 
@@ -2046,6 +2086,7 @@ class VideoPipelineService:
             knowledge_point=knowledge_point,
             folder=str(work_dir),
             cfg=cfg,
+            reference_images=list(reference_images or []),
         )
 
     def _build_preview_from_agent(

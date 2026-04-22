@@ -115,10 +115,12 @@ class TeachingVideoAgent:
         knowledge_point,
         folder="CASES",
         cfg: Optional[RunConfig] = None,
+        reference_images: Optional[List[Path]] = None,
     ):
         self.learning_topic = knowledge_point
         self.idx = idx
         self.cfg = cfg or RunConfig()
+        self.reference_images: List[Path] = list(reference_images or [])
 
         self.API = self.cfg.api
         self.max_code_token_length = self.cfg.max_code_token_length
@@ -221,6 +223,7 @@ class TeachingVideoAgent:
                 section_count=self.section_count,
                 section_duration=self.section_duration_seconds,
                 layout_hint=self.layout_hint or DEFAULT_LAYOUT_FAMILY,
+                reference_images=self.reference_images or None,
                 api_func=self._request_api_and_track_tokens,
                 max_tokens=self.max_code_token_length,
             )
