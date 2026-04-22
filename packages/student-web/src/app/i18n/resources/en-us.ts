@@ -7,6 +7,7 @@ import { enUsLearningCenterResources } from '@/app/i18n/resources/learning-cente
 import { enUsProfileOnboardingResources } from '@/app/i18n/resources/profile-onboarding-content';
 import { enUsUserSettingsResources } from '@/app/i18n/resources/user-settings-content';
 import { enUsVideoResources } from '@/app/i18n/resources/video-content';
+import { enUsOpenMAICResources } from '@/app/i18n/resources/openmaic-content';
 
 export const enUsResources = {
   auth: {
@@ -178,5 +179,6 @@ export const enUsResources = {
   ...enUsEntryPageResources,
   ...enUsVideoResources,
   ...enUsLearningCenterResources,
-  ...enUsUserSettingsResources
+  ...enUsUserSettingsResources,
+  ...enUsOpenMAICResources
 } as const;
