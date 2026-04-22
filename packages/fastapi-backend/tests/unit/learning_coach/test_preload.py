@@ -62,6 +62,34 @@ class _StubLLMProvider:
         return ProviderResult(provider=self.provider_id, content=self._responses.pop(0))
 
 
+class _StubVisionProvider:
+    """支持 vision 的 provider 替身：用于验证 image_ref 到 generate_vision 的传递。"""
+
+    provider_id = "stub-vision"
+    config = ProviderRuntimeConfig(provider_id="stub-vision")
+
+    def __init__(self, responses: list[str]) -> None:
+        self._responses = list(responses)
+        self.text_calls: list[str] = []
+        self.vision_calls: list[dict[str, str]] = []
+
+    async def generate(self, prompt: str) -> ProviderResult:
+        self.text_calls.append(prompt)
+        if not self._responses:
+            raise llm_generator.LLMGenerationError("stub: exhausted")
+        return ProviderResult(provider=self.provider_id, content=self._responses.pop(0))
+
+    async def generate_vision(
+        self, prompt: str, *, image_base64: str, image_media_type: str = "image/jpeg"
+    ) -> ProviderResult:
+        self.vision_calls.append(
+            {"prompt": prompt, "mime": image_media_type, "b64_len": str(len(image_base64))}
+        )
+        if not self._responses:
+            raise llm_generator.LLMGenerationError("stub: exhausted")
+        return ProviderResult(provider=self.provider_id, content=self._responses.pop(0))
+
+
 def _questions_payload(count: int) -> str:
     questions = []
     for idx in range(1, count + 1):
@@ -274,3 +302,93 @@ async def test_build_entry_skips_preload_when_lock_held(
     await service.build_entry(source)
 
     assert actor.sent == []  # 锁存在：跳过
+
+
+@pytest.mark.asyncio
+async def test_quiz_generation_uses_vision_when_image_ref_and_vision_provider(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Source 带 image_ref + provider 支持 vision 时，quiz 走 generate_vision 并注入图片。"""
+    from app.features.learning_coach.schemas import LearningCoachSourceSolutionStep
+
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: type("S", (), {"video_image_storage_root": str(tmp_path)})(),
+    )
+    img_rel_dir = tmp_path / "20260422"
+    img_rel_dir.mkdir(parents=True)
+    img_path = img_rel_dir / "quiz-test.png"
+    img_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32)
+
+    source = LearningCoachSource(
+        source_type=LearningCoachSourceType.VIDEO,
+        source_session_id="vtask-vision",
+        source_task_id="vtask-vision",
+        topic_hint="几何证明",
+        topic_summary="题目讲的是正方形 ABCD …",
+        knowledge_points=["全等三角形", "45° 角"],
+        solution_steps=[
+            LearningCoachSourceSolutionStep(
+                title="抽出等角", explanation="由正方形得 ∠ABP = 90°"
+            ),
+        ],
+        image_ref="local://20260422/quiz-test.png",
+    )
+    provider = _StubVisionProvider(
+        responses=[_questions_payload(5), _questions_payload(3)]
+    )
+    service = LearningCoachService(
+        runtime_store=_InMemoryRuntimeStore(),
+        persistence_service=AsyncMock(),
+        provider_chain=[provider],
+    )
+
+    payload = await service.generate_quiz(
+        source=source, question_count=5, reuse_preloaded=False
+    )
+
+    assert payload.generation_source == GENERATION_SOURCE_LLM
+    # 走了 vision 路径，不是纯文本 generate
+    assert len(provider.vision_calls) == 1, "预期调用 generate_vision 一次"
+    assert provider.text_calls == []
+    call = provider.vision_calls[0]
+    # prompt 中包含所有 understanding 结构化要点
+    assert "题目完整讲解" in call["prompt"]
+    assert "全等三角形" in call["prompt"]
+    assert "抽出等角" in call["prompt"]
+    assert "原题图片" in call["prompt"]
+    # image base64 非空且 mime 正确
+    assert call["mime"] == "image/png"
+    assert int(call["b64_len"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_quiz_generation_falls_back_to_text_when_image_missing_on_disk(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """image_ref 指向不存在的文件时，不阻塞 quiz：优雅降级到纯文本 generate。"""
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: type("S", (), {"video_image_storage_root": str(tmp_path)})(),
+    )
+    source = LearningCoachSource(
+        source_type=LearningCoachSourceType.VIDEO,
+        source_session_id="vtask-missing",
+        image_ref="local://missing/nope.png",
+        topic_summary="摘要",
+    )
+    provider = _StubVisionProvider(
+        responses=[_questions_payload(3), _questions_payload(2)]
+    )
+    service = LearningCoachService(
+        runtime_store=_InMemoryRuntimeStore(),
+        persistence_service=AsyncMock(),
+        provider_chain=[provider],
+    )
+    payload = await service.generate_quiz(
+        source=source, question_count=3, reuse_preloaded=False
+    )
+    assert payload.generation_source == GENERATION_SOURCE_LLM
+    # 图读不到 → 走 text generate，不走 vision
+    assert provider.vision_calls == []
+    assert len(provider.text_calls) == 1

@@ -22,6 +22,13 @@ class LearningCoachSourceType(str, Enum):
     MANUAL = "manual"
 
 
+class LearningCoachSourceSolutionStep(CamelCaseModel):
+    """从视频管道 UnderstandingResult 透传到 learning_coach 的解题步骤。"""
+
+    title: str = Field(min_length=1, max_length=120)
+    explanation: str = Field(min_length=1, max_length=1000)
+
+
 class LearningCoachSource(CamelCaseModel):
     """Learning Coach 来源上下文。"""
 
@@ -33,6 +40,17 @@ class LearningCoachSource(CamelCaseModel):
     source_result_id: str | None = Field(default=None, max_length=128)
     return_to: str | None = Field(default=None, max_length=512)
     topic_hint: str | None = Field(default=None, max_length=200)
+    # 以下字段由视频管道 understanding 阶段透传：topic_summary 是 250-450 字
+    # 的高密度讲解，knowledge_points / solution_steps 是结构化要点。quiz LLM
+    # 拿到这些就不用再凭 title 猜题目，也不必自己读图。
+    topic_summary: str | None = Field(default=None, max_length=4000)
+    knowledge_points: list[str] | None = Field(default=None, max_length=12)
+    solution_steps: list[LearningCoachSourceSolutionStep] | None = Field(
+        default=None, max_length=8
+    )
+    # 用户上传的原图引用（与视频管道使用同一 local:// 协议）。当 provider 具备
+    # vision 能力时会自动切到 generate_vision()。
+    image_ref: str | None = Field(default=None, max_length=512)
 
 
 class LearningCoachCapability(CamelCaseModel):

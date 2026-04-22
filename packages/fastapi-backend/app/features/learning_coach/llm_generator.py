@@ -13,7 +13,7 @@ import logging
 import re
 from collections.abc import Sequence
 
-from app.providers.protocols import LLMProvider, ProviderError
+from app.providers.protocols import LLMProvider, ProviderError, VisionLLMProvider
 
 from app.features.learning_coach.schemas import LearningCoachSource
 
@@ -51,12 +51,31 @@ def _build_question_prompt(
     if source.source_task_id:
         source_line += f" / task={source.source_task_id}"
 
+    # 来自视频管道 understanding 的结构化要点，能极大提升 quiz 命中率。
+    context_blocks: list[str] = []
+    if source.topic_summary:
+        context_blocks.append(f"【题目完整讲解】\n{source.topic_summary.strip()}")
+    if source.knowledge_points:
+        kps = "、".join(p for p in source.knowledge_points if p)
+        if kps:
+            context_blocks.append(f"【本题涉及的知识点/定理】\n{kps}")
+    if source.solution_steps:
+        steps_text = "\n".join(
+            f"  {i}. {step.title} — {step.explanation}"
+            for i, step in enumerate(source.solution_steps, start=1)
+        )
+        context_blocks.append(f"【解题步骤骨架】\n{steps_text}")
+    if source.image_ref:
+        context_blocks.append("【原题图片】已随本请求一并发送（见多模态 image 内容），出题时请结合图中信息；若题干里需要引用图中内容，请用文字描述而不要依赖「见图」。")
+    context_section = ("\n\n" + "\n\n".join(context_blocks)) if context_blocks else ""
+
     return (
         "你是资深教学助手，需要出单选题用于" + mode_label + "。\n\n"
         "上下文：\n"
         f"- {source_line}\n"
         f"- 知识点提示：{topic}\n"
-        f"- 题目数量：{question_count}\n\n"
+        f"- 题目数量：{question_count}"
+        f"{context_section}\n\n"
         "要求：\n"
         f"1. 每题 4 个选项（A/B/C/D），单选题；{difficulty_hint}。\n"
         "2. 题目内容必须紧扣知识点提示，若提示不明确则围绕该 session 的典型场景出题。\n"
@@ -158,22 +177,81 @@ def _extract_json_text(raw: str) -> str:
     raise LLMGenerationError("LLM 返回中未找到 JSON 片段")
 
 
+def _load_image_for_vision(image_ref: str | None) -> tuple[str, str] | None:
+    """把 local:// image_ref 读成 (base64, mime_type)。读不到返回 None。
+
+    与 app.features.video.pipeline.services._read_image_as_base64 同源——使用
+    video_image_storage_root 配置（而非 video_asset_root）。
+    """
+    if not image_ref or not image_ref.startswith("local://"):
+        return None
+    try:
+        import base64
+        from pathlib import Path
+
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        base_dir = Path(
+            getattr(settings, "video_image_storage_root", "data/uploads/video")
+        )
+        full_path = base_dir / image_ref.removeprefix("local://")
+        if not full_path.exists():
+            logger.warning(
+                "learning_coach.vision.image_missing ref=%s resolved=%s",
+                image_ref,
+                full_path,
+            )
+            return None
+        mime_map = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+        }
+        mime = mime_map.get(full_path.suffix.lower(), "image/jpeg")
+        data = base64.b64encode(full_path.read_bytes()).decode("ascii")
+        return data, mime
+    except Exception:  # noqa: BLE001 — 读图失败降级到纯文本，不阻塞 quiz
+        logger.warning(
+            "learning_coach.vision.load_failed ref=%s", image_ref, exc_info=True
+        )
+        return None
+
+
 async def _call_with_failover(
     prompt: str,
     provider_chain: Sequence[LLMProvider],
+    *,
+    image_data: tuple[str, str] | None = None,
 ) -> str:
+    """文本/多模态统一调用。image_data=(base64, mime) 且 provider 支持 vision
+    时走 generate_vision，其余情况走 generate。单个 provider 失败或不支持 vision
+    时继续尝试下一个 provider。"""
     if not provider_chain:
         raise LLMGenerationError("未配置 LLM Provider")
     last_error: Exception | None = None
     for provider in provider_chain:
         try:
-            result = await provider.generate(prompt)
+            if image_data is not None and isinstance(provider, VisionLLMProvider):
+                image_b64, image_mime = image_data
+                result = await provider.generate_vision(
+                    prompt, image_base64=image_b64, image_media_type=image_mime
+                )
+                call_mode = "vision"
+            else:
+                result = await provider.generate(prompt)
+                call_mode = "text"
             content = (result.content or "").strip()
             if not content:
                 raise LLMGenerationError(f"Provider {provider.provider_id} 返回空内容")
             logger.debug(
                 "learning_coach.llm.ok",
-                extra={"provider": provider.provider_id, "content_len": len(content)},
+                extra={
+                    "provider": provider.provider_id,
+                    "content_len": len(content),
+                    "mode": call_mode,
+                },
             )
             return content
         except (ProviderError, LLMGenerationError) as error:
@@ -353,7 +431,8 @@ async def generate_question_bank_via_llm(
     if question_count <= 0:
         raise LLMGenerationError("question_count 必须大于 0")
     prompt = _build_question_prompt(source, question_count, mode=mode)
-    raw = await _call_with_failover(prompt, provider_chain)
+    image_data = _load_image_for_vision(source.image_ref)
+    raw = await _call_with_failover(prompt, provider_chain, image_data=image_data)
     try:
         payload = json.loads(_extract_json_text(raw))
     except json.JSONDecodeError as error:

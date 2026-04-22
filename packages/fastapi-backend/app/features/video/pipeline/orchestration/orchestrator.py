@@ -847,11 +847,19 @@ class VideoPipelineService:
             or preview_state.summary
             or ctx.knowledge_point
         )
+        source_payload_for_preload = metadata.get("sourcePayload") or {}
+        image_ref_for_preload = (
+            source_payload_for_preload.get("imageRef")
+            if isinstance(source_payload_for_preload, dict)
+            else None
+        )
         ctx.preload_task = asyncio.create_task(
             self._preload_learning_coach_inline(
                 task_id=ctx.task_id,
                 title=topic_hint_for_preload or "",
                 assembly=setup.assembly,
+                understanding=understanding,
+                image_ref=image_ref_for_preload,
             ),
             name=f"learning_coach_preload:{ctx.task_id}",
         )
@@ -1416,6 +1424,8 @@ class VideoPipelineService:
         task_id: str,
         title: str,
         assembly: VideoProviderRuntimeAssembly,
+        understanding: Any = None,
+        image_ref: str | None = None,
     ) -> None:
         """视频管道内的 inline 预生成：与 storyboard/manim/render/TTS 并行执行。
 
@@ -1427,6 +1437,7 @@ class VideoPipelineService:
         try:
             from app.features.learning_coach.schemas import (
                 LearningCoachSource,
+                LearningCoachSourceSolutionStep,
                 LearningCoachSourceType,
             )
             from app.features.learning_coach.service import LearningCoachService
@@ -1442,11 +1453,39 @@ class VideoPipelineService:
                 )
                 return
 
+            # 把视频管道 understanding 的高密度讲解 + 结构化要点 + 原图透传给
+            # quiz 生成器，让 quiz 拿到和视频同一份上下文，避免凭 title 瞎猜。
+            understanding_summary = None
+            understanding_kps: list[str] | None = None
+            understanding_steps: list[LearningCoachSourceSolutionStep] | None = None
+            if understanding is not None:
+                understanding_summary = (
+                    getattr(understanding, "topic_summary", None) or None
+                )
+                kps = list(getattr(understanding, "knowledge_points", None) or [])
+                understanding_kps = [p for p in kps if p] or None
+                raw_steps = list(getattr(understanding, "solution_steps", None) or [])
+                converted: list[LearningCoachSourceSolutionStep] = []
+                for step in raw_steps[:8]:
+                    s_title = (getattr(step, "title", "") or "").strip()
+                    s_expl = (getattr(step, "explanation", "") or "").strip()
+                    if s_title and s_expl:
+                        converted.append(
+                            LearningCoachSourceSolutionStep(
+                                title=s_title[:120], explanation=s_expl[:1000]
+                            )
+                        )
+                understanding_steps = converted or None
+
             source = LearningCoachSource(
                 source_type=LearningCoachSourceType.VIDEO,
                 source_session_id=task_id,
                 source_task_id=task_id,
-                topic_hint=title or None,
+                topic_hint=(title or None) if not understanding_summary else (title or None),
+                topic_summary=understanding_summary,
+                knowledge_points=understanding_kps,
+                solution_steps=understanding_steps,
+                image_ref=image_ref or None,
             )
             service = LearningCoachService(
                 runtime_store=self._runtime_store,
