@@ -2,29 +2,29 @@
  * 文件说明：提供用户配置的 real / local fallback API。
  * 在真实接口缺位时优先回退到本地持久化，保证 onboarding 流程可先跑通。
  */
+import { useUserProfileStore } from '@/features/profile/stores/user-profile-store';
+import {
+	createEmptyUserProfile,
+	mergeUserProfile,
+	PROFILE_API_BASE_PATH,
+	PROFILE_DEFAULT_LANGUAGE,
+	PROFILE_THEME_MODES,
+	TEACHER_TAGS,
+	type ProfileThemeMode,
+	type SaveUserProfileInput,
+	type TeacherTag,
+	type UserProfile
+} from '@/features/profile/types';
+import { readNumberProperty, readRecord, readStringProperty } from '@/lib/type-guards';
 import { pickAdapterImplementation } from '@/services/api/adapters/base-adapter';
 import {
-  apiClient,
-  ApiClientError,
-  withAuthHeader,
-  type ApiClient,
-  type ApiRequestConfig
+	apiClient,
+	ApiClientError,
+	withAuthHeader,
+	type ApiClient,
+	type ApiRequestConfig
 } from '@/services/api/client';
-import { readNumberProperty, readRecord, readStringProperty } from '@/lib/type-guards';
 import { AUTH_SUCCESS_CODE, type RuoyiEnvelope } from '@/types/auth';
-import {
-  createEmptyUserProfile,
-  mergeUserProfile,
-  PROFILE_API_BASE_PATH,
-  PROFILE_DEFAULT_LANGUAGE,
-  PROFILE_THEME_MODES,
-  TEACHER_TAGS,
-  type ProfileThemeMode,
-  type SaveUserProfileInput,
-  type TeacherTag,
-  type UserProfile
-} from '@/features/profile/types';
-import { useUserProfileStore } from '@/features/profile/stores/user-profile-store';
 
 type ProfilePayload = {
   id?: number | null;

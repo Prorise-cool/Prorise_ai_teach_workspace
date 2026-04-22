@@ -3,13 +3,13 @@
  */
 import { resolveProfileApi } from '@/features/profile/api/profile-api';
 import {
-  createEmptyUserProfile,
-  type UserProfile
-} from '@/features/profile/types';
-import {
-  resetUserProfileStore,
-  useUserProfileStore
+	resetUserProfileStore,
+	useUserProfileStore
 } from '@/features/profile/stores/user-profile-store';
+import {
+	createEmptyUserProfile,
+	type UserProfile
+} from '@/features/profile/types';
 
 type RecordedRequest = {
   url?: string;

@@ -3,8 +3,8 @@
  * 对应后端 SysProfileController#updateProfile，BO 包含 nickName/email/phonenumber/sex。
  */
 import { readNumberProperty, readRecord, readStringProperty } from '@/lib/type-guards';
-import { ApiClientError } from '@/services/api/client';
 import type { ApiClient } from '@/services/api/client';
+import { ApiClientError } from '@/services/api/client';
 import { ruoyiClient } from '@/services/api/ruoyi-client';
 import type { RuoyiEnvelope } from '@/types/auth';
 

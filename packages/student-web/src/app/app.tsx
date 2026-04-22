@@ -11,9 +11,9 @@ import { AppRouter } from '@/app/router/router';
  * @returns 应用根节点。
  */
 export function App() {
-  return (
-    <AppProvider>
-      <AppRouter />
-    </AppProvider>
-  );
+	return (
+		<AppProvider>
+			<AppRouter />
+		</AppProvider>
+	);
 }

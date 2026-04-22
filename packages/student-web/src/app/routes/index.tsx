@@ -13,11 +13,11 @@ import { RequireAuthRoute } from '@/features/auth/components/require-auth-route'
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadHomeRoute() {
-  const { HomePage } = await import('@/features/home/pages/home-page');
+	const { HomePage } = await import('@/features/home/pages/home-page');
 
-  return {
-    Component: HomePage
-  };
+	return {
+		Component: HomePage
+	};
 }
 
 /**
@@ -26,11 +26,11 @@ async function loadHomeRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadLandingRoute() {
-  const { LandingPage } = await import('@/features/home/pages/landing-page');
+	const { LandingPage } = await import('@/features/home/pages/landing-page');
 
-  return {
-    Component: LandingPage
-  };
+	return {
+		Component: LandingPage
+	};
 }
 
 /**
@@ -39,11 +39,11 @@ async function loadLandingRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadLoginRoute() {
-  const { LoginPage } = await import('@/features/auth/pages/login-page');
+	const { LoginPage } = await import('@/features/auth/pages/login-page');
 
-  return {
-    Component: LoginPage
-  };
+	return {
+		Component: LoginPage
+	};
 }
 
 /**
@@ -52,13 +52,13 @@ async function loadLoginRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadSocialCallbackRoute() {
-  const { SocialCallbackPage } = await import(
-    '@/features/auth/pages/social-callback-page'
-  );
+	const { SocialCallbackPage } = await import(
+		'@/features/auth/pages/social-callback-page'
+	);
 
-  return {
-    Component: SocialCallbackPage
-  };
+	return {
+		Component: SocialCallbackPage
+	};
 }
 
 /**
@@ -67,11 +67,11 @@ async function loadSocialCallbackRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadForbiddenRoute() {
-  const { ForbiddenPage } = await import('@/features/auth/pages/forbidden-page');
+	const { ForbiddenPage } = await import('@/features/auth/pages/forbidden-page');
 
-  return {
-    Component: ForbiddenPage
-  };
+	return {
+		Component: ForbiddenPage
+	};
 }
 
 /**
@@ -80,13 +80,13 @@ async function loadForbiddenRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadLearningCenterRoute() {
-  const { LearningCenterPage } = await import(
-    '@/features/learning-center/pages/learning-center-page'
-  );
+	const { LearningCenterPage } = await import(
+		'@/features/learning-center/pages/learning-center-page'
+	);
 
-  return {
-    Component: LearningCenterPage
-  };
+	return {
+		Component: LearningCenterPage
+	};
 }
 
 /**
@@ -95,11 +95,11 @@ async function loadLearningCenterRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadHistoryRoute() {
-  const { HistoryPage } = await import('@/features/learning-center/pages/history-page');
+	const { HistoryPage } = await import('@/features/learning-center/pages/history-page');
 
-  return {
-    Component: HistoryPage
-  };
+	return {
+		Component: HistoryPage
+	};
 }
 
 /**
@@ -108,13 +108,13 @@ async function loadHistoryRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadFavoritesRoute() {
-  const { FavoritesPage } = await import(
-    '@/features/learning-center/pages/favorites-page'
-  );
+	const { FavoritesPage } = await import(
+		'@/features/learning-center/pages/favorites-page'
+	);
 
-  return {
-    Component: FavoritesPage
-  };
+	return {
+		Component: FavoritesPage
+	};
 }
 
 /**
@@ -123,11 +123,11 @@ async function loadFavoritesRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadProfileRoute() {
-  const { ProfilePage } = await import('@/features/profile/pages/profile-page');
+	const { ProfilePage } = await import('@/features/profile/pages/profile-page');
 
-  return {
-    Component: ProfilePage
-  };
+	return {
+		Component: ProfilePage
+	};
 }
 
 /**
@@ -136,11 +136,11 @@ async function loadProfileRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadSettingsRoute() {
-  const { SettingsPage } = await import('@/features/profile/pages/settings-page');
+	const { SettingsPage } = await import('@/features/profile/pages/settings-page');
 
-  return {
-    Component: SettingsPage
-  };
+	return {
+		Component: SettingsPage
+	};
 }
 
 /**
@@ -149,13 +149,13 @@ async function loadSettingsRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadClassroomInputRoute() {
-  const { ClassroomInputPage } = await import(
-    '@/features/classroom/pages/classroom-input-page'
-  );
+	const { ClassroomInputPage } = await import(
+		'@/features/classroom/pages/classroom-input-page'
+	);
 
-  return {
-    Component: ClassroomInputPage
-  };
+	return {
+		Component: ClassroomInputPage
+	};
 }
 
 /**
@@ -164,13 +164,13 @@ async function loadClassroomInputRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadProfileSetupRoute() {
-  const { ProfileIntroPage } = await import(
-    '@/features/profile/pages/profile-intro-page'
-  );
+	const { ProfileIntroPage } = await import(
+		'@/features/profile/pages/profile-intro-page'
+	);
 
-  return {
-    Component: ProfileIntroPage
-  };
+	return {
+		Component: ProfileIntroPage
+	};
 }
 
 /**
@@ -179,13 +179,13 @@ async function loadProfileSetupRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadProfilePreferencesRoute() {
-  const { ProfilePreferencesPage } = await import(
-    '@/features/profile/pages/profile-preferences-page'
-  );
+	const { ProfilePreferencesPage } = await import(
+		'@/features/profile/pages/profile-preferences-page'
+	);
 
-  return {
-    Component: ProfilePreferencesPage
-  };
+	return {
+		Component: ProfilePreferencesPage
+	};
 }
 
 /**
@@ -194,13 +194,13 @@ async function loadProfilePreferencesRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadProfileTourRoute() {
-  const { ProfileTourPage } = await import(
-    '@/features/profile/pages/profile-tour-page'
-  );
+	const { ProfileTourPage } = await import(
+		'@/features/profile/pages/profile-tour-page'
+	);
 
-  return {
-    Component: ProfileTourPage
-  };
+	return {
+		Component: ProfileTourPage
+	};
 }
 
 /**
@@ -209,11 +209,11 @@ async function loadProfileTourRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadVideoInputRoute() {
-  const { VideoInputPage } = await import('@/features/video/pages/video-input-page');
+	const { VideoInputPage } = await import('@/features/video/pages/video-input-page');
 
-  return {
-    Component: VideoInputPage
-  };
+	return {
+		Component: VideoInputPage
+	};
 }
 
 /**
@@ -222,13 +222,13 @@ async function loadVideoInputRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadVideoGeneratingRoute() {
-  const { VideoGeneratingPage } = await import(
-    '@/features/video/pages/video-generating-page'
-  );
+	const { VideoGeneratingPage } = await import(
+		'@/features/video/pages/video-generating-page'
+	);
 
-  return {
-    Component: VideoGeneratingPage
-  };
+	return {
+		Component: VideoGeneratingPage
+	};
 }
 
 /**
@@ -237,78 +237,78 @@ async function loadVideoGeneratingRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadVideoResultRoute() {
-  const { VideoResultPage } = await import(
-    '@/features/video/pages/video-result-page'
-  );
+	const { VideoResultPage } = await import(
+		'@/features/video/pages/video-result-page'
+	);
 
-  return {
-    Component: VideoResultPage
-  };
+	return {
+		Component: VideoResultPage
+	};
 }
 
 /**
  * 按需加载 Learning Coach 会话后入口页。
  */
 async function loadLearningCoachEntryRoute() {
-  const { LearningCoachEntryPage } = await import(
-    '@/features/learning-coach/pages/learning-coach-entry-page'
-  );
+	const { LearningCoachEntryPage } = await import(
+		'@/features/learning-coach/pages/learning-coach-entry-page'
+	);
 
-  return {
-    Component: LearningCoachEntryPage
-  };
+	return {
+		Component: LearningCoachEntryPage
+	};
 }
 
 /**
  * 按需加载 Learning Coach Checkpoint 页。
  */
 async function loadLearningCheckpointRoute() {
-  const { LearningCheckpointPage } = await import(
-    '@/features/learning-coach/pages/learning-checkpoint-page'
-  );
+	const { LearningCheckpointPage } = await import(
+		'@/features/learning-coach/pages/learning-checkpoint-page'
+	);
 
-  return {
-    Component: LearningCheckpointPage
-  };
+	return {
+		Component: LearningCheckpointPage
+	};
 }
 
 /**
  * 按需加载 Learning Coach Quiz 页。
  */
 async function loadLearningQuizRoute() {
-  const { LearningQuizPage } = await import(
-    '@/features/learning-coach/pages/learning-quiz-page'
-  );
+	const { LearningQuizPage } = await import(
+		'@/features/learning-coach/pages/learning-quiz-page'
+	);
 
-  return {
-    Component: LearningQuizPage
-  };
+	return {
+		Component: LearningQuizPage
+	};
 }
 
 /**
  * 按需加载 Learning Coach Quiz 只读回看页（Epic 8/9，Decision 1）。
  */
 async function loadLearningQuizReviewRoute() {
-  const { LearningQuizReviewPage } = await import(
-    '@/features/learning-coach/pages/learning-quiz-review-page'
-  );
+	const { LearningQuizReviewPage } = await import(
+		'@/features/learning-coach/pages/learning-quiz-review-page'
+	);
 
-  return {
-    Component: LearningQuizReviewPage
-  };
+	return {
+		Component: LearningQuizReviewPage
+	};
 }
 
 /**
  * 按需加载 Learning Coach 学习路径页。
  */
 async function loadLearningPathRoute() {
-  const { LearningPathPage } = await import(
-    '@/features/learning-coach/pages/learning-path-page'
-  );
+	const { LearningPathPage } = await import(
+		'@/features/learning-coach/pages/learning-path-page'
+	);
 
-  return {
-    Component: LearningPathPage
-  };
+	return {
+		Component: LearningPathPage
+	};
 }
 
 /**
@@ -317,13 +317,13 @@ async function loadLearningPathRoute() {
  * @returns React Router 可消费的懒加载路由定义。
  */
 async function loadPublicVideoResultRoute() {
-  const { VideoResultPage } = await import(
-    '@/features/video/pages/video-result-page'
-  );
+	const { VideoResultPage } = await import(
+		'@/features/video/pages/video-result-page'
+	);
 
-  return {
-    Component: VideoResultPage
-  };
+	return {
+		Component: VideoResultPage
+	};
 }
 
 /**
@@ -335,111 +335,111 @@ async function loadPublicVideoResultRoute() {
  * @returns 全量应用路由实例。
  */
 export function createAppRouter() {
-  return createBrowserRouter([
-    {
-      path: '/',
-      element: <AppShell />,
-      children: [
-        {
-          index: true,
-          lazy: loadHomeRoute
-        },
-        {
-          path: 'landing',
-          lazy: loadLandingRoute
-        },
-        {
-          path: 'video/public/:resultId',
-          lazy: loadPublicVideoResultRoute
-        },
-        {
-          element: <RequireAuthRoute />,
-          children: [
-            {
-              path: 'learning',
-              lazy: loadLearningCenterRoute
-            },
-            {
-              path: 'history',
-              lazy: loadHistoryRoute
-            },
-            {
-              path: 'favorites',
-              lazy: loadFavoritesRoute
-            },
-            {
-              path: 'profile',
-              lazy: loadProfileRoute
-            },
-            {
-              path: 'settings',
-              lazy: loadSettingsRoute
-            },
-            {
-              path: 'profile/setup',
-              lazy: loadProfileSetupRoute
-            },
-            {
-              path: 'profile/setup/preferences',
-              lazy: loadProfilePreferencesRoute
-            },
-            {
-              path: 'profile/setup/tour',
-              lazy: loadProfileTourRoute
-            },
-            {
-              path: 'classroom/input',
-              lazy: loadClassroomInputRoute
-            },
-            {
-              path: 'video/input',
-              lazy: loadVideoInputRoute
-            },
-            {
-              path: 'video/:taskId/generating',
-              lazy: loadVideoGeneratingRoute
-            },
-            {
-              path: 'video/:taskId',
-              lazy: loadVideoResultRoute
-            },
-            {
-              path: 'coach/:sessionId',
-              lazy: loadLearningCoachEntryRoute
-            },
-            {
-              path: 'checkpoint/:sessionId',
-              lazy: loadLearningCheckpointRoute
-            },
-            {
-              path: 'quiz/:sessionId',
-              lazy: loadLearningQuizRoute
-            },
-            {
-              path: 'quiz/:sessionId/review/:quizId',
-              lazy: loadLearningQuizReviewRoute
-            },
-            {
-              path: 'path',
-              lazy: loadLearningPathRoute
-            }
-          ]
-        },
-        {
-          path: 'login',
-          lazy: loadLoginRoute
-        },
-        {
-          path: 'login/social-callback',
-          lazy: loadSocialCallbackRoute
-        },
-        {
-          path: 'forbidden',
-          lazy: loadForbiddenRoute
-        }
-      ]
-    }
-  ]);
+	return createBrowserRouter([
+		{
+			path: '/',
+			element: <AppShell />,
+			children: [
+				{
+					index: true,
+					lazy: loadHomeRoute
+				},
+				{
+					path: 'landing',
+					lazy: loadLandingRoute
+				},
+				{
+					path: 'video/public/:resultId',
+					lazy: loadPublicVideoResultRoute
+				},
+				{
+					element: <RequireAuthRoute />,
+					children: [
+						{
+							path: 'learning',
+							lazy: loadLearningCenterRoute
+						},
+						{
+							path: 'history',
+							lazy: loadHistoryRoute
+						},
+						{
+							path: 'favorites',
+							lazy: loadFavoritesRoute
+						},
+						{
+							path: 'profile',
+							lazy: loadProfileRoute
+						},
+						{
+							path: 'settings',
+							lazy: loadSettingsRoute
+						},
+						{
+							path: 'profile/setup',
+							lazy: loadProfileSetupRoute
+						},
+						{
+							path: 'profile/setup/preferences',
+							lazy: loadProfilePreferencesRoute
+						},
+						{
+							path: 'profile/setup/tour',
+							lazy: loadProfileTourRoute
+						},
+						{
+							path: 'classroom/input',
+							lazy: loadClassroomInputRoute
+						},
+						{
+							path: 'video/input',
+							lazy: loadVideoInputRoute
+						},
+						{
+							path: 'video/:taskId/generating',
+							lazy: loadVideoGeneratingRoute
+						},
+						{
+							path: 'video/:taskId',
+							lazy: loadVideoResultRoute
+						},
+						{
+							path: 'coach/:sessionId',
+							lazy: loadLearningCoachEntryRoute
+						},
+						{
+							path: 'checkpoint/:sessionId',
+							lazy: loadLearningCheckpointRoute
+						},
+						{
+							path: 'quiz/:sessionId',
+							lazy: loadLearningQuizRoute
+						},
+						{
+							path: 'quiz/:sessionId/review/:quizId',
+							lazy: loadLearningQuizReviewRoute
+						},
+						{
+							path: 'path',
+							lazy: loadLearningPathRoute
+						}
+					]
+				},
+				{
+					path: 'login',
+					lazy: loadLoginRoute
+				},
+				{
+					path: 'login/social-callback',
+					lazy: loadSocialCallbackRoute
+				},
+				{
+					path: 'forbidden',
+					lazy: loadForbiddenRoute
+				}
+			]
+		}
+	]);
 }
 
 export const appRouter = createAppRouter();
