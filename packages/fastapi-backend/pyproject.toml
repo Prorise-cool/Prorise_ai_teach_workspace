@@ -17,7 +17,11 @@ dependencies = [
   "httpx>=0.28,<1.0",
   "openai>=1.30,<2.0",
   "cryptography>=44.0,<45.0",
-  "Jinja2>=3.1,<4.0"
+  "Jinja2>=3.1,<4.0",
+  "langgraph>=0.2,<1.0",
+  "langchain-core>=0.3,<1.0",
+  "pypdf>=5.0,<6.0",
+  "partial-json-parser>=0.2,<1.0"
 ]
 
 [project.optional-dependencies]

@@ -12,6 +12,7 @@ from app.features.companion.routes import router as companion_router
 from app.features.knowledge.routes import router as knowledge_router
 from app.features.learning.routes import router as learning_router
 from app.features.learning_coach.routes import router as learning_coach_router
+from app.features.openmaic.routes import router as openmaic_router
 from app.features.video.routes import router as video_router
 
 settings = get_settings()
@@ -29,5 +30,6 @@ v1_router.include_router(companion_router)
 v1_router.include_router(knowledge_router)
 v1_router.include_router(learning_router)
 v1_router.include_router(learning_coach_router)
+v1_router.include_router(openmaic_router)
 
 api_router.include_router(v1_router)

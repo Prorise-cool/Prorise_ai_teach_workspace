@@ -312,6 +312,32 @@ async function loadLearningPathRoute() {
 }
 
 /**
+ * 按需加载 OpenMAIC 多智能体课堂首页（输入主题 + 最近课堂）。
+ */
+async function loadOpenMAICHomeRoute() {
+	const { OpenMAICHomePage } = await import(
+		'@/features/openmaic/pages/openmaic-home-page'
+	);
+
+	return {
+		Component: OpenMAICHomePage
+	};
+}
+
+/**
+ * 按需加载 OpenMAIC 课堂播放页（幻灯片 + 白板 + 讨论）。
+ */
+async function loadOpenMAICClassroomRoute() {
+	const { OpenMAICClassroomPage } = await import(
+		'@/features/openmaic/pages/openmaic-classroom-page'
+	);
+
+	return {
+		Component: OpenMAICClassroomPage
+	};
+}
+
+/**
  * 按需加载公开视频结果详情页路由。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -422,6 +448,14 @@ export function createAppRouter() {
 						{
 							path: 'path',
 							lazy: loadLearningPathRoute
+						},
+						{
+							path: 'openmaic',
+							lazy: loadOpenMAICHomeRoute
+						},
+						{
+							path: 'openmaic/classroom/:classroomId',
+							lazy: loadOpenMAICClassroomRoute
 						}
 					]
 				},
