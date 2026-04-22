@@ -1,0 +1,138 @@
+/**
+ * 文件说明：OpenMAIC 多智能体课堂模块 i18n 资源。
+ * 覆盖首页、课堂页、组件文案。
+ */
+
+export const zhCnOpenMAICResources = {
+  openmaic: {
+    common: {
+      generate: '生成课堂',
+      generating: '生成中...',
+      cancel: '取消',
+      retry: '重试',
+      close: '关闭',
+      next: '下一场景',
+      prev: '上一场景',
+      play: '播放',
+      pause: '暂停',
+    },
+    home: {
+      brand: 'OpenMAIC · 多智能体课堂',
+      tagline: '一句话，生成多智能体课堂',
+      subtitle: '输入你想学的主题，AI 老师与同学将为你打造一堂完整的互动课。',
+      placeholder: '例如：教我微积分中的链式法则，给出例题并让 AI 同学讨论',
+      charCount: '{{count}} / 2000',
+      recentTitle: '最近课堂',
+      noRecent: '暂无最近课堂',
+      options: {
+        webSearch: '启用网络搜索',
+        webSearchHint: '允许 AI 搜索最新资料',
+      },
+      pdfUpload: '上传 PDF 文档',
+      pdfHint: '支持 PDF，最大 20MB',
+    },
+    classroom: {
+      outline: '课程大纲',
+      companion: '伴学助手',
+      notes: '课堂笔记',
+      qa: '互动答疑',
+      askPlaceholder: '向老师提问或打断...',
+      nextSteps: '继续探索',
+      checkpoint: 'Checkpoint',
+      formalQuiz: '正式 Quiz',
+      sources: '来源依据',
+      exportPptx: '导出 PPTX',
+      whiteboard: '白板',
+      raise: '举手',
+      fullscreen: '全屏',
+      sceneLabel: 'SCENE {{order}}',
+      teacher: 'Teacher',
+      listeners: '听众',
+    },
+    generation: {
+      submitting: '正在提交课堂生成任务...',
+      generating: '生成中...',
+      complete: '课堂生成完成！',
+      failed: '课堂生成失败',
+      timeout: '课堂生成超时，请稍后重试',
+    },
+    chat: {
+      streamingPlaceholder: '...',
+      errorPrefix: '错误：',
+    },
+    quiz: {
+      submit: '提交答案',
+      grading: '评分中...',
+      correct: '回答正确！',
+      wrongPrefix: '正确答案是：',
+      totalScore: '{{correct}} / {{total}} 正确',
+    },
+  },
+} as const;
+
+export const enUsOpenMAICResources = {
+  openmaic: {
+    common: {
+      generate: 'Generate Classroom',
+      generating: 'Generating...',
+      cancel: 'Cancel',
+      retry: 'Retry',
+      close: 'Close',
+      next: 'Next Scene',
+      prev: 'Previous Scene',
+      play: 'Play',
+      pause: 'Pause',
+    },
+    home: {
+      brand: 'OpenMAIC · Multi-Agent Classroom',
+      tagline: 'One prompt, a full AI classroom.',
+      subtitle: 'Enter a topic and AI teachers and classmates will create an interactive lesson.',
+      placeholder: 'e.g. Teach me the chain rule in calculus with examples and class discussion',
+      charCount: '{{count}} / 2000',
+      recentTitle: 'Recent Classrooms',
+      noRecent: 'No recent classrooms',
+      options: {
+        webSearch: 'Enable Web Search',
+        webSearchHint: 'Allow AI to search for latest information',
+      },
+      pdfUpload: 'Upload PDF',
+      pdfHint: 'PDF supported, max 20MB',
+    },
+    classroom: {
+      outline: 'Lesson Outline',
+      companion: 'Study Assistant',
+      notes: 'Notes',
+      qa: 'Q&A',
+      askPlaceholder: 'Ask the teacher or interrupt...',
+      nextSteps: 'Continue',
+      checkpoint: 'Checkpoint',
+      formalQuiz: 'Formal Quiz',
+      sources: 'Sources',
+      exportPptx: 'Export PPTX',
+      whiteboard: 'Whiteboard',
+      raise: 'Raise Hand',
+      fullscreen: 'Fullscreen',
+      sceneLabel: 'SCENE {{order}}',
+      teacher: 'Teacher',
+      listeners: 'Listeners',
+    },
+    generation: {
+      submitting: 'Submitting classroom generation task...',
+      generating: 'Generating...',
+      complete: 'Classroom generated!',
+      failed: 'Classroom generation failed',
+      timeout: 'Generation timed out, please try again',
+    },
+    chat: {
+      streamingPlaceholder: '...',
+      errorPrefix: 'Error: ',
+    },
+    quiz: {
+      submit: 'Submit Answers',
+      grading: 'Grading...',
+      correct: 'Correct!',
+      wrongPrefix: 'Correct answer: ',
+      totalScore: '{{correct}} / {{total}} correct',
+    },
+  },
+} as const;
