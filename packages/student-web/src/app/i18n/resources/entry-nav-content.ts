@@ -66,8 +66,12 @@ export const zhCnEntryNavResources = {
         description: '从知识点理解到动画合成，全流程分钟级完成。'
       }
     ],
-    // 「主题课堂」入口已从 nav 隐藏（/classroom/input 路由保留，但尚无完整逻辑）。
     workspaceRoutes: [
+      {
+        label: '主题课堂',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
       {
         label: '单题讲解',
         href: '/video/input',
@@ -192,8 +196,12 @@ export const enUsEntryNavResources = {
           'From topic understanding to animation rendering, the full pipeline completes in minutes.'
       }
     ],
-    // Topic Classroom nav entry hidden: /classroom/input route kept but not yet wired.
     workspaceRoutes: [
+      {
+        label: 'Topic Classroom',
+        href: '/classroom/input',
+        icon: 'layout-template'
+      },
       {
         label: 'Video Explainer',
         href: '/video/input',
