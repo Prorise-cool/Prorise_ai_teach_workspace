@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 from app.features.video.pipeline.models import ArtifactType, VideoArtifactGraph
 from app.shared.datetime_utils import (
-    RUOYI_DATETIME_FORMAT,
     format_iso8601 as _shared_format_iso8601,
     parse_datetime as _shared_parse_datetime,
 )

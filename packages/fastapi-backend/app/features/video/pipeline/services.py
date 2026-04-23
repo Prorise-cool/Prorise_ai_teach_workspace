@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import base64
 import json
 import re
@@ -14,16 +13,12 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from app.core.config import get_settings
-from app.features.video.pipeline.constants import (
-    DEFAULT_FIXED_SCENE_CLASS,
-    VIDEO_OUTPUT_FORMAT,
-)
+from app.features.video.pipeline.constants import DEFAULT_FIXED_SCENE_CLASS
 from app.features.video.pipeline.engine.code_cleaner import extract_code_from_response
 from app.features.video.pipeline.models import (
     ArtifactPayload,
     ArtifactType,
     AudioSegment,
-    ComposeResult,
     FixResult,
     ManimCodeResult,
     Scene,
@@ -31,7 +26,6 @@ from app.features.video.pipeline.models import (
     Storyboard,
     TTSResult,
     UnderstandingResult,
-    UploadResult,
     VideoArtifactGraph,
     VoiceConfig,
 )

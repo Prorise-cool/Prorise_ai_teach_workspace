@@ -862,7 +862,12 @@ def test_upload_service_retries_and_persists_result(tmp_path, monkeypatch: pytes
         retry_events.append((retry_attempt, total_retries, str(exc)))
 
     monkeypatch.setattr(asset_store, "copy_file", flaky_copy_file)
-    monkeypatch.setattr("app.features.video.pipeline.services.asyncio.sleep", fake_sleep)
+    # UploadService 在 wave-0.2 重构后真实实现移至 orchestration.upload；
+    # services.UploadService 为 re-export，asyncio 引用归位到原模块。
+    monkeypatch.setattr(
+        "app.features.video.pipeline.orchestration.upload.asyncio.sleep",
+        fake_sleep,
+    )
 
     result = asyncio.run(
         service.execute(task_id="video_upload_case", compose_result=compose_result, on_retry=on_retry)

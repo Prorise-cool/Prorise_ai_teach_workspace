@@ -14,12 +14,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
 from app.shared.datetime_utils import (
-    RUOYI_DATETIME_FORMAT,
     format_ruoyi_datetime as _shared_format_ruoyi_datetime,
     utc_now as _shared_utc_now,
 )
