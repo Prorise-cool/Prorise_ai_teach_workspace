@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import base64
 import json
 import re
@@ -14,16 +13,12 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from app.core.config import get_settings
-from app.features.video.pipeline.constants import (
-    DEFAULT_FIXED_SCENE_CLASS,
-    VIDEO_OUTPUT_FORMAT,
-)
+from app.features.video.pipeline.constants import DEFAULT_FIXED_SCENE_CLASS
 from app.features.video.pipeline.engine.code_cleaner import extract_code_from_response
 from app.features.video.pipeline.models import (
     ArtifactPayload,
     ArtifactType,
     AudioSegment,
-    ComposeResult,
     FixResult,
     ManimCodeResult,
     Scene,
@@ -31,7 +26,6 @@ from app.features.video.pipeline.models import (
     Storyboard,
     TTSResult,
     UnderstandingResult,
-    UploadResult,
     VideoArtifactGraph,
     VoiceConfig,
 )
@@ -934,47 +928,9 @@ class TTSService:
         return result
 
 
-@dataclass(slots=True)
-class UploadService:
-    asset_store: LocalAssetStore
-    settings: Any
-    runtime: VideoRuntimeStateStore
-
-    async def execute(
-        self,
-        *,
-        task_id: str,
-        compose_result: ComposeResult,
-        on_retry=None,
-    ) -> UploadResult:
-        retry_attempts = max(
-            int(getattr(self.settings, "video_upload_retry_attempts", 0) or 0), 0
-        )
-        total_attempts = retry_attempts + 1
-
-        for attempt in range(1, total_attempts + 1):
-            try:
-                video_asset = self.asset_store.copy_file(
-                    compose_result.video_path,
-                    f"video/{task_id}/output.{VIDEO_OUTPUT_FORMAT}",
-                )
-                cover_asset = self.asset_store.copy_file(
-                    compose_result.cover_path, f"video/{task_id}/cover.jpg"
-                )
-                result = UploadResult(
-                    video_url=video_asset.public_url,
-                    cover_url=cover_asset.public_url,
-                )
-                self.runtime.save_model("upload_result", result)
-                return result
-            except Exception as exc:  # noqa: BLE001
-                if attempt == total_attempts:
-                    raise
-                if on_retry is not None:
-                    await on_retry(attempt, retry_attempts, exc)
-                await asyncio.sleep(attempt)
-
-        raise RuntimeError("unreachable")
+# UploadService 真实实现位于 app.features.video.pipeline.orchestration.upload。
+# 此处仅做 re-export，保留 ``from app.features.video.pipeline.services import UploadService`` 的旧导入路径。
+from app.features.video.pipeline.orchestration.upload import UploadService  # noqa: E402,F401
 
 
 @dataclass(slots=True)

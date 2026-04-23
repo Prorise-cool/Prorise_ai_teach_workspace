@@ -37,7 +37,14 @@ class ChatMessage(BaseModel):
 # ── Agent profile ────────────────────────────────────────────────────────────
 
 class AgentProfile(BaseModel):
-    """Profile of an available agent in the discussion."""
+    """LangGraph 编排层的智能体画像。
+
+    NOTE: 与 ``app.features.openmaic.schemas.AgentProfile`` 是两个不同
+    Profile：本类附带 ``priority`` / ``allowed_actions`` 用于多 Agent
+    调度；API 层 Profile 附带 ``voice_config`` 用于前端 / TTS 配置。
+    两份 Profile 的合并讨论留 Wave 1.5。
+    """
+
     id: str
     name: str
     persona: str

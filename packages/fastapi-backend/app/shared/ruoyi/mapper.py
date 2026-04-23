@@ -6,23 +6,21 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Mapping
 
-RUOYI_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+from app.shared.datetime_utils import (
+    RUOYI_DATETIME_FORMAT,
+    parse_datetime as _shared_parse_datetime,
+)
 
 
 def _parse_datetime(value: Any) -> Any:
-    if isinstance(value, datetime):
+    """RuoYi mapper 内部使用的宽松解析：失败回退原值，不抛异常。"""
+    if not isinstance(value, (datetime, str)):
         return value
-    if not isinstance(value, str):
-        return value
-
     try:
-        return datetime.strptime(value, RUOYI_DATETIME_FORMAT)
+        result = _shared_parse_datetime(value)
     except ValueError:
-        normalized_value = value.replace("Z", "+00:00")
-        try:
-            return datetime.fromisoformat(normalized_value)
-        except ValueError:
-            return value
+        return value
+    return result if result is not None else value
 
 
 def _format_datetime(value: Any) -> Any:

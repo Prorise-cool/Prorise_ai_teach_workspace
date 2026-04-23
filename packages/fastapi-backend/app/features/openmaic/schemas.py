@@ -168,6 +168,14 @@ class AgentVoiceConfig(BaseModel):
 
 
 class AgentProfile(BaseModel):
+    """Stage 1.5 / API 层的智能体画像。
+
+    NOTE: 与 ``app.features.openmaic.orchestration.schemas.AgentProfile`` 是
+    两个不同 Profile：本类附带 ``voice_config`` 用于前端 / TTS 配置；
+    Orchestration 层的 Profile 附带 ``priority`` / ``allowed_actions`` 用于
+    LangGraph 调度。两份 Profile 的合并讨论留 Wave 1.5。
+    """
+
     id: str
     name: str
     role: Literal["teacher", "student", "assistant"] = "teacher"

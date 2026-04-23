@@ -5,9 +5,11 @@ from functools import lru_cache
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import AccessContext, get_access_context
+from app.features.common import FeatureBootstrapResponseEnvelope
 from app.features.companion.schemas import AskRequest
 from app.features.companion.service import CompanionAskService, CompanionService
 from app.schemas.common import build_success_envelope
+from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.long_term_records import (
     CompanionTurnCreateRequest,
     CompanionTurnSnapshot,
@@ -54,6 +56,17 @@ def get_ask_service() -> CompanionAskService:
 
 @router.get(
     "/bootstrap",
+    response_model=FeatureBootstrapResponseEnvelope,
+    responses={
+        200: {
+            "description": "伴学功能域 bootstrap 基线",
+            "content": {
+                "application/json": {
+                    "example": build_feature_bootstrap_example("companion")
+                }
+            },
+        }
+    },
 )
 async def companion_bootstrap(
     task_id: str = "",

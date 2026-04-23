@@ -8,7 +8,10 @@ from typing import Any, Mapping
 from pydantic import BaseModel, Field
 
 from app.features.video.pipeline.models import ArtifactType, VideoArtifactGraph
-from app.shared.ruoyi.mapper import RUOYI_DATETIME_FORMAT
+from app.shared.datetime_utils import (
+    format_iso8601 as _shared_format_iso8601,
+    parse_datetime as _shared_parse_datetime,
+)
 
 VIDEO_PUBLICATION_TABLE = "xm_user_work"
 SESSION_ARTIFACT_TABLE = "xm_session_artifact"
@@ -33,17 +36,8 @@ def _first_present(payload: Mapping[str, Any], *keys: str, default=None):
 
 
 def _parse_datetime(value: Any) -> datetime | None:
-    if value is None or value == "":
-        return None
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.strptime(value, RUOYI_DATETIME_FORMAT)
-        except ValueError:
-            normalized_value = value.replace("Z", "+00:00")
-            return datetime.fromisoformat(normalized_value)
-    raise ValueError(f"unsupported datetime value: {value!r}")
+    """向后兼容别名，转发到 ``app.shared.datetime_utils.parse_datetime``。"""
+    return _shared_parse_datetime(value)
 
 
 def _parse_bool(value: Any) -> bool:
@@ -61,10 +55,10 @@ def _parse_bool(value: Any) -> bool:
 
 
 def _format_iso_datetime(value: datetime | None) -> str | None:
+    """向后兼容别名，转发到 ``app.shared.datetime_utils.format_iso8601``。"""
     if value is None:
         return None
-    normalized = value.astimezone(timezone.utc) if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
-    return normalized.isoformat().replace("+00:00", "Z")
+    return _shared_format_iso8601(value, with_z=True)
 
 
 class VideoPublicationSyncRequest(BaseModel):

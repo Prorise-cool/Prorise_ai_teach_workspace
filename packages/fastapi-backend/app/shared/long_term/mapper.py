@@ -14,11 +14,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from app.shared.ruoyi.mapper import RUOYI_DATETIME_FORMAT
+from app.shared.datetime_utils import (
+    format_ruoyi_datetime as _shared_format_ruoyi_datetime,
+    utc_now as _shared_utc_now,
+)
 
 from .models import (
     COMPANION_TURN_TABLE,
@@ -40,7 +43,7 @@ from .models import (
 
 def _now() -> datetime:
     """返回当前 UTC 时间（带时区信息）。"""
-    return datetime.now(timezone.utc)
+    return _shared_utc_now()
 
 
 def _new_id(prefix: str) -> str:
@@ -50,8 +53,9 @@ def _new_id(prefix: str) -> str:
 
 def _format_ruoyi_datetime(value: datetime) -> str:
     """将 datetime 格式化为 RuoYi 后端接受的字符串格式。"""
-    normalized = value.astimezone(timezone.utc) if value.tzinfo is not None else value
-    return normalized.strftime(RUOYI_DATETIME_FORMAT)
+    formatted = _shared_format_ruoyi_datetime(value)
+    assert formatted is not None  # value 已声明非 None
+    return formatted
 
 
 def _parse_source_refs(raw_value: str | None) -> list[SourceReference]:

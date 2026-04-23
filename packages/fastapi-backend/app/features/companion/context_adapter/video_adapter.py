@@ -17,6 +17,7 @@ from app.features.companion.schemas import (
 )
 from app.features.video.pipeline.models import VideoArtifactGraph
 from app.infra.redis_client import RuntimeStore
+from app.shared.coerce_utils import coerce_int as _shared_coerce_int
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +233,5 @@ async def _get_topic_from_metadata(task_id: str) -> str:
 
 
 def _coerce_int(value: Any) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return max(0, int(value))
-    except (TypeError, ValueError):
-        return None
+    """向后兼容别名，转发到 ``app.shared.coerce_utils.coerce_int``（夹紧到 >= 0）。"""
+    return _shared_coerce_int(value, default=None, clamp_min=0)

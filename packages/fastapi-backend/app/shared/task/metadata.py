@@ -9,7 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
-from app.shared.ruoyi.mapper import RuoYiMapper, RUOYI_DATETIME_FORMAT
+from app.shared.datetime_utils import format_ruoyi_datetime as _shared_format_ruoyi_datetime
+from app.shared.ruoyi.mapper import RuoYiMapper
 from app.shared.task_framework.status import TaskStatus
 
 
@@ -20,10 +21,8 @@ class TaskType(StrEnum):
 
 
 def _format_ruoyi_datetime(value: datetime | None) -> str | None:
-    if value is None:
-        return None
-    normalized = value.astimezone(UTC) if value.tzinfo is not None else value
-    return normalized.strftime(RUOYI_DATETIME_FORMAT)
+    """向后兼容别名，转发到 ``app.shared.datetime_utils.format_ruoyi_datetime``。"""
+    return _shared_format_ruoyi_datetime(value)
 
 
 def _coerce_task_type(task_type: str | None, *, default_task_type: TaskType) -> str:
