@@ -10,7 +10,6 @@ import type { Scene } from '../types/scene';
 import type { AgentProfile } from '../types/agent';
 import type { ChatMessage, LectureNoteEntry } from '../types/chat';
 import { SlideRenderer } from './scene-renderers/slide-renderer';
-import { QuizRenderer } from './scene-renderers/quiz-renderer';
 import { InteractiveRenderer } from './scene-renderers/interactive-renderer';
 import { PBLRenderer } from './scene-renderers/pbl-renderer';
 import { AgentBubble } from './agent/agent-bubble';
@@ -75,15 +74,6 @@ export const Stage: FC<StageProps> = ({
             sceneTitle={scene.title}
             sceneOrder={order}
             spotlightId={spotlightId}
-          />
-        );
-      case 'quiz':
-        return (
-          <QuizRenderer
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={scene.content as any}
-            sceneTitle={scene.title}
-            sceneOrder={order}
           />
         );
       case 'interactive':

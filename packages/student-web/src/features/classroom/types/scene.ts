@@ -1,12 +1,17 @@
 /**
- * 场景类型定义（与 FastAPI openmaic backend schemas.py 对齐）。
+ * 场景类型定义（与 FastAPI classroom backend schemas.py 对齐）。
  *
  * scene.type 作为运行时 discriminator；content 结构由 type 决定。
+ *
+ * Wave 1：移除 'quiz' — quiz 渲染已下放给 learning_coach 模块，
+ * 课堂主舞台不再嵌入测验场景。`features/classroom/types/quiz.ts`
+ * 仍保留 QuizGradeRequest / QuizGradeResult 等类型，供 adapter 层
+ * 桥接 learning_coach 自动评分服务。
  */
 
 import type { Action } from './action';
 
-export type SceneType = 'slide' | 'quiz' | 'interactive' | 'pbl';
+export type SceneType = 'slide' | 'interactive' | 'pbl';
 
 export type StageMode = 'autonomous' | 'playback';
 
@@ -41,27 +46,6 @@ export interface SlideContent {
   elements?: SlideElement[];
 }
 
-/** 测验内容 */
-export interface QuizOption {
-  id: string;
-  label: string; // "A" | "B" | ...
-  content: string;
-}
-
-export interface QuizQuestion {
-  id: string;
-  type: 'single' | 'multiple' | 'short_answer';
-  stem: string;
-  options?: QuizOption[];
-  correctAnswers?: string[];
-  explanation?: string;
-  points?: number;
-}
-
-export interface QuizContent {
-  questions: QuizQuestion[];
-}
-
 /** 交互式（iframe srcDoc 或 URL） */
 export interface InteractiveContent {
   html?: string;
@@ -82,7 +66,7 @@ export interface PBLContent {
   issues?: PBLIssue[];
 }
 
-export type SceneContent = SlideContent | QuizContent | InteractiveContent | PBLContent;
+export type SceneContent = SlideContent | InteractiveContent | PBLContent;
 
 /** Stage 元数据 */
 export interface ClassroomStage {

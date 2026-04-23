@@ -332,7 +332,7 @@ function SceneItem({ scene, index, isActive, onClick }: SceneItemProps) {
             {scene.title}
           </p>
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            {scene.type === 'slide' ? '幻灯片' : scene.type === 'quiz' ? '测验' : scene.type === 'interactive' ? '互动' : '项目'}
+            {scene.type === 'slide' ? '幻灯片' : scene.type === 'interactive' ? '互动' : '项目'}
           </p>
         </div>
       </div>
