@@ -35,6 +35,26 @@ from app.shared.ruoyi.auth import RuoYiRequestAuth
 logger = logging.getLogger(__name__)
 
 
+# ── RuoYi auth endpoint paths ──────────────────────────────────────────────
+AUTH_LOGIN_PATH = "/auth/login"
+AUTH_LOGOUT_PATH = "/auth/logout"
+AUTH_REGISTER_PATH = "/auth/register"
+AUTH_CAPTCHA_PATH = "/auth/code"
+AUTH_REGISTER_ENABLED_PATH = "/auth/register/enabled"
+AUTH_BINDING_PATH_TEMPLATE = "/auth/binding/{source}"
+USER_INFO_PATH = "/system/user/getInfo"
+
+# ── IntegrationError service / resource labels ─────────────────────────────
+RUOYI_SERVICE_LABEL = "ruoyi"
+AUTH_RESOURCE_LABEL = "auth"
+
+# ── HTTP status / response codes ───────────────────────────────────────────
+HTTP_OK = 200
+HTTP_GATEWAY_TIMEOUT = 504
+HTTP_SERVICE_UNAVAILABLE = 503
+HTTP_BAD_GATEWAY = 502
+
+
 class AuthProxyService:
     """RuoYi 认证代理服务。"""
 
@@ -65,11 +85,11 @@ class AuthProxyService:
         """代理登录，并在成功后写入 FastAPI 在线态。"""
         status_code, response_payload = await self._request_json(
             "POST",
-            "/auth/login",
+            AUTH_LOGIN_PATH,
             json_body=payload.model_dump(by_alias=True, exclude_none=True),
             encrypted=True,
         )
-        if status_code == 200:
+        if status_code == HTTP_OK:
             self._persist_online_token(
                 runtime_store,
                 payload=response_payload,
@@ -81,20 +101,20 @@ class AuthProxyService:
         """代理注册。"""
         return await self._request_json(
             "POST",
-            "/auth/register",
+            AUTH_REGISTER_PATH,
             json_body=payload.model_dump(by_alias=True, exclude_none=True),
             encrypted=True,
         )
 
     async def get_captcha(self) -> tuple[int, dict[str, Any]]:
         """代理验证码接口。"""
-        return await self._request_json("GET", "/auth/code")
+        return await self._request_json("GET", AUTH_CAPTCHA_PATH)
 
     async def get_register_enabled(self, tenant_id: str) -> tuple[int, dict[str, Any]]:
         """代理注册开关查询。"""
         return await self._request_json(
             "GET",
-            "/auth/register/enabled",
+            AUTH_REGISTER_ENABLED_PATH,
             params={"tenantId": tenant_id},
         )
 
@@ -108,7 +128,7 @@ class AuthProxyService:
         """代理第三方登录绑定入口。"""
         return await self._request_json(
             "GET",
-            f"/auth/binding/{source}",
+            AUTH_BINDING_PATH_TEMPLATE.format(source=source),
             params={"tenantId": tenant_id, "domain": domain},
         )
 
@@ -121,13 +141,13 @@ class AuthProxyService:
         """代理登出，并清理 FastAPI 在线态。"""
         token = extract_bearer_token(authorization)
         if token is None:
-            return 200, {"code": 200, "msg": "退出成功", "data": None}
+            return HTTP_OK, {"code": HTTP_OK, "msg": "退出成功", "data": None}
 
         claims = extract_access_token_claims(token)
         try:
             status_code, response_payload = await self._request_json(
                 "POST",
-                "/auth/logout",
+                AUTH_LOGOUT_PATH,
                 headers={"Authorization": f"Bearer {token}"},
             )
         finally:
@@ -145,7 +165,7 @@ class AuthProxyService:
             headers["Clientid"] = request_auth.client_id
         return await self._request_json(
             "GET",
-            "/system/user/getInfo",
+            USER_INFO_PATH,
             headers=headers,
         )
 
@@ -196,29 +216,29 @@ class AuthProxyService:
                     )
         except httpx.TimeoutException as exc:
             raise IntegrationError(
-                service="ruoyi",
-                resource="auth",
+                service=RUOYI_SERVICE_LABEL,
+                resource=AUTH_RESOURCE_LABEL,
                 operation=f"{method.lower()} {path}",
                 code="RUOYI_TIMEOUT",
                 message="RuoYi 认证请求超时",
-                status_code=504,
+                status_code=HTTP_GATEWAY_TIMEOUT,
                 retryable=False,
             ) from exc
         except httpx.RequestError as exc:
             raise IntegrationError(
-                service="ruoyi",
-                resource="auth",
+                service=RUOYI_SERVICE_LABEL,
+                resource=AUTH_RESOURCE_LABEL,
                 operation=f"{method.lower()} {path}",
                 code="RUOYI_NETWORK_ERROR",
                 message="RuoYi 认证网络异常",
-                status_code=503,
+                status_code=HTTP_SERVICE_UNAVAILABLE,
                 retryable=True,
             ) from exc
 
         payload = self._parse_response_payload(response)
         payload_code = payload.get("code")
         normalized_payload_code = payload_code if isinstance(payload_code, int) else None
-        effective_status = response.status_code if response.status_code >= 400 else (normalized_payload_code or 200)
+        effective_status = response.status_code if response.status_code >= 400 else (normalized_payload_code or HTTP_OK)
         return effective_status, payload
 
     def _parse_response_payload(self, response: httpx.Response) -> dict[str, Any]:
@@ -232,14 +252,14 @@ class AuthProxyService:
             raise AppError(
                 code="RUOYI_AUTH_PROXY_INVALID_RESPONSE",
                 message="RuoYi 认证响应不是合法 JSON",
-                status_code=502,
+                status_code=HTTP_BAD_GATEWAY,
             ) from exc
 
         if not isinstance(payload, dict):
             raise AppError(
                 code="RUOYI_AUTH_PROXY_INVALID_RESPONSE",
                 message="RuoYi 认证响应格式异常",
-                status_code=502,
+                status_code=HTTP_BAD_GATEWAY,
             )
         return payload
 
@@ -255,7 +275,7 @@ class AuthProxyService:
             raise AppError(
                 code="RUOYI_AUTH_PROXY_INVALID_RESPONSE",
                 message="登录响应缺少 token 数据",
-                status_code=502,
+                status_code=HTTP_BAD_GATEWAY,
             )
 
         access_token = token_payload.get("access_token")
@@ -265,13 +285,13 @@ class AuthProxyService:
             raise AppError(
                 code="RUOYI_AUTH_PROXY_INVALID_RESPONSE",
                 message="登录响应缺少 access_token",
-                status_code=502,
+                status_code=HTTP_BAD_GATEWAY,
             )
         if not isinstance(expire_in, int) or expire_in <= 0:
             raise AppError(
                 code="RUOYI_AUTH_PROXY_INVALID_RESPONSE",
                 message="登录响应缺少有效 expire_in",
-                status_code=502,
+                status_code=HTTP_BAD_GATEWAY,
             )
 
         claims = extract_access_token_claims(access_token)
