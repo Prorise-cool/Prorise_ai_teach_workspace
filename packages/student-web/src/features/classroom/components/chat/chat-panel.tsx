@@ -10,6 +10,7 @@ import type { LectureNoteEntry } from '../../types/chat';
 import type { AgentProfile } from '../../types/agent';
 import type { ChatMessage } from '../../types/chat';
 import { MessageList } from './message-list';
+import { InlineActionTag } from './inline-action-tag';
 
 interface ChatPanelProps {
   classroomId: string;
@@ -171,11 +172,17 @@ const NotesList: FC<{ notes: LectureNoteEntry[] }> = ({ notes }) => {
             </span>
           </div>
           <div className="mt-2 space-y-1">
-            {note.items.slice(0, 3).map((item, i) => (
-              <div key={i} className="text-[12px] leading-relaxed text-muted-foreground">
-                {item.kind === 'speech' ? item.text : `[${item.label ?? item.type}]`}
-              </div>
-            ))}
+            {note.items.slice(0, 3).map((item, i) =>
+              item.kind === 'speech' ? (
+                <div key={i} className="text-[12px] leading-relaxed text-muted-foreground">
+                  {item.text}
+                </div>
+              ) : (
+                <div key={i} className="text-[12px]">
+                  <InlineActionTag actionName={item.type} state="completed" />
+                </div>
+              ),
+            )}
           </div>
         </div>
       ))}
