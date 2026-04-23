@@ -4,7 +4,7 @@
  * 与 UI 设计稿 01-classroom.html 对应。
  */
 import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -140,7 +140,7 @@ export function ClassroomPlayPage() {
     void navigate(`/coach/${encodeURIComponent(classroomId)}?${params.toString()}`);
   }, [classroomId, classroom?.name, navigate]);
 
-  const courseLabel = useMemo(() => 'OpenMAIC', []);
+  const courseLabel = t('classroom.stage.xiaomaiBrand');
 
   if (!classroomId) {
     return (
