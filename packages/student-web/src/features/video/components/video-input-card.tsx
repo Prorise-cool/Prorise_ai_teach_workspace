@@ -1,18 +1,11 @@
 /**
  * 文件说明：视频输入页核心输入卡片组件。
  * 页面容器负责业务编排，本组件承接题目输入、图片上传、预设切换与高级参数调整。
+ * Wave 1.5 polish：拆分出 video-input-media-preview / video-input-tool-buttons / video-input-advanced-dialog。
  */
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from 'react';
 import { type FieldErrors, type UseFormReturn } from 'react-hook-form';
-import {
-  ArrowRight,
-  ChevronDown,
-  Image,
-  Loader2,
-  Mic,
-  SlidersHorizontal,
-  X,
-} from 'lucide-react';
+import { ArrowRight, ChevronDown, Loader2, SlidersHorizontal } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import {
@@ -20,16 +13,7 @@ import {
 } from '@/components/input-page/input-workspace-card-frame';
 import { createInputWorkspaceCardClassNames } from '@/components/input-page/input-workspace-card-class-names';
 import { useFileDropzone } from '@/components/input-page';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';
 import {
@@ -40,10 +24,13 @@ import {
 import {
   VIDEO_TEXT_MAX_LENGTH,
   VIDEO_QUALITY_PRESET_DEFAULTS,
-  type VideoLayoutHint,
   type VideoQualityPreset,
   type VideoRenderQuality,
 } from '@/types/video';
+
+import { VideoInputAdvancedDialog } from './video-input-advanced-dialog';
+import { VideoInputMediaPreview } from './video-input-media-preview';
+import { VideoInputToolButtons } from './video-input-tool-buttons';
 
 type VideoInputCardProps = {
   form: UseFormReturn<VideoInputFormValues>;
@@ -87,12 +74,6 @@ type VideoInputCardProps = {
   textAreaRef?: MutableRefObject<HTMLTextAreaElement | null>;
 };
 
-const QUALITY_PRESET_SEQUENCE: VideoQualityPreset[] = [
-  'fast',
-  'balanced',
-  'cinematic',
-];
-
 export function VideoInputCard({
   form,
   errors,
@@ -112,14 +93,9 @@ export function VideoInputCard({
   const textValue = watch('text') ?? '';
   const qualityPreset = watch('qualityPreset');
   const durationMinutes = watch('durationMinutes');
-  const sectionCount = watch('sectionCount');
-  const sectionConcurrency = watch('sectionConcurrency');
   const renderQuality = watch('renderQuality');
   const layoutHint = watch('layoutHint');
   const textField = register('text');
-  const durationField = register('durationMinutes', { valueAsNumber: true });
-  const sectionCountField = register('sectionCount', { valueAsNumber: true });
-  const sectionConcurrencyField = register('sectionConcurrency', { valueAsNumber: true });
 
   const {
     isDragging,
@@ -162,17 +138,6 @@ export function VideoInputCard({
     m: labels.renderBalancedLabel,
     h: labels.renderHighLabel,
   };
-
-  const renderQualityOptions: Array<{ value: VideoRenderQuality; label: string }> = [
-    { value: 'l', label: labels.renderQuickLabel },
-    { value: 'm', label: labels.renderBalancedLabel },
-    { value: 'h', label: labels.renderHighLabel },
-  ];
-
-  const layoutHintOptions: Array<{ value: VideoLayoutHint; label: string }> = [
-    { value: 'center_stage', label: labels.layoutCenterLabel },
-    { value: 'two_column', label: labels.layoutTwoColumnLabel },
-  ];
 
   const applyPreset = useCallback(
     (preset: VideoQualityPreset) => {
@@ -301,7 +266,6 @@ export function VideoInputCard({
     errors.sectionConcurrency ? 'video-input-section-concurrency-error' : null,
   ].filter(Boolean);
   const describedBy = fieldErrorIds.length > 0 ? fieldErrorIds.join(' ') : undefined;
-  const toolButtonClassName = `${classNames.root}-tool-btn`;
   const submitClassName = `${classNames.root}-submit`;
   const parameterSummary = `${presetLabelMap[qualityPreset]} · ${durationMinutes}${labels.durationUnit} · ${renderQualityLabelMap[renderQuality]}`;
 
@@ -333,31 +297,14 @@ export function VideoInputCard({
           onPaste={handlePaste}
           body={
             <>
-              {imageFiles.length > 0 && inputType === 'image' ? (
-                <div className={`${classNames.root}-image-grid`}>
-                  {imageFiles.map((file, index) => (
-                    <div
-                      key={`${file.name}-${file.size}-${index}`}
-                      className={`${classNames.root}-image-thumb`}
-                    >
-                      <img
-                        src={previewUrls[index]}
-                        alt={file.name}
-                        className={`${classNames.root}-image-thumb-img`}
-                      />
-                      <span className="sr-only">{file.name}</span>
-                      <button
-                        type="button"
-                        className={`${classNames.root}-image-thumb-remove`}
-                        onClick={() => removeImage(index)}
-                        title={t('videoInput.removeImageLabel')}
-                        aria-label={t('videoInput.removeImageLabel')}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              {inputType === 'image' ? (
+                <VideoInputMediaPreview
+                  imageFiles={imageFiles}
+                  previewUrls={previewUrls}
+                  onRemove={removeImage}
+                  blockPrefix={classNames.root}
+                  removeLabel={t('videoInput.removeImageLabel')}
+                />
               ) : null}
 
               <textarea
@@ -410,51 +357,21 @@ export function VideoInputCard({
             </>
           }
           tools={
-            <>
-              <input
-                type="file"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={originalHandleFileChange}
-                accept={VIDEO_INPUT_ACCEPTED_IMAGE_TYPES.join(',')}
-                multiple
-                aria-label={labels.toolUploadImage}
-              />
-              <button
-                type="button"
-                className={`${toolButtonClassName} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-color-ring)]/40`}
-                title={labels.toolUploadImage}
-                aria-label={labels.toolUploadImage}
-                onClick={triggerSelect}
-              >
-                <Image className="h-4 w-4" />
-                {imageFiles.length > 0 ? (
-                  <span className={`${classNames.root}-tool-indicator`} />
-                ) : null}
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  `${toolButtonClassName} ${classNames.root}-voice-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--xm-color-ring)]/40`,
-                  isRecording && 'is-recording',
-                )}
-                title={labels.toolVoiceInput}
-                aria-label={labels.toolVoiceInput}
-                onClick={onToggleRecording}
-              >
-                <span className={`${classNames.root}-voice-btn-icon`}>
-                  <Mic className="h-4 w-4" />
-                </span>
-                <span className={`${classNames.root}-voice-btn-wave`} aria-hidden={!isRecording}>
-                  <span className="h-2 w-[2px] rounded-full bg-current animate-audio-bar-1" />
-                  <span className="h-4 w-[2px] rounded-full bg-current animate-audio-bar-2" />
-                  <span className="h-3 w-[2px] rounded-full bg-current animate-audio-bar-3" />
-                  <span className={`${classNames.root}-voice-btn-label`}>
-                    {labels.recordingLabel}
-                  </span>
-                </span>
-              </button>
-            </>
+            <VideoInputToolButtons
+              blockPrefix={classNames.root}
+              fileInputRef={fileInputRef}
+              onFileChange={originalHandleFileChange}
+              acceptedMimeTypes={VIDEO_INPUT_ACCEPTED_IMAGE_TYPES}
+              onTriggerSelect={triggerSelect}
+              hasImage={imageFiles.length > 0}
+              isRecording={isRecording}
+              onToggleRecording={onToggleRecording}
+              labels={{
+                toolUploadImage: labels.toolUploadImage,
+                toolVoiceInput: labels.toolVoiceInput,
+                recordingLabel: labels.recordingLabel,
+              }}
+            />
           }
           submitAction={
             <button
@@ -482,197 +399,34 @@ export function VideoInputCard({
         />
       </div>
 
-      <DialogContent className="xm-video-input__advanced-dialog">
-        <div className="xm-video-input__advanced-dialog-head">
-          <div className="xm-video-input__advanced-dialog-title-row">
-            <div className="xm-video-input__advanced-dialog-title-group">
-              <SlidersHorizontal className="xm-video-input__advanced-dialog-title-icon h-4 w-4" />
-              <DialogTitle>{labels.advancedTitle}</DialogTitle>
-            </div>
-            <DialogClose asChild>
-              <button
-                type="button"
-                className="xm-video-input__advanced-close"
-                aria-label={t('common.close')}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </DialogClose>
-          </div>
-          <DialogDescription className="xm-video-input__advanced-dialog-description">
-            {labels.advancedDescription}
-          </DialogDescription>
-        </div>
-
-        <div className="xm-video-input__advanced-shell">
-          <div className="xm-video-input__advanced-section">
-            <p className="xm-video-input__advanced-section-label">
-              {labels.qualityPresetLabel}
-            </p>
-            <div
-              className="xm-video-input__advanced-preset-grid"
-              role="listbox"
-              aria-label={labels.qualityPresetLabel}
-            >
-              {QUALITY_PRESET_SEQUENCE.map((preset) => {
-                const isActive = preset === qualityPreset;
-
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    role="option"
-                    aria-selected={isActive}
-                    className={cn(
-                      'xm-video-input__advanced-preset-btn',
-                      isActive && 'is-active',
-                    )}
-                    onClick={() => applyPreset(preset)}
-                  >
-                    {presetLabelMap[preset]}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="xm-video-input__advanced-divider" />
-
-          <div className="xm-video-input__advanced-grid">
-            <div className="xm-video-input__advanced-field">
-              <Label htmlFor="video-duration-minutes">{labels.durationLabel}</Label>
-              <Input
-                id="video-duration-minutes"
-                type="number"
-                min={1}
-                max={10}
-                inputMode="numeric"
-                className="xm-video-input__advanced-input"
-                aria-invalid={Boolean(errors.durationMinutes?.message)}
-                {...durationField}
-              />
-              {errors.durationMinutes?.message ? (
-                <p id="video-input-duration-error" className="text-xs text-destructive">
-                  {errors.durationMinutes.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="xm-video-input__advanced-field">
-              <Label htmlFor="video-section-count">{labels.sectionCountLabel}</Label>
-              <Input
-                id="video-section-count"
-                type="number"
-                min={1}
-                max={12}
-                inputMode="numeric"
-                className="xm-video-input__advanced-input"
-                aria-invalid={Boolean(errors.sectionCount?.message)}
-                {...sectionCountField}
-              />
-              {errors.sectionCount?.message ? (
-                <p id="video-input-section-count-error" className="text-xs text-destructive">
-                  {errors.sectionCount.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="xm-video-input__advanced-field xm-video-input__advanced-field--full">
-              <Label htmlFor="video-section-concurrency">{labels.concurrencyLabel}</Label>
-              <Input
-                id="video-section-concurrency"
-                type="number"
-                min={1}
-                max={8}
-                inputMode="numeric"
-                className="xm-video-input__advanced-input"
-                aria-invalid={Boolean(errors.sectionConcurrency?.message)}
-                {...sectionConcurrencyField}
-              />
-              {errors.sectionConcurrency?.message ? (
-                <p
-                  id="video-input-section-concurrency-error"
-                  className="text-xs text-destructive"
-                >
-                  {errors.sectionConcurrency.message}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="xm-video-input__advanced-field xm-video-input__advanced-field--full">
-              <span className="xm-video-input__advanced-label">
-                {labels.renderQualityLabel}
-              </span>
-              <div
-                className="xm-video-input__advanced-choice-grid xm-video-input__advanced-choice-grid--quality"
-                role="group"
-                aria-label={labels.renderQualityLabel}
-              >
-                {renderQualityOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      'xm-video-input__advanced-choice',
-                      renderQuality === option.value && 'is-active',
-                    )}
-                    onClick={() => {
-                      setValue('renderQuality', option.value, {
-                        shouldDirty: true,
-                        shouldTouch: true,
-                      });
-                      clearErrors('renderQuality');
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="xm-video-input__advanced-field xm-video-input__advanced-field--full">
-              <span className="xm-video-input__advanced-label">
-                {labels.layoutHintLabel}
-              </span>
-              <div
-                className="xm-video-input__advanced-choice-grid xm-video-input__advanced-choice-grid--layout"
-                role="group"
-                aria-label={labels.layoutHintLabel}
-              >
-                {layoutHintOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      'xm-video-input__advanced-choice',
-                      layoutHint === option.value && 'is-active',
-                    )}
-                    onClick={() => {
-                      setValue('layoutHint', option.value, {
-                        shouldDirty: true,
-                        shouldTouch: true,
-                      });
-                      clearErrors('layoutHint');
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="xm-video-input__advanced-footer">
-          <button
-            type="button"
-            className="xm-video-input__advanced-confirm"
-            onClick={() => setIsAdvancedOpen(false)}
-          >
-            {labels.advancedDone}
-          </button>
-        </div>
-      </DialogContent>
+      <VideoInputAdvancedDialog
+        form={form}
+        errors={errors}
+        qualityPreset={qualityPreset}
+        renderQuality={renderQuality}
+        layoutHint={layoutHint}
+        onApplyPreset={applyPreset}
+        onClose={() => setIsAdvancedOpen(false)}
+        labels={{
+          advancedTitle: labels.advancedTitle,
+          advancedDescription: labels.advancedDescription,
+          advancedDone: labels.advancedDone,
+          qualityPresetLabel: labels.qualityPresetLabel,
+          durationLabel: labels.durationLabel,
+          sectionCountLabel: labels.sectionCountLabel,
+          concurrencyLabel: labels.concurrencyLabel,
+          renderQualityLabel: labels.renderQualityLabel,
+          layoutHintLabel: labels.layoutHintLabel,
+          presetQuick: labels.presetQuick,
+          presetBalanced: labels.presetBalanced,
+          presetCinematic: labels.presetCinematic,
+          renderQuickLabel: labels.renderQuickLabel,
+          renderBalancedLabel: labels.renderBalancedLabel,
+          renderHighLabel: labels.renderHighLabel,
+          layoutCenterLabel: labels.layoutCenterLabel,
+          layoutTwoColumnLabel: labels.layoutTwoColumnLabel,
+        }}
+      />
     </Dialog>
   );
 }
