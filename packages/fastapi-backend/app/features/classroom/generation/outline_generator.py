@@ -10,12 +10,12 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Sequence
 
-from app.features.openmaic.generation.json_repair import parse_json_response
-from app.features.openmaic.generation.prompts.outline import (
+from app.features.classroom.generation.json_repair import parse_json_response
+from app.features.classroom.generation.prompts.outline import (
     OUTLINE_SYSTEM_PROMPT,
     build_outline_user_prompt,
 )
-from app.features.openmaic.llm_adapter import LLMCallParams, call_llm, stream_llm
+from app.features.classroom.llm_adapter import LLMCallParams, call_llm, stream_llm
 from app.providers.protocols import LLMProvider
 
 logger = logging.getLogger(__name__)

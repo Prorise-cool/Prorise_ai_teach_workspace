@@ -11,7 +11,7 @@ import logging
 import re
 import uuid
 
-from app.features.openmaic.generation.json_repair import _try_parse_json
+from app.features.classroom.generation.json_repair import _try_parse_json
 
 logger = logging.getLogger(__name__)
 

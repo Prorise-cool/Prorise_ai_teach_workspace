@@ -383,5 +383,5 @@ def _reset_module_state() -> None:
 # dramatiq 会扫描模块级的 actor，因此需要在模块加载时立即初始化
 _ensure_initialized()
 
-# OpenMAIC 后台任务 actor 注册 — 通过 import 触发 @dramatiq.actor 扫描
-import app.features.openmaic.jobs.job_runner  # noqa: E402, F401
+# Classroom（合并自 OpenMAIC）后台任务 actor 注册 — 通过 import 触发 @dramatiq.actor 扫描
+import app.features.classroom.jobs.job_runner  # noqa: E402, F401

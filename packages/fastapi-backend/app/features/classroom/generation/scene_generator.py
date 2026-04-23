@@ -1,7 +1,7 @@
-"""Stage 2: Scene content and action generation.
+"""Stage 2: 场景内容与动作生成。
 
-Ported from OpenMAIC /lib/generation/scene-generator.ts.
-Generates slide/quiz/interactive/PBL content + agent actions per scene.
+Wave 1 重构：删除 ``quiz`` 与 ``interactive`` 分支（quiz 移交 learning_coach），
+新增 ``discussion`` 类型。``slide`` 与 ``pbl`` 保留。
 """
 
 from __future__ import annotations
@@ -10,25 +10,17 @@ import logging
 import uuid
 from typing import Sequence
 
-from app.features.openmaic.generation.action_parser import parse_actions_from_structured_output
-from app.features.openmaic.generation.json_repair import parse_json_response
-from app.features.openmaic.generation.prompts.scene_actions import (
+from app.features.classroom.generation.action_parser import parse_actions_from_structured_output
+from app.features.classroom.generation.json_repair import parse_json_response
+from app.features.classroom.generation.prompts.scene_actions import (
     SCENE_ACTIONS_SYSTEM_PROMPT,
     build_scene_actions_user_prompt,
 )
-from app.features.openmaic.generation.prompts.scene_interactive import (
-    INTERACTIVE_CONTENT_SYSTEM_PROMPT,
-    build_interactive_content_user_prompt,
-)
-from app.features.openmaic.generation.prompts.scene_quiz import (
-    QUIZ_CONTENT_SYSTEM_PROMPT,
-    build_quiz_content_user_prompt,
-)
-from app.features.openmaic.generation.prompts.scene_slide import (
+from app.features.classroom.generation.prompts.scene_slide import (
     SLIDE_CONTENT_SYSTEM_PROMPT,
     build_slide_content_user_prompt,
 )
-from app.features.openmaic.llm_adapter import LLMCallParams, call_llm
+from app.features.classroom.llm_adapter import LLMCallParams, call_llm
 from app.providers.protocols import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -43,20 +35,20 @@ async def generate_scene_content(
 ) -> dict:
     """Generate content for a single scene based on its outline.
 
-    Returns content dict appropriate for the scene type.
+    Wave 1 仅支持 ``slide`` / ``pbl`` / ``discussion``；其他类型回退到 slide。
     """
     scene_type = outline.get("type", "slide")
 
     if scene_type == "slide":
         return await _generate_slide_content(outline, provider_chain, language_directive, course_context)
-    elif scene_type == "quiz":
-        return await _generate_quiz_content(outline, provider_chain, language_directive, course_context)
-    elif scene_type == "interactive":
-        return await _generate_interactive_content(outline, provider_chain, language_directive)
     elif scene_type == "pbl":
         return await _generate_pbl_content(outline, provider_chain, language_directive)
+    elif scene_type == "discussion":
+        return _generate_discussion_content(outline)
     else:
-        logger.warning("Unknown scene type: %s, falling back to slide", scene_type)
+        logger.warning(
+            "scene_generator: unsupported scene type %s, falling back to slide", scene_type,
+        )
         return await _generate_slide_content(outline, provider_chain, language_directive, course_context)
 
 
@@ -109,7 +101,7 @@ async def generate_agent_profiles(
     available_avatars: list[str] | None = None,
 ) -> list[dict]:
     """Generate agent personas for a classroom session."""
-    from app.features.openmaic.generation.prompts.agent_profiles import (
+    from app.features.classroom.generation.prompts.agent_profiles import (
         AGENT_PROFILES_SYSTEM_PROMPT,
         build_agent_profiles_user_prompt,
     )
@@ -175,68 +167,13 @@ async def _generate_slide_content(
     return _build_fallback_slide(outline)
 
 
-async def _generate_quiz_content(
-    outline: dict,
-    provider_chain: Sequence[LLMProvider],
-    language_directive: str,
-    course_context: str,
-) -> dict:
-    quiz_config = outline.get("quizConfig") or {}
-    key_points = outline.get("keyPoints", []) or outline.get("key_points", [])
-
-    params = LLMCallParams(
-        system=QUIZ_CONTENT_SYSTEM_PROMPT,
-        prompt=build_quiz_content_user_prompt(
-            outline_title=outline.get("title", ""),
-            outline_description=outline.get("description", ""),
-            key_points=key_points,
-            question_count=quiz_config.get("questionCount", 2),
-            difficulty=quiz_config.get("difficulty", "medium"),
-            question_types=quiz_config.get("questionTypes", ["single"]),
-            language_directive=language_directive,
-            course_context=course_context,
-        ),
-    )
-
-    try:
-        response = await call_llm(params, provider_chain)
-        parsed = parse_json_response(response)
-        if isinstance(parsed, dict) and "questions" in parsed:
-            return parsed
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("_generate_quiz_content: LLM failed: %s", exc)
-
-    return _build_fallback_quiz(outline)
-
-
-async def _generate_interactive_content(
-    outline: dict,
-    provider_chain: Sequence[LLMProvider],
-    language_directive: str,
-) -> dict:
-    key_points = outline.get("keyPoints", []) or outline.get("key_points", [])
-    params = LLMCallParams(
-        system=INTERACTIVE_CONTENT_SYSTEM_PROMPT,
-        prompt=build_interactive_content_user_prompt(
-            outline_title=outline.get("title", ""),
-            outline_description=outline.get("description", ""),
-            key_points=key_points,
-            widget_type=outline.get("widgetType"),
-            widget_outline=outline.get("widgetOutline"),
-            interactive_config=outline.get("interactiveConfig"),
-            language_directive=language_directive,
-        ),
-    )
-
-    try:
-        response = await call_llm(params, provider_chain)
-        parsed = parse_json_response(response)
-        if isinstance(parsed, dict) and "html" in parsed:
-            return parsed
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("_generate_interactive_content: LLM failed: %s", exc)
-
-    return {"html": _build_fallback_interactive_html(outline), "css": None, "js": None}
+def _generate_discussion_content(outline: dict) -> dict:
+    """讨论场景的内容仅记录题面与背景，正式 turn 由 director graph 触发。"""
+    return {
+        "topic": outline.get("title", ""),
+        "prompt": outline.get("description", ""),
+        "keyPoints": outline.get("keyPoints", []) or outline.get("key_points", []),
+    }
 
 
 async def _generate_pbl_content(
@@ -263,7 +200,7 @@ async def _generate_pbl_content(
 
 
 def _summarize_content(content: dict, scene_type: str) -> str:
-    """Create a brief content summary for action generation prompts."""
+    """生成动作 prompt 时的简要内容描述。"""
     if scene_type == "slide":
         elements = content.get("elements", [])
         texts = [
@@ -271,16 +208,10 @@ def _summarize_content(content: dict, scene_type: str) -> str:
             if e.get("type") == "text" and e.get("content")
         ]
         return "\n".join(str(t)[:200] for t in texts[:5]) or "（幻灯片内容）"
-    elif scene_type == "quiz":
-        questions = content.get("questions", [])
-        if questions:
-            q = questions[0]
-            return f"测验第一题：{q.get('stem', '')[:100]}"
-        return "（测验场景）"
-    elif scene_type == "interactive":
-        return "互动可视化场景，学生可动手操作体验概念。"
     elif scene_type == "pbl":
         return f"项目式学习：{content.get('projectTitle', '')}。{content.get('projectOverview', '')[:200]}"
+    elif scene_type == "discussion":
+        return f"讨论环节：{content.get('topic', '')} —— {content.get('prompt', '')[:200]}"
     return "（场景内容）"
 
 
@@ -320,56 +251,6 @@ def _build_fallback_slide(outline: dict) -> dict:
             },
         ],
     }
-
-
-def _build_fallback_quiz(outline: dict) -> dict:
-    """Minimal quiz content as fallback."""
-    return {
-        "questions": [
-            {
-                "id": "q_fallback_1",
-                "type": "single",
-                "stem": "关于'{}'，以下说法正确的是？".format(outline.get("title", "")),
-                "options": [
-                    {"id": "opt_a", "label": "A", "content": "选项A"},
-                    {"id": "opt_b", "label": "B", "content": "选项B"},
-                    {"id": "opt_c", "label": "C", "content": "选项C"},
-                    {"id": "opt_d", "label": "D", "content": "选项D"},
-                ],
-                "correctAnswers": ["opt_a"],
-                "explanation": "请参考课程内容。",
-                "points": 1,
-            }
-        ]
-    }
-
-
-def _build_fallback_interactive_html(outline: dict) -> str:
-    """Simple placeholder HTML for interactive scenes."""
-    title = outline.get("title", "互动场景")
-    desc = outline.get("description", "")
-    return f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<style>
-  body {{ margin: 0; display: flex; align-items: center; justify-content: center;
-         height: 100vh; font-family: sans-serif; background: #f5f7fa; }}
-  .container {{ text-align: center; max-width: 600px; padding: 24px; }}
-  h2 {{ color: #2c3e50; }}
-  p {{ color: #7f8c8d; line-height: 1.6; }}
-  .badge {{ background: #3498db; color: white; padding: 8px 16px;
-             border-radius: 20px; display: inline-block; margin-top: 16px; }}
-</style>
-</head>
-<body>
-<div class="container">
-  <h2>{title}</h2>
-  <p>{desc}</p>
-  <div class="badge">互动内容加载中...</div>
-</div>
-</body>
-</html>"""
 
 
 def _build_fallback_agents(stage_name: str) -> list[dict]:

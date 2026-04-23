@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from app.features.openmaic.generation.scene_generator import (
+from app.features.classroom.generation.scene_generator import (
     generate_scene_content,
     generate_scene_actions,
 )
@@ -36,25 +36,14 @@ _SLIDE_OUTLINE = {
     "order": 1,
 }
 
-_QUIZ_OUTLINE = {
-    "id": "scene_2",
-    "type": "quiz",
-    "title": "知识检验",
-    "description": "测试Python基础知识",
-    "keyPoints": ["变量类型", "控制流"],
+# NOTE: quiz / interactive 场景类型已在 Wave 1 移除（Task 8），相关用例随之删除。
+_DISCUSSION_OUTLINE = {
+    "id": "scene_disc",
+    "type": "discussion",
+    "title": "Python风格之争",
+    "description": "围绕代码风格展开讨论",
+    "keyPoints": ["缩进", "命名"],
     "order": 2,
-    "quizConfig": {"questionCount": 2, "difficulty": "easy", "questionTypes": ["single"]},
-}
-
-_INTERACTIVE_OUTLINE = {
-    "id": "scene_3",
-    "type": "interactive",
-    "title": "排序算法可视化",
-    "description": "通过动画理解冒泡排序",
-    "keyPoints": ["比较", "交换", "递归"],
-    "order": 3,
-    "widgetType": "simulation",
-    "widgetOutline": {"concept": "BubbleSort", "keyVariables": ["array", "step"]},
 }
 
 
@@ -74,42 +63,12 @@ async def test_generate_slide_content_returns_elements():
 
 
 @pytest.mark.asyncio
-async def test_generate_quiz_content_returns_questions():
-    quiz_response = json.dumps({
-        "questions": [
-            {
-                "id": "q_1",
-                "type": "single",
-                "stem": "Python中用于定义变量的关键字是？",
-                "options": [
-                    {"id": "opt_a", "label": "A", "content": "var"},
-                    {"id": "opt_b", "label": "B", "content": "let"},
-                    {"id": "opt_c", "label": "C", "content": "无需关键字"},
-                    {"id": "opt_d", "label": "D", "content": "def"},
-                ],
-                "correctAnswers": ["opt_c"],
-                "explanation": "Python不需要关键字声明变量",
-                "points": 1,
-            }
-        ]
-    })
-    provider = _make_fixed_provider(quiz_response)
-    content = await generate_scene_content(_QUIZ_OUTLINE, [provider], language_directive="用中文教学")
-    assert "questions" in content
-    assert len(content["questions"]) == 1
-
-
-@pytest.mark.asyncio
-async def test_generate_interactive_content_returns_html():
-    interactive_response = json.dumps({
-        "html": "<!DOCTYPE html><html><body><h1>Sort Viz</h1></body></html>",
-        "css": None,
-        "js": None,
-    })
-    provider = _make_fixed_provider(interactive_response)
-    content = await generate_scene_content(_INTERACTIVE_OUTLINE, [provider])
-    assert "html" in content
-    assert "<html" in content["html"].lower()
+async def test_generate_discussion_content_returns_topic():
+    """讨论类型场景内容只回传题面，不调用 LLM。"""
+    provider = _make_fixed_provider("(should-not-be-called)")
+    content = await generate_scene_content(_DISCUSSION_OUTLINE, [provider])
+    assert content["topic"] == "Python风格之争"
+    assert "缩进" in content["keyPoints"]
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.features.openmaic.llm_adapter import LLMCallParams, call_llm, stream_llm
+from app.features.classroom.llm_adapter import LLMCallParams, call_llm, stream_llm
 from app.providers.protocols import ProviderError, ProviderResult, ProviderRuntimeConfig
 from app.providers.llm.stub_provider import StubLLMProvider
 

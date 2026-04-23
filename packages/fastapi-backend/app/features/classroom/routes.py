@@ -1,4 +1,10 @@
-"""课堂功能域路由模块。"""
+"""课堂功能域路由聚合。
+
+Wave 1 重构：把原 ``app.features.openmaic.routes`` 拆分到
+``routes_generation.py`` / ``routes_chat.py`` / ``routes_pdf_search.py``，
+本模块继续承载任务元数据 CRUD + bootstrap + sessions/replay。
+所有子 router 共用 ``/classroom`` 前缀。
+"""
 
 from functools import lru_cache
 from datetime import datetime
@@ -10,6 +16,9 @@ from app.api.routes.tasks import get_task_events as get_shared_task_events
 from app.api.routes.tasks import get_task_status as get_shared_task_status
 from app.core.security import AccessContext, get_access_context
 from app.features.common import FeatureBootstrapResponseEnvelope
+from app.features.classroom.routes_chat import router as _chat_router
+from app.features.classroom.routes_generation import router as _generation_router
+from app.features.classroom.routes_pdf_search import router as _pdf_search_router
 from app.features.classroom.schemas import (
     ClassroomTaskMetadataCreateRequest,
     ClassroomTaskMetadataPageResponse,
@@ -22,6 +31,9 @@ from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.task_framework.status import TaskStatus
 
 router = APIRouter(prefix="/classroom", tags=["classroom"])
+router.include_router(_generation_router)
+router.include_router(_chat_router)
+router.include_router(_pdf_search_router)
 
 
 @lru_cache

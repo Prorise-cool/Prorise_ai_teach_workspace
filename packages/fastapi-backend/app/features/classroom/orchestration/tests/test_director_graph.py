@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.providers.protocols import LLMProvider, ProviderResult, ProviderRuntimeConfig
-from app.features.openmaic.orchestration.schemas import (
+from app.features.classroom.orchestration.schemas import (
     AgentProfile,
     ChatMessage,
     ClassroomContext,
@@ -29,15 +29,15 @@ from app.features.openmaic.orchestration.schemas import (
     MessagePart,
     EndEvent,
 )
-from app.features.openmaic.orchestration.director_prompt import (
+from app.features.classroom.orchestration.director_prompt import (
     parse_director_decision,
     build_director_prompt,
 )
-from app.features.openmaic.orchestration.summarizers import (
+from app.features.classroom.orchestration.summarizers import (
     summarize_conversation,
     convert_messages_to_openai,
 )
-from app.features.openmaic.orchestration import run_discussion
+from app.features.classroom.orchestration import run_discussion
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -397,7 +397,7 @@ def test_build_director_prompt_discussion_mode():
 
 
 def test_build_director_prompt_whiteboard_crowded():
-    from app.features.openmaic.orchestration.schemas import WhiteboardActionRecord
+    from app.features.classroom.orchestration.schemas import WhiteboardActionRecord
 
     ledger = [
         WhiteboardActionRecord(

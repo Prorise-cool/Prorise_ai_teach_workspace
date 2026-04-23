@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from app.features.openmaic.generation.json_repair import parse_json_response
-from app.features.openmaic.generation.action_parser import parse_actions_from_structured_output
+from app.features.classroom.generation.json_repair import parse_json_response
+from app.features.classroom.generation.action_parser import parse_actions_from_structured_output
 
 
 # ── JSON repair tests ──────────────────────────────────────────────────────────
@@ -72,14 +72,13 @@ def test_parse_actions_strips_code_fences():
     assert actions[0]["text"] == "Hello"
 
 
-def test_parse_actions_filters_slide_only_for_quiz():
-    """Spotlight should be stripped from quiz scenes."""
+def test_parse_actions_filters_slide_only_for_non_slide():
+    """Spotlight 等仅幻灯片可用的动作应在非 slide 场景被剥离（如 discussion / pbl）。"""
     response = json.dumps([
         {"type": "action", "name": "spotlight", "params": {"elementId": "el_1"}},
         {"type": "text", "content": "讲解题目"},
     ])
-    actions = parse_actions_from_structured_output(response, scene_type="quiz")
-    # spotlight should be removed for quiz scene
+    actions = parse_actions_from_structured_output(response, scene_type="discussion")
     action_types = [a["type"] for a in actions]
     assert "spotlight" not in action_types
     assert "speech" in action_types

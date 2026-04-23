@@ -2,8 +2,8 @@
 OpenMAIC orchestration — public API.
 
 Team A imports:
-    from app.features.openmaic.orchestration import run_discussion
-    from app.features.openmaic.orchestration import DirectorGraph
+    from app.features.classroom.orchestration import run_discussion
+    from app.features.classroom.orchestration import DirectorGraph
 
 Integration contract:
     async def run_discussion(

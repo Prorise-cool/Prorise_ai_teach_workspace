@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from app.features.openmaic.generation.outline_generator import (
+from app.features.classroom.generation.outline_generator import (
     generate_scene_outlines,
     stream_scene_outlines,
 )
@@ -43,12 +43,11 @@ _VALID_OUTLINE_JSON = json.dumps({
         },
         {
             "id": "scene_2",
-            "type": "quiz",
+            "type": "discussion",
             "title": "知识检验",
             "description": "测试对微积分基本概念的理解",
             "keyPoints": ["导数计算", "极限"],
             "order": 2,
-            "quizConfig": {"questionCount": 2, "difficulty": "medium", "questionTypes": ["single"]},
         },
     ],
 }, ensure_ascii=False)
@@ -64,7 +63,7 @@ async def test_generate_scene_outlines_returns_structured():
     outlines = result["outlines"]
     assert len(outlines) == 2
     assert outlines[0]["type"] == "slide"
-    assert outlines[1]["type"] == "quiz"
+    assert outlines[1]["type"] == "discussion"
 
 
 @pytest.mark.asyncio
