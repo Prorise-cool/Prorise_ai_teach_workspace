@@ -61,6 +61,12 @@ from app.features.video.pipeline.models import (
 from app.features.video.pipeline.services import UnderstandingService
 from app.features.video.pipeline.orchestration.assets import LocalAssetStore
 from app.features.video.pipeline.orchestration import subtitle as subtitle_mod
+from app.features.video.pipeline.orchestration.media_utils import (
+    compose_section_with_audio as _compose_section_with_audio,
+    concat_videos as _concat_videos,
+    extract_cover as _extract_cover,
+    probe_duration as _probe_duration,
+)
 from app.features.video.pipeline.orchestration.runtime import (
     VideoRuntimeStateStore,
     attach_preview_audio_urls,
@@ -92,7 +98,6 @@ logger = logging.getLogger(__name__)
 
 SECTION_LOOP_PROGRESS_START = 26
 SECTION_LOOP_PROGRESS_END = 94
-SECTION_AUDIO_TAIL_HOLD_SECONDS = 0.35
 PREVIEW_SUMMARY_MAX_STEPS = 4
 PREVIEW_SUMMARY_MAX_CHARS = 1200
 SECTION_STATUS_RATIOS: dict[VideoPreviewSectionStatus, float] = {
@@ -298,150 +303,6 @@ async def _run_tts_for_sections(
 
     return results
 
-
-# ---------------------------------------------------------------------------
-# FFmpeg compose: merge silent video + TTS audio per section, then concat all
-# ---------------------------------------------------------------------------
-
-
-def _compose_section_with_audio(
-    video_path: Path,
-    audio_path: Path | None,
-    output_path: Path,
-) -> Path:
-    """合并单个 section 的视频和音频。如果没有音频，直接复制视频。"""
-    if audio_path is None or not audio_path.exists():
-        shutil.copy2(video_path, output_path)
-        return output_path
-
-    video_duration = _probe_media_duration(video_path)
-    audio_duration = _probe_media_duration(audio_path)
-    tail_padding = max(
-        0.0,
-        audio_duration - video_duration + SECTION_AUDIO_TAIL_HOLD_SECONDS,
-    )
-
-    if tail_padding > 0.05:
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(video_path),
-            "-i",
-            str(audio_path),
-            "-filter_complex",
-            f"[0:v]tpad=stop_mode=clone:stop_duration={tail_padding:.3f}[v]",
-            "-map",
-            "[v]",
-            "-map",
-            "1:a",
-            "-c:v",
-            "libvpx-vp9",
-            "-pix_fmt",
-            "yuva420p",
-            "-auto-alt-ref",
-            "0",
-            "-c:a",
-            "libvorbis",
-            "-shortest",
-            str(output_path),
-        ]
-    else:
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(video_path),
-            "-i",
-            str(audio_path),
-            "-c:v",
-            "copy",
-            "-c:a",
-            "libvorbis",
-            "-shortest",
-            str(output_path),
-        ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.warning(
-            "FFmpeg libvorbis audio merge failed for %s; falling back to silent clip copy: %s",
-            video_path.name,
-            result.stderr[:200],
-        )
-        shutil.copy2(video_path, output_path)
-    return output_path
-
-
-def _concat_videos(video_paths: list[Path], output_path: Path) -> Path:
-    """FFmpeg concat demuxer 合并多个视频。"""
-    list_file = output_path.parent / "concat_list.txt"
-    list_file.write_text("\n".join(f"file '{p}'" for p in video_paths))
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        str(list_file),
-        "-c",
-        "copy",
-        str(output_path),
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg concat failed: {result.stderr[:300]}")
-    return output_path
-
-
-def _extract_cover(video_path: Path, cover_path: Path) -> Path:
-    """从视频第 1 秒提取封面。"""
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(video_path),
-        "-ss",
-        "1",
-        "-vframes",
-        "1",
-        str(cover_path),
-    ]
-    subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if not cover_path.exists():
-        # fallback: create a placeholder
-        cover_path.write_bytes(b"")
-    return cover_path
-
-
-def _probe_media_duration(media_path: Path) -> float:
-    """用 ffprobe 获取媒体时长（秒）。"""
-    cmd = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        str(media_path),
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    try:
-        return max(0.0, float(result.stdout.strip()))
-    except (ValueError, AttributeError):
-        return 0.0
-
-
-def _probe_duration(video_path: Path) -> int:
-    """用 ffprobe 获取视频时长（秒）。"""
-    duration = _probe_media_duration(video_path)
-    if duration <= 0:
-        return 60  # fallback
-    return max(1, int(duration))
 
 
 # ---------------------------------------------------------------------------

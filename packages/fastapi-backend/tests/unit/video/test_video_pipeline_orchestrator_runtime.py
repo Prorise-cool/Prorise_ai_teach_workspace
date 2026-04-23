@@ -748,10 +748,11 @@ def test_compose_section_with_audio_pads_tail_when_audio_longer(
         output_path.write_bytes(b"merged")
         return SimpleNamespace(returncode=0, stderr="", stdout="")
 
-    monkeypatch.setattr(orchestrator_module, "_probe_media_duration", fake_probe)
-    monkeypatch.setattr(orchestrator_module.subprocess, "run", fake_run)
+    from app.features.video.pipeline.orchestration import media_utils
+    monkeypatch.setattr(media_utils, "probe_media_duration", fake_probe)
+    monkeypatch.setattr(media_utils.subprocess, "run", fake_run)
 
-    result = orchestrator_module._compose_section_with_audio(
+    result = media_utils.compose_section_with_audio(
         video_path,
         audio_path,
         output_path,
@@ -789,10 +790,11 @@ def test_compose_section_with_audio_keeps_fast_path_when_video_is_long_enough(
         output_path.write_bytes(b"merged-fast")
         return SimpleNamespace(returncode=0, stderr="", stdout="")
 
-    monkeypatch.setattr(orchestrator_module, "_probe_media_duration", fake_probe)
-    monkeypatch.setattr(orchestrator_module.subprocess, "run", fake_run)
+    from app.features.video.pipeline.orchestration import media_utils
+    monkeypatch.setattr(media_utils, "probe_media_duration", fake_probe)
+    monkeypatch.setattr(media_utils.subprocess, "run", fake_run)
 
-    result = orchestrator_module._compose_section_with_audio(
+    result = media_utils.compose_section_with_audio(
         video_path,
         audio_path,
         output_path,
