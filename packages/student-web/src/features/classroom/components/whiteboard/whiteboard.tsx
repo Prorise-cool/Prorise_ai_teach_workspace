@@ -8,13 +8,13 @@
  * 数据模型：WhiteboardPath 单一 interface 用 `type` 做 discriminator，按需使用可选字段，
  *          避免为 agent shape 单建联合类型。
  */
-import { useCallback, useRef, useState } from 'react';
-import type { FC } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
 import { DrawingTools } from './drawing-tools';
 import type { DrawingTool } from './drawing-tools';
+import { renderPath } from './whiteboard-shape';
 
 interface Point {
   x: number;
@@ -54,11 +54,65 @@ interface WhiteboardProps {
   className?: string;
 }
 
+/**
+ * use-action-player 通过此接口驱动白板 —— 每个方法映射一个 wb_* action。
+ */
+export interface WhiteboardHandle {
+  drawShape(
+    shape: 'rectangle' | 'circle' | 'triangle',
+    params: {
+      elementId?: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      fillColor?: string;
+      strokeColor?: string;
+    },
+  ): void;
+  drawText(params: {
+    elementId?: string;
+    content: string;
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    fontSize?: number;
+    color?: string;
+  }): void;
+  drawLatex(params: {
+    elementId?: string;
+    latex: string;
+    x: number;
+    y: number;
+    width?: number;
+    height?: number;
+    color?: string;
+  }): void;
+  drawLine(params: {
+    elementId?: string;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    color?: string;
+    width?: number;
+    style?: 'solid' | 'dashed';
+    arrowStart?: boolean;
+    arrowEnd?: boolean;
+  }): void;
+  clear(): void;
+  deleteElement(elementId: string): void;
+}
+
 const DEFAULT_COLOR = '#1f2937';
 const DEFAULT_STROKE = 3;
 const UNDO_LIMIT = 64;
 
-export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '' }) => {
+export const Whiteboard = forwardRef<WhiteboardHandle, WhiteboardProps>(function Whiteboard(
+  { isOpen, onClose, className = '' },
+  ref,
+) {
   const { t } = useAppTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeTool, setActiveTool] = useState<DrawingTool>('pen');
@@ -115,6 +169,10 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
         setCurrentPath({ id, type: 'pen', points: [pt], color, strokeWidth });
       } else if (activeTool === 'line') {
         setCurrentPath({ id, type: 'line', start: pt, end: pt, color, strokeWidth });
+      } else if (activeTool === 'rect') {
+        setCurrentPath({ id, type: 'rect', x: pt.x, y: pt.y, width: 0, height: 0, color, strokeWidth });
+      } else if (activeTool === 'circle') {
+        setCurrentPath({ id, type: 'circle', x: pt.x, y: pt.y, width: 0, height: 0, color, strokeWidth });
       } else if (activeTool === 'text') {
         const content = window.prompt(t('classroom.whiteboard.textPrompt')) ?? '';
         if (!content.trim()) return;
@@ -146,6 +204,11 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
         );
       } else if (currentPath.type === 'line') {
         setCurrentPath((prev) => (prev ? { ...prev, end: pt } : null));
+      } else if (currentPath.type === 'rect' || currentPath.type === 'circle') {
+        setCurrentPath((prev) => {
+          if (!prev || prev.x == null || prev.y == null) return prev;
+          return { ...prev, width: pt.x - prev.x, height: pt.y - prev.y };
+        });
       }
     },
     [isDrawing, currentPath, getSvgPoint],
@@ -153,7 +216,8 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
 
   const handleMouseUp = useCallback(() => {
     if (!isDrawing || !currentPath) return;
-    pushPath(currentPath);
+    const finalized = normalizeDraft(currentPath);
+    if (finalized) pushPath(finalized);
     setCurrentPath(null);
     setIsDrawing(false);
   }, [isDrawing, currentPath, pushPath]);
@@ -166,6 +230,84 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
     });
     setCurrentPath(null);
   }, []);
+
+  /* ---------- Agent 命令式 API（use-action-player 通过 ref 调用） ---------- */
+
+  const addAgentPath = useCallback((p: WhiteboardPath) => {
+    setPaths((prev) => [...prev, p]);
+    setRedoStack([]);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    (): WhiteboardHandle => ({
+      drawShape(shape, p) {
+        const id = p.elementId ?? `wb-agent-${shape}-${Date.now()}`;
+        const strokeColor = p.strokeColor ?? p.fillColor ?? '#3b82f6';
+        const pathType: WhiteboardPath['type'] =
+          shape === 'rectangle' ? 'rect' : shape === 'circle' ? 'circle' : 'triangle';
+        addAgentPath({
+          id,
+          type: pathType,
+          color: strokeColor,
+          strokeWidth: 3,
+          x: p.x,
+          y: p.y,
+          width: p.width,
+          height: p.height,
+          fillColor: p.fillColor,
+        });
+      },
+      drawText(p) {
+        addAgentPath({
+          id: p.elementId ?? `wb-agent-text-${Date.now()}`,
+          type: 'text',
+          color: p.color ?? '#1f2937',
+          strokeWidth: 1,
+          x: p.x,
+          y: p.y,
+          width: p.width,
+          height: p.height,
+          text: p.content,
+          fontSize: p.fontSize ?? 28,
+        });
+      },
+      drawLatex(p) {
+        addAgentPath({
+          id: p.elementId ?? `wb-agent-latex-${Date.now()}`,
+          type: 'latex',
+          color: p.color ?? '#1f2937',
+          strokeWidth: 1,
+          x: p.x,
+          y: p.y,
+          width: p.width,
+          height: p.height,
+          text: p.latex,
+        });
+      },
+      drawLine(p) {
+        addAgentPath({
+          id: p.elementId ?? `wb-agent-line-${Date.now()}`,
+          type: 'line',
+          color: p.color ?? '#1f2937',
+          strokeWidth: p.width ?? 3,
+          start: { x: p.startX, y: p.startY },
+          end: { x: p.endX, y: p.endY },
+          lineStyle: p.style ?? 'solid',
+          arrowStart: p.arrowStart ?? false,
+          arrowEnd: p.arrowEnd ?? false,
+        });
+      },
+      clear() {
+        setPaths([]);
+        setRedoStack([]);
+      },
+      deleteElement(elementId) {
+        setPaths((prev) => prev.filter((e) => e.id !== elementId));
+      },
+    }),
+    [addAgentPath],
+  );
 
   if (!isOpen) return null;
 
@@ -237,137 +379,22 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
       </svg>
     </div>
   );
-};
+});
 
-/** 渲染单个元素为 SVG 节点。 */
-function renderPath(path: WhiteboardPath): React.ReactNode {
-  switch (path.type) {
-    case 'pen':
-      if (!path.points || path.points.length < 2) return null;
-      return (
-        <path
-          key={path.id}
-          d={path.points.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ')}
-          stroke={path.color}
-          strokeWidth={path.strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      );
-    case 'line':
-      if (!path.start || !path.end) return null;
-      return (
-        <line
-          key={path.id}
-          x1={path.start.x}
-          y1={path.start.y}
-          x2={path.end.x}
-          y2={path.end.y}
-          stroke={path.color}
-          strokeWidth={path.strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={path.lineStyle === 'dashed' ? '8 6' : undefined}
-          markerStart={path.arrowStart ? 'url(#wb-arrow-start)' : undefined}
-          markerEnd={path.arrowEnd ? 'url(#wb-arrow-end)' : undefined}
-        />
-      );
-    case 'rect':
-      if (path.x == null || path.y == null || path.width == null || path.height == null) return null;
-      return (
-        <rect
-          key={path.id}
-          x={path.x}
-          y={path.y}
-          width={path.width}
-          height={path.height}
-          stroke={path.color}
-          strokeWidth={path.strokeWidth}
-          fill={path.fillColor ?? 'none'}
-        />
-      );
-    case 'circle':
-      if (path.x == null || path.y == null || path.width == null || path.height == null) return null;
-      return (
-        <ellipse
-          key={path.id}
-          cx={path.x + path.width / 2}
-          cy={path.y + path.height / 2}
-          rx={path.width / 2}
-          ry={path.height / 2}
-          stroke={path.color}
-          strokeWidth={path.strokeWidth}
-          fill={path.fillColor ?? 'none'}
-        />
-      );
-    case 'triangle': {
-      if (path.x == null || path.y == null || path.width == null || path.height == null) return null;
-      const pts = `${path.x + path.width / 2},${path.y} ${path.x},${path.y + path.height} ${path.x + path.width},${path.y + path.height}`;
-      return (
-        <polygon
-          key={path.id}
-          points={pts}
-          stroke={path.color}
-          strokeWidth={path.strokeWidth}
-          fill={path.fillColor ?? 'none'}
-        />
-      );
-    }
-    case 'text': {
-      if (path.x == null || path.y == null || !path.text) return null;
-      const fontSize = path.fontSize ?? 24;
-      return (
-        <foreignObject
-          key={path.id}
-          x={path.x}
-          y={path.y}
-          width={path.width ?? 400}
-          height={path.height ?? Math.max(fontSize * 1.6, 48)}
-        >
-          <div
-            style={{
-              color: path.color,
-              fontSize,
-              lineHeight: 1.3,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              pointerEvents: 'none',
-            }}
-          >
-            {path.text}
-          </div>
-        </foreignObject>
-      );
-    }
-    case 'latex': {
-      // Wave 1.6：monospace fallback，Wave 2 再接 KaTeX
-      if (path.x == null || path.y == null || !path.text) return null;
-      const fontSize = path.fontSize ?? 28;
-      return (
-        <foreignObject
-          key={path.id}
-          x={path.x}
-          y={path.y}
-          width={path.width ?? 500}
-          height={path.height ?? Math.max(fontSize * 1.8, 56)}
-        >
-          <div
-            style={{
-              color: path.color,
-              fontSize,
-              fontFamily: '"JetBrains Mono", "SFMono-Regular", Consolas, monospace',
-              lineHeight: 1.4,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              pointerEvents: 'none',
-            }}
-          >
-            {path.text}
-          </div>
-        </foreignObject>
-      );
-    }
-    default:
-      return null;
+/** 手绘 draft 定稿：rect/circle 宽高归一为正值（允许反向拖拽）；零面积视为无效。 */
+function normalizeDraft(draft: WhiteboardPath): WhiteboardPath | null {
+  if (draft.type === 'rect' || draft.type === 'circle') {
+    if (draft.x == null || draft.y == null || draft.width == null || draft.height == null) return null;
+    const x = draft.width < 0 ? draft.x + draft.width : draft.x;
+    const y = draft.height < 0 ? draft.y + draft.height : draft.y;
+    const width = Math.abs(draft.width);
+    const height = Math.abs(draft.height);
+    if (width < 3 || height < 3) return null;
+    return { ...draft, x, y, width, height };
   }
+  if (draft.type === 'pen' && (!draft.points || draft.points.length < 2)) return null;
+  if (draft.type === 'line' && draft.start && draft.end) {
+    if (draft.start.x === draft.end.x && draft.start.y === draft.end.y) return null;
+  }
+  return draft;
 }
