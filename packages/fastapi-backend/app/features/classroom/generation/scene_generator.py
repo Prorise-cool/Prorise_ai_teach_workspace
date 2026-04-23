@@ -86,8 +86,12 @@ async def generate_scene_actions(
         actions = parse_actions_from_structured_output(response, scene_type=scene_type)
         if actions:
             return actions
+        logger.error(
+            "generate_scene_actions: 解析结果为空，降级到占位动作 (scene_type=%s, response_len=%d)",
+            scene_type, len(response),
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("generate_scene_actions: LLM failed: %s", exc)
+        logger.error("generate_scene_actions: LLM 调用失败，降级到占位动作: %s", exc)
 
     return _build_fallback_actions(outline)
 
@@ -125,15 +129,19 @@ async def generate_agent_profiles(
         ),
     )
 
-    try:
-        response = await call_llm(params, provider_chain)
-        parsed = parse_json_response(response)
-        if isinstance(parsed, list) and parsed:
-            return parsed
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("generate_agent_profiles: LLM failed: %s", exc)
+    # 失败语义：智能体是"多智能体课堂"的主角，没有真实画像整堂课就不成立。
+    # LLM 调用或解析失败一律抛 RuntimeError，由 job_runner 外层接住标 failed。
+    response = await call_llm(params, provider_chain)
+    parsed = parse_json_response(response)
 
-    return _build_fallback_agents(stage_name)
+    if not isinstance(parsed, list):
+        raise RuntimeError(
+            f"generate_agent_profiles: LLM 响应形状异常 (type={type(parsed).__name__})"
+        )
+    if not parsed:
+        raise RuntimeError("generate_agent_profiles: LLM 返回了空智能体数组")
+
+    return parsed
 
 
 # ── Private helpers ─────────────────────────────────────────────────────────────
@@ -161,8 +169,12 @@ async def _generate_slide_content(
         parsed = parse_json_response(response)
         if isinstance(parsed, dict) and "elements" in parsed:
             return parsed
+        logger.error(
+            "_generate_slide_content: LLM 响应缺少 elements 字段，降级到占位幻灯片 (shape=%s)",
+            type(parsed).__name__,
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("_generate_slide_content: LLM failed: %s", exc)
+        logger.error("_generate_slide_content: LLM 调用失败，降级到占位幻灯片: %s", exc)
 
     return _build_fallback_slide(outline)
 
@@ -251,28 +263,6 @@ def _build_fallback_slide(outline: dict) -> dict:
             },
         ],
     }
-
-
-def _build_fallback_agents(stage_name: str) -> list[dict]:
-    """Minimal agent list as fallback."""
-    return [
-        {
-            "id": "agent_teacher",
-            "name": "张老师",
-            "role": "teacher",
-            "persona": "资深教育工作者，擅长将复杂知识简单化，教学风格生动有趣。",
-            "avatar": "default_teacher",
-            "color": "#4A90D9",
-        },
-        {
-            "id": "agent_student",
-            "name": "小明",
-            "role": "student",
-            "persona": "好奇心强的学生，喜欢提问，思维活跃。",
-            "avatar": "default_student",
-            "color": "#2ECC71",
-        },
-    ]
 
 
 def _build_fallback_actions(outline: dict) -> list[dict]:

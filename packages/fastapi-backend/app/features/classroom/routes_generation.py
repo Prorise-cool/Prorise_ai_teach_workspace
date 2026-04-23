@@ -99,16 +99,20 @@ async def create_classroom_generation(
     return build_success_envelope(response, msg="操作成功")
 
 
-@router.get("/generate/classroom/{task_id}", response_model=JobStatusResponse)
+@router.get("/generate/classroom/{task_id}")
 async def get_classroom_generation_status(
     task_id: str,
     request: Request,
     access_context: AccessContext = Depends(get_access_context),  # noqa: ARG001
-) -> JobStatusResponse:
-    """轮询课堂生成任务状态（兼容旧 OpenMAIC ``JobStatusResponse``）。"""
+) -> dict[str, object]:
+    """轮询课堂生成任务状态。
+
+    返回统一信封 ``{code, msg, data: JobStatusResponse}``，与其他 POST
+    接口保持一致，供前端 ``unwrapEnvelope`` 统一解包。
+    """
     runtime_state = _get_runtime_state_store(request)
     info = runtime_state.get_status(task_id)
-    return JobStatusResponse(
+    payload = JobStatusResponse(
         task_id=task_id,
         status=info["status"],
         progress=info.get("progress", 0),
@@ -116,6 +120,7 @@ async def get_classroom_generation_status(
         error=info.get("error"),
         message=info.get("message"),
     )
+    return build_success_envelope(payload, msg="操作成功")
 
 
 @router.get("/generate/classroom/{task_id}/events")

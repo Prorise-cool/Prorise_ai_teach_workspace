@@ -6,7 +6,6 @@ Ported from OpenMAIC /lib/generation/outline-generator.ts.
 from __future__ import annotations
 
 import logging
-import uuid
 from collections.abc import AsyncIterator
 from typing import Sequence
 
@@ -44,8 +43,12 @@ async def generate_scene_outlines(
 ) -> dict:
     """Generate scene outlines (one-shot, returns parsed dict).
 
-    Returns {"languageDirective": str, "outlines": list[dict]}
-    Raises on LLM failure.
+    Returns ``{"languageDirective": str, "outlines": list[dict]}``。
+
+    失败语义：大纲是整堂课的骨架，解析失败或 shape 异常一律抛
+    ``RuntimeError``，由 ``job_runner`` 的外层 try 接住并把任务标为
+    failed。不再返回占位大纲 —— 用户看到 1 个通用场景的"课堂"比看到
+    报错更困惑。
     """
     params = LLMCallParams(
         system=OUTLINE_SYSTEM_PROMPT,
@@ -63,8 +66,9 @@ async def generate_scene_outlines(
     parsed = parse_json_response(response)
 
     if parsed is None:
-        logger.error("outline_generator: failed to parse LLM response")
-        return {"languageDirective": "", "outlines": _build_fallback_outlines(requirement)}
+        raise RuntimeError(
+            f"outline_generator: LLM 响应无法解析为 JSON (response_len={len(response)})"
+        )
 
     # Normalize: LLM may return flat array (legacy) or {languageDirective, outlines}
     if isinstance(parsed, list):
@@ -74,12 +78,17 @@ async def generate_scene_outlines(
         language_directive = parsed.get("languageDirective", "")
         raw_outlines = parsed["outlines"]
     else:
-        logger.warning("outline_generator: unexpected response shape")
-        return {"languageDirective": "", "outlines": _build_fallback_outlines(requirement)}
+        raise RuntimeError(
+            f"outline_generator: LLM 响应形状异常 (type={type(parsed).__name__})"
+        )
 
     if not isinstance(raw_outlines, list):
-        logger.warning("outline_generator: outlines is not a list")
-        return {"languageDirective": "", "outlines": _build_fallback_outlines(requirement)}
+        raise RuntimeError(
+            f"outline_generator: outlines 字段不是数组 (type={type(raw_outlines).__name__})"
+        )
+
+    if not raw_outlines:
+        raise RuntimeError("outline_generator: LLM 返回了空 outlines 数组")
 
     enriched = _ensure_ids(raw_outlines)
     return {"languageDirective": language_directive, "outlines": enriched}
@@ -108,20 +117,3 @@ async def stream_scene_outlines(
 
     async for chunk in stream_llm(params, provider_chain):
         yield chunk
-
-
-def _build_fallback_outlines(requirement: str) -> list[dict]:
-    """Emergency fallback: produce a minimal outline when LLM fails."""
-    logger.warning("outline_generator: using fallback outline")
-    return [
-        {
-            "id": f"scene_{uuid.uuid4().hex[:6]}",
-            "type": "slide",
-            "title": f"关于'{requirement[:30]}'的介绍",
-            "description": "课程概述与核心概念介绍",
-            "keyPoints": ["核心概念", "基本原理", "实际应用"],
-            "teachingObjective": "理解基本概念",
-            "estimatedDuration": 180,
-            "order": 1,
-        }
-    ]

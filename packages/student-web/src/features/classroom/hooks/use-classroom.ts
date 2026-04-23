@@ -2,12 +2,13 @@
  * 课堂生成与加载主 Hook。
  * 负责提交生成任务、轮询状态、存储到 IndexedDB、更新 Zustand store。
  *
- * 后端状态机（FastAPI openmaic job_runner）:
+ * 后端状态机（FastAPI classroom job_runner）:
  *   pending → generating_outline → generating_scenes → ready | failed
  *
- * 后端 /classroom/generate/classroom/{taskId} 响应形状:
- *   { taskId, status, progress, message?, classroom?, error? }
- *   其中 classroom 包含 scenes / agents / requirement 完整数据。
+ * 后端 /classroom/generate/classroom/{taskId} 响应为统一信封
+ *   { code, msg, data: { taskId, status, progress, message?, classroom?, error? } }
+ * adapter 通过 ``unwrapEnvelope`` 解包后向本 Hook 暴露 ``data`` 负载，
+ * 其中 ``classroom`` 包含 scenes / agents / requirement 完整数据。
  */
 import { useCallback, useRef } from 'react';
 

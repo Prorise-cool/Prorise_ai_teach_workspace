@@ -4,7 +4,7 @@
 client id 写入 Redis 运行态键，Dramatiq worker 取回后自带身份调用
 RuoYi 内部 AI runtime（解析 xm_ai_module_binding 等）。
 
-Key 前缀：``classroom_runtime_auth:{task_id}``。
+Key 前缀：``xm_classroom_runtime_auth:{task_id}``（RuntimeStore 强制 xm_ 前缀约束）。
 TTL：复用 ``TASK_RUNTIME_TTL_SECONDS``。
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ from app.infra.redis_client import RuntimeStore
 from app.shared.ruoyi.auth import RuoYiRequestAuth
 from app.shared.task_framework.key_builder import TASK_RUNTIME_TTL_SECONDS
 
-_CLASSROOM_RUNTIME_AUTH_KEY_PREFIX = "classroom_runtime_auth"
+_CLASSROOM_RUNTIME_AUTH_KEY_PREFIX = "xm_classroom_runtime_auth"
 
 
 def build_classroom_runtime_auth_key(task_id: str) -> str:

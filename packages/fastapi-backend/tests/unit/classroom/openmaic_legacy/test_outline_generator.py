@@ -85,12 +85,32 @@ async def test_generate_scene_outlines_handles_flat_array():
 
 
 @pytest.mark.asyncio
-async def test_generate_scene_outlines_handles_malformed():
-    """Malformed JSON → fallback outline returned."""
+async def test_generate_scene_outlines_raises_on_malformed():
+    """大纲是整堂课骨架：malformed JSON 一律 fail-fast。
+
+    Wave 2 移除占位大纲降级 —— 用户看到 1 个通用"XX 的介绍"场景比看到
+    报错更困惑。由 job_runner 外层接住异常并把任务标为 failed 让前端
+    展示真实错误、提示用户重试。
+    """
     provider = _make_stub_with_response("This is not JSON at all!")
-    result = await generate_scene_outlines("test", [provider])
-    # Should get fallback outline (at least one scene)
-    assert len(result["outlines"]) >= 1
+    with pytest.raises(RuntimeError, match="无法解析为 JSON"):
+        await generate_scene_outlines("test", [provider])
+
+
+@pytest.mark.asyncio
+async def test_generate_scene_outlines_raises_on_unexpected_shape():
+    """LLM 返回 JSON 但字段形状异常 → fail-fast。"""
+    provider = _make_stub_with_response('{"unexpected": "payload"}')
+    with pytest.raises(RuntimeError, match="响应形状异常"):
+        await generate_scene_outlines("test", [provider])
+
+
+@pytest.mark.asyncio
+async def test_generate_scene_outlines_raises_on_empty_outlines():
+    """LLM 返回了合法 JSON 但 outlines 数组为空 → fail-fast。"""
+    provider = _make_stub_with_response('{"languageDirective": "zh", "outlines": []}')
+    with pytest.raises(RuntimeError, match="空 outlines 数组"):
+        await generate_scene_outlines("test", [provider])
 
 
 @pytest.mark.asyncio

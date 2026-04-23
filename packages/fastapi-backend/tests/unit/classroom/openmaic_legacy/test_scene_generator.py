@@ -7,8 +7,9 @@ import json
 import pytest
 
 from app.features.classroom.generation.scene_generator import (
-    generate_scene_content,
+    generate_agent_profiles,
     generate_scene_actions,
+    generate_scene_content,
 )
 from app.providers.protocols import ProviderResult
 
@@ -102,7 +103,7 @@ async def test_generate_scene_actions_returns_list():
 
 @pytest.mark.asyncio
 async def test_generate_scene_actions_fallback_on_failure():
-    """LLM failure → fallback actions returned."""
+    """LLM failure → fallback actions returned（单场景级别可接受降级）。"""
     from app.providers.protocols import ProviderError
 
     class FailingProvider:
@@ -119,3 +120,51 @@ async def test_generate_scene_actions_fallback_on_failure():
     # Fallback returns at least one speech action
     assert len(actions) >= 1
     assert actions[0]["type"] == "speech"
+
+
+@pytest.mark.asyncio
+async def test_generate_agent_profiles_raises_on_llm_failure():
+    """智能体画像是多智能体课堂的主角：LLM 调用失败一律 fail-fast。"""
+    from app.providers.protocols import ProviderError
+
+    class FailingProvider:
+        provider_id = "stub-fail"
+
+        async def generate(self, _prompt: str) -> ProviderResult:
+            raise ProviderError("simulated LLM outage")
+
+    with pytest.raises(ProviderError):
+        await generate_agent_profiles(
+            stage_name="Python基础",
+            language_directive="用中文教学",
+            provider_chain=[FailingProvider()],
+            scene_outlines=[_SLIDE_OUTLINE],
+        )
+
+
+@pytest.mark.asyncio
+async def test_generate_agent_profiles_raises_on_malformed_shape():
+    """LLM 返回了内容但不是数组 → fail-fast（而不是降级成通用 2-agent 表演）。"""
+    provider = _make_fixed_provider('{"not": "an array"}')
+
+    with pytest.raises(RuntimeError, match="响应形状异常"):
+        await generate_agent_profiles(
+            stage_name="Python基础",
+            language_directive="用中文教学",
+            provider_chain=[provider],
+            scene_outlines=[_SLIDE_OUTLINE],
+        )
+
+
+@pytest.mark.asyncio
+async def test_generate_agent_profiles_raises_on_empty_array():
+    """LLM 返回合法 JSON 数组但为空 → fail-fast。"""
+    provider = _make_fixed_provider("[]")
+
+    with pytest.raises(RuntimeError, match="空智能体数组"):
+        await generate_agent_profiles(
+            stage_name="Python基础",
+            language_directive="用中文教学",
+            provider_chain=[provider],
+            scene_outlines=[_SLIDE_OUTLINE],
+        )
