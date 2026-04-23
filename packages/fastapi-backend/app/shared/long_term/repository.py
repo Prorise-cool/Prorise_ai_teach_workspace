@@ -17,12 +17,14 @@ from threading import RLock
 
 from app.shared.long_term.mapper import _new_id, _now
 from app.shared.long_term.models import (
+    AnchorContext,
     CompanionTurnCreateRequest,
     CompanionTurnSnapshot,
     KnowledgeChatCreateRequest,
     KnowledgeChatSnapshot,
     PersistenceStatus,
     SessionReplaySnapshot,
+    WhiteboardActionRecord,
     WhiteboardActionSnapshot,
 )
 
@@ -86,6 +88,61 @@ class LongTermConversationRepository:
             for action in whiteboard_actions:
                 self._whiteboard_action_logs[action.action_id] = action
             return snapshot
+
+    def save_whiteboard_actions(
+        self,
+        actions: list[WhiteboardActionRecord],
+        *,
+        session_id: str,
+        user_id: str,
+        anchor_context: AnchorContext,
+        turn_id: str | None = None,
+        persistence_status: PersistenceStatus | None = None,
+    ) -> tuple[list[WhiteboardActionSnapshot], PersistenceStatus]:
+        """独立保存一批白板动作（Wave 1.5）。
+
+        与 ``save_companion_turn`` 不同，本方法**不**要求成对提交问答轮次，
+        适用于课堂生成 / 批量场景：只回写 ``wb_draw_*`` / ``wb_erase_*`` 等
+        动作作为独立条目，便于后续重放 / 审计。
+
+        语义：
+        - ``turn_id`` 未提供时自动生成 ``wb_batch:<uuid>`` 风格的伪 turn id，
+          便于把一批动作聚合到同一锚点；后续 Wave 2 Java 侧提供
+          ``/internal/xiaomai/whiteboard-actions/batch`` 端点后，此处改走
+          ``RuoYiClient`` 真实回写，不再创建伪 turn。
+        - ``anchor_context`` 决定 ``context_type`` 字段，课堂场景传
+          ``ContextType.CLASSROOM`` + ``AnchorKind.WHITEBOARD_STEP_ID``。
+        - 返回 ``(snapshots, persistence_status)``：调用方据此决定是否把
+          本次回写标为 ``WHITEBOARD_DEGRADED``。
+
+        TODO(Wave 2): Java 侧新增独立 whiteboard-action batch 端点
+        (``/internal/xiaomai/whiteboard-actions/batch``)；当前 Wave 1.5
+        阶段只做内存快照 + 结构化日志，不触发 RuoYi 回写。
+        """
+        with self._lock:
+            if not actions:
+                return (
+                    [],
+                    persistence_status or PersistenceStatus.COMPLETE_SUCCESS,
+                )
+            effective_turn_id = turn_id or _new_id("wb_batch")
+            created_at = _now()
+            _ = anchor_context  # reserved for future RuoYi payload (Wave 2)
+            snapshots = [
+                WhiteboardActionSnapshot(
+                    action_id=_new_id("wb"),
+                    turn_id=effective_turn_id,
+                    session_id=session_id,
+                    user_id=user_id,
+                    created_at=created_at,
+                    **action.model_dump(),
+                )
+                for action in actions
+            ]
+            for snapshot in snapshots:
+                self._whiteboard_action_logs[snapshot.action_id] = snapshot
+            status = persistence_status or PersistenceStatus.COMPLETE_SUCCESS
+            return snapshots, status
 
     def save_knowledge_chat(
         self, request: KnowledgeChatCreateRequest

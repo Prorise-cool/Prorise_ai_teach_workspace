@@ -276,21 +276,64 @@ def _persist_scene_whiteboard_actions(
     scene_index: int,
     actions: list[dict[str, Any]],
 ) -> None:
-    """记录 wb_* 动作摘要日志（Wave 1 best-effort）。
+    """把 wb_* 动作作为独立条目落入 LongTermConversationRepository（Wave 1.5）。
 
-    NOTE: ``LongTermConversationRepository`` 当前的 ``save_companion_turn`` 接口
-    要求成对提交 turn + 动作，与课堂"无问答轮次"的批量场景不匹配；为避免
-    引入直写内部字段的脆弱代码，Wave 1 只记录摘要日志，把"按 turn 落库"
-    的设计留到 Wave 1.5（仓库新增 ``save_whiteboard_actions_only`` 接口后切换）。
+    Wave 1 只写了摘要日志；Wave 1.5 新增 ``save_whiteboard_actions`` 后可以
+    不依赖 companion turn 成对提交，直接记录课堂 scene 生成过程中的白板动作：
+
+    - ``anchor_context`` 用 ``ContextType.CLASSROOM`` + ``AnchorKind.WHITEBOARD_STEP_ID``，
+      ``anchor_ref`` 指向 ``{task_id}:scene_{index}``；
+    - ``session_id`` 用 ``task_id``，``turn_id`` 用 ``wb_batch:{task_id}:{index}``
+      便于后续回放按 scene 聚合；
+    - 内部失败不抛出，best-effort 回退到摘要日志。
+
+    TODO(Wave 2): Java 侧独立 whiteboard-actions/batch 端点上线后，
+    repository 切换到 RuoYi 回写即可，本函数签名保持不变。
     """
+    from app.shared.long_term.models import (
+        AnchorContext,
+        AnchorKind,
+        ContextType,
+        WhiteboardActionRecord,
+    )
+    from app.shared.long_term.repository import shared_long_term_repository
+
     wb_actions = [
         a for a in actions
         if isinstance(a, dict) and str(a.get("type") or "").startswith("wb_")
     ]
     if not wb_actions:
         return
+
+    try:
+        records = [
+            WhiteboardActionRecord(
+                action_type=str(a.get("type") or "wb_unknown"),
+                payload={k: v for k, v in a.items() if k != "type"},
+                object_ref=str(a.get("objectRef")) if a.get("objectRef") else None,
+            )
+            for a in wb_actions
+        ]
+        anchor = AnchorContext(
+            context_type=ContextType.CLASSROOM,
+            anchor_kind=AnchorKind.WHITEBOARD_STEP_ID,
+            anchor_ref=f"{task_id}:scene_{scene_index}",
+        )
+        shared_long_term_repository.save_whiteboard_actions(
+            records,
+            session_id=task_id,
+            user_id=user_id or "",
+            anchor_context=anchor,
+            turn_id=f"wb_batch:{task_id}:{scene_index}",
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "classroom.job_runner.wb_actions_persist_failed task_id=%s scene_index=%d error=%s",
+            task_id, scene_index, exc,
+        )
+
     logger.info(
-        "classroom.job_runner.wb_actions_summary task_id=%s scene_index=%d count=%d types=%s",
+        "classroom.job_runner.wb_actions_persisted task_id=%s scene_index=%d count=%d types=%s",
         task_id,
         scene_index,
         len(wb_actions),
