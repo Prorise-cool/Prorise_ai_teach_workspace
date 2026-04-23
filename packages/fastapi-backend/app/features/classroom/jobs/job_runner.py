@@ -184,8 +184,9 @@ async def _async_run_classroom_generation(
             status_value="completed",
             summary=requirement[:200],
         )
-        _persist_classroom_artifacts(
+        await _persist_classroom_artifacts(
             task_id=task_id, user_id=user_id, classroom=classroom,
+            request_auth=request_auth,
         )
         logger.info(
             "classroom.job_runner.completed task_id=%s scenes=%d", task_id, len(scenes),
@@ -341,34 +342,146 @@ def _persist_scene_whiteboard_actions(
     )
 
 
-def _persist_classroom_artifacts(
+async def _persist_classroom_artifacts(
     *,
     task_id: str,
     user_id: str | None,
     classroom: dict[str, Any],
+    request_auth,
 ) -> None:
-    """把 scenes / agents / actions 拆条目记录到调试日志。
+    """把 scenes / agents / actions 拆条目写入 ``xm_session_artifact``（Wave 1.5）。
 
-    Wave 1：``xm_session_artifact`` 表的 RuoYi 端点尚未在 RuoYiClient 中暴露
-    （shared.long_term.repository 仅有内存实现），为避免新增 RuoYi schema
-    依赖，此处只记录摘要日志，留 Wave 1.5 接入 ``/internal/xiaomai/session-artifact``
-    HTTP 端点后再切换到真实写库。
+    复用 video 域的 ``VideoArtifactIndexService`` —— Java 侧端点
+    ``/internal/xiaomai/video/session-artifacts`` 通过 ``sessionType`` 字段
+    区分业务类型，传 ``"classroom"`` 即可写入同一表。拆条目策略：
+
+    - ``artifact_type='scene'``：每个 scene 一条，``anchor_key=scene.id``；
+    - ``artifact_type='agent_profile'``：每个 agent 一条，``anchor_key=agent.id``；
+    - ``artifact_type='scene_action'``：每个 action 一条，``anchor_key=f"{scene_id}:{i}"``。
+
+    调用失败不抛出 —— 写库失败不应阻断课堂生成主流程（runtime_state 已经写过
+    Redis）；失败路径会降级到 structured summary log 便于排查。
     """
+    from datetime import datetime, timezone
+
+    from app.features.video.long_term.records import (
+        VideoSessionArtifactBatchCreateRequest,
+        VideoSessionArtifactItem,
+    )
+    from app.features.video.long_term.service import VideoArtifactIndexService
+
+    scenes = classroom.get("scenes") or []
+    agents = classroom.get("agents") or []
+    occurred_at = datetime.now(timezone.utc)
+
     summary = {
         "taskId": task_id,
         "userId": user_id,
-        "scenes": len(classroom.get("scenes", [])),
-        "agents": len(classroom.get("agents", [])),
+        "scenes": len(scenes),
+        "agents": len(agents),
         "totalActions": sum(
             len(scene.get("actions", []))
-            for scene in classroom.get("scenes", [])
+            for scene in scenes
             if isinstance(scene, dict)
         ),
     }
-    logger.info(
-        "classroom.job_runner.artifacts_summary %s",
-        summary,
+
+    if request_auth is None:
+        logger.info(
+            "classroom.job_runner.artifacts_skip_no_auth %s",
+            summary,
+        )
+        return
+
+    artifacts: list[VideoSessionArtifactItem] = []
+    seq = 0
+    for scene_idx, scene in enumerate(scenes):
+        if not isinstance(scene, dict):
+            continue
+        scene_id = str(scene.get("id") or f"scene_{scene_idx}")
+        artifacts.append(
+            VideoSessionArtifactItem(
+                artifact_type="scene",
+                anchor_type="scene_id",
+                anchor_key=scene_id,
+                sequence_no=seq,
+                title=str(scene.get("title") or scene_id)[:200],
+                summary=str(scene.get("type") or "slide"),
+                metadata={
+                    "sceneIndex": scene_idx,
+                    "sceneType": scene.get("type"),
+                    "actionCount": len(scene.get("actions", []) or []),
+                },
+                occurred_at=occurred_at,
+            )
+        )
+        seq += 1
+
+        for action_idx, action in enumerate(scene.get("actions", []) or []):
+            if not isinstance(action, dict):
+                continue
+            artifacts.append(
+                VideoSessionArtifactItem(
+                    artifact_type="scene_action",
+                    anchor_type="scene_action",
+                    anchor_key=f"{scene_id}:{action_idx}",
+                    sequence_no=seq,
+                    title=str(action.get("type") or "action")[:200],
+                    summary=str(action.get("text") or action.get("agentId") or "")[:500] or None,
+                    metadata={
+                        "actionType": action.get("type"),
+                        "agentId": action.get("agentId"),
+                    },
+                    occurred_at=occurred_at,
+                )
+            )
+            seq += 1
+
+    for agent_idx, agent in enumerate(agents):
+        if not isinstance(agent, dict):
+            continue
+        agent_id = str(agent.get("id") or f"agent_{agent_idx}")
+        artifacts.append(
+            VideoSessionArtifactItem(
+                artifact_type="agent_profile",
+                anchor_type="agent_id",
+                anchor_key=agent_id,
+                sequence_no=seq,
+                title=str(agent.get("name") or agent_id)[:200],
+                summary=str(agent.get("role") or "")[:500] or None,
+                metadata={
+                    "agentIndex": agent_idx,
+                    "avatar": agent.get("avatar"),
+                    "role": agent.get("role"),
+                },
+                occurred_at=occurred_at,
+            )
+        )
+        seq += 1
+
+    if not artifacts:
+        logger.info("classroom.job_runner.artifacts_empty %s", summary)
+        return
+
+    request = VideoSessionArtifactBatchCreateRequest(
+        session_type="classroom",
+        session_ref_id=task_id,
+        occurred_at=occurred_at,
+        artifacts=artifacts,
     )
+
+    try:
+        service = VideoArtifactIndexService()
+        await service.sync_artifact_batch(request, request_auth=request_auth)
+        logger.info(
+            "classroom.job_runner.artifacts_persisted %s total_items=%d",
+            summary, len(artifacts),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "classroom.job_runner.artifacts_persist_failed %s error=%s",
+            summary, exc,
+        )
 
 
 async def _persist_task_terminal(
