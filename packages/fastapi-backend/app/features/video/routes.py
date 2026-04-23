@@ -311,14 +311,13 @@ async def delete_video_task_endpoint(
         access_context=access_context,
         service=service,
     )
-    return {
-        "code": 200,
-        "msg": "任务已删除",
-        "data": {
+    return build_success_envelope(
+        {
             "taskId": result["task_id"],
             "status": result["status"],
         },
-    }
+        msg="任务已删除",
+    )
 
 
 @router.get("/tasks/{task_id}/result", response_model=VideoResultDetailResponseEnvelope)

@@ -110,12 +110,23 @@ class PermissionProbeResponseEnvelope(BaseModel):
     data: PermissionProbePayload
 
 
-def build_success_envelope(data: BaseModel, msg: str = "查询成功") -> dict[str, object]:
-    """构建统一成功响应信封。"""
+def build_success_envelope(
+    data: BaseModel | dict[str, Any] | list[Any] | None,
+    msg: str = "查询成功",
+) -> dict[str, object]:
+    """构建统一成功响应信封。
+
+    ``data`` 既支持 ``BaseModel``（自动 ``model_dump(by_alias=True)``），
+    也支持原生 ``dict`` / ``list`` / ``None``，便于尚未建模的 ad-hoc 端点统一信封。
+    """
+    if isinstance(data, BaseModel):
+        payload: object = data.model_dump(mode="json", by_alias=True)
+    else:
+        payload = data
     return {
         "code": 200,
         "msg": msg,
-        "data": data.model_dump(mode="json", by_alias=True)
+        "data": payload,
     }
 
 
