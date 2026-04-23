@@ -29,6 +29,26 @@ export interface ClassroomStoreState {
   currentSpotlightId: string | null;
   // 当前讲述的语音内容（驱动教师气泡）
   currentSpeech: { agentId: string | null; text: string } | null;
+
+  // —— Stage UI 状态（供 OpenMAIC 移植组件消费）——
+  // 左侧场景边栏是否折叠
+  sidebarCollapsed: boolean;
+  // 右侧聊天/伴学面板是否折叠
+  chatAreaCollapsed: boolean;
+  // 右侧聊天面板宽度（px，可拖拽）
+  chatAreaWidth: number;
+  // 左侧场景边栏宽度（px，可拖拽）
+  sidebarWidth: number;
+  // 演示（全屏）模式
+  isPresenting: boolean;
+  // TTS 静音
+  ttsMuted: boolean;
+  // TTS 音量（0-1）
+  ttsVolume: number;
+  // 自动播放下一节
+  autoPlayLecture: boolean;
+  // 播放速度
+  playbackSpeed: number;
 }
 
 export interface ClassroomStoreActions {
@@ -42,6 +62,15 @@ export interface ClassroomStoreActions {
   setCurrentActionIndex: (index: number) => void;
   setCurrentSpotlightId: (id: string | null) => void;
   setCurrentSpeech: (speech: { agentId: string | null; text: string } | null) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setChatAreaCollapsed: (collapsed: boolean) => void;
+  setChatAreaWidth: (width: number) => void;
+  setSidebarWidth: (width: number) => void;
+  setIsPresenting: (presenting: boolean) => void;
+  setTTSMuted: (muted: boolean) => void;
+  setTTSVolume: (volume: number) => void;
+  setAutoPlayLecture: (enabled: boolean) => void;
+  setPlaybackSpeed: (speed: number) => void;
   resetPlayback: () => void;
   reset: () => void;
 }
@@ -57,6 +86,16 @@ const INITIAL_STATE: ClassroomStoreState = {
   currentActionIndex: -1,
   currentSpotlightId: null,
   currentSpeech: null,
+  // OpenMAIC parity defaults
+  sidebarCollapsed: false,
+  chatAreaCollapsed: false,
+  chatAreaWidth: 340,
+  sidebarWidth: 220,
+  isPresenting: false,
+  ttsMuted: false,
+  ttsVolume: 1,
+  autoPlayLecture: false,
+  playbackSpeed: 1,
 };
 
 export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActions>()((set) => ({
@@ -87,6 +126,16 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
   setCurrentSpotlightId: (id) => set({ currentSpotlightId: id }),
 
   setCurrentSpeech: (speech) => set({ currentSpeech: speech }),
+
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  setChatAreaCollapsed: (collapsed) => set({ chatAreaCollapsed: collapsed }),
+  setChatAreaWidth: (width) => set({ chatAreaWidth: width }),
+  setSidebarWidth: (width) => set({ sidebarWidth: width }),
+  setIsPresenting: (presenting) => set({ isPresenting: presenting }),
+  setTTSMuted: (muted) => set({ ttsMuted: muted }),
+  setTTSVolume: (volume) => set({ ttsVolume: volume }),
+  setAutoPlayLecture: (enabled) => set({ autoPlayLecture: enabled }),
+  setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
   resetPlayback: () =>
     set({
