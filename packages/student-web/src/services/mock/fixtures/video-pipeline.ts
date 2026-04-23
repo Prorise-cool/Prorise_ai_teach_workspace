@@ -1,8 +1,16 @@
 /**
  * 文件说明：提供视频流水线 SSE stage 流、状态查询与结果查询的 mock fixture。
  * Story 4.1：消费 mocks/video/v1/ 下的 pipeline-stages 和 video-result 样例数据。
+ *
+ * Wave 0.2：将 JSON 加载从 `as unknown as T` cast 切换到 zod 解析，
+ * 字段错位会在 fixture 加载阶段就抛出，不再隐藏到运行时。
  */
 import type { TaskEventPayload } from '@/types/task';
+import {
+  taskEventPayloadArraySchema,
+  videoFailureSchema,
+  videoResultSchema,
+} from '@/lib/zod-schemas';
 import type {
   VideoFailure,
   VideoPreviewSection,
@@ -19,12 +27,13 @@ import videoResultFailureJson from '../../../../../../mocks/video/v1/video-resul
 
 /* ---------- SSE 事件序列 ---------- */
 
-// TODO(wave-1): replace `as unknown` casts with zod-based runtime validation
-// (no shared schema for TaskEventPayload exists yet — keeping casts for now).
+// 注意：zod schema 的 `errorCode` 是 string；TS 类型 `TaskErrorCode` 是 enum。
+// 这里在 schema 校验通过的前提下做一次受控的 enum narrow，把跨 domain 错误码
+// （如 VIDEO_RENDER_TIMEOUT）按 fixture 现状归入 TaskEventPayload。
 const SSE_FLOW_MAP: Record<VideoPipelineMockScenario, TaskEventPayload[]> = {
-  success: successFlowJson as unknown as TaskEventPayload[],
-  fix: fixFlowJson as unknown as TaskEventPayload[],
-  failure: failureFlowJson as unknown as TaskEventPayload[],
+  success: taskEventPayloadArraySchema.parse(successFlowJson) as TaskEventPayload[],
+  fix: taskEventPayloadArraySchema.parse(fixFlowJson) as TaskEventPayload[],
+  failure: taskEventPayloadArraySchema.parse(failureFlowJson) as TaskEventPayload[],
 };
 
 /**
@@ -53,10 +62,8 @@ export function getVideoPipelineEventSequence(
 
 /* ---------- 视频结果 ---------- */
 
-// TODO(wave-1): replace `as unknown` casts with zod-based runtime validation
-// (no shared schema for VideoResult / VideoFailure exists yet — keeping casts for now).
-const videoResultSuccess: VideoResult = videoResultSuccessJson as unknown as VideoResult;
-const videoResultFailure: VideoFailure = videoResultFailureJson as unknown as VideoFailure;
+const videoResultSuccess: VideoResult = videoResultSchema.parse(videoResultSuccessJson);
+const videoResultFailure: VideoFailure = videoFailureSchema.parse(videoResultFailureJson);
 
 const PREVIEW_TIMESTAMP = '2026-04-16T10:00:00Z';
 
@@ -319,8 +326,7 @@ export function getVideoResultFromFlow(
   const completed = events.find((e) => e.event === 'completed');
 
   if (completed?.result) {
-    // TODO(wave-1): replace with zod-validated parse once VideoResult schema exists.
-    const result = completed.result as unknown as VideoResult;
+    const result = videoResultSchema.parse(completed.result);
 
     return taskId ? { ...result, taskId } : result;
   }
