@@ -13,7 +13,7 @@
  * 颜色全部走项目 token；字体走 var(--xm-font-sans)。本组件不直接消费 OpenMAIC
  * 的 settings store，而是用 local state + props 兜底，保证 ≤ 500 行硬限制。
  */
-import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type FC, type ReactNode } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
@@ -24,6 +24,7 @@ import { PBLRenderer } from './scene-renderers/pbl-renderer';
 import { SlideRenderer } from './scene-renderers/slide-renderer';
 import { StageBottomBar } from './stage/stage-bottom-bar';
 import { Whiteboard } from './whiteboard/whiteboard';
+import type { WhiteboardHandle } from './whiteboard/whiteboard';
 import { useActionPlayer } from '../hooks/use-action-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import type { AgentProfile } from '../types/agent';
@@ -113,13 +114,23 @@ export const Stage: FC<StageProps> = ({
   isStreaming = false,
 }) => {
   const { t } = useAppTranslation();
-  // Action player 订阅当前场景的 speech/spotlight/… 序列
-  useActionPlayer(scene);
+  // 白板命令式 ref（use-action-player 通过它驱动 wb_draw_* / wb_clear / wb_delete）
+  const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const spotlightId = useClassroomStore((s) => s.currentSpotlightId);
   const currentSpeech = useClassroomStore((s) => s.currentSpeech);
 
   // 本地 UI 态（尚未接入全局 settings store）
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+
+  const openWhiteboard = useCallback(() => setWhiteboardOpen(true), []);
+  const closeWhiteboard = useCallback(() => setWhiteboardOpen(false), []);
+
+  // Action player 订阅当前场景的 speech/spotlight/wb_* 序列
+  useActionPlayer(scene, {
+    whiteboardRef,
+    onOpenWhiteboard: openWhiteboard,
+    onCloseWhiteboard: closeWhiteboard,
+  });
   const [ttsMuted, setTtsMuted] = useState(false);
   const [ttsVolume, setTtsVolume] = useState(0.8);
   const [autoPlayLecture, setAutoPlayLecture] = useState(false);
@@ -154,13 +165,14 @@ export const Stage: FC<StageProps> = ({
     () => (
       <div className="pointer-events-auto h-full w-full">
         <Whiteboard
+          ref={whiteboardRef}
           isOpen={whiteboardOpen}
-          onClose={() => setWhiteboardOpen(false)}
+          onClose={closeWhiteboard}
           className="h-full w-full"
         />
       </div>
     ),
-    [whiteboardOpen],
+    [whiteboardOpen, closeWhiteboard],
   );
 
   if (!scene) {

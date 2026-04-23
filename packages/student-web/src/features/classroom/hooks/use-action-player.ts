@@ -4,7 +4,7 @@
  * 按序执行当前场景的 action 队列，驱动：
  *   - spotlight/laser: 设置 currentSpotlightId（由 SlideRenderer 消费做高亮）
  *   - speech:          设置 currentSpeech 并通过 `speechSynthesis` 朗读
- *   - 白板动作:        P1：仅打日志（占位）
+ *   - 白板动作:        通过 whiteboardRef 命令式 API 驱动 Whiteboard 渲染
  *   - discussion:      P1：占位（未来接 Team C director graph）
  *
  * 生命周期：
@@ -13,22 +13,52 @@
  *   - pause/stop 取消 speechSynthesis
  */
 import { useEffect, useRef } from 'react';
+import type { RefObject } from 'react';
 
+import type { WhiteboardHandle } from '../components/whiteboard/whiteboard';
 import { useClassroomStore } from '../stores/classroom-store';
-import type { Action, SpotlightAction, LaserAction, SpeechAction } from '../types/action';
+import type {
+  Action,
+  LaserAction,
+  SpeechAction,
+  SpotlightAction,
+  WbDeleteAction,
+  WbDrawLatexAction,
+  WbDrawLineAction,
+  WbDrawShapeAction,
+  WbDrawTextAction,
+} from '../types/action';
 import type { Scene } from '../types/scene';
+
+interface ActionPlayerOptions {
+  /** 白板 handle；缺省时 wb_* 动作退化为占位 sleep。 */
+  whiteboardRef?: RefObject<WhiteboardHandle | null>;
+  /** wb_open 触发：通知上层打开白板。 */
+  onOpenWhiteboard?: () => void;
+  /** wb_close 触发：通知上层收起白板。 */
+  onCloseWhiteboard?: () => void;
+}
 
 const SPOTLIGHT_DURATION_MS = 1600;
 const LASER_DURATION_MS = 900;
 const SPEECH_FALLBACK_MS_PER_CHAR = 80; // 没有语音合成时的停留节奏
+const WB_DRAW_DWELL_MS = 600;
+const WB_TRANSITION_MS = 300;
 
-export function useActionPlayer(currentScene: Scene | null): void {
+export function useActionPlayer(
+  currentScene: Scene | null,
+  options: ActionPlayerOptions = {},
+): void {
   const playbackStatus = useClassroomStore((s) => s.playbackStatus);
   const setCurrentSpotlightId = useClassroomStore((s) => s.setCurrentSpotlightId);
   const setCurrentSpeech = useClassroomStore((s) => s.setCurrentSpeech);
   const setCurrentActionIndex = useClassroomStore((s) => s.setCurrentActionIndex);
   const setPlaybackStatus = useClassroomStore((s) => s.setPlaybackStatus);
   const resetPlayback = useClassroomStore((s) => s.resetPlayback);
+
+  // 稳定化 options，避免上层每次渲染重启 action 队列
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Active run identifier so effect teardown can signal cancellation without
   // touching DOM APIs synchronously (React strict-mode double-invoke friendly).
@@ -60,6 +90,9 @@ export function useActionPlayer(currentScene: Scene | null): void {
         await executeAction(action, () => cancelled || runIdRef.current !== myRunId, {
           setSpotlightId: setCurrentSpotlightId,
           setSpeech: setCurrentSpeech,
+          whiteboardRef: optionsRef.current.whiteboardRef,
+          onOpenWhiteboard: optionsRef.current.onOpenWhiteboard,
+          onCloseWhiteboard: optionsRef.current.onCloseWhiteboard,
         });
       }
       if (cancelled || runIdRef.current !== myRunId) return;
@@ -88,13 +121,17 @@ export function useActionPlayer(currentScene: Scene | null): void {
 interface Setters {
   setSpotlightId: (id: string | null) => void;
   setSpeech: (speech: { agentId: string | null; text: string } | null) => void;
+  whiteboardRef?: RefObject<WhiteboardHandle | null>;
+  onOpenWhiteboard?: () => void;
+  onCloseWhiteboard?: () => void;
 }
 
 async function executeAction(
   action: Action,
   isCancelled: () => boolean,
-  { setSpotlightId, setSpeech }: Setters,
+  setters: Setters,
 ): Promise<void> {
+  const { setSpotlightId, setSpeech, whiteboardRef, onOpenWhiteboard, onCloseWhiteboard } = setters;
   if (isCancelled()) return;
 
   switch (action.type) {
@@ -119,16 +156,89 @@ async function executeAction(
     }
 
     case 'wb_open':
-    case 'wb_close':
-    case 'wb_clear':
-    case 'wb_delete':
-    case 'wb_draw_text':
-    case 'wb_draw_shape':
-    case 'wb_draw_latex':
-    case 'wb_draw_line':
-      // P1：占位 —— 白板渲染待补
-      await sleep(200, isCancelled);
+      onOpenWhiteboard?.();
+      await sleep(WB_TRANSITION_MS, isCancelled);
       return;
+
+    case 'wb_close':
+      onCloseWhiteboard?.();
+      await sleep(WB_TRANSITION_MS, isCancelled);
+      return;
+
+    case 'wb_clear':
+      whiteboardRef?.current?.clear();
+      await sleep(WB_TRANSITION_MS, isCancelled);
+      return;
+
+    case 'wb_delete': {
+      const a = action as WbDeleteAction;
+      whiteboardRef?.current?.deleteElement(a.elementId);
+      await sleep(WB_TRANSITION_MS, isCancelled);
+      return;
+    }
+
+    case 'wb_draw_text': {
+      const a = action as WbDrawTextAction;
+      whiteboardRef?.current?.drawText({
+        elementId: a.elementId,
+        content: a.content,
+        x: a.x,
+        y: a.y,
+        width: a.width,
+        height: a.height,
+        fontSize: a.fontSize,
+        color: a.color,
+      });
+      await sleep(WB_DRAW_DWELL_MS, isCancelled);
+      return;
+    }
+
+    case 'wb_draw_shape': {
+      const a = action as WbDrawShapeAction;
+      whiteboardRef?.current?.drawShape(a.shape, {
+        elementId: a.elementId,
+        x: a.x,
+        y: a.y,
+        width: a.width,
+        height: a.height,
+        fillColor: a.fillColor,
+      });
+      await sleep(WB_DRAW_DWELL_MS, isCancelled);
+      return;
+    }
+
+    case 'wb_draw_latex': {
+      const a = action as WbDrawLatexAction;
+      whiteboardRef?.current?.drawLatex({
+        elementId: a.elementId,
+        latex: a.latex,
+        x: a.x,
+        y: a.y,
+        width: a.width,
+        height: a.height,
+        color: a.color,
+      });
+      await sleep(WB_DRAW_DWELL_MS, isCancelled);
+      return;
+    }
+
+    case 'wb_draw_line': {
+      const a = action as WbDrawLineAction;
+      whiteboardRef?.current?.drawLine({
+        elementId: a.elementId,
+        startX: a.startX,
+        startY: a.startY,
+        endX: a.endX,
+        endY: a.endY,
+        color: a.color,
+        width: a.width,
+        style: a.style,
+        arrowStart: a.points?.[0] === 'arrow',
+        arrowEnd: a.points?.[1] === 'arrow',
+      });
+      await sleep(WB_DRAW_DWELL_MS, isCancelled);
+      return;
+    }
 
     case 'discussion':
       // P1：占位 —— 未来接 Team C director graph
