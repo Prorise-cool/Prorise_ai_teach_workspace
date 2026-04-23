@@ -183,6 +183,10 @@ export const zhCnClassroomResources = {
       generatingOutlines: '正在规划大纲',
       firstPageReady: '首幕已准备好',
       generatingFirstPage: '正在准备首幕',
+      overlayTitle: '小麦正在为你备课',
+      overlaySubtitle: '多智能体团队协作中，请稍候',
+      overlayTip: '首轮通常需要 1-3 分钟，复杂主题可能更久。',
+      progressLabel: '进度',
     },
   },
 } as const;
@@ -360,6 +364,10 @@ export const enUsClassroomResources = {
       generatingOutlines: 'Planning outline',
       firstPageReady: 'First scene ready',
       generatingFirstPage: 'Preparing first scene',
+      overlayTitle: 'XiaoMai is preparing your lesson',
+      overlaySubtitle: 'Multi-agent team collaborating, please wait',
+      overlayTip: 'First run usually takes 1-3 minutes; complex topics may take longer.',
+      progressLabel: 'Progress',
     },
   },
 } as const;

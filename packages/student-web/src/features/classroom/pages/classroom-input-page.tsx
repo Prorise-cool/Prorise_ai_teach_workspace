@@ -23,6 +23,7 @@ import {
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
+import { ClassroomGeneratingOverlay } from '@/features/classroom/components/classroom-generating-overlay';
 import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
 import { useClassroomStore } from '@/features/classroom/stores/classroom-store';
 
@@ -90,7 +91,16 @@ export function ClassroomInputPage() {
 	const feedLoadMore = t('classroomInput.feedLoadMore');
 	const feedLoading = t('classroomInput.feedLoading');
 
+	const showGeneratingOverlay = isSubmitting && generationProgress > 0;
+
 	return (
+		<>
+		{showGeneratingOverlay && (
+			<ClassroomGeneratingOverlay
+				progress={generationProgress}
+				message={generationMessage ?? null}
+			/>
+		)}
 		<WorkspaceInputShell
 			rootClassName="xm-classroom-input"
 			navLinks={navLinks}
@@ -180,5 +190,6 @@ export function ClassroomInputPage() {
 			feedLoadMoreLabel={feedLoadMore}
 			feedLoadingLabel={feedLoading}
 		/>
+		</>
 	);
 }
