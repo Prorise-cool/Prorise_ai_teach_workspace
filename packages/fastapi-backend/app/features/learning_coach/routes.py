@@ -6,7 +6,7 @@ import logging
 import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.config import get_settings
 from app.core.security import AccessContext, get_access_context
@@ -84,12 +84,12 @@ async def get_learning_coach_service(
 
 @router.get("/entry", response_model=LearningCoachEntryEnvelope)
 async def learning_coach_entry(
-    source_type: str,
-    source_session_id: str,
-    source_task_id: str | None = None,
-    source_result_id: str | None = None,
-    return_to: str | None = None,
-    topic_hint: str | None = None,
+    source_type: str = Query(..., alias="sourceType"),
+    source_session_id: str = Query(..., alias="sourceSessionId"),
+    source_task_id: str | None = Query(default=None, alias="sourceTaskId"),
+    source_result_id: str | None = Query(default=None, alias="sourceResultId"),
+    return_to: str | None = Query(default=None, alias="returnTo"),
+    topic_hint: str | None = Query(default=None, alias="topicHint"),
     access_context: AccessContext = Depends(get_access_context),
     service: LearningCoachService = Depends(get_learning_coach_service),
 ) -> LearningCoachEntryEnvelope:
