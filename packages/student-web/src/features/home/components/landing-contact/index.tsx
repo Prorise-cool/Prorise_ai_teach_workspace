@@ -3,7 +3,7 @@
  * 负责表单校验、匿名线索提交、提交反馈与成功后的重置策略。
  */
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { useLandingContactSubmit } from './use-landing-contact-submit';
+import { useLandingContactSubmit } from '@/features/home/hooks/use-landing-contact-submit';
 import { ContactInfoPanel, ContactForm } from './contact-info-panel';
 
 type ContactInfo = {

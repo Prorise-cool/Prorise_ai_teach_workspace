@@ -25,7 +25,7 @@ import {
 	resolveLandingContactFeedbackMessage,
 	createLandingContactDefaultValues,
 	type LandingContactFeedbackCopy,
-} from './landing-contact-helpers';
+} from '../components/landing-contact/landing-contact-helpers';
 
 type ContactSubjectOptions = string[];
 
