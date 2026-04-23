@@ -3,21 +3,7 @@
  * 三栏布局：课程大纲 | 主画布（幻灯片+白板）| 智能体讨论。
  * 与 UI 设计稿 01-classroom.html 对应。
  */
-import {
-  ArrowRight,
-  Bot,
-  ChevronLeft,
-  Layers,
-  Menu,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  Sparkles,
-  Sun,
-  Trophy,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -30,8 +16,9 @@ import { useDirectorChat } from '../hooks/use-director-chat';
 import { useScenePlayer } from '../hooks/use-scene-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
-import { ChatPanel } from '../components/chat/chat-panel';
-import type { Scene } from '../types/scene';
+import { ChatArea } from '../components/chat/chat-area';
+import { ClassroomHeader } from '../components/classroom-header';
+import { SceneSidebar } from '../components/stage/scene-sidebar';
 import type { AgentSummary } from '../types/classroom';
 import type { AgentProfile } from '../types/agent';
 
@@ -58,6 +45,11 @@ export function ClassroomPlayPage() {
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [companionOpen, setCompanionOpen] = useState(true);
   const [isMobileOverlayVisible, setMobileOverlayVisible] = useState(false);
+  // 边栏宽度受 store 持久化（W3c 已扩展）；折叠状态本地驱动
+  const sidebarWidth = useClassroomStore((s) => s.sidebarWidth);
+  const setSidebarWidth = useClassroomStore((s) => s.setSidebarWidth);
+  const chatAreaWidth = useClassroomStore((s) => s.chatAreaWidth);
+  const setChatAreaWidth = useClassroomStore((s) => s.setChatAreaWidth);
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark'),
   );
@@ -169,7 +161,7 @@ export function ClassroomPlayPage() {
   const courseTitle = classroom?.name ?? null;
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-background">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-muted/30">
       <GlobalTopNav links={[]} variant="surface" />
       {/* 背景纹理 */}
       <div
@@ -190,127 +182,50 @@ export function ClassroomPlayPage() {
         />
       )}
 
-      {/* 左侧边栏 — 课程大纲 */}
-      <aside
-        className={`fixed left-0 top-0 z-30 flex h-full flex-col border-r border-border bg-card/95 backdrop-blur-md transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
-          outlineOpen ? 'translate-x-0' : '-translate-x-full'
-        } w-[260px] shrink-0`}
+      {/* 左侧边栏 — 课程大纲（OpenMAIC 1:1 移植：可拖拽宽度 + 缩略图） */}
+      <div
+        className={`fixed left-0 top-0 z-30 h-full transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
+          outlineOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
       >
-        {/* 侧栏标题 */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
-              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              课程大纲
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => { setOutlineOpen(false); setMobileOverlayVisible(false); }}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+        {player.scenes.length === 0 ? (
+          <aside
+            style={{ width: outlineOpen ? sidebarWidth : 0 }}
+            className="flex h-full flex-col border-r border-border bg-card/95 backdrop-blur-md overflow-hidden"
           >
-            <PanelLeftClose className="h-4 w-4 hidden md:block" />
-            <X className="h-4 w-4 md:hidden" />
-          </button>
-        </div>
-
-        {/* 场景列表 */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {player.scenes.length === 0 ? (
             <LoadingState size="sm" message="场景加载中..." />
-          ) : (
-            <div className="space-y-2">
-              {player.scenes.map((scene, i) => (
-                <SceneItem
-                  key={scene.id}
-                  scene={scene}
-                  index={i}
-                  isActive={scene.id === player.currentScene?.id}
-                  onClick={() => player.goToScene(scene.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </aside>
+          </aside>
+        ) : (
+          <SceneSidebar
+            scenes={player.scenes}
+            currentSceneId={player.currentScene?.id ?? null}
+            collapsed={!outlineOpen}
+            onCollapseChange={(c) => { setOutlineOpen(!c); setMobileOverlayVisible(false); }}
+            onSceneSelect={(id) => player.goToScene(id)}
+            width={sidebarWidth}
+            onWidthChange={setSidebarWidth}
+            onLogoClick={() => void navigate('/openmaic')}
+          />
+        )}
+      </div>
 
       {/* 主内容区 */}
       <main className="flex flex-1 min-w-0 flex-col">
-        {/* 顶部导航栏 */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-md">
-          {/* 左侧：菜单 + 标题 */}
-          <div className="flex items-center gap-2 min-w-0">
-            {/* 移动端汉堡菜单 */}
-            <button
-              type="button"
-              onClick={openMobileOutline}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            {/* 桌面端大纲切换 */}
-            <button
-              type="button"
-              onClick={() => setOutlineOpen((v) => !v)}
-              className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:flex"
-            >
-              {outlineOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeftOpen className="h-4 w-4" />
-              )}
-            </button>
-            <div className="min-w-0">
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {courseLabel}
-              </p>
-              {courseTitle ? (
-                <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-lg">
-                  {courseTitle}
-                </h1>
-              ) : (
-                <LoadingState size="sm" variant="inline" message="课堂加载中..." />
-              )}
-            </div>
-          </div>
+        <ClassroomHeader
+          courseLabel={courseLabel}
+          courseTitle={courseTitle}
+          isDark={isDark}
+          onToggleDark={toggleDark}
+          outlineOpen={outlineOpen}
+          onToggleOutline={() => setOutlineOpen((v) => !v)}
+          onOpenMobileOutline={openMobileOutline}
+          companionOpen={companionOpen}
+          onToggleCompanion={() => { setCompanionOpen((v) => !v); openMobileCompanion(); }}
+          onBackHome={() => void navigate('/openmaic')}
+        />
 
-          {/* 右侧工具栏 —— 对齐 OpenMAIC 的玻璃感 pill */}
-          <div className="flex items-center gap-1 rounded-full border border-border/40 bg-card/60 px-2 py-1 shadow-sm backdrop-blur-md">
-            <button
-              type="button"
-              onClick={toggleDark}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-              title={isDark ? '切换浅色' : '切换深色'}
-            >
-              {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => { setCompanionOpen((v) => !v); openMobileCompanion(); }}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-accent ${
-                companionOpen ? 'text-primary' : 'text-muted-foreground'
-              }`}
-              title="伴学助手"
-            >
-              <Bot className="h-3.5 w-3.5" />
-            </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => void navigate('/openmaic')}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-              title="返回首页"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* 中央画布 */}
-        <div className="flex flex-1 min-h-0 p-2 md:p-3 lg:p-4">
+        {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2 */}
+        <div className="flex flex-1 min-h-0">
           <Stage
             scene={player.currentScene}
             agents={agents}
@@ -324,35 +239,33 @@ export function ClassroomPlayPage() {
             onNext={player.goNext}
             onPrev={player.goPrev}
             onAskQuestion={chat.sendMessage}
+            sceneIndex={player.currentScene
+              ? player.scenes.findIndex((s) => s.id === player.currentScene?.id)
+              : 0}
+            scenesCount={player.scenes.length}
+            isStreaming={chat.isStreaming}
           />
         </div>
       </main>
 
-      {/* 右侧边栏 — 伴学助手 */}
-      <aside
-        className={`fixed right-0 top-0 z-30 flex h-full flex-col border-l border-border bg-card/95 backdrop-blur-md transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
-          companionOpen ? 'translate-x-0' : 'translate-x-full'
-        } w-[300px] shrink-0 xl:w-[340px]`}
+      {/* 右侧边栏 — 伴学助手（OpenMAIC 1:1：双 Tab + 拖拽宽度 + 玻璃感） */}
+      <div
+        className={`fixed right-0 top-0 z-30 h-full transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
+          companionOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+        }`}
       >
-        {/* 紧凑关闭按钮（仅移动端） */}
-        <button
-          type="button"
-          onClick={() => { setCompanionOpen(false); setMobileOverlayVisible(false); }}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden z-10"
-        >
-          <PanelRightClose className="h-4 w-4" />
-        </button>
-
-        <ChatPanel
-          classroomId={classroomId}
-          agents={agents}
+        <ChatArea
           messages={chat.messages}
-          isStreaming={chat.isStreaming}
           notes={notes}
+          isStreaming={chat.isStreaming}
+          currentSceneId={player.currentScene?.id ?? null}
           onSendMessage={chat.sendMessage}
-          onClose={companionOpen ? () => { setCompanionOpen(false); } : undefined}
+          collapsed={!companionOpen}
+          onCollapseChange={(c) => { setCompanionOpen(!c); setMobileOverlayVisible(false); }}
+          width={chatAreaWidth}
+          onWidthChange={setChatAreaWidth}
         />
-      </aside>
+      </div>
 
       {/* 课堂结束 —— 课后测试引导 */}
       {showPostClassCTA && (
@@ -431,55 +344,3 @@ function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps
   );
 }
 
-/** 场景列表项 */
-interface SceneItemProps {
-  scene: Scene;
-  index: number;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function SceneItem({ scene, index, isActive, onClick }: SceneItemProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group w-full rounded-xl border p-3 text-left transition-all ${
-        isActive
-          ? 'border-primary/30 bg-primary/5 shadow-sm'
-          : 'border-border hover:bg-muted/60'
-      }`}
-    >
-      <div className="flex items-center gap-2.5">
-        {/* 编号徽章 */}
-        <div
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ${
-            isActive
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'
-          }`}
-        >
-          {index + 1}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p
-            className={`truncate text-xs font-bold ${
-              isActive ? 'text-primary' : 'text-foreground'
-            }`}
-          >
-            {scene.title}
-          </p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
-            {scene.type === 'slide' ? '幻灯片' : scene.type === 'interactive' ? '互动' : '项目'}
-          </p>
-        </div>
-      </div>
-      {/* 缩略图占位 */}
-      <div
-        className={`mt-2 aspect-video w-full rounded-md ${
-          isActive ? 'bg-primary/10 opacity-90' : 'bg-muted/50 opacity-50'
-        }`}
-      />
-    </button>
-  );
-}

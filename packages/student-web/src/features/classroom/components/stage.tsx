@@ -1,35 +1,94 @@
 /**
- * 课堂主舞台组件。
- * 顶层组合：场景渲染器 + 白板 + 聊天。
+ * 课堂主舞台组件 —— 画布容器 + 工具栏 + 底部 Roundtable/Composer。
+ *
+ * 在 classroom-play-page 的三栏布局（SceneSidebar | Stage | ChatArea）里，
+ * 这个组件对标 OpenMAIC `components/stage.tsx` 主区的
+ * `CanvasArea` + `Roundtable` 组合（去掉了我们暂时不需要的
+ * PlaybackEngine / ActionEngine 侵入）。
+ *
+ * 视觉构成完全照抄 OpenMAIC：顶部画布卡片（16:9，ring + shadow-2xl，
+ * 白板叠层，序号水印，play-hint 呼吸按钮）+ 底部 9px 工具栏（播放/上下一/
+ * TTS/全屏），工具栏之下再挂一个 StageBottomBar（教师气泡 + 提问输入）。
+ *
+ * 颜色全部走项目 token；字体走 var(--xm-font-sans)。本组件不直接消费 OpenMAIC
+ * 的 settings store，而是用 local state + props 兜底，保证 ≤ 500 行硬限制。
  */
-import { ChevronLeft, ChevronRight, Maximize, Pause, Play } from 'lucide-react';
-import { useState } from 'react';
-import type { FC } from 'react';
+import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
 
-import type { Scene } from '../types/scene';
-import type { AgentProfile } from '../types/agent';
-import type { ChatMessage, LectureNoteEntry } from '../types/chat';
-import { SlideRenderer } from './scene-renderers/slide-renderer';
+import { CanvasArea } from './canvas/canvas-area';
+import { AgentBubble } from './agent/agent-bubble';
 import { InteractiveRenderer } from './scene-renderers/interactive-renderer';
 import { PBLRenderer } from './scene-renderers/pbl-renderer';
-import { AgentBubble } from './agent/agent-bubble';
+import { SlideRenderer } from './scene-renderers/slide-renderer';
+import { StageBottomBar } from './stage/stage-bottom-bar';
 import { Whiteboard } from './whiteboard/whiteboard';
 import { useActionPlayer } from '../hooks/use-action-player';
 import { useClassroomStore } from '../stores/classroom-store';
+import type { AgentProfile } from '../types/agent';
+import type { ChatMessage, LectureNoteEntry } from '../types/chat';
+import type { Scene } from '../types/scene';
 
 interface StageProps {
-  scene: Scene | null;
-  agents: AgentProfile[];
-  messages: ChatMessage[];
-  notes: LectureNoteEntry[];
-  isPlaying: boolean;
-  canGoNext: boolean;
-  canGoPrev: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onNext: () => void;
-  onPrev: () => void;
-  onAskQuestion: (text: string) => Promise<void>;
+  readonly scene: Scene | null;
+  readonly agents: AgentProfile[];
+  readonly messages: ChatMessage[];
+  /** 预留：父级从 ChatArea 里管理的笔记，保留 prop 形状不变。 */
+  readonly notes: LectureNoteEntry[];
+  readonly isPlaying: boolean;
+  readonly canGoNext: boolean;
+  readonly canGoPrev: boolean;
+  readonly onPlay: () => void;
+  readonly onPause: () => void;
+  readonly onNext: () => void;
+  readonly onPrev: () => void;
+  readonly onAskQuestion: (text: string) => Promise<void>;
+  /** 可选：场景总数（用于工具栏中的 1/N 显示） */
+  readonly sceneIndex?: number;
+  readonly scenesCount?: number;
+  /** 可选：是否正在与后端对话（锁定输入） */
+  readonly isStreaming?: boolean;
+}
+
+/** discriminated-union 消费场景 —— 避免 `as any`。 */
+function renderSceneContent(scene: Scene, spotlightId: string | null): ReactNode {
+  const order = scene.order ?? scene.outline?.order ?? 1;
+  switch (scene.type) {
+    case 'slide':
+      return (
+        <SlideRenderer
+          content={scene.content}
+          sceneTitle={scene.title}
+          sceneOrder={order}
+          spotlightId={spotlightId}
+        />
+      );
+    case 'interactive':
+      return (
+        <InteractiveRenderer
+          content={scene.content}
+          sceneTitle={scene.title}
+          sceneOrder={order}
+        />
+      );
+    case 'pbl':
+      return (
+        <PBLRenderer
+          content={scene.content}
+          sceneTitle={scene.title}
+          sceneOrder={order}
+        />
+      );
+    default: {
+      // exhaustive check
+      const _exhaustive: never = scene;
+      void _exhaustive;
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          未知场景类型
+        </div>
+      );
+    }
+  }
 }
 
 export const Stage: FC<StageProps> = ({
@@ -42,191 +101,128 @@ export const Stage: FC<StageProps> = ({
   onPause,
   onNext,
   onPrev,
+  onAskQuestion,
+  sceneIndex = 0,
+  scenesCount = 1,
+  isStreaming = false,
 }) => {
-  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
-  const [questionInput, setQuestionInput] = useState('');
-
-  const teacher = agents[0] ?? null;
-  const listeners = agents.slice(1);
-
-  // Action player — 把 speech/spotlight/… 序列按 play/pause 状态自动执行
+  // Action player 订阅当前场景的 speech/spotlight/… 序列
   useActionPlayer(scene);
   const spotlightId = useClassroomStore((s) => s.currentSpotlightId);
   const currentSpeech = useClassroomStore((s) => s.currentSpeech);
 
-  const renderSceneContent = () => {
-    if (!scene) {
-      return (
-        <div className="flex h-full items-center justify-center">
-          <p className="text-sm text-muted-foreground">选择一个场景开始学习</p>
-        </div>
-      );
-    }
+  // 本地 UI 态（尚未接入全局 settings store）
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const [ttsMuted, setTtsMuted] = useState(false);
+  const [ttsVolume, setTtsVolume] = useState(0.8);
+  const [autoPlayLecture, setAutoPlayLecture] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isPresenting, setIsPresenting] = useState(false);
 
-    const order = scene.order ?? scene.outline?.order ?? 1;
+  const teacher = agents[0] ?? null;
+  const listeners = useMemo(() => agents.slice(1), [agents]);
 
-    // discriminated union — TS 自动 narrow content 类型，无需 as any
-    switch (scene.type) {
-      case 'slide':
-        return (
-          <SlideRenderer
-            content={scene.content}
-            sceneTitle={scene.title}
-            sceneOrder={order}
-            spotlightId={spotlightId}
-          />
-        );
-      case 'interactive':
-        return (
-          <InteractiveRenderer
-            content={scene.content}
-            sceneTitle={scene.title}
-            sceneOrder={order}
-          />
-        );
-      case 'pbl':
-        return (
-          <PBLRenderer
-            content={scene.content}
-            sceneTitle={scene.title}
-            sceneOrder={order}
-          />
-        );
-      default: {
-        // exhaustive check — 新增 SceneType 时编译器报错
-        const _exhaustive: never = scene;
-        void _exhaustive;
-        return (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            未知场景类型
+  // 把 play/pause/next/prev 映射成 CanvasToolbar 期望的 engineState 三态
+  const engineState = useMemo<'idle' | 'playing' | 'paused'>(() => {
+    if (isPlaying) return 'playing';
+    if (currentSpeech?.text) return 'paused';
+    return 'idle';
+  }, [isPlaying, currentSpeech?.text]);
+
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) onPause();
+    else onPlay();
+  }, [isPlaying, onPlay, onPause]);
+
+  const handleWhiteboardToggle = useCallback(() => {
+    setWhiteboardOpen((v) => !v);
+  }, []);
+
+  const handleCycleSpeed = useCallback(() => {
+    setPlaybackSpeed((s) => (s >= 2 ? 0.5 : s + 0.25));
+  }, []);
+
+  // 渲染白板叠层
+  const renderWhiteboard = useCallback(
+    () => (
+      <div className="pointer-events-auto h-full w-full">
+        <Whiteboard
+          isOpen={whiteboardOpen}
+          onClose={() => setWhiteboardOpen(false)}
+          className="h-full w-full"
+        />
+      </div>
+    ),
+    [whiteboardOpen],
+  );
+
+  if (!scene) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-card shadow-xl ring-1 ring-border">
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-muted-foreground">选择一个场景开始学习</p>
           </div>
-        );
-      }
-    }
-  };
-
-  return (
-    <div className="flex h-full flex-col">
-      {/* 主内容卡片 */}
-      <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-card shadow-xl ring-1 ring-border">
-        {renderSceneContent()}
-
-        {/* 白板叠层 */}
-        {whiteboardOpen && (
-          <div className="absolute inset-0 z-10">
-            <Whiteboard
-              isOpen={whiteboardOpen}
-              onClose={() => setWhiteboardOpen(false)}
-              className="h-full w-full"
+        </div>
+        {teacher && (
+          <div className="mt-3">
+            <AgentBubble
+              agent={teacher}
+              text="等待场景加载..."
+              listeners={listeners}
+              isStreaming={false}
             />
           </div>
         )}
       </div>
+    );
+  }
 
-      {/* 底部：教师气泡 + 播放控件 */}
-      <div className="shrink-0 border-t border-border py-3">
-        <div className="mx-auto max-w-5xl px-4 md:px-6">
-          {/* 后续步骤提示 */}
-          {!isPlaying && scene && (
-            <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border bg-card/50 px-4 py-3">
-              <span className="text-xs text-muted-foreground">继续探索：</span>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors">
-                  资料依据
-                </button>
-                <button type="button" className="rounded-full border border-border bg-foreground px-3 py-1 text-[11px] text-background transition-colors hover:opacity-90">
-                  Checkpoint
-                </button>
-                <button type="button" className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors">
-                  正式 Quiz
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 教师气泡 —— 朗读时显示真实讲稿，否则提示点击播放 */}
-          {teacher && scene && (
-            <AgentBubble
-              agent={teacher}
-              text={
-                currentSpeech?.text
-                  ? currentSpeech.text
-                  : isPlaying
-                    ? `现在播放场景「${scene.title}」...`
-                    : `场景「${scene.title}」。点击播放开始讲解。`
-              }
-              listeners={listeners}
-              isStreaming={isPlaying && !!currentSpeech}
-            />
-          )}
-
-          {/* 播放控件 */}
-          <div className="mt-3 flex items-center gap-3">
-            {/* 播放/暂停 */}
-            <button
-              type="button"
-              onClick={isPlaying ? onPause : onPlay}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
-            >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </button>
-
-            {/* 问题输入 */}
-            <div className="flex h-9 flex-1 items-center gap-2 rounded-full border border-border bg-background px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all md:h-10">
-              <input
-                value={questionInput}
-                onChange={(e) => setQuestionInput(e.target.value)}
-                placeholder="向老师提问或打断..."
-                className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (questionInput.trim()) {
-                    setQuestionInput('');
-                  }
-                }}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-            </div>
-
-            {/* 上下场景 */}
-            <div className="hidden items-center gap-1 sm:flex">
-              <button
-                type="button"
-                onClick={onPrev}
-                disabled={!canGoPrev}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent disabled:opacity-40"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={onNext}
-                disabled={!canGoNext}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent disabled:opacity-40"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setWhiteboardOpen((v) => !v)}
-                className={`flex h-8 w-8 items-center justify-center rounded-full border border-border transition-colors hover:bg-accent ${
-                  whiteboardOpen ? 'bg-primary/10 text-primary border-primary/40' : 'text-muted-foreground'
-                }`}
-                title="白板"
-              >
-                <span className="text-[10px] font-bold">WB</span>
-              </button>
-              <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent">
-                <Maximize className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="flex h-full flex-col">
+      {/* 画布 + 工具栏（OpenMAIC CanvasArea 视觉 1:1：flush edge，卡片 ring 由 CanvasArea 内部自带） */}
+      <div className="relative flex-1 overflow-hidden">
+        <CanvasArea
+          currentScene={scene}
+          currentSceneIndex={sceneIndex}
+          scenesCount={scenesCount}
+          mode="playback"
+          engineState={engineState}
+          isLiveSession={isStreaming}
+          whiteboardOpen={whiteboardOpen}
+          sidebarCollapsed={false}
+          chatCollapsed={false}
+          onPrevSlide={onPrev}
+          onNextSlide={onNext}
+          onPlayPause={handlePlayPause}
+          onWhiteboardClose={handleWhiteboardToggle}
+          isPresenting={isPresenting}
+          onTogglePresentation={() => setIsPresenting((v) => !v)}
+          ttsEnabled
+          ttsMuted={ttsMuted}
+          ttsVolume={ttsVolume}
+          onToggleMute={() => setTtsMuted((v) => !v)}
+          onVolumeChange={setTtsVolume}
+          autoPlayLecture={autoPlayLecture}
+          onToggleAutoPlay={() => setAutoPlayLecture((v) => !v)}
+          playbackSpeed={playbackSpeed}
+          onCycleSpeed={handleCycleSpeed}
+          renderScene={(s) => renderSceneContent(s, spotlightId)}
+          renderWhiteboard={whiteboardOpen ? renderWhiteboard : undefined}
+        />
       </div>
+
+      {/* 底部教师气泡 + 主问答输入 */}
+      <StageBottomBar
+        teacher={teacher}
+        listeners={listeners}
+        scene={scene}
+        currentSpeechText={currentSpeech?.text ?? null}
+        isPlaying={isPlaying}
+        isStreaming={isStreaming}
+        onAskQuestion={onAskQuestion}
+      />
     </div>
   );
 };
+
