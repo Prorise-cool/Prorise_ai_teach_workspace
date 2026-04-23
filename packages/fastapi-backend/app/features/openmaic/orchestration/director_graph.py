@@ -155,9 +155,15 @@ async def _director_node(state: OrchestratorState) -> dict[str, Any]:
         log.info("[Director] Turn limit (%d/%d), ending", state["turn_count"], state["max_turns"])
         return {"should_end": True}
 
+    # Guard: no agents at all → cannot dispatch anyone; end immediately to avoid
+    # a loop where director repeatedly picks a nonexistent fallback ID.
+    if not agents:
+        log.warning("[Director] No agents in request, ending")
+        return {"should_end": True}
+
     # Single agent: pure code logic
     if is_single:
-        agent_id = agents[0].id if agents else "default-1"
+        agent_id = agents[0].id
         if state["turn_count"] == 0:
             log.info("[Director] Single agent: dispatching %s", agent_id)
             _push(state, ThinkingEvent(stage="agent_loading", agent_id=agent_id))
@@ -435,7 +441,14 @@ class DirectorGraph:
         async def _run_graph() -> None:
             """Execute the graph in a background task."""
             try:
-                final_state = await self._graph.ainvoke(initial_state)
+                # Each loop "director → agent_generate → director" counts as 2 nodes,
+                # so recursion_limit must cover max_turns * 2 + epsilon.
+                turn_budget = max(initial_state.get("max_turns", 6), 1)
+                recursion_limit = turn_budget * 2 + 4
+                final_state = await self._graph.ainvoke(
+                    initial_state,
+                    config={"recursion_limit": recursion_limit},
+                )
                 # Extract final state counts
                 nonlocal total_actions, final_responses, final_ledger
                 total_actions = final_state.get("total_actions", 0)

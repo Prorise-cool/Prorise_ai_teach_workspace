@@ -23,6 +23,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
   const abortRef = useRef<AbortController | null>(null);
   const currentSceneId = useClassroomStore((s) => s.currentSceneId);
   const agents = useClassroomStore((s) => s.agents);
+  const classroom = useClassroomStore((s) => s.classroom);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -56,16 +57,36 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
       };
       setMessages((prev) => [...prev, assistantMsg]);
 
+      // 把画布当前场景标题 + 课程要求拼成 classroom_context 传给后端，
+      // 让 Director 理解此刻学生的讨论上下文。
+      const currentScene = classroom?.scenes?.find((s) => s.id === currentSceneId);
+      const classroomContext = [
+        classroom?.name ? `课程主题：${classroom.name}` : '',
+        currentScene?.title ? `当前场景：${currentScene.title}` : '',
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
       try {
         const stream = streamChat(
           {
-            messages: nextMessages,
+            // 后端 ChatRequest 形状：{messages, agents, classroomContext, languageDirective}
+            messages: nextMessages.map((m) => ({
+              role: m.role,
+              content: m.content,
+              agentId: m.agentId,
+            })),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            agents: agents as any,
+            classroomContext,
+            // 保留旧字段以防其他消费者依赖
             storeState: { classroomId, currentSceneId },
             config: {
               agentIds: agents.map((a) => a.id),
               sessionType: 'qa',
             },
-          },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any,
           ac.signal,
         );
 

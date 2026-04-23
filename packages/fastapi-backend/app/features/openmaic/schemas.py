@@ -169,12 +169,12 @@ class AgentProfile(BaseModel):
     id: str
     name: str
     role: Literal["teacher", "student", "assistant"] = "teacher"
-    persona: str
+    persona: str = ""
     avatar: str | None = None
     color: str | None = None
     voice_config: AgentVoiceConfig | None = Field(default=None, alias="voiceConfig")
 
-    model_config = {"populate_by_name": True}
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 # ─── Slide content (simplified for generation) ─────────────────────────────────
@@ -360,7 +360,8 @@ class ChatRequest(BaseModel):
     classroom_context: str = Field(default="", alias="classroomContext")
     language_directive: str = Field(default="", alias="languageDirective")
 
-    model_config = {"populate_by_name": True}
+    # 容忍前端附带 storeState / config 等旧字段 —— Team B 遗留兼容
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 class QuizGradeRequest(BaseModel):

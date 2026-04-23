@@ -352,27 +352,83 @@ async def chat(
     """Multi-agent discussion SSE stream.
 
     Delegates to Team C's orchestration.director_graph.run_discussion().
-    """
-    from app.features.openmaic.orchestration import run_discussion
 
-    messages = [m.model_dump(by_alias=True) for m in request.messages]
-    agents = [a.model_dump(by_alias=True) for a in request.agents]
+    Event mapping (backend ChatEvent → frontend):
+      agent_switch  → {type:"agent_start", data:{agentId,agentName,agentColor}}
+      text_delta    → {type:"text_delta",  data:{content,agentId}}
+      agent_turn_end → {type:"agent_turn_end", data:{agentId}}
+      end           → {type:"done"}
+      error         → {type:"error", data:{message}}
+    """
+    from app.features.openmaic.orchestration import run_discussion as _run_discussion
+    from app.features.openmaic.orchestration.schemas import (
+        AgentProfile as OrchAgentProfile,
+        ChatMessage as OrchChatMessage,
+        ClassroomContext as OrchClassroomContext,
+        DiscussionRequest as OrchDiscussionRequest,
+        MessageMetadata as OrchMessageMetadata,
+        MessagePart as OrchMessagePart,
+    )
+    from app.features.openmaic.llm_adapter import resolve_openmaic_providers
+
+    # 1. Resolve director LLM chain from xm_ai_module_binding
+    provider_chain = await resolve_openmaic_providers(
+        "director",
+        access_token=_access_token_from(access_context),
+        client_id=_client_id_from(access_context),
+    )
+
+    # 2. Map ChatRequest → DiscussionRequest (schema bridging)
+    orch_messages = [
+        OrchChatMessage(
+            role=m.role,
+            parts=[OrchMessagePart(type="text", text=m.content or "")],
+            metadata=(
+                OrchMessageMetadata(agent_id=m.agent_id) if m.agent_id else None
+            ),
+        )
+        for m in request.messages
+    ]
+    # teacher/assistant/student triple — only these are valid roles for OrchAgentProfile
+    _valid_roles = {"teacher", "assistant", "student"}
+    orch_agents = [
+        OrchAgentProfile(
+            id=a.id,
+            name=a.name,
+            persona=getattr(a, "persona", "") or "",
+            role=(a.role if a.role in _valid_roles else "teacher"),  # type: ignore[arg-type]
+            avatar=getattr(a, "avatar", None),
+            color=getattr(a, "color", None),
+        )
+        for a in request.agents
+    ]
+    orch_context = OrchClassroomContext(
+        slide_content=request.classroom_context or None,
+        language_directive=request.language_directive or None,
+    )
+    orch_request = OrchDiscussionRequest(
+        messages=orch_messages,
+        agents=orch_agents,
+        classroom_context=orch_context,
+        max_turns=6,
+    )
 
     async def _chat_stream() -> AsyncIterator[str]:
         try:
-            async for chunk in run_discussion(
-                messages=messages,
-                agents=agents,
-                classroom_context=request.classroom_context,
-                language_directive=request.language_directive,
-            ):
-                yield _sse_event(chunk)
+            async for event in _run_discussion(orch_request, provider_chain):
+                payload = _translate_chat_event(event)
+                if payload is None:
+                    continue
+                yield _sse_event(json.dumps(payload, ensure_ascii=False))
+            yield _sse_event(json.dumps({"type": "done"}))
             yield _sse_done()
         except Exception as exc:  # noqa: BLE001
-            logger.error("chat: orchestration error: %s", exc)
+            logger.error("openmaic.chat.orchestration_error %s", exc, exc_info=exc)
             yield _sse_event(
-                json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False),
-                event="error",
+                json.dumps(
+                    {"type": "error", "data": {"message": str(exc)}},
+                    ensure_ascii=False,
+                )
             )
             yield _sse_done()
 
@@ -381,6 +437,50 @@ async def chat(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _translate_chat_event(event) -> dict | None:  # noqa: ANN001 — orchestration event union
+    """Map orchestration ChatEvent → frontend-friendly shape."""
+    t = getattr(event, "type", None)
+    if t == "agent_switch":
+        return {
+            "type": "agent_start",
+            "data": {
+                "agentId": event.agent_id,
+                "agentName": event.agent_name,
+                "agentColor": event.agent_color,
+                "agentAvatar": event.agent_avatar,
+                "messageId": event.message_id,
+            },
+        }
+    if t == "text_delta":
+        return {
+            "type": "text_delta",
+            "data": {"content": event.content, "messageId": event.message_id},
+        }
+    if t == "agent_turn_end":
+        return {
+            "type": "agent_turn_end",
+            "data": {"agentId": event.agent_id, "messageId": event.message_id},
+        }
+    if t == "tool_call":
+        return {
+            "type": "tool_call",
+            "data": {
+                "actionId": event.action_id,
+                "name": event.name,
+                "args": event.args,
+                "agentId": event.agent_id,
+            },
+        }
+    if t == "summary":
+        return {"type": "summary", "data": {"text": event.text}}
+    if t == "end":
+        return {"type": "done"}
+    if t == "error":
+        return {"type": "error", "data": {"message": event.message}}
+    # thinking / cue_user / unknown → drop
+    return None
 
 
 @router.post("/quiz-grade")
