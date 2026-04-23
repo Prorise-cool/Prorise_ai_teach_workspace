@@ -5,8 +5,9 @@
 import { nanoid } from 'nanoid';
 import { useCallback, useRef, useState } from 'react';
 
+import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
+
 import { saveChatHistory } from '../db/classroom-db';
-import { streamChat } from '../api/openmaic-adapter';
 import { useClassroomStore } from '../stores/classroom-store';
 import type { ChatMessage } from '../types/chat';
 
@@ -21,6 +22,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const adapter = resolveClassroomAdapter();
   const currentSceneId = useClassroomStore((s) => s.currentSceneId);
   const agents = useClassroomStore((s) => s.agents);
   const classroom = useClassroomStore((s) => s.classroom);
@@ -68,7 +70,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
         .join(' | ');
 
       try {
-        const stream = streamChat(
+        const stream = adapter.streamChat(
           {
             // 后端 ChatRequest 形状：{messages, agents, classroomContext, languageDirective}
             messages: nextMessages.map((m) => ({
@@ -87,7 +89,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
             },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
-          ac.signal,
+          { signal: ac.signal },
         );
 
         let fullContent = '';
@@ -152,7 +154,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
         setIsStreaming(false);
       }
     },
-    [isStreaming, messages, classroomId, currentSceneId, agents],
+    [isStreaming, messages, classroomId, currentSceneId, agents, adapter, classroom],
   );
 
   const clearMessages = useCallback(() => {

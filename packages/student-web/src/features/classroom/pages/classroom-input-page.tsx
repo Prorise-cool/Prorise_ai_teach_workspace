@@ -21,9 +21,9 @@ import {
 	WorkspaceInputShell
 } from '@/components/input-page';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
+import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
 import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
-import { parsePdf } from '@/features/classroom/api/openmaic-adapter';
 import { useClassroomStore } from '@/features/classroom/stores/classroom-store';
 
 import '@/components/input-page/styles/input-page-shared.scss';
@@ -136,7 +136,9 @@ export function ClassroomInputPage() {
 							if (attachedFile && /\.pdf$/i.test(attachedFile.name)) {
 								const form = new FormData();
 								form.append('file', attachedFile);
-								const parsed = await parsePdf(form).catch(() => null);
+								const parsed = await resolveClassroomAdapter()
+									.parsePdf(form)
+									.catch(() => null);
 								pdfText = parsed?.text;
 							}
 							const classroomId = await create({

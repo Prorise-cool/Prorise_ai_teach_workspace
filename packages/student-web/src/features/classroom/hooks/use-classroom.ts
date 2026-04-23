@@ -11,8 +11,9 @@
  */
 import { useCallback, useRef } from 'react';
 
+import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
+
 import { saveClassroom } from '../db/classroom-db';
-import { submitClassroom, getClassroomStatus } from '../api/openmaic-adapter';
 import { useClassroomStore } from '../stores/classroom-store';
 import type { Classroom } from '../types/classroom';
 import type { ClassroomCreateRequest } from '../types/classroom';
@@ -23,6 +24,7 @@ const MAX_POLL_COUNT = 150; // ~5 分钟
 export function useClassroomCreate() {
   const store = useClassroomStore;
   const abortRef = useRef<AbortController | null>(null);
+  const adapter = resolveClassroomAdapter();
 
   const create = useCallback(
     async (req: ClassroomCreateRequest): Promise<string> => {
@@ -33,7 +35,7 @@ export function useClassroomCreate() {
       store.getState().setGenerationProgress(0, '正在提交课堂生成任务...');
 
       // 1. 提交任务 → 获取 jobId
-      const { jobId } = await submitClassroom(req);
+      const { jobId } = await adapter.submit(req, { signal: ac.signal });
       store.getState().setGenerationProgress(5, '任务已提交，等待生成...');
 
       // 2. 轮询任务状态（后端已做 outline + agent profiles + scene 全链路编排）
@@ -45,7 +47,7 @@ export function useClassroomCreate() {
 
         let statusResp;
         try {
-          statusResp = await getClassroomStatus(jobId);
+          statusResp = await adapter.getStatus(jobId, { signal: ac.signal });
         } catch {
           pollCount++;
           continue;
@@ -123,7 +125,7 @@ export function useClassroomCreate() {
 
       throw new Error('课堂生成超时，请稍后重试');
     },
-    [store],
+    [store, adapter],
   );
 
   const cancel = useCallback(() => {

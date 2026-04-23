@@ -16,7 +16,8 @@ import { Check, ChevronRight } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import type { FC } from 'react';
 
-import { gradeQuiz } from '../../api/openmaic-adapter';
+import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
+
 import type { QuizGradeResult } from '../../types/quiz';
 
 interface QuizOption {
@@ -84,7 +85,7 @@ export const QuizRenderer: FC<QuizRendererProps> = ({ content, sceneTitle, scene
 
       if (q.type === 'short_answer') {
         try {
-          const result = await gradeQuiz({
+          const result = await resolveClassroomAdapter().gradeQuiz({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             question: q as any,
             studentAnswer: String(answer),
