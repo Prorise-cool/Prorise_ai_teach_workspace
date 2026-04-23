@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from app.core.errors import IntegrationError
 from app.shared.ruoyi.client import RuoYiClient
 from app.shared.ruoyi.mapper import RUOYI_DATETIME_FORMAT
 from app.shared.ruoyi.service_mixin import RuoYiServiceMixin

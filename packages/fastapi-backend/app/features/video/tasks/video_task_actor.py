@@ -6,7 +6,6 @@ from app.features.video.pipeline.orchestration.runtime import VideoRuntimeStateS
 from app.features.video.runtime_auth import load_video_runtime_auth
 from app.features.video.service import VideoService
 from app.infra.redis_client import create_runtime_store
-from app.shared.ruoyi.auth import RuoYiRequestAuth
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import TaskErrorCode, TaskStatus

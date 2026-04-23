@@ -14,9 +14,7 @@ Coverage:
 """
 from __future__ import annotations
 
-import asyncio
 import json
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -30,9 +28,6 @@ from app.features.openmaic.orchestration.schemas import (
     DiscussionRequest,
     MessagePart,
     EndEvent,
-    AgentSwitchEvent,
-    TextDeltaEvent,
-    ToolCallEvent,
 )
 from app.features.openmaic.orchestration.director_prompt import (
     parse_director_decision,
@@ -42,7 +37,6 @@ from app.features.openmaic.orchestration.summarizers import (
     summarize_conversation,
     convert_messages_to_openai,
 )
-from app.features.openmaic.orchestration.director_graph import DirectorGraph
 from app.features.openmaic.orchestration import run_discussion
 
 

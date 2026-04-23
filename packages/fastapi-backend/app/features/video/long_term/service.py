@@ -18,12 +18,12 @@ from app.features.video.long_term.records import (
     video_session_artifact_batch_from_ruoyi_data,
     video_session_artifact_batch_to_ruoyi_payload,
 )
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
-    from app.shared.ruoyi_auth import RuoYiRequestAuth
+    from app.shared.ruoyi.auth import RuoYiRequestAuth
 
 
 class VideoPublicationService(RuoYiServiceMixin):

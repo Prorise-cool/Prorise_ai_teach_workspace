@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from typing import Mapping
 
-from openai import AsyncOpenAI
 
 from app.providers.http_utils import handle_openai_request_error, require_setting
 from app.providers.llm.openai_client_factory import _normalize_base_url, create_async_client

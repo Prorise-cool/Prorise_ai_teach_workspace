@@ -37,9 +37,11 @@ def client():
 def test_bootstrap_returns_200(client):
     response = client.get("/api/v1/openmaic/bootstrap")
     assert response.status_code == 200
-    data = response.json()
-    assert data["feature"] == "openmaic"
-    assert data["status"] == "ready"
+    envelope = response.json()
+    assert envelope["code"] == 200
+    payload = envelope["data"]
+    assert payload["feature"] == "openmaic"
+    assert payload["status"] == "ready"
 
 
 def test_create_classroom_returns_job_id(client):
@@ -53,10 +55,11 @@ def test_create_classroom_returns_job_id(client):
             json={"requirement": "教我Python基础"},
         )
     assert response.status_code == 200
-    data = response.json()
-    assert "jobId" in data
-    assert data["jobId"] == "classroom_test123"
-    assert "pollUrl" in data
+    envelope = response.json()
+    assert envelope["code"] == 200
+    payload = envelope["data"]
+    assert payload["jobId"] == "classroom_test123"
+    assert "pollUrl" in payload
 
 
 def test_get_classroom_status_returns_pending(client):
@@ -87,9 +90,9 @@ def test_quiz_grade_returns_score(client):
             },
         )
     assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert data["data"]["score"] == 8.0
+    envelope = response.json()
+    assert envelope["code"] == 200
+    assert envelope["data"]["score"] == 8.0
 
 
 def test_parse_pdf_rejects_non_pdf(client):
@@ -109,10 +112,11 @@ def test_parse_pdf_accepts_pdf(client):
     )
     # PDF parse may return 0 pages for minimal PDF but should not error
     assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert "text" in data["data"]
-    assert "pageCount" in data["data"]
+    envelope = response.json()
+    assert envelope["code"] == 200
+    payload = envelope["data"]
+    assert "text" in payload
+    assert "pageCount" in payload
 
 
 def test_generate_agent_profiles_returns_agents(client):
@@ -133,6 +137,6 @@ def test_generate_agent_profiles_returns_agents(client):
             },
         )
     assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is True
-    assert len(data["data"]["agents"]) >= 1
+    envelope = response.json()
+    assert envelope["code"] == 200
+    assert len(envelope["data"]["agents"]) >= 1

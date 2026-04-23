@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 import httpx
 
 from app.shared.ruoyi.auth import RuoYiRequestAuth
-from app.shared.ruoyi.mapper import RuoYiMapper
 
 # Re-export 数据类和辅助函数，作为客户端公共 API 暴露
 from app.shared.ruoyi.models import (  # noqa: F401 – re-export

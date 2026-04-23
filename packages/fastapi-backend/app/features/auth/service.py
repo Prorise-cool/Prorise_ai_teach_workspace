@@ -19,6 +19,7 @@ Design Note — Direct httpx Client Usage:
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Mapping
 
 import httpx
@@ -29,7 +30,9 @@ from app.core.security import extract_access_token_claims, extract_bearer_token
 from app.features.auth.crypto import RuoYiAuthCrypto
 from app.features.auth.models import AuthLoginRequest, AuthRegisterRequest
 from app.infra.redis_client import RuntimeStore
-from app.shared.ruoyi_auth import RuoYiRequestAuth
+from app.shared.ruoyi.auth import RuoYiRequestAuth
+
+logger = logging.getLogger(__name__)
 
 
 class AuthProxyService:

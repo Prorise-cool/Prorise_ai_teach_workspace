@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Mapping
 
@@ -18,11 +19,13 @@ from app.features.learning.schemas import (
     LearningResultInput,
     LearningResultType
 )
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+
+logger = logging.getLogger(__name__)
 
 
 class LearningService(RuoYiServiceMixin):

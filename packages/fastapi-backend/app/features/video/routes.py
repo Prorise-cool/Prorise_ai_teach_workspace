@@ -311,14 +311,13 @@ async def delete_video_task_endpoint(
         access_context=access_context,
         service=service,
     )
-    return {
-        "code": 200,
-        "msg": "任务已删除",
-        "data": {
+    return build_success_envelope(
+        {
             "taskId": result["task_id"],
             "status": result["status"],
         },
-    }
+        msg="任务已删除",
+    )
 
 
 @router.get("/tasks/{task_id}/result", response_model=VideoResultDetailResponseEnvelope)
@@ -484,14 +483,14 @@ async def unpublish_video_task(
 @router.get("/published", response_model=PublishedVideoPageResponseEnvelope)
 async def list_published_video_tasks(
     request: Request,
-    page: int = Query(default=1, ge=1),
+    page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=12, alias="pageSize", ge=1, le=50),
     access_context: AccessContext = Depends(get_access_context),
     service: VideoService = Depends(get_video_service),
 ) -> dict[str, object]:
     """分页查询已公开发布的视频卡片列表。"""
     payload = await service.list_published_tasks(
-        page=page,
+        page=page_num,
         page_size=page_size,
         runtime_store=request.app.state.runtime_store,
         access_context=access_context,

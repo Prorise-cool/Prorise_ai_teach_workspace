@@ -35,7 +35,7 @@ from app.infra.redis_client import RuntimeStore
 from app.shared.task_framework.status import TaskStatus
 
 if TYPE_CHECKING:
-    from app.shared.ruoyi_auth import RuoYiRequestAuth
+    from app.shared.ruoyi.auth import RuoYiRequestAuth
 
 logger = get_logger("app.features.video.service")
 

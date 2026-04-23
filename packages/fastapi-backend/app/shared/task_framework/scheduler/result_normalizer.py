@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from app.core.logging import EMPTY_TRACE_VALUE, bind_trace_context, get_logger, reset_trace_context
+from app.core.logging import bind_trace_context, get_logger, reset_trace_context
 from app.shared.task_framework.base import BaseTask, TaskResult
 from app.shared.task_framework.context import TaskContext
 from app.shared.task_framework.status import (

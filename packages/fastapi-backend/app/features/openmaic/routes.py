@@ -24,28 +24,24 @@ import json
 import logging
 from typing import AsyncIterator
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.core.security import AccessContext, get_access_context
+from app.schemas.common import build_success_envelope
 from app.features.openmaic.jobs.job_store import JobStore
 from app.features.openmaic.pdf.parser import parse_pdf_bytes
 from app.features.openmaic.schemas import (
     AgentProfilesRequest,
-    AgentProfilesResponse,
     BootstrapResponse,
     ChatRequest,
     ClassroomCreateRequest,
     ClassroomCreateResponse,
     JobStatusResponse,
     OutlineStreamRequest,
-    ParsePdfResponse,
     QuizGradeRequest,
-    QuizGradeResponse,
     SceneActionsRequest,
-    SceneActionsResponse,
     SceneContentRequest,
-    SceneContentResponse,
 )
 from app.features.openmaic.service import OpenMAICService
 
@@ -97,20 +93,20 @@ async def _sse_heartbeat(interval: float = 15.0) -> AsyncIterator[str]:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@router.get("/bootstrap", response_model=BootstrapResponse)
+@router.get("/bootstrap")
 async def bootstrap(
     access_context: AccessContext = Depends(get_access_context),
-) -> BootstrapResponse:
+) -> dict[str, object]:
     """Feature health + config detect."""
-    return BootstrapResponse()
+    return build_success_envelope(BootstrapResponse(), msg="操作成功")
 
 
-@router.post("/classroom", response_model=ClassroomCreateResponse)
+@router.post("/classroom")
 async def create_classroom(
     request: ClassroomCreateRequest,
     access_context: AccessContext = Depends(get_access_context),
     service: OpenMAICService = Depends(_get_service),
-) -> ClassroomCreateResponse:
+) -> dict[str, object]:
     """Submit a classroom generation job. Returns job_id immediately."""
     job_id = await service.create_classroom_job(
         requirement=request.requirement,
@@ -119,10 +115,11 @@ async def create_classroom(
         access_token=_access_token_from(access_context),
         client_id=_client_id_from(access_context),
     )
-    return ClassroomCreateResponse(
+    response = ClassroomCreateResponse(
         job_id=job_id,
         poll_url=f"/api/v1/openmaic/classroom/{job_id}",
     )
+    return build_success_envelope(response, msg="操作成功")
 
 
 @router.get("/classroom/{job_id}", response_model=JobStatusResponse)
@@ -283,14 +280,12 @@ async def generate_scene_content(
         client_id=_client_id_from(access_context),
     )
 
-    return JSONResponse(
-        content={
-            "success": True,
-            "data": {
-                "sceneId": outline_dict.get("id", ""),
-                "content": content,
-            },
-        }
+    return build_success_envelope(
+        {
+            "sceneId": outline_dict.get("id", ""),
+            "content": content,
+        },
+        msg="操作成功",
     )
 
 
@@ -313,14 +308,12 @@ async def generate_scene_actions(
         client_id=_client_id_from(access_context),
     )
 
-    return JSONResponse(
-        content={
-            "success": True,
-            "data": {
-                "sceneId": outline_dict.get("id", ""),
-                "actions": actions,
-            },
-        }
+    return build_success_envelope(
+        {
+            "sceneId": outline_dict.get("id", ""),
+            "actions": actions,
+        },
+        msg="操作成功",
     )
 
 
@@ -341,7 +334,7 @@ async def generate_agent_profiles(
         client_id=_client_id_from(access_context),
     )
 
-    return JSONResponse(content={"success": True, "data": {"agents": agents}})
+    return build_success_envelope({"agents": agents}, msg="操作成功")
 
 
 @router.post("/chat")
@@ -499,7 +492,7 @@ async def quiz_grade(
         access_token=_access_token_from(access_context),
         client_id=_client_id_from(access_context),
     )
-    return JSONResponse(content={"success": True, "data": result})
+    return build_success_envelope(result, msg="操作成功")
 
 
 @router.post("/parse-pdf")
@@ -524,14 +517,12 @@ async def parse_pdf(
         )
 
     result = parse_pdf_bytes(pdf_bytes)
-    return JSONResponse(
-        content={
-            "success": True,
-            "data": {
-                "text": result.text,
-                "pageCount": result.page_count,
-            },
-        }
+    return build_success_envelope(
+        {
+            "text": result.text,
+            "pageCount": result.page_count,
+        },
+        msg="操作成功",
     )
 
 
