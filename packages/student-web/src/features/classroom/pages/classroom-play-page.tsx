@@ -3,20 +3,7 @@
  * 三栏布局：课程大纲 | 主画布（幻灯片+白板）| 智能体讨论。
  * 与 UI 设计稿 01-classroom.html 对应。
  */
-import {
-  ArrowRight,
-  Bot,
-  ChevronLeft,
-  Layers,
-  Menu,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sparkles,
-  Sun,
-  Trophy,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -30,6 +17,7 @@ import { useScenePlayer } from '../hooks/use-scene-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
 import { ChatArea } from '../components/chat/chat-area';
+import { ClassroomHeader } from '../components/classroom-header';
 import { SceneSidebar } from '../components/stage/scene-sidebar';
 import type { AgentSummary } from '../types/classroom';
 import type { AgentProfile } from '../types/agent';
@@ -223,76 +211,18 @@ export function ClassroomPlayPage() {
 
       {/* 主内容区 */}
       <main className="flex flex-1 min-w-0 flex-col">
-        {/* 顶部导航栏 */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-md">
-          {/* 左侧：菜单 + 标题 */}
-          <div className="flex items-center gap-2 min-w-0">
-            {/* 移动端汉堡菜单 */}
-            <button
-              type="button"
-              onClick={openMobileOutline}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            {/* 桌面端大纲切换 */}
-            <button
-              type="button"
-              onClick={() => setOutlineOpen((v) => !v)}
-              className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:flex"
-            >
-              {outlineOpen ? (
-                <PanelLeftClose className="h-4 w-4" />
-              ) : (
-                <PanelLeftOpen className="h-4 w-4" />
-              )}
-            </button>
-            <div className="min-w-0">
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {courseLabel}
-              </p>
-              {courseTitle ? (
-                <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-lg">
-                  {courseTitle}
-                </h1>
-              ) : (
-                <LoadingState size="sm" variant="inline" message="课堂加载中..." />
-              )}
-            </div>
-          </div>
-
-          {/* 右侧工具栏 —— 对齐 OpenMAIC 的玻璃感 pill */}
-          <div className="flex items-center gap-1 rounded-full border border-border/40 bg-card/60 px-2 py-1 shadow-sm backdrop-blur-md">
-            <button
-              type="button"
-              onClick={toggleDark}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-              title={isDark ? '切换浅色' : '切换深色'}
-            >
-              {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-            </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => { setCompanionOpen((v) => !v); openMobileCompanion(); }}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-accent ${
-                companionOpen ? 'text-primary' : 'text-muted-foreground'
-              }`}
-              title="伴学助手"
-            >
-              <Bot className="h-3.5 w-3.5" />
-            </button>
-            <div className="mx-1 h-4 w-px bg-border" />
-            <button
-              type="button"
-              onClick={() => void navigate('/openmaic')}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-              title="返回首页"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-        </header>
+        <ClassroomHeader
+          courseLabel={courseLabel}
+          courseTitle={courseTitle}
+          isDark={isDark}
+          onToggleDark={toggleDark}
+          outlineOpen={outlineOpen}
+          onToggleOutline={() => setOutlineOpen((v) => !v)}
+          onOpenMobileOutline={openMobileOutline}
+          companionOpen={companionOpen}
+          onToggleCompanion={() => { setCompanionOpen((v) => !v); openMobileCompanion(); }}
+          onBackHome={() => void navigate('/openmaic')}
+        />
 
         {/* 中央画布 */}
         <div className="flex flex-1 min-h-0 p-2 md:p-3 lg:p-4">
