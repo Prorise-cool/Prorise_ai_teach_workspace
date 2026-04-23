@@ -309,6 +309,11 @@ export function ClassroomPlayPage() {
             onNext={player.goNext}
             onPrev={player.goPrev}
             onAskQuestion={chat.sendMessage}
+            sceneIndex={player.currentScene
+              ? player.scenes.findIndex((s) => s.id === player.currentScene?.id)
+              : 0}
+            scenesCount={player.scenes.length}
+            isStreaming={chat.isStreaming}
           />
         </div>
       </main>
