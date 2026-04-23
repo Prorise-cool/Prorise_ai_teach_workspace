@@ -19,6 +19,8 @@ import videoResultFailureJson from '../../../../../../mocks/video/v1/video-resul
 
 /* ---------- SSE 事件序列 ---------- */
 
+// TODO(wave-1): replace `as unknown` casts with zod-based runtime validation
+// (no shared schema for TaskEventPayload exists yet — keeping casts for now).
 const SSE_FLOW_MAP: Record<VideoPipelineMockScenario, TaskEventPayload[]> = {
   success: successFlowJson as unknown as TaskEventPayload[],
   fix: fixFlowJson as unknown as TaskEventPayload[],
@@ -51,6 +53,8 @@ export function getVideoPipelineEventSequence(
 
 /* ---------- 视频结果 ---------- */
 
+// TODO(wave-1): replace `as unknown` casts with zod-based runtime validation
+// (no shared schema for VideoResult / VideoFailure exists yet — keeping casts for now).
 const videoResultSuccess: VideoResult = videoResultSuccessJson as unknown as VideoResult;
 const videoResultFailure: VideoFailure = videoResultFailureJson as unknown as VideoFailure;
 
@@ -315,6 +319,7 @@ export function getVideoResultFromFlow(
   const completed = events.find((e) => e.event === 'completed');
 
   if (completed?.result) {
+    // TODO(wave-1): replace with zod-validated parse once VideoResult schema exists.
     const result = completed.result as unknown as VideoResult;
 
     return taskId ? { ...result, taskId } : result;
