@@ -24,9 +24,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# ── RuoYi knowledge endpoint paths ─────────────────────────────────────────
+KNOWLEDGE_CHAT_LOGS_COLLECTION_PATH = "/internal/xiaomai/knowledge/chat-logs"
+KNOWLEDGE_CHAT_LOG_ITEM_PATH_TEMPLATE = "/internal/xiaomai/knowledge/chat-logs/{chat_log_id}"
+
+# ── IntegrationError codes we handle specially ────────────────────────────
+RUOYI_NOT_FOUND_CODE = "RUOYI_NOT_FOUND"
+
+# ── RuoYiServiceMixin resource label ──────────────────────────────────────
+_RESOURCE_LABEL = "knowledge-chat"
+
+
 class KnowledgeService(RuoYiServiceMixin):
     """知识检索业务服务，与 RuoYi 持久化交互。"""
-    _RESOURCE = "knowledge-chat"
+    _RESOURCE = _RESOURCE_LABEL
 
     def __init__(self, client_factory=None) -> None:
         """初始化知识检索服务。"""
@@ -50,12 +61,16 @@ class KnowledgeService(RuoYiServiceMixin):
         """
         async with self._resolve_authenticated_factory(access_context)() as client:
             result = await client.post_single(
-                "/internal/xiaomai/knowledge/chat-logs",
+                KNOWLEDGE_CHAT_LOGS_COLLECTION_PATH,
                 resource=self._RESOURCE,
                 operation="persist",
                 json_body=knowledge_chat_to_ruoyi_payload(request)
             )
-        return self._parse_chat_log(result.data, operation="persist", endpoint="/internal/xiaomai/knowledge/chat-logs")
+        return self._parse_chat_log(
+            result.data,
+            operation="persist",
+            endpoint=KNOWLEDGE_CHAT_LOGS_COLLECTION_PATH,
+        )
 
     async def get_chat_log(
         self,
@@ -69,21 +84,22 @@ class KnowledgeService(RuoYiServiceMixin):
             chat_log_id: 对话记录唯一标识。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
         """
+        endpoint = KNOWLEDGE_CHAT_LOG_ITEM_PATH_TEMPLATE.format(chat_log_id=chat_log_id)
         try:
             async with self._resolve_authenticated_factory(access_context)() as client:
                 result = await client.get_single(
-                    f"/internal/xiaomai/knowledge/chat-logs/{chat_log_id}",
+                    endpoint,
                     resource=self._RESOURCE,
                     operation="get"
                 )
         except IntegrationError as exc:
-            if exc.code == "RUOYI_NOT_FOUND":
+            if exc.code == RUOYI_NOT_FOUND_CODE:
                 return None
             raise
         return self._parse_chat_log(
             result.data,
             operation="get",
-            endpoint=f"/internal/xiaomai/knowledge/chat-logs/{chat_log_id}"
+            endpoint=endpoint,
         )
 
     def _parse_chat_log(

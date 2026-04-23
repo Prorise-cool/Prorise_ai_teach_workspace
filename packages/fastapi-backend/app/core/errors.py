@@ -10,6 +10,7 @@ unhandled_exception_handler、request_validation_error_handler）。
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import (
     EMPTY_TRACE_VALUE,
@@ -208,6 +209,86 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         reset_trace_context(tokens)
 
 
+async def http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException
+) -> JSONResponse:
+    """处理 FastAPI/Starlette ``HTTPException``，返回统一信封格式。
+
+    未显式抛出 ``AppError`` 但通过 ``raise HTTPException(...)`` 产生的错误
+    由此处兜底，保持响应信封一致。``error_code`` 约定为 ``HTTP_<status>``。
+    """
+    request_id, details = _resolve_trace_details(request)
+    error_code = f"HTTP_{exc.status_code}"
+    tokens = bind_trace_context(
+        request_id=request_id or EMPTY_TRACE_VALUE,
+        task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+        error_code=error_code
+    )
+    try:
+        logger.warning(
+            "HTTPException path=%s status=%s",
+            request.url.path,
+            exc.status_code
+        )
+        message = exc.detail if isinstance(exc.detail, str) and exc.detail else "请求处理失败"
+        headers = _trace_headers(request_id)
+        if exc.headers:
+            headers = {**exc.headers, **headers}
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=build_error_envelope(
+                code=exc.status_code,
+                msg=message,
+                error_code=error_code,
+                retryable=False,
+                request_id=request_id,
+                task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+                details=details
+            ),
+            headers=headers
+        )
+    finally:
+        reset_trace_context(tokens)
+
+
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    """处理业务层抛出的 ``ValueError``，返回 400 + ``COMMON_INVALID_VALUE``。
+
+    ``ValueError`` 常见于参数校验或枚举转换失败。相比 500 兜底，这里把它映射为
+    400，避免把调用方错误当作服务端异常。
+    """
+    request_id, details = _resolve_trace_details(request)
+    error_code = "COMMON_INVALID_VALUE"
+    tokens = bind_trace_context(
+        request_id=request_id or EMPTY_TRACE_VALUE,
+        task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+        error_code=error_code
+    )
+    try:
+        logger.warning(
+            "ValueError path=%s message=%s",
+            request.url.path,
+            str(exc)
+        )
+        message = str(exc) or "请求参数非法"
+        return JSONResponse(
+            status_code=400,
+            content=build_error_envelope(
+                code=400,
+                msg=message,
+                error_code=error_code,
+                retryable=False,
+                request_id=request_id,
+                task_id=details.get("task_id") if isinstance(details.get("task_id"), str) else None,
+                details=details
+            ),
+            headers=_trace_headers(request_id)
+        )
+    finally:
+        reset_trace_context(tokens)
+
+
 async def request_validation_error_handler(
     request: Request,
     exc: RequestValidationError
@@ -246,4 +327,6 @@ def register_exception_handlers(app: FastAPI) -> None:
     """将所有异常处理器注册到 FastAPI 应用实例。"""
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(RequestValidationError, request_validation_error_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(ValueError, value_error_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
