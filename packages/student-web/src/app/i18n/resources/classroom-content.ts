@@ -124,6 +124,8 @@ export const zhCnClassroomResources = {
       toolText: '文字',
       toolEraser: '橡皮',
       clear: '清除',
+      close: '关闭',
+      textPrompt: '输入文本内容',
     },
     sceneRenderer: {
       projectTasksLabel: '项目任务',
@@ -287,6 +289,8 @@ export const enUsClassroomResources = {
       toolText: 'Text',
       toolEraser: 'Eraser',
       clear: 'Clear',
+      close: 'Close',
+      textPrompt: 'Enter text',
     },
     sceneRenderer: {
       projectTasksLabel: 'Project Tasks',
