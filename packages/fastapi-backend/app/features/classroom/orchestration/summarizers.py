@@ -17,12 +17,21 @@ from .schemas import (
 )
 
 
+# ── Summary limits ───────────────────────────────────────────────────────────
+DEFAULT_MAX_CONVERSATION_MESSAGES = 10
+DEFAULT_MAX_MESSAGE_CONTENT_LENGTH = 200
+ACTION_RESULT_PREVIEW_LIMIT = 100
+PEER_PREVIEW_LIMIT = 120
+SLIDE_CONTENT_PREVIEW_LIMIT = 300
+WHITEBOARD_ACTION_TAIL_LIMIT = 5
+
+
 # ── Conversation summary (director context) ──────────────────────────────────
 
 def summarize_conversation(
     messages: list[dict[str, str]],
-    max_messages: int = 10,
-    max_content_length: int = 200,
+    max_messages: int = DEFAULT_MAX_CONVERSATION_MESSAGES,
+    max_content_length: int = DEFAULT_MAX_MESSAGE_CONTENT_LENGTH,
 ) -> str:
     """Condense recent conversation history into a plain-text summary.
 
@@ -77,7 +86,7 @@ def convert_messages_to_openai(
                         output = part.output or {}
                         is_success = output.get("success") is True
                         result_summary = (
-                            f"result: {str(output.get('data', ''))[:100]}"
+                            f"result: {str(output.get('data', ''))[:ACTION_RESULT_PREVIEW_LIMIT]}"
                             if is_success and output.get("data")
                             else ("success" if is_success else output.get("error", "failed"))
                         )
@@ -106,7 +115,7 @@ def convert_messages_to_openai(
                         output = part.output or {}
                         is_success = output.get("success") is True
                         r = (
-                            f"result: {str(output.get('data', ''))[:100]}"
+                            f"result: {str(output.get('data', ''))[:ACTION_RESULT_PREVIEW_LIMIT]}"
                             if is_success and output.get("data")
                             else ("success" if is_success else output.get("error", "failed"))
                         )
@@ -148,7 +157,11 @@ def build_peer_context_section(
 
     lines = [f"\n# 已发言的同伴（本轮）"]
     for r in others:
-        preview = r.content_preview[:120] + "..." if len(r.content_preview) > 120 else r.content_preview
+        preview = (
+            r.content_preview[:PEER_PREVIEW_LIMIT] + "..."
+            if len(r.content_preview) > PEER_PREVIEW_LIMIT
+            else r.content_preview
+        )
         lines.append(f'- {r.agent_name}: "{preview}" [{r.action_count}个操作]')
     lines.append(
         "\n不要重复他们已经说过的内容——从独特的角度、后续问题或反驳意见切入。\n"
@@ -172,7 +185,7 @@ def build_state_context(ctx: ClassroomContext) -> str:
         parts.append(f"当前场景类型：{scene_label}")
 
     if ctx.slide_content:
-        parts.append(f"当前幻灯片内容：{ctx.slide_content[:300]}")
+        parts.append(f"当前幻灯片内容：{ctx.slide_content[:SLIDE_CONTENT_PREVIEW_LIMIT]}")
 
     wb_state = "已打开" if ctx.whiteboard_open else "已关闭"
     parts.append(f"白板状态：{wb_state}")
@@ -217,7 +230,7 @@ def build_virtual_whiteboard_context(
         lines.append(f"贡献者：{', '.join(sorted(contributors))}")
     if action_summaries:
         lines.append("近期操作记录：")
-        for s in action_summaries[-5:]:  # last 5 actions
+        for s in action_summaries[-WHITEBOARD_ACTION_TAIL_LIMIT:]:
             lines.append(f"  - {s}")
     lines.append("")
     return "\n".join(lines)
