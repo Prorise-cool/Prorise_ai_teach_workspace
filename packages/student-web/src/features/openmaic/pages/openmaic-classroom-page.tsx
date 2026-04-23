@@ -18,6 +18,8 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { GlobalTopNav } from '@/components/navigation/global-top-nav';
+
 import { loadClassroom } from '../db/classroom-db';
 import { useDirectorChat } from '../hooks/use-director-chat';
 import { useScenePlayer } from '../hooks/use-scene-player';
@@ -108,6 +110,7 @@ export function OpenMAICClassroomPage() {
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-background">
+      <GlobalTopNav links={[]} variant="surface" />
       {/* 背景纹理 */}
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
