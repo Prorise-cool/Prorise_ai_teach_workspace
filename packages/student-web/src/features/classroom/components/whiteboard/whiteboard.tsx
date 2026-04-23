@@ -178,6 +178,14 @@ export const Whiteboard: FC<WhiteboardProps> = ({ isOpen, onClose, className = '
         <DrawingTools
           activeTool={activeTool}
           onToolChange={setActiveTool}
+          color={color}
+          onColorChange={setColor}
+          strokeWidth={strokeWidth}
+          onStrokeWidthChange={setStrokeWidth}
+          canUndo={paths.length > 0}
+          canRedo={redoStack.length > 0}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
           onClear={handleClear}
         />
         <button
