@@ -1,5 +1,5 @@
 /**
- * OpenMAIC 课堂播放页。
+ * 课堂播放页（由 OpenMAIC 移植，Wave 1 已合入 features/classroom）。
  * 三栏布局：课程大纲 | 主画布（幻灯片+白板）| 智能体讨论。
  * 与 UI 设计稿 01-classroom.html 对应。
  */
@@ -28,7 +28,7 @@ import { Stage } from '../components/stage';
 import { ChatPanel } from '../components/chat/chat-panel';
 import type { Scene } from '../types/scene';
 
-export function OpenMAICClassroomPage() {
+export function ClassroomPlayPage() {
   const { classroomId } = useParams<{ classroomId: string }>();
   const navigate = useNavigate();
 

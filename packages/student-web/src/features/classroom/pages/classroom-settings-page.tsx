@@ -1,14 +1,14 @@
 /**
- * OpenMAIC 设置页。
+ * 课堂设置页（由 OpenMAIC 移植，Wave 1 已合入 features/classroom）。
  * 展示当前设置状态，可作为模态对话框或独立页面使用。
  */
 import { RotateCcw } from 'lucide-react';
 
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
-import { useOpenMAICSettingsStore } from '../stores/settings-store';
+import { useClassroomSettingsStore } from '../stores/settings-store';
 
-export function OpenMAICSettingsPage() {
-  const settings = useOpenMAICSettingsStore();
+export function ClassroomSettingsPage() {
+  const settings = useClassroomSettingsStore();
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

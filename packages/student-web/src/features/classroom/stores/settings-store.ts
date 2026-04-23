@@ -1,12 +1,12 @@
 /**
- * OpenMAIC 设置 Zustand Store。
+ * 课堂设置 Zustand Store（Wave 1：从 features/openmaic 迁入 features/classroom）。
  * 管理提供商偏好、语言设置等，持久化到 localStorage。
  */
 import { create } from 'zustand';
 
 const STORAGE_KEY = 'openmaic-settings';
 
-export interface OpenMAICSettings {
+export interface ClassroomSettings {
   preferredProvider: string;
   enableWebSearch: boolean;
   enableInteractiveMode: boolean;
@@ -17,11 +17,11 @@ export interface OpenMAICSettings {
 }
 
 export interface SettingsStoreActions {
-  updateSettings: (partial: Partial<OpenMAICSettings>) => void;
+  updateSettings: (partial: Partial<ClassroomSettings>) => void;
   resetSettings: () => void;
 }
 
-const DEFAULT_SETTINGS: OpenMAICSettings = {
+const DEFAULT_SETTINGS: ClassroomSettings = {
   preferredProvider: 'default',
   enableWebSearch: false,
   enableInteractiveMode: false,
@@ -31,18 +31,18 @@ const DEFAULT_SETTINGS: OpenMAICSettings = {
   autoAdvanceScenes: false,
 };
 
-function readPersistedSettings(): OpenMAICSettings {
+function readPersistedSettings(): ClassroomSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<OpenMAICSettings>) };
+    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<ClassroomSettings>) };
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
-function persistSettings(settings: OpenMAICSettings): void {
+function persistSettings(settings: ClassroomSettings): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -51,7 +51,7 @@ function persistSettings(settings: OpenMAICSettings): void {
   }
 }
 
-export const useOpenMAICSettingsStore = create<OpenMAICSettings & SettingsStoreActions>()((set) => ({
+export const useClassroomSettingsStore = create<ClassroomSettings & SettingsStoreActions>()((set) => ({
   ...readPersistedSettings(),
 
   updateSettings: (partial) => {
