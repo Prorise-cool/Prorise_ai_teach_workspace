@@ -19,8 +19,8 @@ from app.shared.long_term_records import (
     companion_turn_to_ruoyi_payload,
     session_replay_from_ruoyi_data,
 )
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext

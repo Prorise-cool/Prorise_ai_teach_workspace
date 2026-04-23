@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from app.core.security import AccessContext
 from app.infra.redis_client import RuntimeStore
-from app.shared.ruoyi_auth import RuoYiRequestAuth
+from app.shared.ruoyi.auth import RuoYiRequestAuth
 from app.shared.task_framework.key_builder import TASK_RUNTIME_TTL_SECONDS
 
 _VIDEO_RUNTIME_AUTH_KEY_PREFIX = "xm_video_runtime_auth"

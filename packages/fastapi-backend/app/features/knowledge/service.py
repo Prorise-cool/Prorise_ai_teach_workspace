@@ -14,8 +14,8 @@ from app.shared.long_term_records import (
     knowledge_chat_from_ruoyi_data,
     knowledge_chat_to_ruoyi_payload,
 )
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext

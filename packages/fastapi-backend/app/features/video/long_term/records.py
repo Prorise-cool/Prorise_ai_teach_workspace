@@ -8,7 +8,7 @@ from typing import Any, Mapping
 from pydantic import BaseModel, Field
 
 from app.features.video.pipeline.models import ArtifactType, VideoArtifactGraph
-from app.shared.ruoyi_mapper import RUOYI_DATETIME_FORMAT
+from app.shared.ruoyi.mapper import RUOYI_DATETIME_FORMAT
 
 VIDEO_PUBLICATION_TABLE = "xm_user_work"
 SESSION_ARTIFACT_TABLE = "xm_session_artifact"

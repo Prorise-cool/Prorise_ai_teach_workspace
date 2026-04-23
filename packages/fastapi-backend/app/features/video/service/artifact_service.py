@@ -12,7 +12,7 @@ from app.features.video.long_term.records import build_session_artifact_batch_re
 from app.features.video.pipeline.models import VideoArtifactGraph
 
 if TYPE_CHECKING:
-    from app.shared.ruoyi_auth import RuoYiRequestAuth
+    from app.shared.ruoyi.auth import RuoYiRequestAuth
 
 logger = get_logger("app.features.video.service")
 
