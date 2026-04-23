@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.features.classroom.agent_schemas import AgentProfileBase
 from app.features.common import BootstrapStatus
 from app.schemas.common import CamelCaseModel
 from app.shared.task_metadata import (
@@ -212,21 +213,18 @@ class AgentVoiceConfig(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class AgentProfile(BaseModel):
+class AgentProfile(AgentProfileBase):
     """Stage 1.5 / API 层的智能体画像。
 
-    NOTE: 与 ``app.features.classroom.orchestration.schemas.AgentProfile`` 是
-    两个不同 Profile：本类附带 ``voice_config`` 用于前端 / TTS 配置；
-    Orchestration 层的 Profile 附带 ``priority`` / ``allowed_actions`` 用于
-    LangGraph 调度。两份 Profile 的合并讨论留 Wave 1.5。
+    继承 ``AgentProfileBase`` 的公共字段（id / name / role / persona /
+    avatar / color），本类额外携带 ``voice_config`` 用于前端 / TTS 配置。
+
+    对应的 Orchestration 层画像见
+    ``app.features.classroom.orchestration.schemas.AgentProfile``（额外携带
+    ``priority`` / ``allowed_actions``，用于 LangGraph 调度）。
+    两层共享基类，公共字段在 ``agent_schemas.AgentProfileBase`` 单点维护。
     """
 
-    id: str
-    name: str
-    role: Literal["teacher", "student", "assistant"] = "teacher"
-    persona: str = ""
-    avatar: str | None = None
-    color: str | None = None
     voice_config: AgentVoiceConfig | None = Field(default=None, alias="voiceConfig")
 
     model_config = {"populate_by_name": True, "extra": "ignore"}

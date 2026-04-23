@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any, Literal, Union
 from pydantic import BaseModel, Field
 
+from app.features.classroom.agent_schemas import AgentProfileBase
+
 
 # ── Chat message format ──────────────────────────────────────────────────────
 
@@ -36,22 +38,19 @@ class ChatMessage(BaseModel):
 
 # ── Agent profile ────────────────────────────────────────────────────────────
 
-class AgentProfile(BaseModel):
+class AgentProfile(AgentProfileBase):
     """LangGraph 编排层的智能体画像。
 
-    NOTE: 与 ``app.features.classroom.schemas.AgentProfile`` 是两个不同
-    Profile：本类附带 ``priority`` / ``allowed_actions`` 用于多 Agent
-    调度；API 层 Profile 附带 ``voice_config`` 用于前端 / TTS 配置。
-    两份 Profile 的合并讨论留 Wave 1.5。
+    继承 ``AgentProfileBase`` 的公共字段（id / name / role / persona /
+    avatar / color），本类额外携带 ``priority`` / ``allowed_actions``
+    用于多 Agent 调度。
+
+    对应的 API 层画像见 ``app.features.classroom.schemas.AgentProfile``
+    （额外携带 ``voice_config``，用于前端 / TTS 配置）。
+    两层共享基类，公共字段在 ``agent_schemas.AgentProfileBase`` 单点维护。
     """
 
-    id: str
-    name: str
-    persona: str
-    role: Literal["teacher", "assistant", "student"] = "teacher"
     priority: int = 1
-    avatar: str | None = None
-    color: str | None = None
     allowed_actions: list[str] = Field(default_factory=list)
 
 
