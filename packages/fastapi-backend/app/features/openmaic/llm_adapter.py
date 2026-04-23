@@ -97,53 +97,49 @@ async def resolve_openmaic_providers(
 ) -> tuple[LLMProvider, ...]:
     """Resolve provider chain for a given OpenMAIC stage from DB bindings.
 
-    Falls back to settings defaults if DB lookup fails (identical to
-    the learning_coach resolver pattern).
+    Reads `xm_ai_module_binding` for module_code='openmaic' filtered by stage_code.
+    When a request-side access_token is available, the resolver hits RuoYi
+    internal AI runtime for DB-backed bindings; otherwise falls back to
+    settings defaults (`FASTAPI_DEFAULT_LLM_PROVIDER`).
     """
     if stage_code not in OPENMAIC_STAGE_CODES:
         raise ValueError(f"Unknown OpenMAIC stage code: {stage_code!r}")
-
-    module_code = f"openmaic.{stage_code}"
 
     try:
         resolver = ProviderRuntimeResolver(
             settings=get_settings(),
             provider_factory=get_provider_factory(),
         )
-        # Use generic module resolution — maps openmaic.* → xm_ai_module bindings
         assembly = await resolver.resolve_by_module_code(
-            module_code=module_code,
+            module_code="openmaic",
+            stage_code=stage_code,
             access_token=access_token,
             client_id=client_id,
         )
         chain = assembly.llm
         if chain:
-            logger.debug(
-                "openmaic.llm_adapter.chain_resolved",
-                extra={"stage": stage_code, "length": len(chain)},
+            logger.info(
+                "openmaic.llm_adapter.chain_resolved stage=%s source=%s length=%d",
+                stage_code, assembly.source, len(chain),
             )
             return chain
-    except AttributeError:
-        # ProviderRuntimeResolver may not expose resolve_by_module_code yet;
-        # fall through to settings fallback
-        logger.debug(
-            "openmaic.llm_adapter.resolver_no_generic_method",
-            extra={"stage": stage_code},
-        )
     except Exception as exc:  # noqa: BLE001
         logger.warning(
-            "openmaic.llm_adapter.resolver_failed",
-            extra={"stage": stage_code, "error": str(exc)},
+            "openmaic.llm_adapter.resolver_failed stage=%s error=%s",
+            stage_code, exc,
         )
 
-    # Fallback: use default provider from settings
+    # Fallback: settings default (e.g. stub-llm in dev)
     factory = get_provider_factory()
     try:
         default_provider = factory.get_llm_provider(get_settings().default_llm_provider)
+        logger.warning(
+            "openmaic.llm_adapter.falling_back_to_default_provider stage=%s provider=%s",
+            stage_code, get_settings().default_llm_provider,
+        )
         return (default_provider,)
     except Exception as exc:  # noqa: BLE001
         logger.error(
-            "openmaic.llm_adapter.default_provider_failed",
-            extra={"error": str(exc)},
+            "openmaic.llm_adapter.default_provider_failed error=%s", exc,
         )
         return ()

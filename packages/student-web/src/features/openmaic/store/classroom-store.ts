@@ -80,7 +80,10 @@ export function useCurrentScene(): Scene | null {
   });
 }
 
-/** 便捷 selector：场景列表 */
+/** 便捷 selector：场景列表。
+ *  注意：必须复用稳定的空数组引用，避免每次 rerender 产生新引用触发依赖 useEffect 死循环。
+ */
+const EMPTY_SCENES: readonly Scene[] = Object.freeze([]);
 export function useSceneList(): Scene[] {
-  return useClassroomStore((state) => state.classroom?.scenes ?? []);
+  return useClassroomStore((state) => (state.classroom?.scenes as Scene[] | undefined) ?? (EMPTY_SCENES as Scene[]));
 }

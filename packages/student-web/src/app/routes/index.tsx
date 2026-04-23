@@ -312,20 +312,10 @@ async function loadLearningPathRoute() {
 }
 
 /**
- * 按需加载 OpenMAIC 多智能体课堂首页（输入主题 + 最近课堂）。
- */
-async function loadOpenMAICHomeRoute() {
-	const { OpenMAICHomePage } = await import(
-		'@/features/openmaic/pages/openmaic-home-page'
-	);
-
-	return {
-		Component: OpenMAICHomePage
-	};
-}
-
-/**
  * 按需加载 OpenMAIC 课堂播放页（幻灯片 + 白板 + 讨论）。
+ *
+ * 入口复用既有 /classroom/input（由 features/classroom 提供 UI + 样式），
+ * 不再维护 /openmaic 重复首页。
  */
 async function loadOpenMAICClassroomRoute() {
 	const { OpenMAICClassroomPage } = await import(
@@ -461,10 +451,6 @@ export function createAppRouter() {
 						{
 							path: 'path',
 							lazy: loadLearningPathRoute
-						},
-						{
-							path: 'openmaic',
-							lazy: loadOpenMAICHomeRoute
 						},
 						{
 							path: 'openmaic/classroom/:classroomId',

@@ -146,6 +146,20 @@ class LearningCoachRuntimeAssembly:
     source: str = "settings"
 
 
+@dataclass(slots=True, frozen=True)
+class ModuleStageRuntimeAssembly:
+    """通用单阶段 LLM 运行时装配结果（OpenMAIC / 其他泛用模块）。
+
+    由 ProviderRuntimeResolver.resolve_by_module_code() 产出；按 stage_code
+    过滤 xm_ai_module_binding 并组装优先级排序的 LLM Provider 链。
+    """
+
+    llm: tuple[LLMProvider, ...]
+    module_code: str = ""
+    stage_code: str = ""
+    source: str = "settings"
+
+
 class ProviderRuntimeResolver:
     """根据 settings 或 RuoYi runtime 配置解析视频流水线 Provider 链。"""
 
@@ -413,6 +427,120 @@ class ProviderRuntimeResolver:
             else fallback.llm
         )
         return LearningCoachRuntimeAssembly(llm=llm_chain, source="ruoyi")
+
+    async def resolve_by_module_code(
+        self,
+        *,
+        module_code: str,
+        stage_code: str | None = None,
+        access_token: str | None = None,
+        client_id: str | None = None,
+    ) -> ModuleStageRuntimeAssembly:
+        """通用单阶段 LLM 链路解析（OpenMAIC / 其他模块均可用）。
+
+        读取 xm_ai_module_binding：按 module_code 拉取所有 LLM 绑定，
+        若 stage_code 提供则过滤到该阶段，按 priority 升序排列组成 Provider 链。
+
+        失败或无绑定时自动降级到 settings 默认链路（保持与 resolve_learning_coach
+        一致的守则，避免因 DB 临时异常让生成全线崩）。
+        """
+        fallback_llm = tuple(self._provider_factory.assemble_from_settings(self._settings).llm)
+        fallback = ModuleStageRuntimeAssembly(
+            llm=fallback_llm,
+            module_code=module_code,
+            stage_code=stage_code or "",
+            source="settings",
+        )
+
+        runtime_source = _enum_value(getattr(self._settings, "provider_runtime_source", "settings")).lower()
+        logger.info(
+            "resolve_by_module_code called  module=%s  stage=%s  source=%s  has_token=%s",
+            module_code, stage_code, runtime_source, access_token is not None,
+        )
+        if runtime_source != "ruoyi":
+            return fallback
+        if access_token is None and self._ruoyi_runtime_client.requires_explicit_request_auth():
+            logger.info(
+                "Skip RuoYi %s runtime lookup without explicit request auth; fallback to settings",
+                module_code,
+            )
+            return fallback
+
+        try:
+            module = await self._ruoyi_runtime_client.get_module_runtime(
+                module_code,
+                access_token=access_token,
+                client_id=client_id,
+            )
+            logger.info(
+                "RuoYi %s runtime response  bindings_count=%s",
+                module_code, len(module.bindings),
+            )
+        except IntegrationError as exc:
+            logger.warning("Resolve %s runtime from RuoYi failed; fallback to settings", module_code, exc_info=exc)
+            return fallback
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Resolve %s runtime unexpectedly failed; fallback to settings", module_code, exc_info=exc)
+            return fallback
+
+        if not module.bindings:
+            logger.warning("RuoYi returned EMPTY bindings for module=%s; fallback to settings", module_code)
+            return fallback
+
+        filtered = tuple(
+            b for b in module.bindings
+            if not stage_code or b.stage_code == stage_code
+        )
+        if not filtered:
+            logger.warning(
+                "No bindings match module=%s stage=%s; fallback to settings",
+                module_code, stage_code,
+            )
+            return fallback
+
+        try:
+            runtime_provider_factory = self._provider_factory.clone()
+            llm_configs: list[ProviderRuntimeConfig] = []
+            for binding in sorted(filtered, key=lambda b: (b.priority, b.provider_id)):
+                if not binding.provider_id:
+                    continue
+                try:
+                    capability = ProviderCapability(binding.capability)
+                except ValueError:
+                    continue
+                if capability is not ProviderCapability.LLM:
+                    continue
+                try:
+                    config = self._build_runtime_config(binding)
+                    self._ensure_runtime_registration(
+                        runtime_provider_factory, capability, config, binding,
+                    )
+                except (ProviderConfigurationError, ProviderNotFoundError, ValueError) as exc:
+                    logger.warning(
+                        "Skip invalid %s binding  provider_id=%s  stage=%s  error=%s",
+                        module_code, binding.provider_id, binding.stage_code, exc,
+                    )
+                    continue
+                llm_configs.append(config)
+
+            if not llm_configs:
+                return fallback
+            llm_chain = tuple(
+                runtime_provider_factory.build_chain(ProviderCapability.LLM, llm_configs)
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Build %s runtime from RuoYi failed; fallback to settings",
+                module_code, exc_info=exc,
+            )
+            return fallback
+
+        return ModuleStageRuntimeAssembly(
+            llm=llm_chain,
+            module_code=module_code,
+            stage_code=stage_code or "",
+            source="ruoyi",
+        )
 
     def _build_from_settings(self) -> VideoProviderRuntimeAssembly:
         assembly = self._provider_factory.assemble_from_settings(self._settings)

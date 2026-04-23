@@ -116,6 +116,8 @@ async def create_classroom(
         requirement=request.requirement,
         pdf_text=request.pdf_text,
         user_id=getattr(access_context, "user_id", None),
+        access_token=_access_token_from(access_context),
+        client_id=_client_id_from(access_context),
     )
     return ClassroomCreateResponse(
         job_id=job_id,

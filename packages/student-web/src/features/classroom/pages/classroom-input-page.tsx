@@ -1,8 +1,12 @@
 /**
  * 文件说明：课堂工作区输入页容器。
  * 页面容器负责课堂输入业务状态，公共页面壳层和卡片骨架下沉到共享组件。
+ *
+ * 提交入口：接入 OpenMAIC 多智能体课堂管道
+ * （POST /api/v1/openmaic/classroom → Dramatiq worker → ready 后跳 playback）。
  */
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
 	LayoutTemplate,
@@ -18,6 +22,9 @@ import {
 } from '@/components/input-page';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
+import { useClassroomCreate } from '@/features/openmaic/hooks/use-classroom';
+import { parsePdf } from '@/features/openmaic/api/openmaic-adapter';
+import { useClassroomStore } from '@/features/openmaic/store/classroom-store';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';
@@ -29,8 +36,13 @@ import '@/features/classroom/styles/classroom-input-page.scss';
  */
 export function ClassroomInputPage() {
 	const { t } = useAppTranslation();
+	const navigate = useNavigate();
 	const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 	const [text, setText] = useState('');
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const { create } = useClassroomCreate();
+	const generationProgress = useClassroomStore((s) => s.generationProgress);
+	const generationMessage = useClassroomStore((s) => s.generationMessage);
 
 	const {
 		isDragging,
@@ -111,15 +123,44 @@ export function ClassroomInputPage() {
 					onTriggerSelect={triggerSelect}
 					fileInputRef={fileInputRef}
 					onFileChange={handleFileChange}
-					onSubmit={() => {
-						console.log('[ClassroomInput] 生成课堂 - 待接入');
+					onSubmit={async () => {
+						if (isSubmitting) return;
+						const requirement = text.trim();
+						if (requirement.length < 5) {
+							console.warn('[ClassroomInput] 主题过短，已拦截');
+							return;
+						}
+						setIsSubmitting(true);
+						try {
+							let pdfText: string | undefined;
+							if (attachedFile && /\.pdf$/i.test(attachedFile.name)) {
+								const form = new FormData();
+								form.append('file', attachedFile);
+								const parsed = await parsePdf(form).catch(() => null);
+								pdfText = parsed?.text;
+							}
+							const classroomId = await create({
+								requirement,
+								pdfText,
+								enableWebSearch: webSearchEnabled,
+							});
+							void navigate(`/openmaic/classroom/${classroomId}`);
+						} catch (err) {
+							console.error('[ClassroomInput] 课堂生成失败:', err);
+						} finally {
+							setIsSubmitting(false);
+						}
 					}}
 					labels={{
 						smartMatchHint,
 						smartMatchDesc,
 						multiAgentHint,
 						placeholder,
-						submitLabel,
+						submitLabel: isSubmitting
+							? generationProgress > 0
+								? `${generationMessage ?? '生成中'} ${Math.round(generationProgress)}%`
+								: '生成中...'
+							: submitLabel,
 						toolUploadFile,
 						toolVoiceInput,
 						toolWebSearch

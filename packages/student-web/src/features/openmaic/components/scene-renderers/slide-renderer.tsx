@@ -1,91 +1,246 @@
 /**
- * 幻灯片场景渲染器。
- * 将 SlideContent 数据渲染为可视化幻灯片。
+ * 幻灯片场景渲染器（对齐 OpenMAIC 参考项目）。
+ *
+ * 后端 scene.content 形状：
+ *   {
+ *     background: { type: "solid", color: "#ffffff" },
+ *     elements: [
+ *       { id, type: "text"|"shape"|"image", left, top, width, height,
+ *         content: "<p>...</p>" | null, extra: {} },
+ *       ...
+ *     ]
+ *   }
+ *
+ * 元素位置使用绝对坐标（内部画布 960×540），通过 CSS transform scale 自适应容器。
  */
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { SlideContent } from '../../types/scene';
+interface SlideElement {
+  id: string;
+  type: 'text' | 'shape' | 'image' | 'latex';
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  content: string | null;
+  extra?: Record<string, unknown>;
+}
+
+interface SlideContent {
+  background?: { type?: string; color?: string };
+  elements?: SlideElement[];
+}
 
 interface SlideRendererProps {
   content: SlideContent;
   sceneTitle: string;
   sceneOrder: number;
+  spotlightId?: string | null;
 }
 
-export const SlideRenderer: FC<SlideRendererProps> = ({ content, sceneTitle, sceneOrder }) => {
-  const canvas = content.canvas as Record<string, unknown> | undefined;
-  const elements = (canvas?.elements as unknown[]) ?? [];
-  const background = canvas?.background as Record<string, unknown> | undefined;
-  const theme = canvas?.theme as Record<string, unknown> | undefined;
+const CANVAS_W = 960;
+const CANVAS_H = 540;
 
-  const bgColor = (background?.color as string) ?? (theme?.backgroundColor as string) ?? '#ffffff';
+export const SlideRenderer: FC<SlideRendererProps> = ({
+  content,
+  sceneTitle,
+  sceneOrder,
+  spotlightId,
+}) => {
+  const elements = content?.elements ?? [];
+  const bgColor = content?.background?.color ?? '#ffffff';
 
-  // 如果没有元素数据，渲染占位内容
+  const [scale, setScale] = useState(1);
+
+  const recomputeScale = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const sx = rect.width / CANVAS_W;
+    const sy = rect.height / CANVAS_H;
+    const next = Math.min(sx, sy);
+    setScale((prev) => (Math.abs(prev - next) < 0.01 ? prev : next));
+  }, []);
+
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const setHostRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      hostRef.current = el;
+      recomputeScale(el);
+    },
+    [recomputeScale],
+  );
+
+  useEffect(() => {
+    const handler = () => recomputeScale(hostRef.current);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [recomputeScale]);
+
   if (elements.length === 0) {
     return (
       <div
         className="flex h-full w-full flex-col items-center justify-center gap-4 rounded-lg p-8"
         style={{ backgroundColor: bgColor }}
       >
-        <div className="text-center space-y-2">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            SCENE {String(sceneOrder).padStart(2, '0')}
-          </span>
-          <h2 className="text-xl font-bold text-foreground">{sceneTitle}</h2>
-          <p className="text-sm text-muted-foreground">幻灯片内容加载中...</p>
-        </div>
+        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-black/40">
+          SCENE {String(sceneOrder).padStart(2, '0')}
+        </span>
+        <h2 className="text-xl font-bold text-black/80">{sceneTitle}</h2>
+        <p className="text-sm text-black/50">幻灯片没有渲染元素</p>
       </div>
     );
   }
 
   return (
     <div
-      className="relative h-full w-full overflow-hidden rounded-lg"
+      ref={setHostRef}
+      className="relative flex h-full w-full items-center justify-center overflow-hidden"
       style={{ backgroundColor: bgColor }}
     >
-      {/* 场景标头 */}
-      <div className="flex items-center gap-2 border-b border-black/10 px-5 py-3">
-        <span className="h-2 w-2 rounded-full bg-primary" />
-        <span className="font-mono text-xs font-bold uppercase tracking-wider text-muted-foreground">
+      {/* 固定 960×540 画布，靠 transform: scale() 自适应容器 */}
+      <div
+        style={{
+          width: CANVAS_W,
+          height: CANVAS_H,
+          position: 'relative',
+          transform: `scale(${scale})`,
+          transformOrigin: 'center center',
+          backgroundColor: bgColor,
+        }}
+      >
+        {/* 场景编号徽标 */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 18,
+            fontFamily: 'monospace',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 2,
+            color: 'rgba(0,0,0,0.35)',
+          }}
+        >
           SCENE {String(sceneOrder).padStart(2, '0')}
-        </span>
-      </div>
+        </div>
 
-      {/* 简单元素渲染 */}
-      <div className="flex-1 px-6 py-4">
-        <h2 className="mb-4 text-xl font-bold text-foreground md:text-2xl">{sceneTitle}</h2>
-        {elements.slice(0, 5).map((el, i) => {
-          const element = el as Record<string, unknown>;
-          if (element.type === 'text') {
-            const content = element.content as string;
-            // 剥离 HTML 标签做简单文本显示
-            const text = content.replace(/<[^>]+>/g, '');
-            return (
-              <p key={i} className="mb-2 text-sm leading-relaxed text-foreground/80">
-                {text}
-              </p>
-            );
-          }
-          if (element.type === 'image') {
-            return (
-              <img
-                key={i}
-                src={element.src as string}
-                alt=""
-                className="mb-2 max-h-48 rounded-md object-contain"
-              />
-            );
-          }
-          if (element.type === 'latex') {
-            return (
-              <div key={i} className="mb-2 rounded-md bg-muted px-3 py-2 font-mono text-sm">
-                {element.latex as string}
-              </div>
-            );
-          }
-          return null;
-        })}
+        {elements.map((el) => (
+          <SlideElementView
+            key={el.id}
+            element={el}
+            highlighted={spotlightId === el.id}
+          />
+        ))}
       </div>
     </div>
   );
 };
+
+const SlideElementView: FC<{ element: SlideElement; highlighted: boolean }> = ({
+  element,
+  highlighted,
+}) => {
+  const baseStyle: CSSProperties = {
+    position: 'absolute',
+    left: element.left,
+    top: element.top,
+    width: element.width,
+    height: element.height,
+    boxSizing: 'border-box',
+    transition: 'box-shadow 240ms ease-out, transform 240ms ease-out',
+    ...(highlighted
+      ? {
+          boxShadow: '0 0 0 3px rgba(245, 197, 71, 0.7), 0 8px 24px rgba(245, 197, 71, 0.25)',
+          transform: 'scale(1.02)',
+          zIndex: 10,
+        }
+      : null),
+  };
+
+  if (element.type === 'text') {
+    const html = element.content ?? '';
+    return (
+      <div
+        style={{ ...baseStyle, color: '#1f1f1f', lineHeight: 1.4 }}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+
+  if (element.type === 'image') {
+    const src =
+      (element.extra && (element.extra.src as string)) ||
+      (element.content as string | null) ||
+      '';
+    if (!src) {
+      return (
+        <div
+          style={{
+            ...baseStyle,
+            backgroundColor: 'rgba(0,0,0,0.05)',
+            border: '1px dashed rgba(0,0,0,0.15)',
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            color: 'rgba(0,0,0,0.4)',
+          }}
+        >
+          图片占位
+        </div>
+      );
+    }
+    return (
+      <img
+        src={src}
+        alt=""
+        style={{ ...baseStyle, objectFit: 'contain', borderRadius: 8 }}
+      />
+    );
+  }
+
+  if (element.type === 'latex') {
+    const latex =
+      (element.content as string | null) ||
+      ((element.extra?.latex as string | undefined) ?? '');
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'KaTeX_Main, serif',
+          fontSize: 20,
+          backgroundColor: 'rgba(245, 197, 71, 0.08)',
+          border: '1px solid rgba(245, 197, 71, 0.25)',
+          borderRadius: 8,
+          padding: '6px 12px',
+        }}
+      >
+        {latex}
+      </div>
+    );
+  }
+
+  // shape: background rectangle (支持 extra.fill / extra.stroke)
+  const extra = element.extra ?? {};
+  const fill = (extra.fill as string) ?? 'rgba(245, 197, 71, 0.1)';
+  const stroke = (extra.stroke as string) ?? 'rgba(245, 197, 71, 0.35)';
+  const strokeWidth = (extra.strokeWidth as number) ?? 1;
+  const radius = (extra.radius as number) ?? 8;
+  return (
+    <div
+      style={{
+        ...baseStyle,
+        backgroundColor: fill,
+        border: `${strokeWidth}px solid ${stroke}`,
+        borderRadius: radius,
+      }}
+    />
+  );
+};
+

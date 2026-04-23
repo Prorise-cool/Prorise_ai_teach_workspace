@@ -2,6 +2,11 @@
 
 Enqueued by POST /openmaic/classroom endpoint.
 Writes progress to Redis via JobStore (synchronous).
+
+Access token and client id are forwarded so the Dramatiq worker can hit
+RuoYi internal AI runtime to resolve xm_ai_module_binding → real LLM chain
+(gemini-3-flash primary, deepseek-v3 fallback). Without them the resolver
+would downgrade to settings default (stub-llm) and emit placeholder content.
 """
 
 from __future__ import annotations
@@ -28,6 +33,8 @@ def run_classroom_generation(
     requirement: str,
     pdf_text: str | None = None,
     user_id: str | None = None,
+    access_token: str | None = None,
+    client_id: str | None = None,
 ) -> None:
     """Background task: orchestrate full classroom generation pipeline.
 
@@ -37,7 +44,9 @@ def run_classroom_generation(
     3. Generate scene content + actions (Stage 2, sequential for P0)
     4. Persist result to Redis via JobStore
     """
-    asyncio.run(_async_run_classroom_generation(job_id, requirement, pdf_text, user_id))
+    asyncio.run(_async_run_classroom_generation(
+        job_id, requirement, pdf_text, user_id, access_token, client_id,
+    ))
 
 
 async def _async_run_classroom_generation(
@@ -45,6 +54,8 @@ async def _async_run_classroom_generation(
     requirement: str,
     pdf_text: str | None,
     user_id: str | None,
+    access_token: str | None,
+    client_id: str | None,
 ) -> None:
     """Async implementation of the classroom generation pipeline."""
     from app.features.openmaic.llm_adapter import resolve_openmaic_providers
@@ -55,6 +66,11 @@ async def _async_run_classroom_generation(
         generate_agent_profiles,
     )
 
+    async def _chain(stage: str):
+        return await resolve_openmaic_providers(
+            stage, access_token=access_token, client_id=client_id,
+        )
+
     job_store = _make_job_store()
 
     try:
@@ -62,7 +78,7 @@ async def _async_run_classroom_generation(
         job_store.set_progress(job_id, 5)
 
         # ── Stage 1: Outline ─────────────────────────────────────────────
-        outline_chain = await resolve_openmaic_providers("outline")
+        outline_chain = await _chain("outline")
         outline_result = await generate_scene_outlines(
             requirement=requirement,
             provider_chain=outline_chain,
@@ -75,7 +91,7 @@ async def _async_run_classroom_generation(
         job_store.set_progress(job_id, 20)
 
         # ── Stage 1.5: Agent profiles ────────────────────────────────────
-        profile_chain = await resolve_openmaic_providers("agent_profiles")
+        profile_chain = await _chain("agent_profiles")
         agents = await generate_agent_profiles(
             stage_name=requirement[:60],
             language_directive=language_directive,
@@ -88,8 +104,8 @@ async def _async_run_classroom_generation(
         job_store.set_status(job_id, "generating_scenes")
 
         # ── Stage 2: Scene content + actions ─────────────────────────────
-        content_chain = await resolve_openmaic_providers("scene_content")
-        actions_chain = await resolve_openmaic_providers("scene_actions")
+        content_chain = await _chain("scene_content")
+        actions_chain = await _chain("scene_actions")
 
         scenes = []
         total_outlines = len(outlines)

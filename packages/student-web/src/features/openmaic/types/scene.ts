@@ -1,67 +1,90 @@
 /**
- * 课堂场景相关类型定义。
- * 对应 OpenMAIC lib/types/stage.ts 中的核心类型，适配 Prorise 架构。
+ * 场景类型定义（与 FastAPI openmaic backend schemas.py 对齐）。
+ *
+ * scene.type 作为运行时 discriminator；content 结构由 type 决定。
  */
+
+import type { Action } from './action';
 
 export type SceneType = 'slide' | 'quiz' | 'interactive' | 'pbl';
 
 export type StageMode = 'autonomous' | 'playback';
 
-/** 场景提纲（Stage 1 生成结果） */
+/** 场景大纲（Stage 1 产出） */
 export interface SceneOutline {
   id: string;
   type: SceneType;
   title: string;
-  description: string;
+  description?: string;
+  keyPoints?: string[];
+  teachingObjective?: string;
+  estimatedDuration?: number;
   order: number;
-  estimatedDuration?: number; // 秒
+  suggestedImageIds?: string[];
+  languageNote?: string;
 }
 
-/** 幻灯片内容场景 */
+/** 幻灯片内容：背景 + 绝对定位元素数组 */
+export interface SlideElement {
+  id: string;
+  type: 'text' | 'shape' | 'image' | 'latex';
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  content: string | null;
+  extra?: Record<string, unknown>;
+}
+
 export interface SlideContent {
-  type: 'slide';
-  canvas: Record<string, unknown>; // Slide 数据结构（PPT canvas）
+  background?: { type?: string; color?: string };
+  elements?: SlideElement[];
 }
 
-/** 测验内容场景 */
-export interface QuizContent {
-  type: 'quiz';
-  questions: QuizQuestion[];
-}
-
+/** 测验内容 */
 export interface QuizOption {
-  label: string;
-  value: string;
+  id: string;
+  label: string; // "A" | "B" | ...
+  content: string;
 }
 
 export interface QuizQuestion {
   id: string;
   type: 'single' | 'multiple' | 'short_answer';
-  question: string;
+  stem: string;
   options?: QuizOption[];
-  answer?: string[];
-  analysis?: string;
-  commentPrompt?: string;
-  hasAnswer?: boolean;
+  correctAnswers?: string[];
+  explanation?: string;
   points?: number;
 }
 
-/** 交互式场景（iframe 沙箱） */
-export interface InteractiveContent {
-  type: 'interactive';
-  url?: string;
-  html?: string;
+export interface QuizContent {
+  questions: QuizQuestion[];
 }
 
-/** 项目制学习场景 */
+/** 交互式（iframe srcDoc 或 URL） */
+export interface InteractiveContent {
+  html?: string;
+  url?: string;
+}
+
+/** 项目制学习 */
+export interface PBLIssue {
+  id: string;
+  title: string;
+  description: string;
+  assigneeRole?: string;
+}
+
 export interface PBLContent {
-  type: 'pbl';
-  projectConfig: Record<string, unknown>;
+  projectTitle?: string;
+  projectOverview?: string;
+  issues?: PBLIssue[];
 }
 
 export type SceneContent = SlideContent | QuizContent | InteractiveContent | PBLContent;
 
-/** 课堂 Stage（整个课程） */
+/** Stage 元数据 */
 export interface ClassroomStage {
   id: string;
   name: string;
@@ -84,15 +107,17 @@ export interface AgentConfig {
   priority: number;
 }
 
-/** 单个场景 */
+/** 单个场景 —— 后端真实 shape */
 export interface Scene {
   id: string;
-  stageId: string;
   type: SceneType;
   title: string;
-  order: number;
   content: SceneContent;
-  actions?: import('./action').Action[];
+  actions?: Action[];
+  outline?: SceneOutline;
+  /** 前端渲染时注入的 1-based 序号（后端不发 order）。 */
+  order?: number;
+  stageId?: string;
   multiAgent?: {
     enabled: boolean;
     agentIds: string[];

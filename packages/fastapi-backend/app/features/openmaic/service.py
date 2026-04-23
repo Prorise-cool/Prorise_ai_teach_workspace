@@ -39,10 +39,18 @@ class OpenMAICService:
         requirement: str,
         pdf_text: str | None = None,
         user_id: str | None = None,
+        access_token: str | None = None,
+        client_id: str | None = None,
     ) -> str:
         """Create a classroom generation job and enqueue it.
 
         Returns job_id.
+
+        ``access_token`` / ``client_id`` are forwarded into the Dramatiq actor
+        payload so the worker can resolve provider chains from RuoYi DB
+        bindings (gemini-3-flash primary + deepseek-v3 fallback for openmaic).
+        Without them the worker falls back to `FASTAPI_DEFAULT_LLM_PROVIDER`
+        (stub-llm) and emits placeholder content.
         """
         job_id = f"classroom_{uuid.uuid4().hex[:12]}"
         self._job_store.create(job_id)
@@ -55,6 +63,8 @@ class OpenMAICService:
             requirement=requirement,
             pdf_text=pdf_text,
             user_id=user_id,
+            access_token=access_token,
+            client_id=client_id,
         )
 
         logger.info("openmaic.service: enqueued job_id=%s", job_id)

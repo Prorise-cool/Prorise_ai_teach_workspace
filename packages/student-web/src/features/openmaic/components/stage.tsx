@@ -57,38 +57,50 @@ export const Stage: FC<StageProps> = ({
       );
     }
 
-    switch (scene.content.type) {
+    const order = scene.order ?? scene.outline?.order ?? 1;
+
+    switch (scene.type) {
       case 'slide':
         return (
           <SlideRenderer
-            content={scene.content}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={scene.content as any}
             sceneTitle={scene.title}
-            sceneOrder={scene.order}
+            sceneOrder={order}
           />
         );
       case 'quiz':
         return (
           <QuizRenderer
-            content={scene.content}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={scene.content as any}
             sceneTitle={scene.title}
-            sceneOrder={scene.order}
+            sceneOrder={order}
           />
         );
       case 'interactive':
         return (
           <InteractiveRenderer
-            content={scene.content}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={scene.content as any}
             sceneTitle={scene.title}
-            sceneOrder={scene.order}
+            sceneOrder={order}
           />
         );
       case 'pbl':
         return (
           <PBLRenderer
-            content={scene.content}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            content={scene.content as any}
             sceneTitle={scene.title}
-            sceneOrder={scene.order}
+            sceneOrder={order}
           />
+        );
+      default:
+        return (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            未知场景类型
+          </div>
         );
     }
   };
