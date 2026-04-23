@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
 
@@ -164,7 +163,6 @@ export function ClassroomPlayPage() {
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-muted/30">
-      <GlobalTopNav links={[]} variant="surface" />
       {/* 背景纹理 */}
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
