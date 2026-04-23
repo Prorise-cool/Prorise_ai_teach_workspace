@@ -42,14 +42,33 @@ export function OpenMAICClassroomPage() {
   const classroom = useClassroomStore((s) => s.classroom);
   const agents = useClassroomStore((s) => s.agents);
   const setClassroom = useClassroomStore((s) => s.setClassroom);
+  const setAgents = useClassroomStore((s) => s.setAgents);
 
   useEffect(() => {
     if (!classroomId) return;
     if (classroom?.id === classroomId) return;
     void loadClassroom(classroomId).then((c) => {
-      if (c) setClassroom(c);
+      if (!c) return;
+      setClassroom(c);
+      // 从持久化的 classroom.agents 回灌 store.agents —— 避免刷新后教师气泡消失
+      if (Array.isArray(c.agents) && c.agents.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAgents(c.agents as any);
+      }
     });
-  }, [classroomId, classroom, setClassroom]);
+  }, [classroomId, classroom, setClassroom, setAgents]);
+
+  // 当前 classroom.agents 比 store.agents 新时也同步一次
+  useEffect(() => {
+    if (classroom && Array.isArray(classroom.agents) && classroom.agents.length > 0) {
+      const currentIds = agents.map((a) => a.id).join(',');
+      const classroomIds = classroom.agents.map((a) => a.id).join(',');
+      if (currentIds !== classroomIds) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAgents(classroom.agents as any);
+      }
+    }
+  }, [classroom, agents, setAgents]);
 
   const player = useScenePlayer();
   const chat = useDirectorChat(classroomId ?? '');

@@ -15,6 +15,8 @@ import { InteractiveRenderer } from './scene-renderers/interactive-renderer';
 import { PBLRenderer } from './scene-renderers/pbl-renderer';
 import { AgentBubble } from './agent/agent-bubble';
 import { Whiteboard } from './whiteboard/whiteboard';
+import { useActionPlayer } from '../hooks/use-action-player';
+import { useClassroomStore } from '../store/classroom-store';
 
 interface StageProps {
   scene: Scene | null;
@@ -48,6 +50,11 @@ export const Stage: FC<StageProps> = ({
   const teacher = agents[0] ?? null;
   const listeners = agents.slice(1);
 
+  // Action player — 把 speech/spotlight/… 序列按 play/pause 状态自动执行
+  useActionPlayer(scene);
+  const spotlightId = useClassroomStore((s) => s.currentSpotlightId);
+  const currentSpeech = useClassroomStore((s) => s.currentSpeech);
+
   const renderSceneContent = () => {
     if (!scene) {
       return (
@@ -67,6 +74,7 @@ export const Stage: FC<StageProps> = ({
             content={scene.content as any}
             sceneTitle={scene.title}
             sceneOrder={order}
+            spotlightId={spotlightId}
           />
         );
       case 'quiz':
@@ -144,13 +152,19 @@ export const Stage: FC<StageProps> = ({
             </div>
           )}
 
-          {/* 教师气泡 */}
+          {/* 教师气泡 —— 朗读时显示真实讲稿，否则提示点击播放 */}
           {teacher && scene && (
             <AgentBubble
               agent={teacher}
-              text={`现在播放场景「${scene.title}」，${isPlaying ? '正在讲解中...' : '点击播放开始。'}`}
+              text={
+                currentSpeech?.text
+                  ? currentSpeech.text
+                  : isPlaying
+                    ? `现在播放场景「${scene.title}」...`
+                    : `场景「${scene.title}」。点击播放开始讲解。`
+              }
               listeners={listeners}
-              isStreaming={isPlaying}
+              isStreaming={isPlaying && !!currentSpeech}
             />
           )}
 

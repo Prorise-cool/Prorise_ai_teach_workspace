@@ -23,6 +23,12 @@ export interface ClassroomStoreState {
   generationMessage: string;
   // 白板是否打开
   whiteboardOpen: boolean;
+  // 当前 action 播放索引（-1 表示未开始）
+  currentActionIndex: number;
+  // 当前高亮的元素 ID（受 spotlight/laser 动作驱动）
+  currentSpotlightId: string | null;
+  // 当前讲述的语音内容（驱动教师气泡）
+  currentSpeech: { agentId: string | null; text: string } | null;
 }
 
 export interface ClassroomStoreActions {
@@ -33,6 +39,10 @@ export interface ClassroomStoreActions {
   setAgents: (agents: AgentProfile[]) => void;
   setGenerationProgress: (progress: number, message?: string) => void;
   setWhiteboardOpen: (open: boolean) => void;
+  setCurrentActionIndex: (index: number) => void;
+  setCurrentSpotlightId: (id: string | null) => void;
+  setCurrentSpeech: (speech: { agentId: string | null; text: string } | null) => void;
+  resetPlayback: () => void;
   reset: () => void;
 }
 
@@ -44,6 +54,9 @@ const INITIAL_STATE: ClassroomStoreState = {
   generationProgress: 0,
   generationMessage: '',
   whiteboardOpen: false,
+  currentActionIndex: -1,
+  currentSpotlightId: null,
+  currentSpeech: null,
 };
 
 export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActions>()((set) => ({
@@ -68,6 +81,19 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
     set({ generationProgress: progress, generationMessage: message ?? '' }),
 
   setWhiteboardOpen: (open) => set({ whiteboardOpen: open }),
+
+  setCurrentActionIndex: (index) => set({ currentActionIndex: index }),
+
+  setCurrentSpotlightId: (id) => set({ currentSpotlightId: id }),
+
+  setCurrentSpeech: (speech) => set({ currentSpeech: speech }),
+
+  resetPlayback: () =>
+    set({
+      currentActionIndex: -1,
+      currentSpotlightId: null,
+      currentSpeech: null,
+    }),
 
   reset: () => set(INITIAL_STATE),
 }));
