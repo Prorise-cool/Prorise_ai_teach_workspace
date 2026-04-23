@@ -95,7 +95,7 @@ export function ClassroomInputCard({
       smartMatchHint={labels.smartMatchHint}
       smartMatchDesc={labels.smartMatchDesc}
       multiAgentHint={labels.multiAgentHint}
-      dragOverlayLabel="松开鼠标，上传参考课件"
+      dragOverlayLabel={t('classroom.inputCard.dragOverlayUpload')}
       isDragging={isDragging}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
