@@ -12,6 +12,11 @@ export const zhCnEntryCommonResources = {
     themeLight: '切到浅色',
     themeDark: '切到深色'
   },
+  notFound: {
+    title: '页面不存在',
+    description: '找不到地址 {{path}} 对应的页面。可能已被移除，或链接有误。',
+    backHome: '回到首页'
+  },
   entryHome: {
     titleLine1: 'XMAI',
     titleLine2: 'VIRTUAL',
@@ -184,6 +189,11 @@ export const enUsEntryCommonResources = {
     next: 'Next',
     themeLight: 'Switch to light mode',
     themeDark: 'Switch to dark mode'
+  },
+  notFound: {
+    title: 'Page not found',
+    description: 'The address {{path}} does not match any page. It may have been removed or the link is incorrect.',
+    backHome: 'Back to home'
   },
   entryHome: {
     titleLine1: 'XMAI',
