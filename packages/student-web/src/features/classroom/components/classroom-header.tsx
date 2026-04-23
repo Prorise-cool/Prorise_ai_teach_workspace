@@ -64,7 +64,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
   trailingExtras,
 }) => {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-md">
+    <header className="flex h-20 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/60 px-6 md:px-8 backdrop-blur-md">
       {/* 左侧：菜单 + 标题 */}
       <div className="flex min-w-0 items-center gap-2">
         {/* 移动端汉堡 */}

@@ -161,7 +161,7 @@ export function ClassroomPlayPage() {
   const courseTitle = classroom?.name ?? null;
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-background">
+    <div className="relative flex h-screen w-screen overflow-hidden bg-muted/30">
       <GlobalTopNav links={[]} variant="surface" />
       {/* 背景纹理 */}
       <div
@@ -224,8 +224,8 @@ export function ClassroomPlayPage() {
           onBackHome={() => void navigate('/openmaic')}
         />
 
-        {/* 中央画布 */}
-        <div className="flex flex-1 min-h-0 p-2 md:p-3 lg:p-4">
+        {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2 */}
+        <div className="flex flex-1 min-h-0">
           <Stage
             scene={player.currentScene}
             agents={agents}

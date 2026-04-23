@@ -180,8 +180,8 @@ export const Stage: FC<StageProps> = ({
 
   return (
     <div className="flex h-full flex-col">
-      {/* 画布 + 工具栏（OpenMAIC CanvasArea 视觉 1:1） */}
-      <div className="relative flex-1 overflow-hidden rounded-lg ring-1 ring-border">
+      {/* 画布 + 工具栏（OpenMAIC CanvasArea 视觉 1:1：flush edge，卡片 ring 由 CanvasArea 内部自带） */}
+      <div className="relative flex-1 overflow-hidden">
         <CanvasArea
           currentScene={scene}
           currentSceneIndex={sceneIndex}
