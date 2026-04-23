@@ -4,6 +4,7 @@
 ``POST /api/v1/classroom/chat`` —— SSE 推送 director graph 事件。
 对话轮次完成后 best-effort 写入 ``LongTermConversationRepository``。
 """
+
 from __future__ import annotations
 
 import json
@@ -67,10 +68,20 @@ async def classroom_chat(
     from app.features.classroom.orchestration import run_discussion as _run_discussion
     from app.features.classroom.orchestration.schemas import (
         AgentProfile as OrchAgentProfile,
+    )
+    from app.features.classroom.orchestration.schemas import (
         ChatMessage as OrchChatMessage,
+    )
+    from app.features.classroom.orchestration.schemas import (
         ClassroomContext as OrchClassroomContext,
+    )
+    from app.features.classroom.orchestration.schemas import (
         DiscussionRequest as OrchDiscussionRequest,
+    )
+    from app.features.classroom.orchestration.schemas import (
         MessageMetadata as OrchMessageMetadata,
+    )
+    from app.features.classroom.orchestration.schemas import (
         MessagePart as OrchMessagePart,
     )
 
@@ -84,9 +95,7 @@ async def classroom_chat(
         OrchChatMessage(
             role=m.role,
             parts=[OrchMessagePart(type="text", text=m.content or "")],
-            metadata=(
-                OrchMessageMetadata(agent_id=m.agent_id) if m.agent_id else None
-            ),
+            metadata=(OrchMessageMetadata(agent_id=m.agent_id) if m.agent_id else None),
         )
         for m in payload.messages
     ]

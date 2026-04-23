@@ -9,6 +9,7 @@ Wave 1 重构要点：
 - 移除 ``quiz_grade`` stage（由 ``learning_coach`` 接管）。
 - 新增 ``tts`` stage 供 SpeechAction 预合成查询 TTS provider。
 """
+
 from __future__ import annotations
 
 import logging
@@ -113,13 +114,16 @@ async def resolve_classroom_providers(
         if chain:
             logger.info(
                 "classroom.llm_adapter.chain_resolved stage=%s source=%s length=%d",
-                stage_code, assembly.source, len(chain),
+                stage_code,
+                assembly.source,
+                len(chain),
             )
             return chain
     except Exception as exc:  # noqa: BLE001 - resolver层下游可能抛多种异常
         logger.warning(
             "classroom.llm_adapter.resolver_failed stage=%s error=%s",
-            stage_code, exc,
+            stage_code,
+            exc,
         )
 
     factory = get_provider_factory()
@@ -127,7 +131,8 @@ async def resolve_classroom_providers(
         default_provider = factory.get_llm_provider(get_settings().default_llm_provider)
         logger.warning(
             "classroom.llm_adapter.falling_back_to_default_provider stage=%s provider=%s",
-            stage_code, get_settings().default_llm_provider,
+            stage_code,
+            get_settings().default_llm_provider,
         )
         return (default_provider,)
     except Exception as exc:  # noqa: BLE001
@@ -165,7 +170,8 @@ async def resolve_classroom_tts_provider(
         if chain:
             logger.info(
                 "classroom.llm_adapter.tts_chain_resolved stage=tts source=%s length=%d",
-                assembly.source, len(chain),
+                assembly.source,
+                len(chain),
             )
             return chain
     except Exception as exc:  # noqa: BLE001

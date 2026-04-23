@@ -9,12 +9,12 @@ Wave 2 Task 2：内部切到 :class:`EventBuffer` 统一抽象（与
 - 每 channel 一个环形缓冲，上限 ``MAX_EVENTS_PER_CHANNEL = 200``
 - 不做 Redis 持久化：worker 重启后 chat 流本来就会重跑
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from app.infra.event_bus import EventBuffer
-
 
 MAX_EVENTS_PER_CHANNEL = 200
 
