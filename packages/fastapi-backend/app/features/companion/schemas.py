@@ -9,6 +9,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import CamelCaseModel
 from app.shared.long_term.models import (
     AnchorContext,
     PersistenceStatus,
@@ -41,8 +42,12 @@ class CompanionBootstrapData(BaseModel):
 # ── Ask API Request ───────────────────────────────────────────────────
 
 
-class AskRequest(BaseModel):
-    """伴学提问请求。"""
+class AskRequest(CamelCaseModel):
+    """伴学提问请求。
+
+    继承 ``CamelCaseModel`` 以支持前端 camelCase 字段名（``sessionId`` /
+    ``questionText`` / ``parentTurnId`` / ``frameBase64``）。
+    """
 
     session_id: str
     anchor: AnchorContext

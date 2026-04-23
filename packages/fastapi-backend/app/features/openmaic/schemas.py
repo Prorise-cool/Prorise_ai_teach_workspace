@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any, Literal
 from pydantic import BaseModel, Field
 
+from app.schemas.common import CamelCaseModel
+
 
 # ─── Scene Types ───────────────────────────────────────────────────────────────
 
@@ -282,15 +284,17 @@ class ClassroomCreateRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class ClassroomCreateResponse(BaseModel):
-    job_id: str = Field(alias="jobId")
-    poll_url: str = Field(alias="pollUrl")
+class ClassroomCreateResponse(CamelCaseModel):
+    """前端期望 camelCase 字段（``jobId`` / ``pollUrl``）。"""
 
-    model_config = {"populate_by_name": True}
+    job_id: str
+    poll_url: str
 
 
-class JobStatusResponse(BaseModel):
-    job_id: str = Field(alias="jobId")
+class JobStatusResponse(CamelCaseModel):
+    """前端期望 camelCase 字段（``jobId``）。"""
+
+    job_id: str
     status: Literal["pending", "generating_outline", "generating_scenes", "ready", "failed"]
     progress: int = Field(default=0, ge=0, le=100)
     message: str | None = None
