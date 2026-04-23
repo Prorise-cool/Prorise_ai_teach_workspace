@@ -1,20 +1,19 @@
 """课堂 chat SSE broker —— in-memory 环形缓冲，支持 Last-Event-ID 重放。
 
-与 ``app.infra.sse_broker.InMemorySseBroker`` 分离：后者硬绑
-``TaskProgressEvent``（status / progress / error_code 必填），被 video / tasks
-广泛使用；chat 的 ChatEvent 形状不同，独立 feature-local 实例避免污染
-上游 schema。
+Wave 2 Task 2：内部切到 :class:`EventBuffer` 统一抽象（与
+``InMemorySseBroker`` 共用存储层），外部 API（publish / replay / drop）
+保持原签名与返回值，FastAPI 路由与 ``chat_sse_broker`` 单例无感。
 
-设计约束（Wave 1.6 scope B）：
+设计约束（Wave 1.6 scope B 延续）：
 - 3 个公开方法：publish / replay / drop
-- 每 channel 一个 ``deque`` 环形缓冲，上限 ``MAX_EVENTS_PER_CHANNEL = 200``
+- 每 channel 一个环形缓冲，上限 ``MAX_EVENTS_PER_CHANNEL = 200``
 - 不做 Redis 持久化：worker 重启后 chat 流本来就会重跑
 """
 from __future__ import annotations
 
-import threading
-from collections import deque
 from dataclasses import dataclass
+
+from app.infra.event_bus import EventBuffer
 
 
 MAX_EVENTS_PER_CHANNEL = 200
@@ -33,9 +32,9 @@ class ChatSseBroker:
     """线程安全的 in-memory chat SSE 事件 broker。"""
 
     def __init__(self, max_events_per_channel: int = MAX_EVENTS_PER_CHANNEL) -> None:
-        self._channels: dict[str, deque[ChatBrokerEvent]] = {}
-        self._max = max_events_per_channel
-        self._lock = threading.Lock()
+        self._buffer: EventBuffer[ChatBrokerEvent] = EventBuffer(
+            max_events_per_channel=max_events_per_channel
+        )
 
     def publish(
         self,
@@ -47,12 +46,7 @@ class ChatSseBroker:
     ) -> ChatBrokerEvent:
         """缓存一条事件；channel 首次出现时初始化 ring buffer。"""
         record = ChatBrokerEvent(event_id=event_id, event_name=event_name, data=data)
-        with self._lock:
-            buf = self._channels.get(channel)
-            if buf is None:
-                buf = deque(maxlen=self._max)
-                self._channels[channel] = buf
-            buf.append(record)
+        self._buffer.append(channel, record)
         return record
 
     def replay(
@@ -66,24 +60,15 @@ class ChatSseBroker:
         ``after_event_id`` 为 None / 空 → 全量；匹配到某条 → 仅返回其后；
         未知 ID → 回退全量（避免前端丢帧）。
         """
-        with self._lock:
-            buf = self._channels.get(channel)
-            if buf is None:
-                return []
-            events = list(buf)
-
-        if not after_event_id:
-            return events
-
-        for idx, ev in enumerate(events):
-            if ev.event_id == after_event_id:
-                return events[idx + 1:]
-        return events
+        return self._buffer.replay_after(
+            channel,
+            after_event_id=after_event_id,
+            event_id_of=lambda ev: ev.event_id,
+        )
 
     def drop(self, channel: str) -> None:
         """释放 channel 的缓冲。流结束时调用，防止内存无限增长。"""
-        with self._lock:
-            self._channels.pop(channel, None)
+        self._buffer.drop(channel)
 
 
 _broker: ChatSseBroker | None = None
