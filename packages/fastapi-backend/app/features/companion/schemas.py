@@ -11,8 +11,6 @@ from pydantic import BaseModel, Field
 
 from app.shared.long_term.models import (
     AnchorContext,
-    AnchorKind,
-    ContextType,
     PersistenceStatus,
     WhiteboardActionRecord,
 )

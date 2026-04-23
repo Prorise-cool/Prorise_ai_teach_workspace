@@ -6,7 +6,6 @@ All methods are synchronous to match RuntimeStore's interface.
 
 from __future__ import annotations
 
-import json
 import logging
 
 from app.infra.redis_client import RuntimeStore

@@ -5,11 +5,9 @@ from functools import lru_cache
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.security import AccessContext, get_access_context
-from app.features.common import FeatureBootstrapResponseEnvelope
-from app.features.companion.schemas import AskRequest, AskResponse
+from app.features.companion.schemas import AskRequest
 from app.features.companion.service import CompanionAskService, CompanionService
 from app.schemas.common import build_success_envelope
-from app.schemas.examples import build_feature_bootstrap_example
 from app.shared.long_term_records import (
     CompanionTurnCreateRequest,
     CompanionTurnSnapshot,
@@ -30,7 +28,6 @@ def _build_ask_service() -> CompanionAskService:
     from app.features.companion.context_adapter.video_adapter import VideoContextAdapter
     from app.features.companion.context_window import ContextWindow
     from app.features.video.pipeline.orchestration.assets import LocalAssetStore
-    from app.infra.redis_client import create_runtime_store
     from app.providers.factory import get_provider_factory
     from app.worker import get_runtime_store
 

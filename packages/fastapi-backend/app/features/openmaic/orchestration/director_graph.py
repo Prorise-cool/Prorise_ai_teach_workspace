@@ -25,7 +25,7 @@ import time
 from typing import Any, AsyncIterator, Sequence, TypedDict
 
 from langgraph.graph import StateGraph, START, END
-from app.providers.protocols import LLMProvider, ProviderError
+from app.providers.protocols import LLMProvider
 
 from .schemas import (
     AgentProfile,

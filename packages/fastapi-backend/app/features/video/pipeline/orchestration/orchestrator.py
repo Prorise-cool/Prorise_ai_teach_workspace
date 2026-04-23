@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import Settings, get_settings
-from app.features.video.pipeline.constants import VIDEO_ARTIFACT_GRAPH_TEMPLATE, VIDEO_OUTPUT_FORMAT
+from app.features.video.pipeline.constants import VIDEO_OUTPUT_FORMAT
 from app.features.video.pipeline.engine.agent import (
     RunConfig,
     TeachingVideoAgent,

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from app.core.errors import IntegrationError
-from app.core.logging import get_logger, get_request_id, get_task_id
+from app.core.logging import get_logger
 from app.shared.ruoyi.models import build_retry_details
 
 logger = get_logger("app.shared.ruoyi_client")

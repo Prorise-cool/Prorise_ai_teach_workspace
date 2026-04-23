@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.core.errors import AppError
 from app.core.logging import format_trace_timestamp, get_logger

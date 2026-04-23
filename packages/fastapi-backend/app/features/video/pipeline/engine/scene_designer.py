@@ -14,11 +14,10 @@ import hashlib
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..prompts.manimcat.api_codebook import SHARED_SPECIFICATION, build_api_index_module
 from ..prompts.manimcat.prompt_loader import load_and_render
 from .code_cleaner import extract_design_from_response
 

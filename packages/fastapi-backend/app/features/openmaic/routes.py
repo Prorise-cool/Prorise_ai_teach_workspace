@@ -24,7 +24,7 @@ import json
 import logging
 from typing import AsyncIterator
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.core.security import AccessContext, get_access_context
@@ -32,20 +32,15 @@ from app.features.openmaic.jobs.job_store import JobStore
 from app.features.openmaic.pdf.parser import parse_pdf_bytes
 from app.features.openmaic.schemas import (
     AgentProfilesRequest,
-    AgentProfilesResponse,
     BootstrapResponse,
     ChatRequest,
     ClassroomCreateRequest,
     ClassroomCreateResponse,
     JobStatusResponse,
     OutlineStreamRequest,
-    ParsePdfResponse,
     QuizGradeRequest,
-    QuizGradeResponse,
     SceneActionsRequest,
-    SceneActionsResponse,
     SceneContentRequest,
-    SceneContentResponse,
 )
 from app.features.openmaic.service import OpenMAICService
 

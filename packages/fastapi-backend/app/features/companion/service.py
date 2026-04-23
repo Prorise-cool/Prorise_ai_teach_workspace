@@ -190,7 +190,6 @@ class CompanionAskService:
         """处理伴学提问：前端帧 → 视觉 LLM → 回答 → 持久化。"""
         from app.features.companion.schemas import (
             AskResponse,
-            CompanionContextSource,
         )
         from app.shared.long_term.models import (
             CompanionTurnCreateRequest,

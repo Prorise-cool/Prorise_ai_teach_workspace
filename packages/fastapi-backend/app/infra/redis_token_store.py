@@ -7,11 +7,10 @@
 from __future__ import annotations
 
 import json
-from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from threading import Lock
+    pass
 
 ONLINE_TOKEN_KEY_PREFIX = "online_tokens:"
 
