@@ -4,6 +4,8 @@
 import { useEffect, useRef } from 'react';
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { ChatMessage } from '../../types/chat';
 import { AgentAvatar } from '../agent/agent-avatar';
 
@@ -12,6 +14,7 @@ interface MessageListProps {
 }
 
 export const MessageList: FC<MessageListProps> = ({ messages }) => {
+  const { t } = useAppTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,7 +24,7 @@ export const MessageList: FC<MessageListProps> = ({ messages }) => {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center py-8">
-        <p className="text-xs text-muted-foreground">向老师提问，开启互动答疑</p>
+        <p className="text-xs text-muted-foreground">{t('classroom.chat.qaEmpty')}</p>
       </div>
     );
   }
@@ -37,6 +40,7 @@ export const MessageList: FC<MessageListProps> = ({ messages }) => {
 };
 
 const MessageBubble: FC<{ message: ChatMessage }> = ({ message }) => {
+  const { t } = useAppTranslation();
   const isUser = message.role === 'user';
 
   if (isUser) {
@@ -46,7 +50,7 @@ const MessageBubble: FC<{ message: ChatMessage }> = ({ message }) => {
           {message.content}
         </div>
         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] text-muted-foreground">
-          我
+          {t('classroom.chat.me')}
         </div>
       </div>
     );
@@ -55,7 +59,7 @@ const MessageBubble: FC<{ message: ChatMessage }> = ({ message }) => {
   return (
     <div className="flex items-start gap-2">
       <AgentAvatar
-        name={message.agentName ?? '助手'}
+        name={message.agentName ?? t('classroom.common.assistant')}
         color={message.agentColor ?? '#0091FF'}
         size="sm"
       />

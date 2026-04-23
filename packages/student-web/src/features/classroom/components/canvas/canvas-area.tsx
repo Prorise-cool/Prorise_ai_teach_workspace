@@ -13,6 +13,7 @@
 import { Play } from 'lucide-react';
 import { useCallback, type FC, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 import type { Scene, StageMode } from '../../types/scene';
@@ -69,6 +70,7 @@ export const CanvasArea: FC<CanvasAreaProps> = ({
   onCycleSpeed,
   whiteboardElementCount,
 }) => {
+  const { t } = useAppTranslation();
   const showControls = mode === 'playback' && !whiteboardOpen;
   const showPlayHint =
     showControls &&
@@ -147,7 +149,7 @@ export const CanvasArea: FC<CanvasAreaProps> = ({
                       />
                     </svg>
                   </div>
-                  <span className="text-sm text-destructive font-medium">该节生成失败</span>
+                  <span className="text-sm text-destructive font-medium">{t('classroom.canvas.sceneFailed')}</span>
                   {onRetryGeneration && (
                     <button
                       type="button"
@@ -164,7 +166,7 @@ export const CanvasArea: FC<CanvasAreaProps> = ({
                     <div className="absolute inset-0 rounded-full border-2 border-border" />
                     <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
                   </div>
-                  <span className="text-sm text-muted-foreground font-medium">下一节生成中…</span>
+                  <span className="text-sm text-muted-foreground font-medium">{t('classroom.canvas.nextScenePending')}</span>
                 </div>
               )}
             </div>

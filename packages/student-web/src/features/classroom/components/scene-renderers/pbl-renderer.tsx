@@ -10,6 +10,8 @@
 import type { FC } from 'react';
 import { GraduationCap, User, Users } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 interface PBLIssue {
   id: string;
   title: string;
@@ -35,13 +37,14 @@ const roleIcon: Record<string, React.ComponentType<{ className?: string }>> = {
   assistant: Users,
 };
 
-const roleLabel: Record<string, string> = {
-  student: '学员',
-  teacher: '教师',
-  assistant: '助教',
+const roleLabelKey: Record<string, string> = {
+  student: 'student',
+  teacher: 'teacher',
+  assistant: 'assistant',
 };
 
 export const PBLRenderer: FC<PBLRendererProps> = ({ content, sceneTitle, sceneOrder }) => {
+  const { t } = useAppTranslation();
   const title = content?.projectTitle ?? sceneTitle;
   const overview = content?.projectOverview ?? '';
   const issues = content?.issues ?? [];
@@ -66,14 +69,17 @@ export const PBLRenderer: FC<PBLRendererProps> = ({ content, sceneTitle, sceneOr
         {issues.length > 0 && (
           <div>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              项目任务 · {issues.length}
+              {t('classroom.sceneRenderer.projectTasksLabel')} · {issues.length}
             </h3>
             <div className="space-y-3">
               {issues.map((issue, i) => {
                 const Icon = issue.assigneeRole ? roleIcon[issue.assigneeRole] ?? User : User;
-                const label = issue.assigneeRole
-                  ? roleLabel[issue.assigneeRole] ?? issue.assigneeRole
-                  : '学员';
+                const labelKey = issue.assigneeRole
+                  ? roleLabelKey[issue.assigneeRole]
+                  : 'student';
+                const label = labelKey
+                  ? t(`classroom.common.${labelKey}`)
+                  : issue.assigneeRole ?? t('classroom.common.student');
                 return (
                   <div
                     key={issue.id}

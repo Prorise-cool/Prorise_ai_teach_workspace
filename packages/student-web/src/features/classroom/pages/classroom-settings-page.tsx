@@ -4,10 +4,12 @@
  */
 import { RotateCcw } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { useClassroomSettingsStore } from '../stores/settings-store';
 
 export function ClassroomSettingsPage() {
+  const { t } = useAppTranslation();
   const settings = useClassroomSettingsStore();
 
   return (
@@ -17,15 +19,15 @@ export function ClassroomSettingsPage() {
       <main className="mx-auto w-full max-w-lg px-6 py-10">
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">OpenMAIC 设置</h1>
-            <p className="mt-1 text-sm text-muted-foreground">配置课堂生成偏好</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('classroom.settingsPage.title')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t('classroom.settingsPage.description')}</p>
           </div>
 
           <div className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
             {/* 语言设置 */}
             <SettingRow
-              label="显示语言"
-              description="课堂内容和界面的语言"
+              label={t('classroom.settingsPage.displayLanguageLabel')}
+              description={t('classroom.settingsPage.displayLanguageDescription')}
             >
               <select
                 value={settings.language}
@@ -34,8 +36,8 @@ export function ClassroomSettingsPage() {
                 }
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               >
-                <option value="zh-CN">中文（简体）</option>
-                <option value="en-US">English</option>
+                <option value="zh-CN">{t('classroom.settingsPage.localeZh')}</option>
+                <option value="en-US">{t('classroom.settingsPage.localeEn')}</option>
               </select>
             </SettingRow>
 
@@ -43,8 +45,8 @@ export function ClassroomSettingsPage() {
 
             {/* 语音速度 */}
             <SettingRow
-              label="语音播放速度"
-              description={`当前：${settings.speechRate.toFixed(1)}x`}
+              label={t('classroom.settingsPage.ttsSpeedLabel')}
+              description={t('classroom.settingsPage.speechRateCurrent', { rate: settings.speechRate.toFixed(1) })}
             >
               <input
                 type="range"
@@ -63,8 +65,8 @@ export function ClassroomSettingsPage() {
 
             {/* 自动进入下一场景 */}
             <SettingRow
-              label="自动进入下一场景"
-              description="场景播放结束后自动切换"
+              label={t('classroom.settingsPage.autoNextLabel')}
+              description={t('classroom.settingsPage.autoNextDescription')}
             >
               <button
                 type="button"
@@ -89,8 +91,8 @@ export function ClassroomSettingsPage() {
 
             {/* 网络搜索 */}
             <SettingRow
-              label="默认启用网络搜索"
-              description="生成课堂时自动联网获取最新资料"
+              label={t('classroom.settingsPage.webSearchLabel')}
+              description={t('classroom.settingsPage.webSearchDescription')}
             >
               <button
                 type="button"
@@ -119,7 +121,7 @@ export function ClassroomSettingsPage() {
             className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            恢复默认设置
+            {t('classroom.settingsPage.resetDefaults')}
           </button>
         </div>
       </main>

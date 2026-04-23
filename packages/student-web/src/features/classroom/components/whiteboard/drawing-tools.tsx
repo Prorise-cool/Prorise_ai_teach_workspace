@@ -5,6 +5,8 @@
 import { Eraser, MousePointer, Minus, Pencil, Type } from 'lucide-react';
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 export type DrawingTool = 'select' | 'pen' | 'line' | 'text' | 'eraser';
 
 interface DrawingToolsProps {
@@ -13,22 +15,23 @@ interface DrawingToolsProps {
   onClear: () => void;
 }
 
-const TOOLS: { id: DrawingTool; icon: FC<{ className?: string }>; label: string }[] = [
-  { id: 'select', icon: MousePointer, label: '选择' },
-  { id: 'pen', icon: Pencil, label: '画笔' },
-  { id: 'line', icon: Minus, label: '直线' },
-  { id: 'text', icon: Type, label: '文字' },
-  { id: 'eraser', icon: Eraser, label: '橡皮' },
+const TOOLS: { id: DrawingTool; icon: FC<{ className?: string }>; labelKey: string }[] = [
+  { id: 'select', icon: MousePointer, labelKey: 'toolSelect' },
+  { id: 'pen', icon: Pencil, labelKey: 'toolPen' },
+  { id: 'line', icon: Minus, labelKey: 'toolLine' },
+  { id: 'text', icon: Type, labelKey: 'toolText' },
+  { id: 'eraser', icon: Eraser, labelKey: 'toolEraser' },
 ];
 
 export const DrawingTools: FC<DrawingToolsProps> = ({ activeTool, onToolChange, onClear }) => {
+  const { t } = useAppTranslation();
   return (
     <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
-      {TOOLS.map(({ id, icon: Icon, label }) => (
+      {TOOLS.map(({ id, icon: Icon, labelKey }) => (
         <button
           key={id}
           type="button"
-          title={label}
+          title={t(`classroom.whiteboard.${labelKey}`)}
           onClick={() => onToolChange(id)}
           className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
             activeTool === id
@@ -42,7 +45,7 @@ export const DrawingTools: FC<DrawingToolsProps> = ({ activeTool, onToolChange, 
       <div className="mx-1 h-5 w-px bg-border" />
       <button
         type="button"
-        title="清除"
+        title={t('classroom.whiteboard.clear')}
         onClick={onClear}
         className="flex h-8 w-8 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10"
       >

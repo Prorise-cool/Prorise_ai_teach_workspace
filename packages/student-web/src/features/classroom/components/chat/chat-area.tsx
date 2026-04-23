@@ -28,6 +28,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 import type { ChatMessage, LectureNoteEntry } from '../../types/chat';
@@ -65,6 +66,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
   onWidthChange,
   className,
 }) => {
+  const { t } = useAppTranslation();
   const [internalWidth, setInternalWidth] = useState(width ?? DEFAULT_WIDTH);
   const currentWidth = width ?? internalWidth;
   const [activeTab, setActiveTab] = useState<ChatTab>('lecture');
@@ -163,13 +165,13 @@ export const ChatArea: FC<ChatAreaProps> = ({
               active={activeTab === 'lecture'}
               onClick={() => setActiveTab('lecture')}
               icon={<BookOpen className="w-3.5 h-3.5" />}
-              label="讲稿笔记"
+              label={t('classroom.chat.tabLecture')}
             />
             <TabButton
               active={activeTab === 'chat'}
               onClick={() => setActiveTab('chat')}
               icon={<MessageSquare className="w-3.5 h-3.5" />}
-              label="互动答疑"
+              label={t('classroom.chat.tabQa')}
               badge={hasUnreadChat}
             />
           </div>
@@ -179,7 +181,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               type="button"
               onClick={() => onCollapseChange(true)}
               className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-muted text-muted-foreground ring-1 ring-border/40 hover:bg-accent hover:text-foreground active:scale-90 transition-all duration-200"
-              aria-label="折叠面板"
+              aria-label={t('classroom.chat.ariaCollapsePanel')}
             >
               <PanelRightClose className="w-4 h-4" />
             </button>
@@ -203,7 +205,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="向老师提问或打断..."
+              placeholder={t('openmaic.classroom.askPlaceholder')}
               disabled={isStreaming}
               className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
             />
@@ -211,7 +213,7 @@ export const ChatArea: FC<ChatAreaProps> = ({
               type="button"
               onClick={() => void handleSend()}
               disabled={!inputValue.trim() || isStreaming}
-              aria-label="发送"
+              aria-label={t('classroom.chat.ariaSend')}
               className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-opacity disabled:opacity-40"
             >
               <ArrowUp className="h-3 w-3" />

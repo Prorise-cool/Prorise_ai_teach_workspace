@@ -7,6 +7,7 @@ import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ function summariesToProfiles(agents: AgentSummary[]): AgentProfile[] {
 }
 
 export function ClassroomPlayPage() {
+  const { t } = useAppTranslation();
   const { classroomId } = useParams<{ classroomId: string }>();
   const navigate = useNavigate();
 
@@ -146,11 +148,11 @@ export function ClassroomPlayPage() {
       <div className="flex h-screen items-center justify-center bg-background">
         <EmptyState
           icon={<Layers className="h-8 w-8" />}
-          title="课堂 ID 不存在"
-          description="请从课堂列表重新进入。"
+          title={t('classroom.playPage.noIdTitle')}
+          description={t('classroom.playPage.noIdDescription')}
           action={
             <Button onClick={() => void navigate('/openmaic')} variant="outline">
-              返回课堂列表
+              {t('classroom.playPage.backToList')}
             </Button>
           }
         />
@@ -270,7 +272,7 @@ export function ClassroomPlayPage() {
       {/* 课堂结束 —— 课后测试引导 */}
       {showPostClassCTA && (
         <PostClassCTA
-          courseTitle={classroom?.name ?? '本节课'}
+          courseTitle={classroom?.name ?? t('classroom.common.thisLesson')}
           onStartQuiz={handleStartQuiz}
           onDismiss={() => setPostClassDismissed(true)}
         />

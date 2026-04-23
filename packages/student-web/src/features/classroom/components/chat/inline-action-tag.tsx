@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 interface InlineActionTagProps {
@@ -56,7 +57,8 @@ const DEFAULT_STYLE =
 // ── Action config ─────────────────────────────────────────────
 
 interface ActionCfg {
-  label: string;
+  /** i18n key suffix under `classroom.inlineAction.` */
+  labelKey: string;
   Icon: LucideIcon;
   style: string;
   /** Whiteboard family — gets the pen-line accent indicator */
@@ -65,36 +67,37 @@ interface ActionCfg {
 
 const ACTION_CONFIG: Record<string, ActionCfg> = {
   // 幻灯片效果
-  spotlight: { label: '聚光', Icon: Flashlight, style: SPOTLIGHT_STYLE },
-  laser: { label: '激光', Icon: MousePointer2, style: LASER_STYLE },
-  play_video: { label: '播放', Icon: Play, style: SPOTLIGHT_STYLE },
+  spotlight: { labelKey: 'spotlight', Icon: Flashlight, style: SPOTLIGHT_STYLE },
+  laser: { labelKey: 'laser', Icon: MousePointer2, style: LASER_STYLE },
+  play_video: { labelKey: 'play', Icon: Play, style: SPOTLIGHT_STYLE },
 
   // 白板生命周期
-  wb_open: { label: '打开白板', Icon: PanelLeftOpen, style: WB_STYLE, wb: true },
-  wb_close: { label: '关闭白板', Icon: PanelLeftClose, style: WB_STYLE, wb: true },
-  wb_clear: { label: '清空', Icon: Eraser, style: WB_STYLE, wb: true },
-  wb_delete: { label: '删除', Icon: Trash2, style: WB_STYLE, wb: true },
+  wb_open: { labelKey: 'wbOpen', Icon: PanelLeftOpen, style: WB_STYLE, wb: true },
+  wb_close: { labelKey: 'wbClose', Icon: PanelLeftClose, style: WB_STYLE, wb: true },
+  wb_clear: { labelKey: 'wbClear', Icon: Eraser, style: WB_STYLE, wb: true },
+  wb_delete: { labelKey: 'wbDelete', Icon: Trash2, style: WB_STYLE, wb: true },
 
   // 白板绘制
-  wb_draw_text: { label: '文字', Icon: Type, style: WB_STYLE, wb: true },
-  wb_draw_shape: { label: '形状', Icon: Shapes, style: WB_STYLE, wb: true },
-  wb_draw_chart: { label: '图表', Icon: BarChart3, style: WB_STYLE, wb: true },
-  wb_draw_latex: { label: '公式', Icon: Sigma, style: WB_STYLE, wb: true },
-  wb_draw_table: { label: '表格', Icon: Table2, style: WB_STYLE, wb: true },
-  wb_draw_line: { label: '线条', Icon: Minus, style: WB_STYLE, wb: true },
-  wb_draw_code: { label: '代码', Icon: Code2, style: WB_STYLE, wb: true },
-  wb_edit_code: { label: '编辑代码', Icon: FileCode, style: WB_STYLE, wb: true },
+  wb_draw_text: { labelKey: 'wbDrawText', Icon: Type, style: WB_STYLE, wb: true },
+  wb_draw_shape: { labelKey: 'wbDrawShape', Icon: Shapes, style: WB_STYLE, wb: true },
+  wb_draw_chart: { labelKey: 'wbDrawChart', Icon: BarChart3, style: WB_STYLE, wb: true },
+  wb_draw_latex: { labelKey: 'wbDrawLatex', Icon: Sigma, style: WB_STYLE, wb: true },
+  wb_draw_table: { labelKey: 'wbDrawTable', Icon: Table2, style: WB_STYLE, wb: true },
+  wb_draw_line: { labelKey: 'wbDrawLine', Icon: Minus, style: WB_STYLE, wb: true },
+  wb_draw_code: { labelKey: 'wbDrawCode', Icon: Code2, style: WB_STYLE, wb: true },
+  wb_edit_code: { labelKey: 'wbEditCode', Icon: FileCode, style: WB_STYLE, wb: true },
 
   // 互动
-  discussion: { label: '讨论', Icon: MessageSquare, style: DISCUSS_STYLE },
+  discussion: { labelKey: 'discussion', Icon: MessageSquare, style: DISCUSS_STYLE },
 };
 
 // ── Component ─────────────────────────────────────────────────
 
 export function InlineActionTag({ actionName, state }: InlineActionTagProps) {
+  const { t } = useAppTranslation();
   const config = ACTION_CONFIG[actionName];
   const Icon = config?.Icon || Zap;
-  const label = config?.label || actionName;
+  const label = config ? t(`classroom.inlineAction.${config.labelKey}`) : actionName;
   const style = config?.style || DEFAULT_STYLE;
   const isWb = config?.wb ?? false;
   const isRunning = state === 'running' || state === 'input-available';

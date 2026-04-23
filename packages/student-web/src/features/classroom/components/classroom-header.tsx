@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { FC, ReactNode } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { LoadingState } from '@/components/states';
 
 interface ClassroomHeaderProps {
@@ -63,6 +64,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
   onBackHome,
   trailingExtras,
 }) => {
+  const { t } = useAppTranslation();
   return (
     <header className="flex h-20 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/60 px-6 md:px-8 backdrop-blur-md">
       {/* 左侧：菜单 + 标题 */}
@@ -72,7 +74,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           type="button"
           onClick={onOpenMobileOutline}
           className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden"
-          aria-label="打开大纲"
+          aria-label={t('classroom.header.ariaOpenOutline')}
         >
           <Menu className="h-4 w-4" />
         </button>
@@ -81,7 +83,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           type="button"
           onClick={onToggleOutline}
           className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:flex"
-          aria-label={outlineOpen ? '收起大纲' : '展开大纲'}
+          aria-label={outlineOpen ? t('classroom.header.ariaCollapseOutline') : t('classroom.header.ariaExpandOutline')}
         >
           {outlineOpen ? (
             <PanelLeftClose className="h-4 w-4" />
@@ -99,7 +101,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
               {courseTitle}
             </h1>
           ) : (
-            <LoadingState size="sm" variant="inline" message="课堂加载中..." />
+            <LoadingState size="sm" variant="inline" message={t('classroom.common.loading')} />
           )}
         </div>
       </div>
@@ -111,7 +113,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           type="button"
           onClick={onToggleDark}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-          title={isDark ? '切换浅色' : '切换深色'}
+          title={isDark ? t('classroom.header.toggleLight') : t('classroom.header.toggleDark')}
         >
           {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
         </button>
@@ -122,7 +124,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-accent ${
             companionOpen ? 'text-primary' : 'text-muted-foreground'
           }`}
-          title="伴学助手"
+          title={t('classroom.header.companion')}
           aria-pressed={companionOpen}
         >
           <Bot className="h-3.5 w-3.5" />
@@ -132,8 +134,8 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           type="button"
           onClick={onBackHome}
           className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
-          title="返回首页"
-          aria-label="返回首页"
+          title={t('classroom.header.backHome')}
+          aria-label={t('classroom.header.backHome')}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>

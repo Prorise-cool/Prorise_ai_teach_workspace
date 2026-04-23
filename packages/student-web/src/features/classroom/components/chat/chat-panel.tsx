@@ -6,6 +6,8 @@ import { ArrowUp, MessageSquare, PlayCircle, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import type { FC, KeyboardEvent } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { LectureNoteEntry } from '../../types/chat';
 import type { AgentProfile } from '../../types/agent';
 import type { ChatMessage } from '../../types/chat';
@@ -31,6 +33,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
   onSendMessage,
   onClose,
 }) => {
+  const { t } = useAppTranslation();
   const [activeTab, setActiveTab] = useState<PanelTab>('notes');
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +66,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
-            <span className="text-[15px] font-bold text-foreground">伴学助手</span>
+            <span className="text-[15px] font-bold text-foreground">{t('classroom.chat.companionTitle')}</span>
           </div>
           {onClose && (
             <button
@@ -87,7 +90,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            课堂笔记
+            {t('openmaic.classroom.notes')}
           </button>
           <button
             type="button"
@@ -98,7 +101,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            互动答疑
+            {t('openmaic.classroom.qa')}
             {unreadCount > 0 && activeTab !== 'qa' && (
               <span className="absolute right-1.5 top-1 h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
             )}
@@ -124,7 +127,7 @@ export const ChatPanel: FC<ChatPanelProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="向老师提问或打断..."
+            placeholder={t('openmaic.classroom.askPlaceholder')}
             disabled={isStreaming}
             className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
           />
@@ -144,10 +147,11 @@ export const ChatPanel: FC<ChatPanelProps> = ({
 
 /** 笔记列表子组件 */
 const NotesList: FC<{ notes: LectureNoteEntry[] }> = ({ notes }) => {
+  const { t } = useAppTranslation();
   if (notes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <p className="text-xs text-muted-foreground">课堂笔记将在场景播放时自动记录</p>
+        <p className="text-xs text-muted-foreground">{t('classroom.chat.notesEmpty')}</p>
       </div>
     );
   }
