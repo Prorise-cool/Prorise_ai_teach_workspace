@@ -4,6 +4,7 @@
  * 与 UI 设计稿 01-classroom.html 对应。
  */
 import {
+  ArrowRight,
   Bot,
   ChevronLeft,
   Layers,
@@ -12,13 +13,17 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
+  Sparkles,
   Sun,
+  Trophy,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
+import { EmptyState, LoadingState } from '@/components/states';
+import { Button } from '@/components/ui/button';
 
 import { loadClassroom } from '../db/classroom-db';
 import { useDirectorChat } from '../hooks/use-director-chat';
@@ -113,16 +118,55 @@ export function ClassroomPlayPage() {
     setMobileOverlayVisible(false);
   }, []);
 
+  // 检测课堂播放完毕 —— 引导跳转 learning-coach 课后测试
+  const sceneCount = player.scenes.length;
+  const playbackCompleted = player.playbackStatus === 'completed';
+  const [postClassDismissed, setPostClassDismissed] = useState(false);
+  const showPostClassCTA = playbackCompleted && sceneCount > 0 && !postClassDismissed;
+
+  // 课堂切换时重置 CTA 关闭状态，避免后端重新就绪时弹窗不出现
+  useEffect(() => {
+    setPostClassDismissed(false);
+  }, [classroomId]);
+
+  /**
+   * 跳转到 learning-coach 的 Quiz 入口。
+   * 路由实际形态：`/coach/:sessionId`（learning-coach-entry-page）。
+   * 课堂场景以 classroomId 作为 seed sessionId，并通过 sourceType=classroom
+   * + sourceTaskId 让目标页识别来源（与 utils/source.ts 契约一致）。
+   */
+  const handleStartQuiz = useCallback(() => {
+    if (!classroomId) return;
+    const topic = classroom?.name ?? '';
+    const params = new URLSearchParams({
+      sourceType: 'classroom',
+      sourceSessionId: classroomId,
+      sourceTaskId: classroomId,
+    });
+    if (topic) params.set('topicHint', topic);
+    void navigate(`/coach/${encodeURIComponent(classroomId)}?${params.toString()}`);
+  }, [classroomId, classroom?.name, navigate]);
+
+  const courseLabel = useMemo(() => 'OpenMAIC', []);
+
   if (!classroomId) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">课堂 ID 不存在</p>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <EmptyState
+          icon={<Layers className="h-8 w-8" />}
+          title="课堂 ID 不存在"
+          description="请从课堂列表重新进入。"
+          action={
+            <Button onClick={() => void navigate('/openmaic')} variant="outline">
+              返回课堂列表
+            </Button>
+          }
+        />
       </div>
     );
   }
 
-  const courseTitle = classroom?.name ?? '课堂加载中...';
-  const courseLabel = 'OpenMAIC';
+  const courseTitle = classroom?.name ?? null;
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-background">
@@ -175,7 +219,7 @@ export function ClassroomPlayPage() {
         {/* 场景列表 */}
         <div className="flex-1 overflow-y-auto p-3">
           {player.scenes.length === 0 ? (
-            <p className="py-4 text-center text-xs text-muted-foreground">场景加载中...</p>
+            <LoadingState size="sm" message="场景加载中..." />
           ) : (
             <div className="space-y-2">
               {player.scenes.map((scene, i) => (
@@ -219,17 +263,21 @@ export function ClassroomPlayPage() {
               )}
             </button>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {courseLabel}
               </p>
-              <h1 className="truncate text-sm font-bold text-foreground md:text-base">
-                {courseTitle}
-              </h1>
+              {courseTitle ? (
+                <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-lg">
+                  {courseTitle}
+                </h1>
+              ) : (
+                <LoadingState size="sm" variant="inline" message="课堂加载中..." />
+              )}
             </div>
           </div>
 
-          {/* 右侧工具栏 */}
-          <div className="flex items-center gap-1 rounded-full bg-muted/50 px-2 py-1">
+          {/* 右侧工具栏 —— 对齐 OpenMAIC 的玻璃感 pill */}
+          <div className="flex items-center gap-1 rounded-full border border-border/40 bg-card/60 px-2 py-1 shadow-sm backdrop-blur-md">
             <button
               type="button"
               onClick={toggleDark}
@@ -305,6 +353,80 @@ export function ClassroomPlayPage() {
           onClose={companionOpen ? () => { setCompanionOpen(false); } : undefined}
         />
       </aside>
+
+      {/* 课堂结束 —— 课后测试引导 */}
+      {showPostClassCTA && (
+        <PostClassCTA
+          courseTitle={classroom?.name ?? '本节课'}
+          onStartQuiz={handleStartQuiz}
+          onDismiss={() => setPostClassDismissed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 课后测试引导浮层。
+ * 视觉对齐 OpenMAIC 完成态卡片：圆角 2xl + 顶部色带 + 居中 trophy 徽章 + 主次按钮组。
+ */
+interface PostClassCTAProps {
+  courseTitle: string;
+  onStartQuiz: () => void;
+  onDismiss: () => void;
+}
+
+function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="post-class-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+    >
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border/40 bg-card shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)]">
+        {/* 顶部彩带 —— 对齐 OpenMAIC AlertDialog accent bar */}
+        <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="关闭"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="px-6 pb-2 pt-7 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 ring-1 ring-amber-200/60 dark:bg-amber-900/20 dark:ring-amber-700/30">
+            <Trophy className="h-7 w-7 text-amber-500 dark:text-amber-400" />
+          </div>
+          <h3 id="post-class-title" className="mb-1.5 text-lg font-bold tracking-tight text-foreground">
+            课堂结束
+          </h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            学得不错！来做个课后测试巩固一下「{courseTitle}」吧。
+          </p>
+        </div>
+
+        <div className="flex flex-row gap-3 px-6 pb-6 pt-4">
+          <Button
+            onClick={onDismiss}
+            variant="outline"
+            className="flex-1 rounded-xl"
+          >
+            稍后再说
+          </Button>
+          <Button
+            onClick={onStartQuiz}
+            className="flex-1 rounded-xl shadow-md shadow-amber-200/50 dark:shadow-amber-900/30"
+          >
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            开始测试
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
