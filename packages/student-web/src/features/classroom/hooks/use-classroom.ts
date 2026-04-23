@@ -11,6 +11,7 @@
  */
 import { useCallback, useRef } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 
 import { saveClassroom } from '../db/classroom-db';
@@ -22,6 +23,7 @@ const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_COUNT = 150; // ~5 分钟
 
 export function useClassroomCreate() {
+  const { t } = useAppTranslation();
   const store = useClassroomStore;
   const abortRef = useRef<AbortController | null>(null);
   const adapter = resolveClassroomAdapter();
@@ -32,17 +34,17 @@ export function useClassroomCreate() {
       const ac = new AbortController();
       abortRef.current = ac;
 
-      store.getState().setGenerationProgress(0, '正在提交课堂生成任务...');
+      store.getState().setGenerationProgress(0, t('openmaic.generation.submitting'));
 
       // 1. 提交任务 → 获取 taskId
       const { taskId } = await adapter.submit(req, { signal: ac.signal });
-      store.getState().setGenerationProgress(5, '任务已提交，等待生成...');
+      store.getState().setGenerationProgress(5, t('openmaic.generation.generating'));
 
       // 2. 轮询任务状态（后端已做 outline + agent profiles + scene 全链路编排）
       let pollCount = 0;
 
       while (pollCount < MAX_POLL_COUNT) {
-        if (ac.signal.aborted) throw new Error('已取消');
+        if (ac.signal.aborted) throw new Error(t('classroom.common.userCancelled'));
         await sleep(POLL_INTERVAL_MS);
 
         let statusResp;
@@ -58,7 +60,7 @@ export function useClassroomCreate() {
         const progress = serverProgress > 0
           ? serverProgress
           : Math.min(95, 5 + (pollCount / MAX_POLL_COUNT) * 90);
-        store.getState().setGenerationProgress(progress, statusResp.message ?? '生成中...');
+        store.getState().setGenerationProgress(progress, statusResp.message ?? t('openmaic.generation.generating'));
 
         // 后端 ready 状态对应前端 completed
         if (statusResp.status === 'ready' && statusResp.classroom) {
@@ -112,20 +114,20 @@ export function useClassroomCreate() {
           };
           await saveClassroom(classroom);
           store.getState().setClassroom(classroom);
-          store.getState().setGenerationProgress(100, '课堂生成完成！');
+          store.getState().setGenerationProgress(100, t('openmaic.generation.complete'));
           return classroom.id;
         }
 
         if (statusResp.status === 'failed') {
-          throw new Error(statusResp.error ?? '课堂生成失败');
+          throw new Error(statusResp.error ?? t('classroom.common.classroomGenerationFailed'));
         }
 
         pollCount++;
       }
 
-      throw new Error('课堂生成超时，请稍后重试');
+      throw new Error(t('openmaic.generation.timeout'));
     },
-    [store, adapter],
+    [store, adapter, t],
   );
 
   const cancel = useCallback(() => {

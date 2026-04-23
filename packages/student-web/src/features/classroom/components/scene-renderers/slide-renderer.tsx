@@ -16,6 +16,8 @@
 import type { CSSProperties, FC } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 interface SlideElement {
   id: string;
   type: 'text' | 'shape' | 'image' | 'latex';
@@ -48,6 +50,7 @@ export const SlideRenderer: FC<SlideRendererProps> = ({
   sceneOrder,
   spotlightId,
 }) => {
+  const { t } = useAppTranslation();
   const elements = content?.elements ?? [];
   const bgColor = content?.background?.color ?? '#ffffff';
 
@@ -88,7 +91,7 @@ export const SlideRenderer: FC<SlideRendererProps> = ({
           SCENE {String(sceneOrder).padStart(2, '0')}
         </span>
         <h2 className="text-xl font-bold text-black/80">{sceneTitle}</h2>
-        <p className="text-sm text-black/50">幻灯片没有渲染元素</p>
+        <p className="text-sm text-black/50">{t('classroom.sceneRenderer.slideNoElements')}</p>
       </div>
     );
   }

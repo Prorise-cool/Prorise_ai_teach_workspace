@@ -5,6 +5,7 @@
 import { nanoid } from 'nanoid';
 import { useCallback, useRef, useState } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 
 import { saveChatHistory } from '../db/classroom-db';
@@ -19,6 +20,7 @@ export interface UseDirectorChatReturn {
 }
 
 export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
+  const { t } = useAppTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -52,7 +54,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
         role: 'assistant',
         content: '',
         agentId: agents[0]?.id,
-        agentName: agents[0]?.name ?? '老师',
+        agentName: agents[0]?.name ?? t('classroom.common.teacher'),
         agentColor: agents[0]?.color,
         createdAt: Date.now(),
         isStreaming: true,
@@ -63,8 +65,8 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
       // 让 Director 理解此刻学生的讨论上下文。
       const currentScene = classroom?.scenes?.find((s) => s.id === currentSceneId);
       const classroomContext = [
-        classroom?.name ? `课程主题：${classroom.name}` : '',
-        currentScene?.title ? `当前场景：${currentScene.title}` : '',
+        classroom?.name ? t('classroom.common.topicLabel', { name: classroom.name }) : '',
+        currentScene?.title ? t('classroom.common.sceneLabel', { title: currentScene.title }) : '',
       ]
         .filter(Boolean)
         .join(' | ');
@@ -92,7 +94,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
 
         let fullContent = '';
         let currentAgentId: string | undefined = agents[0]?.id;
-        let currentAgentName: string = agents[0]?.name ?? '老师';
+        let currentAgentName: string = agents[0]?.name ?? t('classroom.common.teacher');
         let currentAgentColor: string | undefined = agents[0]?.color;
 
         for await (const event of stream) {
@@ -140,11 +142,11 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
         });
       } catch (error) {
         if (ac.signal.aborted) return;
-        const errMsg = error instanceof Error ? error.message : '聊天出错';
+        const errMsg = error instanceof Error ? error.message : t('classroom.common.chatError');
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: `错误：${errMsg}`, isStreaming: false }
+              ? { ...m, content: `${t('classroom.common.errorPrefix')}${errMsg}`, isStreaming: false }
               : m,
           ),
         );
@@ -152,7 +154,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
         setIsStreaming(false);
       }
     },
-    [isStreaming, messages, classroomId, currentSceneId, agents, adapter, classroom],
+    [isStreaming, messages, classroomId, currentSceneId, agents, adapter, classroom, t],
   );
 
   const clearMessages = useCallback(() => {

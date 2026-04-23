@@ -30,6 +30,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 import type { Scene, SceneType } from '../../types/scene';
@@ -79,6 +80,7 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
   logo,
   onLogoClick,
 }) => {
+  const { t } = useAppTranslation();
   const [internalWidth, setInternalWidth] = useState(width ?? DEFAULT_WIDTH);
   const sidebarWidth = width ?? internalWidth;
   const isDraggingRef = useRef(false);
@@ -147,17 +149,17 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
             type="button"
             onClick={onLogoClick}
             className="flex items-center gap-2 cursor-pointer rounded-lg px-1.5 -mx-1.5 py-1 -my-1 hover:bg-accent active:scale-[0.97] transition-all duration-150"
-            title="返回首页"
+            title={t('classroom.common.backHome')}
           >
             {logo ?? (
-              <span className="text-sm font-bold tracking-tight text-foreground">小麦课堂</span>
+              <span className="text-sm font-bold tracking-tight text-foreground">{t('classroom.stage.xiaomaiBrand')}</span>
             )}
           </button>
           <button
             type="button"
             onClick={() => onCollapseChange(true)}
             className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-muted text-muted-foreground ring-1 ring-border/40 hover:bg-accent hover:text-foreground active:scale-90 transition-all duration-200"
-            aria-label="折叠边栏"
+            aria-label={t('classroom.stage.ariaCollapseSidebar')}
           >
             <PanelLeftClose className="w-4 h-4" />
           </button>
@@ -323,6 +325,7 @@ const PendingSceneCard: FC<{
   indexLabel: number;
   isActive: boolean;
 }> = ({ entry, indexLabel, isActive }) => {
+  const { t } = useAppTranslation();
   const isFailed = entry.isFailed === true;
   const isPaused = entry.isPaused === true;
   const isRetrying = entry.isRetrying === true;
@@ -382,14 +385,14 @@ const PendingSceneCard: FC<{
                   }}
                   disabled={isRetrying}
                   className="p-1 -ml-1 rounded-md hover:bg-destructive/15 transition-colors active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-                  title="重试"
+                  title={t('classroom.common.retry')}
                 >
                   <RefreshCw className={cn('w-3.5 h-3.5', isRetrying && 'animate-spin')} />
                 </button>
               ) : (
                 <AlertCircle className="w-3.5 h-3.5" />
               )}
-              <span>{isRetrying ? '重试中…' : '生成失败'}</span>
+              <span>{isRetrying ? t('classroom.common.retrying') : t('classroom.common.generateFailed')}</span>
             </div>
           ) : (
             <>
@@ -406,7 +409,7 @@ const PendingSceneCard: FC<{
                 )}
               />
               <span className="text-[9px] font-medium text-muted-foreground mt-0.5">
-                {isPaused ? '已暂停' : '生成中…'}
+                {isPaused ? t('classroom.common.paused') : t('classroom.common.generating')}
               </span>
             </>
           )}

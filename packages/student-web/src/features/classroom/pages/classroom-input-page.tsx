@@ -160,8 +160,8 @@ export function ClassroomInputPage() {
 						placeholder,
 						submitLabel: isSubmitting
 							? generationProgress > 0
-								? `${generationMessage ?? '生成中'} ${Math.round(generationProgress)}%`
-								: '生成中...'
+								? `${generationMessage ?? t('classroom.inputPage.generatingPrefix')} ${Math.round(generationProgress)}%`
+								: t('openmaic.generation.generating')
 							: submitLabel,
 						toolUploadFile,
 						toolVoiceInput,

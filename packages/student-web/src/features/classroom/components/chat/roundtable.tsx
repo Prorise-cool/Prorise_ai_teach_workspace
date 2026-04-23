@@ -5,6 +5,8 @@
 import { Loader2 } from 'lucide-react';
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { AgentProfile } from '../../types/agent';
 import { AgentAvatar } from '../agent/agent-avatar';
 
@@ -16,13 +18,14 @@ interface RoundtableProps {
 }
 
 export const Roundtable: FC<RoundtableProps> = ({ agents, activeAgentId, topic, isActive }) => {
+  const { t } = useAppTranslation();
   if (!isActive) return null;
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card/50 p-4">
       <div className="flex items-center gap-2">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <span className="text-xs font-bold text-foreground">圆桌讨论中</span>
+        <span className="text-xs font-bold text-foreground">{t('classroom.chat.roundtable')}</span>
       </div>
       <p className="text-xs text-muted-foreground line-clamp-2">{topic}</p>
 

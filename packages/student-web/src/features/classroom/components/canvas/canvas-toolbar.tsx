@@ -30,6 +30,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 export interface CanvasToolbarProps {
@@ -121,6 +122,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
   onCycleSpeed,
   whiteboardElementCount = 0,
 }) => {
+  const { t } = useAppTranslation();
   const canGoPrev = currentSceneIndex > 0;
   const canGoNext = currentSceneIndex < scenesCount - 1;
   const showPlayPause = !isLiveSession;
@@ -142,7 +144,9 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
   useEffect(() => () => clearTimeout(volumeTimerRef.current), []);
 
   const effectiveVolume = ttsMuted ? 0 : ttsVolume;
-  const presentationLabel = isPresenting ? '退出全屏' : '全屏';
+  const presentationLabel = isPresenting
+    ? t('classroom.canvas.exitFullscreen')
+    : t('classroom.canvas.fullscreen');
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
@@ -157,7 +161,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
               'w-6 h-6',
               sidebarCollapsed ? 'text-muted-foreground/60' : 'text-foreground/80',
             )}
-            aria-label="切换大纲"
+            aria-label={t('classroom.canvas.ariaToggleOutline')}
           >
             <LayoutList className="w-3.5 h-3.5" />
           </button>
@@ -200,7 +204,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                       ? 'text-destructive'
                       : 'text-muted-foreground',
                 )}
-                aria-label={ttsMuted ? '取消静音' : '静音'}
+                aria-label={ttsMuted ? t('classroom.canvas.ariaUnmute') : t('classroom.canvas.ariaMute')}
               >
                 <VolumeIcon muted={!!ttsMuted} volume={ttsVolume} disabled={!ttsEnabled} />
               </button>
@@ -260,8 +264,8 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-foreground',
               )}
-              aria-label="播放速度"
-              title={`播放速度 ${playbackSpeed}x`}
+              aria-label={t('classroom.canvas.ariaSpeed')}
+              title={`${t('classroom.canvas.ariaSpeed')} ${playbackSpeed}x`}
             >
               {playbackSpeed === 1.5 ? '1.5x' : `${playbackSpeed}x`}
             </button>
@@ -279,7 +283,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                 ctrlBtn,
                 'w-6 h-6 text-muted-foreground disabled:opacity-20 disabled:pointer-events-none',
               )}
-              aria-label="上一节"
+              aria-label={t('classroom.canvas.ariaPrev')}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
@@ -299,13 +303,13 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                 'text-[11px] font-semibold whitespace-nowrap',
                 'hover:bg-destructive/20 active:scale-95 transition-all cursor-pointer',
               )}
-              title="终止讨论"
+              title={t('classroom.canvas.ariaStop')}
             >
               <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive/70 opacity-75" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-destructive" />
               </span>
-              终止讨论
+              {t('classroom.canvas.ariaStop')}
             </button>
           ) : showPlayPause ? (
             <button
@@ -316,7 +320,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                 'w-7 h-6',
                 engineState === 'playing' ? 'text-primary' : 'text-muted-foreground',
               )}
-              aria-label={engineState === 'playing' ? '暂停' : '播放'}
+              aria-label={engineState === 'playing' ? t('classroom.canvas.ariaPause') : t('classroom.canvas.ariaPlay')}
             >
               {engineState === 'playing' ? (
                 <Pause className="w-3.5 h-3.5" />
@@ -336,7 +340,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                 ctrlBtn,
                 'w-6 h-6 text-muted-foreground disabled:opacity-20 disabled:pointer-events-none',
               )}
-              aria-label="下一节"
+              aria-label={t('classroom.canvas.ariaNext')}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -354,8 +358,8 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
                 'w-8 h-6',
                 autoPlayLecture ? 'text-primary' : 'text-muted-foreground',
               )}
-              aria-label="自动连播"
-              title={autoPlayLecture ? '关闭自动连播' : '自动连播下一节'}
+              aria-label={t('classroom.canvas.ariaAutoPlay')}
+              title={autoPlayLecture ? t('classroom.canvas.autoPlayOn') : t('classroom.canvas.autoPlayOff')}
             >
               <Repeat className="w-3.5 h-3.5" />
             </button>
@@ -373,7 +377,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
               'w-6 h-6',
               whiteboardOpen ? 'text-primary' : 'text-muted-foreground',
             )}
-            title={whiteboardOpen ? '收起白板' : '打开白板'}
+            title={whiteboardOpen ? t('classroom.canvas.closeWhiteboard') : t('classroom.canvas.openWhiteboard')}
           >
             <PencilLine className="w-3.5 h-3.5" />
             {!whiteboardOpen && whiteboardElementCount > 0 && (
@@ -414,7 +418,7 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
               'w-6 h-6',
               chatCollapsed ? 'text-muted-foreground/60' : 'text-foreground/80',
             )}
-            aria-label="切换聊天面板"
+            aria-label={t('classroom.canvas.ariaToggleChat')}
           >
             <MessageSquare className="w-3.5 h-3.5" />
           </button>

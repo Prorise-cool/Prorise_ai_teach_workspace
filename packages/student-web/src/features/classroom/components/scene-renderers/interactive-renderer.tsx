@@ -5,6 +5,8 @@
  */
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { InteractiveContent } from '../../types/scene';
 
 interface InteractiveRendererProps {
@@ -18,6 +20,7 @@ export const InteractiveRenderer: FC<InteractiveRendererProps> = ({
   sceneTitle,
   sceneOrder,
 }) => {
+  const { t } = useAppTranslation();
   // 优先用内嵌 HTML，其次 URL
   const hasHtml = !!content.html;
   const hasUrl = !!content.url;
@@ -29,7 +32,7 @@ export const InteractiveRenderer: FC<InteractiveRendererProps> = ({
           SCENE {String(sceneOrder).padStart(2, '0')} · INTERACTIVE
         </span>
         <h2 className="text-xl font-bold text-foreground">{sceneTitle}</h2>
-        <p className="text-sm text-muted-foreground">交互式内容暂未加载</p>
+        <p className="text-sm text-muted-foreground">{t('classroom.sceneRenderer.interactiveNotLoaded')}</p>
       </div>
     );
   }

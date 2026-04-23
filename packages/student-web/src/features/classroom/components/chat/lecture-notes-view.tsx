@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
 import type { LectureNoteEntry } from '../../types/chat';
@@ -55,6 +56,7 @@ export const LectureNotesView: FC<LectureNotesViewProps> = ({
   notes,
   currentSceneId,
 }) => {
+  const { t } = useAppTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 当前场景节滚动到视野中心
@@ -72,9 +74,9 @@ export const LectureNotesView: FC<LectureNotesViewProps> = ({
         <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-3 text-primary/70 ring-1 ring-primary/20">
           <BookOpen className="w-6 h-6" />
         </div>
-        <p className="text-xs font-medium text-muted-foreground">课堂笔记将在场景播放时自动生成</p>
+        <p className="text-xs font-medium text-muted-foreground">{t('classroom.chat.notesEmptyInline')}</p>
         <p className="text-[10px] text-muted-foreground/70 mt-1">
-          可在右上角切回「互动答疑」继续提问
+          {t('classroom.chat.notesEmptyInlineHint')}
         </p>
       </div>
     );
@@ -113,11 +115,11 @@ export const LectureNotesView: FC<LectureNotesViewProps> = ({
                   isCurrent ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                第 {pageNum} 页
+                {t('classroom.chat.pageLabel', { page: pageNum })}
               </span>
               {isCurrent && (
                 <span className="text-[9px] font-bold px-1.5 py-px rounded-full bg-primary/15 text-primary">
-                  当前
+                  {t('classroom.chat.pageCurrent')}
                 </span>
               )}
             </div>

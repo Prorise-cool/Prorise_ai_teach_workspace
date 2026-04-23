@@ -4,6 +4,8 @@
  */
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { AgentProfile } from '../../types/agent';
 import { AgentAvatar } from './agent-avatar';
 
@@ -20,6 +22,15 @@ export const AgentBubble: FC<AgentBubbleProps> = ({
   listeners = [],
   isStreaming = false,
 }) => {
+  const { t } = useAppTranslation();
+  // 主讲教师（中/英两种可能的 role 字面量）统一显示 Teacher 徽标；
+  // 其他 agent 显示本名。
+  const teacherRoles = [
+    t('classroom.common.headTeacher'),
+    '主讲教师',
+    'Lead Teacher',
+  ];
+  const displayName = teacherRoles.includes(agent.role) ? 'Teacher' : agent.name;
   return (
     <div className="flex items-start gap-3 px-4 py-3">
       {/* 头像 */}
@@ -35,7 +46,7 @@ export const AgentBubble: FC<AgentBubbleProps> = ({
           className="text-[10px] font-bold"
           style={{ color: agent.color }}
         >
-          {agent.role === '主讲教师' ? 'Teacher' : agent.name}
+          {displayName}
         </span>
       </div>
 
@@ -64,7 +75,7 @@ export const AgentBubble: FC<AgentBubbleProps> = ({
               <AgentAvatar key={l.id} name={l.name} color={l.color} size="sm" />
             ))}
           </div>
-          <span className="text-[10px] text-muted-foreground">听众</span>
+          <span className="text-[10px] text-muted-foreground">{t('classroom.common.audience')}</span>
         </div>
       )}
     </div>

@@ -15,6 +15,8 @@
  */
 import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import { CanvasArea } from './canvas/canvas-area';
 import { AgentBubble } from './agent/agent-bubble';
 import { InteractiveRenderer } from './scene-renderers/interactive-renderer';
@@ -50,7 +52,11 @@ interface StageProps {
 }
 
 /** discriminated-union 消费场景 —— 避免 `as any`。 */
-function renderSceneContent(scene: Scene, spotlightId: string | null): ReactNode {
+function renderSceneContent(
+  scene: Scene,
+  spotlightId: string | null,
+  fallbackLabel: string,
+): ReactNode {
   const order = scene.order ?? scene.outline?.order ?? 1;
   switch (scene.type) {
     case 'slide':
@@ -84,7 +90,7 @@ function renderSceneContent(scene: Scene, spotlightId: string | null): ReactNode
       void _exhaustive;
       return (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          未知场景类型
+          {fallbackLabel}
         </div>
       );
     }
@@ -106,6 +112,7 @@ export const Stage: FC<StageProps> = ({
   scenesCount = 1,
   isStreaming = false,
 }) => {
+  const { t } = useAppTranslation();
   // Action player 订阅当前场景的 speech/spotlight/… 序列
   useActionPlayer(scene);
   const spotlightId = useClassroomStore((s) => s.currentSpotlightId);
@@ -161,14 +168,14 @@ export const Stage: FC<StageProps> = ({
       <div className="flex h-full flex-col">
         <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-card shadow-xl ring-1 ring-border">
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">选择一个场景开始学习</p>
+            <p className="text-sm text-muted-foreground">{t('classroom.stage.choosePrompt')}</p>
           </div>
         </div>
         {teacher && (
           <div className="mt-3">
             <AgentBubble
               agent={teacher}
-              text="等待场景加载..."
+              text={t('classroom.stage.waitingScene')}
               listeners={listeners}
               isStreaming={false}
             />
@@ -207,7 +214,7 @@ export const Stage: FC<StageProps> = ({
           onToggleAutoPlay={() => setAutoPlayLecture((v) => !v)}
           playbackSpeed={playbackSpeed}
           onCycleSpeed={handleCycleSpeed}
-          renderScene={(s) => renderSceneContent(s, spotlightId)}
+          renderScene={(s) => renderSceneContent(s, spotlightId, t('classroom.stage.unknownSceneType'))}
           renderWhiteboard={whiteboardOpen ? renderWhiteboard : undefined}
         />
       </div>

@@ -5,6 +5,7 @@
 import type { ChangeEventHandler, RefObject } from 'react';
 import { ArrowRight, FileText, Globe, Mic, Paperclip, X } from 'lucide-react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { InputWorkspaceCardFrame } from '@/components/input-page/input-workspace-card-frame';
 import { createInputWorkspaceCardClassNames } from '@/components/input-page/input-workspace-card-class-names';
 import { cn } from '@/lib/utils';
@@ -80,6 +81,7 @@ export function ClassroomInputCard({
   onSubmit,
   labels,
 }: ClassroomInputCardProps) {
+  const { t } = useAppTranslation();
   const classNames = createInputWorkspaceCardClassNames('xm-classroom-input');
   const dividerClassName = `${classNames.root}-divider`;
   const toggleClassName = `${classNames.root}-toggle`;
@@ -119,7 +121,7 @@ export function ClassroomInputCard({
                 type="button"
                 className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                 onClick={onClearFile}
-                title="取消引用"
+                title={t('classroom.inputCard.quoteRemove')}
               >
                 <X className="h-4 w-4" />
               </button>

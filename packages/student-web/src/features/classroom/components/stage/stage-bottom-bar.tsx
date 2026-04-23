@@ -12,6 +12,8 @@
 import { ChevronRight } from 'lucide-react';
 import { useCallback, useState, type FC, type KeyboardEvent } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { AgentProfile } from '../../types/agent';
 import type { Scene } from '../../types/scene';
 import type { ChatMessage } from '../../types/chat';
@@ -38,6 +40,7 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
   isStreaming,
   onAskQuestion,
 }) => {
+  const { t } = useAppTranslation();
   const [questionInput, setQuestionInput] = useState('');
 
   const handleSubmit = useCallback(async () => {
@@ -63,25 +66,25 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
         {/* 后续探索操作胶囊 */}
         {!isPlaying && scene && (
           <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border bg-card/50 px-4 py-3">
-            <span className="text-xs text-muted-foreground">继续探索：</span>
+            <span className="text-xs text-muted-foreground">{t('classroom.chat.continueExplore')}</span>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors"
               >
-                资料依据
+                {t('classroom.chat.sources')}
               </button>
               <button
                 type="button"
                 className="rounded-full border border-border bg-foreground px-3 py-1 text-[11px] text-background transition-colors hover:opacity-90"
               >
-                Checkpoint
+                {t('classroom.chat.checkpoint')}
               </button>
               <button
                 type="button"
                 className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors"
               >
-                正式 Quiz
+                {t('classroom.chat.formalQuiz')}
               </button>
             </div>
           </div>
@@ -94,8 +97,8 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
             text={
               currentSpeechText ??
               (isPlaying
-                ? `现在播放场景「${scene.title}」...`
-                : `场景「${scene.title}」。点击播放开始讲解。`)
+                ? t('classroom.chat.nowPlayingScene', { title: scene.title })
+                : t('classroom.chat.sceneHint', { title: scene.title }))
             }
             listeners={listeners}
             isStreaming={isPlaying && !!currentSpeechText}
@@ -109,7 +112,7 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
               value={questionInput}
               onChange={(e) => setQuestionInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="向老师提问或打断..."
+              placeholder={t('openmaic.classroom.askPlaceholder')}
               disabled={isStreaming}
               className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
             />
@@ -117,7 +120,7 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
               type="button"
               onClick={() => void handleSubmit()}
               disabled={!questionInput.trim() || isStreaming}
-              aria-label="发送提问"
+              aria-label={t('classroom.chat.ariaAskSend')}
               className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-opacity disabled:opacity-40"
             >
               <ChevronRight className="h-3 w-3" />

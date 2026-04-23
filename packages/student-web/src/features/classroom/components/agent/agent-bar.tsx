@@ -4,6 +4,8 @@
  */
 import type { FC } from 'react';
 
+import { useAppTranslation } from '@/app/i18n/use-app-translation';
+
 import type { AgentProfile } from '../../types/agent';
 import { AgentAvatar } from './agent-avatar';
 
@@ -14,6 +16,7 @@ interface AgentBarProps {
 }
 
 export const AgentBar: FC<AgentBarProps> = ({ currentAgent, listeners, isLive = false }) => {
+  const { t } = useAppTranslation();
   if (!currentAgent) return null;
 
   return (
@@ -53,7 +56,7 @@ export const AgentBar: FC<AgentBarProps> = ({ currentAgent, listeners, isLive = 
           {listeners.length > 3 && (
             <span className="text-[10px] text-muted-foreground">+{listeners.length - 3}</span>
           )}
-          <span className="text-[10px] text-muted-foreground">听众</span>
+          <span className="text-[10px] text-muted-foreground">{t('classroom.common.audience')}</span>
         </div>
       )}
     </div>
