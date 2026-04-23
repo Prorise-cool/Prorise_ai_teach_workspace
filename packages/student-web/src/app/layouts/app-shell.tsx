@@ -1,9 +1,13 @@
 /**
  * 文件说明：应用级页面壳层。
- * 当前仅承接全局背景和 Outlet，供业务页面复用统一宿主。
+ * 当前承接全局背景、全局 ErrorBoundary 以及 Outlet，供业务页面复用统一宿主。
+ *
+ * Wave 2：在 Outlet 外套一层 {@link ErrorBoundary}，避免渲染/生命周期
+ * 异常把整页打成白屏；默认重试按钮会触发路由重载。
  */
 import { Outlet } from 'react-router-dom';
 
+import { ErrorBoundary } from '@/components/error-boundary';
 import { AuthRuntimeBridge } from '@/features/auth/components/auth-runtime-bridge';
 
 /**
@@ -15,7 +19,17 @@ export function AppShell() {
   return (
     <div className="min-h-screen">
       <AuthRuntimeBridge />
-      <Outlet />
+      <ErrorBoundary
+        title="页面出现错误"
+        retryLabel="刷新页面"
+        onRetry={() => {
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        }}
+      >
+        <Outlet />
+      </ErrorBoundary>
     </div>
   );
 }
