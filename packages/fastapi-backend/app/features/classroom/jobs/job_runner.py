@@ -122,7 +122,9 @@ async def _async_run_classroom_generation(
         # ── Stage 2: 场景内容 + 动作 + Speech 预合成 ─────────────────────
         content_chain = await _chain("scene_content")
         actions_chain = await _chain("scene_actions")
-        tts_chain = resolve_classroom_tts_provider()
+        tts_chain = await resolve_classroom_tts_provider(
+            access_token=access_token, client_id=client_id,
+        )
 
         scenes: list[dict[str, Any]] = []
         total = len(outlines)

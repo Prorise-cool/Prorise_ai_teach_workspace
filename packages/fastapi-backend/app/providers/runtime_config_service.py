@@ -148,13 +148,18 @@ class LearningCoachRuntimeAssembly:
 
 @dataclass(slots=True, frozen=True)
 class ModuleStageRuntimeAssembly:
-    """通用单阶段 LLM 运行时装配结果（OpenMAIC / 其他泛用模块）。
+    """通用单阶段运行时装配结果（OpenMAIC / 其他泛用模块）。
 
     由 ProviderRuntimeResolver.resolve_by_module_code() 产出；按 stage_code
-    过滤 xm_ai_module_binding 并组装优先级排序的 LLM Provider 链。
+    过滤 xm_ai_module_binding 并组装优先级排序的 Provider 链。
+
+    Wave 1.5: 新增 ``tts`` 字段，支持课堂 SpeechAction 预合成从
+    ``capability='tts'`` 的 bindings 解析 TTS Provider 链；无 tts binding
+    时 ``tts`` 为空 tuple。
     """
 
     llm: tuple[LLMProvider, ...]
+    tts: tuple[TTSProvider, ...] = field(default_factory=tuple)
     module_code: str = ""
     stage_code: str = ""
     source: str = "settings"
@@ -436,17 +441,23 @@ class ProviderRuntimeResolver:
         access_token: str | None = None,
         client_id: str | None = None,
     ) -> ModuleStageRuntimeAssembly:
-        """通用单阶段 LLM 链路解析（OpenMAIC / 其他模块均可用）。
+        """通用单阶段运行时链路解析（OpenMAIC / 其他模块均可用）。
 
-        读取 xm_ai_module_binding：按 module_code 拉取所有 LLM 绑定，
-        若 stage_code 提供则过滤到该阶段，按 priority 升序排列组成 Provider 链。
+        读取 xm_ai_module_binding：按 module_code 拉取所有绑定；
+        若 stage_code 提供则过滤到该阶段，按 priority 升序排列组装
+        LLM 与 TTS 两条 Provider 链。
 
-        失败或无绑定时自动降级到 settings 默认链路（保持与 resolve_learning_coach
-        一致的守则，避免因 DB 临时异常让生成全线崩）。
+        Wave 1.5 扩展：同时 assemble ``capability='tts'`` 的 bindings，
+        课堂 SpeechAction 预合成改从这里取 TTS 链（fallback 里 TTS 保持
+        空 tuple，由调用方决定是否回退到 settings 或前端 speechSynthesis）。
+
+        失败或无绑定时自动降级到 settings 默认 LLM 链路。
         """
-        fallback_llm = tuple(self._provider_factory.assemble_from_settings(self._settings).llm)
+        settings_assembly = self._provider_factory.assemble_from_settings(self._settings)
+        fallback_llm = tuple(settings_assembly.llm)
         fallback = ModuleStageRuntimeAssembly(
             llm=fallback_llm,
+            tts=(),
             module_code=module_code,
             stage_code=stage_code or "",
             source="settings",
@@ -501,6 +512,7 @@ class ProviderRuntimeResolver:
         try:
             runtime_provider_factory = self._provider_factory.clone()
             llm_configs: list[ProviderRuntimeConfig] = []
+            tts_configs: list[ProviderRuntimeConfig] = []
             for binding in sorted(filtered, key=lambda b: (b.priority, b.provider_id)):
                 if not binding.provider_id:
                     continue
@@ -508,7 +520,7 @@ class ProviderRuntimeResolver:
                     capability = ProviderCapability(binding.capability)
                 except ValueError:
                     continue
-                if capability is not ProviderCapability.LLM:
+                if capability not in (ProviderCapability.LLM, ProviderCapability.TTS):
                     continue
                 try:
                     config = self._build_runtime_config(binding)
@@ -521,12 +533,22 @@ class ProviderRuntimeResolver:
                         module_code, binding.provider_id, binding.stage_code, exc,
                     )
                     continue
-                llm_configs.append(config)
+                if capability is ProviderCapability.LLM:
+                    llm_configs.append(config)
+                else:
+                    tts_configs.append(config)
 
-            if not llm_configs:
+            if not llm_configs and not tts_configs:
                 return fallback
-            llm_chain = tuple(
-                runtime_provider_factory.build_chain(ProviderCapability.LLM, llm_configs)
+            llm_chain = (
+                tuple(runtime_provider_factory.build_chain(ProviderCapability.LLM, llm_configs))
+                if llm_configs
+                else fallback_llm
+            )
+            tts_chain = (
+                tuple(runtime_provider_factory.build_chain(ProviderCapability.TTS, tts_configs))
+                if tts_configs
+                else ()
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -537,6 +559,7 @@ class ProviderRuntimeResolver:
 
         return ModuleStageRuntimeAssembly(
             llm=llm_chain,
+            tts=tts_chain,
             module_code=module_code,
             stage_code=stage_code or "",
             source="ruoyi",

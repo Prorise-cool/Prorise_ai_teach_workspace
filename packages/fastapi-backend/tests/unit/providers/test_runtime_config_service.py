@@ -355,3 +355,89 @@ def test_resolve_learning_coach_without_access_token_falls_back_on_empty_binding
     assert assembly.source == "settings"
     # 当 requires_explicit_request_auth=False 时，会打一次 RuoYi 然后降级。
     assert hit_counter["value"] == 1
+
+
+def test_resolve_by_module_code_assembles_tts_capability_chain() -> None:
+    """Wave 1.5: resolve_by_module_code 支持 capability='tts' 的 bindings。
+
+    课堂 SpeechAction 预合成需要从 xm_ai_module_binding 读取 TTS 链；
+    本测试验证 resolver 在同一模块下能按 stage_code 过滤并产出 TTS chain。
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/internal/xiaomai/ai/runtime-config/modules/classroom"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "msg": "ok",
+                "data": {
+                    "moduleCode": "classroom",
+                    "moduleName": "课堂生成",
+                    "bindings": [
+                        {
+                            "stageCode": "tts",
+                            "capability": "tts",
+                            "providerId": "classroom-edge-tts",
+                            "priority": 1,
+                            "timeoutSeconds": 30,
+                            "retryAttempts": 1,
+                            "isDefault": True,
+                            "providerType": "edge-tts",
+                            "providerCode": "edge-tts",
+                            "providerName": "Edge TTS",
+                            "vendorCode": "microsoft",
+                            "authType": "none",
+                            "endpointUrl": "",
+                            "apiKey": "",
+                            "resourceCode": "zh-CN-XiaoxiaoNeural",
+                            "resourceName": "晓晓",
+                            "resourceType": "voice",
+                            "voiceCode": "zh-CN-XiaoxiaoNeural",
+                            "languageCode": "zh-CN",
+                            "resourceSettings": {"providerType": "edge-tts"},
+                            # 用 providerRegistrationId 引用默认注册表中的 stub-tts，避免
+                            # 测试环境需要真实的 edge-tts Provider 实例。
+                            "runtimeSettings": {"providerRegistrationId": "stub-tts"},
+                        },
+                    ],
+                },
+            },
+        )
+
+    runtime_client = RuoYiAiRuntimeClient(
+        client_factory=lambda **kwargs: RuoYiClient(
+            base_url="http://ruoyi.local",
+            transport=httpx.MockTransport(handler),
+            timeout_seconds=0.01,
+            retry_attempts=0,
+            retry_delay_seconds=0.0,
+            access_token=kwargs.get("access_token"),
+            client_id=kwargs.get("client_id"),
+        )
+    )
+    resolver = ProviderRuntimeResolver(
+        settings=SimpleNamespace(
+            provider_runtime_source="ruoyi",
+            default_llm_provider="stub-llm",
+            default_tts_provider="stub-tts",
+        ),
+        provider_factory=ProviderFactory(build_default_registry()),
+        ruoyi_runtime_client=runtime_client,
+    )
+
+    assembly = asyncio.run(
+        resolver.resolve_by_module_code(
+            module_code="classroom",
+            stage_code="tts",
+            access_token="token",
+            client_id="client",
+        )
+    )
+
+    assert assembly.source == "ruoyi"
+    assert assembly.module_code == "classroom"
+    assert assembly.stage_code == "tts"
+    # TTS chain 非空，LLM chain 回退到 settings 默认链（settings 中无 stub 会为空 tuple）
+    assert len(assembly.tts) >= 1
+    assert assembly.tts[0].provider_id == "classroom-edge-tts"

@@ -135,28 +135,54 @@ async def resolve_classroom_providers(
         return ()
 
 
-def resolve_classroom_tts_provider():
+async def resolve_classroom_tts_provider(
+    access_token: str | None = None,
+    client_id: str | None = None,
+):
     """获取课堂 SpeechAction 预合成所需的 TTS provider 链。
 
-    ``ProviderRuntimeResolver.resolve_by_module_code`` 当前只装配 LLM
-    capability，TTS 暂直接走 ``ProviderFactory.assemble_from_settings``
-    取 ``FASTAPI_DEFAULT_TTS_PROVIDER`` 默认链（含 Edge TTS 实例）。
+    Wave 1.5：改走 ``ProviderRuntimeResolver.resolve_by_module_code`` 的
+    ``stage_code='tts'`` 通道，从 ``xm_ai_module_binding`` 读取
+    ``capability='tts'`` 的绑定（对应 classroom_bootstrap.sql 中 id
+    ``202604230120`` 的 Edge TTS 绑定）。
 
-    DB 级 ``stage_code='tts'`` 绑定留待 Wave 1.5 在 resolver 中开放
-    TTS capability 后再切换。当前管道无 TTS 时返回空 tuple，调用方
-    应把 ``audio_url`` 留空让前端回退到 speechSynthesis。
+    解析失败或无 DB 绑定时降级到 ``ProviderFactory.assemble_from_settings``
+    的默认 TTS 链（含 Edge TTS 实例）；两条路径都没有时返回空 tuple，
+    调用方应把 ``audio_url`` 留空让前端回退到 speechSynthesis。
     """
+    try:
+        resolver = ProviderRuntimeResolver(
+            settings=get_settings(),
+            provider_factory=get_provider_factory(),
+        )
+        assembly = await resolver.resolve_by_module_code(
+            module_code="classroom",
+            stage_code="tts",
+            access_token=access_token,
+            client_id=client_id,
+        )
+        chain = assembly.tts
+        if chain:
+            logger.info(
+                "classroom.llm_adapter.tts_chain_resolved stage=tts source=%s length=%d",
+                assembly.source, len(chain),
+            )
+            return chain
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("classroom.llm_adapter.tts_resolver_failed error=%s", exc)
+
+    # Fallback: settings 默认 TTS 链（Edge TTS 等环境默认实例）
     try:
         factory = get_provider_factory()
         assembly = factory.assemble_from_settings(get_settings())
         chain = assembly.tts
         if chain:
             logger.info(
-                "classroom.llm_adapter.tts_chain_resolved source=settings length=%d",
+                "classroom.llm_adapter.tts_chain_fallback source=settings length=%d",
                 len(chain),
             )
             return chain
     except Exception as exc:  # noqa: BLE001
-        logger.warning("classroom.llm_adapter.tts_resolver_failed error=%s", exc)
+        logger.warning("classroom.llm_adapter.tts_fallback_failed error=%s", exc)
 
     return ()
