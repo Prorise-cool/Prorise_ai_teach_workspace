@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
-import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
 
@@ -164,7 +163,6 @@ export function ClassroomPlayPage() {
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-muted/30">
-      <GlobalTopNav links={[]} variant="surface" />
       {/* 背景纹理 */}
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
@@ -195,7 +193,7 @@ export function ClassroomPlayPage() {
             style={{ width: outlineOpen ? sidebarWidth : 0 }}
             className="flex h-full flex-col border-r border-border bg-card/95 backdrop-blur-md overflow-hidden"
           >
-            <LoadingState size="sm" message="场景加载中..." />
+            <LoadingState size="sm" message={t('classroom.playPage.sceneLoading')} />
           </aside>
         ) : (
           <SceneSidebar
@@ -292,6 +290,7 @@ interface PostClassCTAProps {
 }
 
 function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps) {
+  const { t } = useAppTranslation();
   return (
     <div
       role="dialog"
@@ -306,7 +305,7 @@ function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="关闭"
+          aria-label={t('classroom.playPage.ariaClose')}
           className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
@@ -317,10 +316,10 @@ function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps
             <Trophy className="h-7 w-7 text-amber-500 dark:text-amber-400" />
           </div>
           <h3 id="post-class-title" className="mb-1.5 text-lg font-bold tracking-tight text-foreground">
-            课堂结束
+            {t('classroom.playPage.postClassTitle')}
           </h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            学得不错！来做个课后测试巩固一下「{courseTitle}」吧。
+            {t('classroom.playPage.postClassMessage', { title: courseTitle })}
           </p>
         </div>
 
@@ -330,14 +329,14 @@ function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps
             variant="outline"
             className="flex-1 rounded-xl"
           >
-            稍后再说
+            {t('classroom.playPage.postponeQuiz')}
           </Button>
           <Button
             onClick={onStartQuiz}
             className="flex-1 rounded-xl shadow-md shadow-amber-200/50 dark:shadow-amber-900/30"
           >
             <Sparkles className="mr-1.5 h-4 w-4" />
-            开始测试
+            {t('classroom.playPage.startQuiz')}
             <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>

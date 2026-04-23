@@ -158,6 +158,7 @@ export const zhCnClassroomResources = {
     },
     inputCard: {
       quoteRemove: '取消引用',
+      dragOverlayUpload: '松开鼠标，上传参考课件',
     },
     playPage: {
       ariaClose: '关闭',
@@ -168,6 +169,7 @@ export const zhCnClassroomResources = {
       postClassMessage: '学得不错！来做个课后测试巩固一下「{{title}}」吧。',
       postponeQuiz: '稍后再说',
       startQuiz: '开始测试',
+      sceneLoading: '场景加载中...',
     },
     generation: {
       generatingCourse: '正在生成课堂',
@@ -329,6 +331,7 @@ export const enUsClassroomResources = {
     },
     inputCard: {
       quoteRemove: 'Remove quote',
+      dragOverlayUpload: 'Release to upload reference material',
     },
     playPage: {
       ariaClose: 'Close',
@@ -339,6 +342,7 @@ export const enUsClassroomResources = {
       postClassMessage: 'Well done! Take a post-class quiz on "{{title}}" to cement what you learned.',
       postponeQuiz: 'Later',
       startQuiz: 'Start quiz',
+      sceneLoading: 'Loading scene...',
     },
     generation: {
       generatingCourse: 'Generating classroom',

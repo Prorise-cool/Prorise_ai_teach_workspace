@@ -9,6 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import '@/features/video/components/task-generating-view.scss';
 import { cn } from '@/lib/utils';
@@ -220,8 +221,26 @@ export function VideoGeneratingPage() {
 	}, [navigate, status, taskId]);
 	const handleRetry = useCallback(() => void navigate('/video/input?retry=1', { replace: true }), [navigate]);
 
-	if (isSnapshotLoading) return <div className="xm-generating-loading"><Sparkles className="h-8 w-8 animate-pulse text-primary" /><p>{t('video.generating.loadingSubtitle')}</p></div>;
-	if (isNotFound) return <div className="xm-generating-loading"><h2>{t('video.generating.notFoundTitle')}</h2><p>{t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}</p><button onClick={handleReturn}>{t('video.common.returnToInput')}</button></div>;
+	if (isSnapshotLoading)
+		return (
+			<div className="xm-generating-loading">
+				<LoadingState size="lg" message={t('video.generating.loadingSubtitle')} />
+			</div>
+		);
+	if (isNotFound)
+		return (
+			<div className="xm-generating-loading">
+				<EmptyState
+					title={t('video.generating.notFoundTitle')}
+					description={t('video.generating.notFoundMessage', { taskId: taskId ?? '' })}
+					action={
+						<Button onClick={handleReturn} variant="outline" size="sm">
+							{t('video.common.returnToInput')}
+						</Button>
+					}
+				/>
+			</div>
+		);
 	if (status === 'failed' || status === 'cancelled') return <div className="min-h-screen flex items-center justify-center bg-background px-6"><GeneratingFailureCard errorCode={error?.errorCode ?? null} errorMessage={error?.errorMessage ?? null} failedStage={error?.failedStage ?? null} retryable={error?.retryable ?? false} onRetry={handleRetry} onReturn={handleReturn} /></div>;
 
 	return (
