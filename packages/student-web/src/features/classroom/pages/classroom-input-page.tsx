@@ -24,7 +24,7 @@ import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
 import { useClassroomCreate } from '@/features/openmaic/hooks/use-classroom';
 import { parsePdf } from '@/features/openmaic/api/openmaic-adapter';
-import { useClassroomStore } from '@/features/openmaic/store/classroom-store';
+import { useClassroomStore } from '@/features/openmaic/stores/classroom-store';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';

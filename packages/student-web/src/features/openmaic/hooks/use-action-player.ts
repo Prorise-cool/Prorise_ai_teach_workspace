@@ -14,7 +14,7 @@
  */
 import { useEffect, useRef } from 'react';
 
-import { useClassroomStore } from '../store/classroom-store';
+import { useClassroomStore } from '../stores/classroom-store';
 import type { Action, SpotlightAction, LaserAction, SpeechAction } from '../types/action';
 import type { Scene } from '../types/scene';
 

@@ -44,6 +44,8 @@ export const TASK_EVENT_NAME_VALUES = [
   "cancelled",
   "heartbeat",
   "snapshot",
+  "ready",
+  "error",
 ] as const;
 
 export type TaskEventName = (typeof TASK_EVENT_NAME_VALUES)[number];

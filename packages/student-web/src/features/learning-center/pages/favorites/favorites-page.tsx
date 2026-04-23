@@ -23,7 +23,7 @@ import {
   buildFolderCounts,
   buildFolderNameById,
 } from './favorites-derivations';
-import { useFavoritesPageData } from './use-favorites-page-data';
+import { useFavoritesPageData } from '@/features/learning-center/hooks/use-favorites-page-data';
 
 const BUILTIN_FOLDER_SAMPLE_1 = 'builtin-folder:sample-1';
 const BUILTIN_FOLDER_SAMPLE_2 = 'builtin-folder:sample-2';

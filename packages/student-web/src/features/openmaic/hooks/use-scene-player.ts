@@ -4,7 +4,7 @@
  */
 import { useCallback } from 'react';
 
-import { useClassroomStore, useSceneList } from '../store/classroom-store';
+import { useClassroomStore, useSceneList } from '../stores/classroom-store';
 import type { Scene, PlaybackStatus } from '../types/scene';
 
 export interface UseScenePlayerReturn {
