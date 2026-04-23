@@ -356,6 +356,18 @@ async function loadPublicVideoResultRoute() {
 }
 
 /**
+ * 按需加载 404 兜底页。挂在路由表 path='*' catch-all 上，
+ * 任何未匹配 URL 都走品牌化 EmptyState，而不是 react-router dev error page。
+ */
+async function loadNotFoundRoute() {
+	const { NotFoundPage } = await import('@/features/not-found/pages/not-found-page');
+
+	return {
+		Component: NotFoundPage
+	};
+}
+
+/**
  * 创建应用级 Browser Router。
  *
  * 为运行时入口保留单例导出，同时允许浏览器级测试为每个用例生成独立 router，
@@ -473,6 +485,11 @@ export function createAppRouter() {
 				{
 					path: 'forbidden',
 					lazy: loadForbiddenRoute
+				},
+				// 404 catch-all —— 放在最后，所有未匹配 URL（公开 + 鉴权 + 未知）都走这里
+				{
+					path: '*',
+					lazy: loadNotFoundRoute
 				}
 			]
 		}

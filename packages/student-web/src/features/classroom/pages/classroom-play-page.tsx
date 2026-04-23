@@ -4,7 +4,7 @@
  * 与 UI 设计稿 01-classroom.html 对应。
  */
 import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -61,13 +61,23 @@ export function ClassroomPlayPage() {
   const agents = useClassroomStore((s) => s.agents);
   const setClassroom = useClassroomStore((s) => s.setClassroom);
   const setAgents = useClassroomStore((s) => s.setAgents);
+  // 区分"加载中"和"确认找不到" —— 避免伪 ID 打开空三栏架构
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
 
   useEffect(() => {
     if (!classroomId) return;
-    if (classroom?.id === classroomId) return;
+    if (classroom?.id === classroomId) {
+      setLoadStatus('ready');
+      return;
+    }
+    setLoadStatus('loading');
     void loadClassroom(classroomId).then((c) => {
-      if (!c) return;
+      if (!c) {
+        setLoadStatus('missing');
+        return;
+      }
       setClassroom(c);
+      setLoadStatus('ready');
       // 从持久化的 classroom.agents 回灌 store.agents —— 避免刷新后教师气泡消失
       if (Array.isArray(c.agents) && c.agents.length > 0) {
         setAgents(summariesToProfiles(c.agents));
@@ -140,7 +150,7 @@ export function ClassroomPlayPage() {
     void navigate(`/coach/${encodeURIComponent(classroomId)}?${params.toString()}`);
   }, [classroomId, classroom?.name, navigate]);
 
-  const courseLabel = useMemo(() => 'OpenMAIC', []);
+  const courseLabel = t('classroom.stage.xiaomaiBrand');
 
   if (!classroomId) {
     return (
@@ -155,6 +165,34 @@ export function ClassroomPlayPage() {
             </Button>
           }
         />
+      </div>
+    );
+  }
+
+  // 课堂在 IndexedDB 中找不到 —— 可能是伪 ID（/classroom/play/test-id）或已过期链接。
+  // 渲染 EmptyState 而不是空三栏架构，给用户明确的回到输入页入口。
+  if (loadStatus === 'missing') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <EmptyState
+          icon={<Layers className="h-8 w-8" />}
+          title={t('classroom.playPage.missingTitle')}
+          description={t('classroom.playPage.missingDescription', { id: classroomId })}
+          action={
+            <Button onClick={() => void navigate('/classroom/input')} variant="outline">
+              {t('classroom.playPage.backToInput')}
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  // 加载中 —— 比空三栏更明确
+  if (loadStatus === 'loading' && !classroom) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <LoadingState size="lg" message={t('classroom.playPage.loadingTitle')} />
       </div>
     );
   }
@@ -189,11 +227,20 @@ export function ClassroomPlayPage() {
         }`}
       >
         {player.scenes.length === 0 ? (
+          // 场景占位 —— 对齐 SceneSidebar 的 chrome（logo header + glass bg + border-r），
+          // 避免加载态与正式态的视觉跳跃。
           <aside
             style={{ width: outlineOpen ? sidebarWidth : 0 }}
-            className="flex h-full flex-col border-r border-border bg-card/95 backdrop-blur-md overflow-hidden"
+            className="flex h-full flex-col border-r border-border bg-card/80 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.02)] shrink-0 overflow-hidden"
           >
-            <LoadingState size="sm" message={t('classroom.playPage.sceneLoading')} />
+            <div className="h-10 flex items-center shrink-0 mt-3 mb-1 px-3">
+              <span className="text-sm font-bold tracking-tight text-foreground">
+                {t('classroom.stage.xiaomaiBrand')}
+              </span>
+            </div>
+            <div className="flex flex-1 items-center justify-center">
+              <LoadingState size="sm" message={t('classroom.playPage.sceneLoading')} />
+            </div>
           </aside>
         ) : (
           <SceneSidebar
