@@ -1,6 +1,12 @@
 /**
  * 聊天与多智能体讨论相关类型。
+ *
+ * Wave 1：ChatRequest 与 FastAPI classroom.chat 后端 schema 对齐
+ * （新增 agents / classroomContext / languageDirective），把原先
+ * 各 hook 内自带的 `as any` 收口到类型层。
  */
+
+import type { AgentProfile } from './agent';
 
 export type SessionType = 'qa' | 'discussion';
 export type SessionStatus = 'idle' | 'active' | 'interrupted' | 'completed';
@@ -17,13 +23,26 @@ export interface ChatMessage {
   isStreaming?: boolean;
 }
 
+/**
+ * 多智能体讨论请求体。
+ *
+ * - `messages`：完整对话历史（user + assistant）。
+ * - `agents`：参与本轮讨论的智能体档案。
+ * - `classroomContext`：把当前场景与课程上下文摘成一行字符串，供
+ *   Director 理解学生提问的语境（与后端 ChatRequest.classroom_context
+ *   字段对齐）。
+ * - `storeState` / `config`：历史字段，保留以兼容旧版后端。
+ */
 export interface ChatRequest {
-  messages: ChatMessage[];
-  storeState: {
+  messages: Array<Pick<ChatMessage, 'role' | 'content' | 'agentId'>>;
+  agents?: AgentProfile[];
+  classroomContext?: string;
+  languageDirective?: string;
+  storeState?: {
     classroomId: string;
     currentSceneId: string | null;
   };
-  config: {
+  config?: {
     agentIds: string[];
     sessionType: SessionType;
   };

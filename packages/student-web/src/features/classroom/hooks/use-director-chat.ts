@@ -78,8 +78,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
               content: m.content,
               agentId: m.agentId,
             })),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            agents: agents as any,
+            agents,
             classroomContext,
             // 保留旧字段以防其他消费者依赖
             storeState: { classroomId, currentSceneId },
@@ -87,8 +86,7 @@ export function useDirectorChat(classroomId: string): UseDirectorChatReturn {
               agentIds: agents.map((a) => a.id),
               sessionType: 'qa',
             },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any,
+          },
           { signal: ac.signal },
         );
 
