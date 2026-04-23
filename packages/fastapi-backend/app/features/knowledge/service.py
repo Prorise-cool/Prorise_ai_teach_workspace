@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
@@ -19,6 +20,8 @@ from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+
+logger = logging.getLogger(__name__)
 
 
 class KnowledgeService(RuoYiServiceMixin):

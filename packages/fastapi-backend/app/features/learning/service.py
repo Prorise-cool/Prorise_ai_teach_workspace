@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Mapping
 
@@ -23,6 +24,8 @@ from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 if TYPE_CHECKING:
     from app.core.security import AccessContext
+
+logger = logging.getLogger(__name__)
 
 
 class LearningService(RuoYiServiceMixin):
