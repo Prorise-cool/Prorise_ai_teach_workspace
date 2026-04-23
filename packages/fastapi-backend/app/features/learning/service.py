@@ -28,11 +28,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# ── RuoYi learning endpoint paths ─────────────────────────────────────────
+LEARNING_RESULTS_COLLECTION_PATH = "/internal/xiaomai/learning/results"
+LEARNING_QUIZ_HISTORY_PATH_TEMPLATE = "/internal/xiaomai/learning/results/quiz/{quiz_id}"
+
+# ── IntegrationError labels / codes ───────────────────────────────────────
+RUOYI_SERVICE_LABEL = "ruoyi"
+LEARNING_RESOURCE_LABEL = "learning-result"
+LEARNING_PERSIST_OPERATION = "persist-batch"
+LEARNING_FETCH_QUIZ_HISTORY_OPERATION = "fetch-quiz-history"
+
+# ── HTTP status codes ────────────────────────────────────────────────────
+HTTP_NOT_FOUND = 404
+HTTP_SERVICE_UNAVAILABLE = 503
+
+
 class LearningService(RuoYiServiceMixin):
     """学习结果持久化服务，与 RuoYi 批量交互。"""
-    _RESOURCE = "learning-result"
-    _OPERATION = "persist-batch"
-    _ENDPOINT = "/internal/xiaomai/learning/results"
+    _RESOURCE = LEARNING_RESOURCE_LABEL
+    _OPERATION = LEARNING_PERSIST_OPERATION
+    _ENDPOINT = LEARNING_RESULTS_COLLECTION_PATH
 
     def __init__(self, client_factory=None) -> None:
         """初始化学习结果持久化服务。"""
@@ -85,26 +100,26 @@ class LearningService(RuoYiServiceMixin):
         Raises:
             IntegrationError: RuoYi 非 404 的其他失败，status_code=503。
         """
-        endpoint = f"/internal/xiaomai/learning/results/quiz/{quiz_id}"
+        endpoint = LEARNING_QUIZ_HISTORY_PATH_TEMPLATE.format(quiz_id=quiz_id)
         try:
             async with self._resolve_authenticated_factory(access_context)() as client:
                 result = await client.get_single(
                     endpoint,
-                    resource="learning-result",
-                    operation="fetch-quiz-history",
+                    resource=LEARNING_RESOURCE_LABEL,
+                    operation=LEARNING_FETCH_QUIZ_HISTORY_OPERATION,
                 )
         except IntegrationError as error:
             # RuoYi 明确 404 -> 历史不存在，交由调用方决定 404/空态；
             # 其他错误统一上升为 503，避免把上游不稳定暴露为 500/502。
-            if error.status_code == 404:
+            if error.status_code == HTTP_NOT_FOUND:
                 return None
             raise IntegrationError(
-                service="ruoyi",
-                resource="learning-result",
-                operation="fetch-quiz-history",
+                service=RUOYI_SERVICE_LABEL,
+                resource=LEARNING_RESOURCE_LABEL,
+                operation=LEARNING_FETCH_QUIZ_HISTORY_OPERATION,
                 code="QUIZ_HISTORY_UPSTREAM_UNAVAILABLE",
                 message="历史答卷暂时无法获取",
-                status_code=503,
+                status_code=HTTP_SERVICE_UNAVAILABLE,
                 retryable=True,
                 details={
                     "endpoint": endpoint,
