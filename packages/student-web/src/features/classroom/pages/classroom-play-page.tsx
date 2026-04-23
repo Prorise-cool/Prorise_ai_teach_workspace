@@ -227,11 +227,20 @@ export function ClassroomPlayPage() {
         }`}
       >
         {player.scenes.length === 0 ? (
+          // 场景占位 —— 对齐 SceneSidebar 的 chrome（logo header + glass bg + border-r），
+          // 避免加载态与正式态的视觉跳跃。
           <aside
             style={{ width: outlineOpen ? sidebarWidth : 0 }}
-            className="flex h-full flex-col border-r border-border bg-card/95 backdrop-blur-md overflow-hidden"
+            className="flex h-full flex-col border-r border-border bg-card/80 backdrop-blur-xl shadow-[2px_0_24px_rgba(0,0,0,0.02)] shrink-0 overflow-hidden"
           >
-            <LoadingState size="sm" message={t('classroom.playPage.sceneLoading')} />
+            <div className="h-10 flex items-center shrink-0 mt-3 mb-1 px-3">
+              <span className="text-sm font-bold tracking-tight text-foreground">
+                {t('classroom.stage.xiaomaiBrand')}
+              </span>
+            </div>
+            <div className="flex flex-1 items-center justify-center">
+              <LoadingState size="sm" message={t('classroom.playPage.sceneLoading')} />
+            </div>
           </aside>
         ) : (
           <SceneSidebar
