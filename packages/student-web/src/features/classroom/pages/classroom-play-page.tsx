@@ -61,13 +61,23 @@ export function ClassroomPlayPage() {
   const agents = useClassroomStore((s) => s.agents);
   const setClassroom = useClassroomStore((s) => s.setClassroom);
   const setAgents = useClassroomStore((s) => s.setAgents);
+  // 区分"加载中"和"确认找不到" —— 避免伪 ID 打开空三栏架构
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
 
   useEffect(() => {
     if (!classroomId) return;
-    if (classroom?.id === classroomId) return;
+    if (classroom?.id === classroomId) {
+      setLoadStatus('ready');
+      return;
+    }
+    setLoadStatus('loading');
     void loadClassroom(classroomId).then((c) => {
-      if (!c) return;
+      if (!c) {
+        setLoadStatus('missing');
+        return;
+      }
       setClassroom(c);
+      setLoadStatus('ready');
       // 从持久化的 classroom.agents 回灌 store.agents —— 避免刷新后教师气泡消失
       if (Array.isArray(c.agents) && c.agents.length > 0) {
         setAgents(summariesToProfiles(c.agents));
@@ -155,6 +165,34 @@ export function ClassroomPlayPage() {
             </Button>
           }
         />
+      </div>
+    );
+  }
+
+  // 课堂在 IndexedDB 中找不到 —— 可能是伪 ID（/classroom/play/test-id）或已过期链接。
+  // 渲染 EmptyState 而不是空三栏架构，给用户明确的回到输入页入口。
+  if (loadStatus === 'missing') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <EmptyState
+          icon={<Layers className="h-8 w-8" />}
+          title={t('classroom.playPage.missingTitle')}
+          description={t('classroom.playPage.missingDescription', { id: classroomId })}
+          action={
+            <Button onClick={() => void navigate('/classroom/input')} variant="outline">
+              {t('classroom.playPage.backToInput')}
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  // 加载中 —— 比空三栏更明确
+  if (loadStatus === 'loading' && !classroom) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <LoadingState size="lg" message={t('classroom.playPage.loadingTitle')} />
       </div>
     );
   }

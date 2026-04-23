@@ -170,6 +170,10 @@ export const zhCnClassroomResources = {
       postponeQuiz: '稍后再说',
       startQuiz: '开始测试',
       sceneLoading: '场景加载中...',
+      missingTitle: '课堂不存在',
+      missingDescription: '找不到 ID 为「{{id}}」的课堂。可能已被删除或链接已过期。',
+      backToInput: '回到输入页',
+      loadingTitle: '课堂加载中...',
     },
     generation: {
       generatingCourse: '正在生成课堂',
@@ -343,6 +347,10 @@ export const enUsClassroomResources = {
       postponeQuiz: 'Later',
       startQuiz: 'Start quiz',
       sceneLoading: 'Loading scene...',
+      missingTitle: 'Classroom not found',
+      missingDescription: 'No classroom with ID "{{id}}" was found. It may have been deleted or the link has expired.',
+      backToInput: 'Back to input',
+      loadingTitle: 'Loading classroom...',
     },
     generation: {
       generatingCourse: 'Generating classroom',
