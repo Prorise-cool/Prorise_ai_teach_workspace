@@ -91,12 +91,15 @@ export interface AgentConfig {
   priority: number;
 }
 
-/** 单个场景 —— 后端真实 shape */
-export interface Scene {
+/**
+ * 场景基础字段。
+ * Scene 通过 `type` 作为 discriminator，content 类型由 type 决定。
+ * 直接消费场景 content 时应先 narrow scene.type 再访问 scene.content，
+ * 避免 `as any` 强制断言。
+ */
+interface SceneBase {
   id: string;
-  type: SceneType;
   title: string;
-  content: SceneContent;
   actions?: Action[];
   outline?: SceneOutline;
   /** 前端渲染时注入的 1-based 序号（后端不发 order）。 */
@@ -110,6 +113,24 @@ export interface Scene {
   createdAt?: number;
   updatedAt?: number;
 }
+
+export interface SlideScene extends SceneBase {
+  type: 'slide';
+  content: SlideContent;
+}
+
+export interface InteractiveScene extends SceneBase {
+  type: 'interactive';
+  content: InteractiveContent;
+}
+
+export interface PBLScene extends SceneBase {
+  type: 'pbl';
+  content: PBLContent;
+}
+
+/** 单个场景 —— 后端真实 shape，按 type discriminator 收紧 content 类型 */
+export type Scene = SlideScene | InteractiveScene | PBLScene;
 
 /** 播放状态 */
 export type PlaybackStatus = 'idle' | 'playing' | 'paused' | 'live' | 'completed';
