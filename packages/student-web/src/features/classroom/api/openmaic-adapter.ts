@@ -13,7 +13,7 @@ import type { AgentProfile, AgentProfileRequest } from '../types/agent';
 import type { ChatRequest, ChatEvent } from '../types/chat';
 import type { QuizGradeRequest, QuizGradeResult } from '../types/quiz';
 
-const BASE = '/api/v1/openmaic';
+const BASE = '/api/v1/classroom';
 
 /** 提交课堂生成任务 → 返回 jobId */
 export async function submitClassroom(req: ClassroomCreateRequest): Promise<{ jobId: string }> {

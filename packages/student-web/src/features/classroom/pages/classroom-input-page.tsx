@@ -2,8 +2,8 @@
  * 文件说明：课堂工作区输入页容器。
  * 页面容器负责课堂输入业务状态，公共页面壳层和卡片骨架下沉到共享组件。
  *
- * 提交入口：接入 OpenMAIC 多智能体课堂管道
- * （POST /api/v1/openmaic/classroom → Dramatiq worker → ready 后跳 playback）。
+ * 提交入口：接入多智能体课堂管道
+ * （POST /api/v1/classroom/classroom → Dramatiq worker → ready 后跳 playback）。
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,9 +22,9 @@ import {
 } from '@/components/input-page';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
-import { useClassroomCreate } from '@/features/openmaic/hooks/use-classroom';
-import { parsePdf } from '@/features/openmaic/api/openmaic-adapter';
-import { useClassroomStore } from '@/features/openmaic/stores/classroom-store';
+import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
+import { parsePdf } from '@/features/classroom/api/openmaic-adapter';
+import { useClassroomStore } from '@/features/classroom/stores/classroom-store';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';
@@ -144,7 +144,7 @@ export function ClassroomInputPage() {
 								pdfText,
 								enableWebSearch: webSearchEnabled,
 							});
-							void navigate(`/openmaic/classroom/${classroomId}`);
+							void navigate(`/classroom/play/${classroomId}`);
 						} catch (err) {
 							console.error('[ClassroomInput] 课堂生成失败:', err);
 						} finally {

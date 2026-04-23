@@ -312,31 +312,31 @@ async function loadLearningPathRoute() {
 }
 
 /**
- * 按需加载 OpenMAIC 课堂播放页（幻灯片 + 白板 + 讨论）。
+ * 按需加载课堂播放页（幻灯片 + 白板 + 讨论）。
  *
- * 入口复用既有 /classroom/input（由 features/classroom 提供 UI + 样式），
- * 不再维护 /openmaic 重复首页。
+ * Wave 1：原 features/openmaic 已合并进 features/classroom；
+ * 入口复用既有 /classroom/input（由 features/classroom 提供 UI + 样式）。
  */
-async function loadOpenMAICClassroomRoute() {
-	const { OpenMAICClassroomPage } = await import(
-		'@/features/openmaic/pages/openmaic-classroom-page'
+async function loadClassroomPlayRoute() {
+	const { ClassroomPlayPage } = await import(
+		'@/features/classroom/pages/classroom-play-page'
 	);
 
 	return {
-		Component: OpenMAICClassroomPage
+		Component: ClassroomPlayPage
 	};
 }
 
 /**
- * 按需加载 OpenMAIC 设置页（Provider 偏好 / Web 搜索开关）。
+ * 按需加载课堂设置页（Provider 偏好 / Web 搜索开关）。
  */
-async function loadOpenMAICSettingsRoute() {
-	const { OpenMAICSettingsPage } = await import(
-		'@/features/openmaic/pages/openmaic-settings-page'
+async function loadClassroomSettingsRoute() {
+	const { ClassroomSettingsPage } = await import(
+		'@/features/classroom/pages/classroom-settings-page'
 	);
 
 	return {
-		Component: OpenMAICSettingsPage
+		Component: ClassroomSettingsPage
 	};
 }
 
@@ -453,12 +453,12 @@ export function createAppRouter() {
 							lazy: loadLearningPathRoute
 						},
 						{
-							path: 'openmaic/classroom/:classroomId',
-							lazy: loadOpenMAICClassroomRoute
+							path: 'classroom/play/:classroomId',
+							lazy: loadClassroomPlayRoute
 						},
 						{
-							path: 'openmaic/settings',
-							lazy: loadOpenMAICSettingsRoute
+							path: 'classroom/settings',
+							lazy: loadClassroomSettingsRoute
 						}
 					]
 				},
