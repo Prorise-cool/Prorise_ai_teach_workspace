@@ -11,7 +11,7 @@ from app.core.errors import IntegrationError
 from app.core.logging import get_logger, get_request_id, get_task_id
 from app.shared.ruoyi.models import build_retry_details, coerce_status_code, format_headers
 
-logger = get_logger("app.shared.ruoyi_client")
+logger = get_logger("app.shared.ruoyi.client")
 _SAFE_RETRY_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 

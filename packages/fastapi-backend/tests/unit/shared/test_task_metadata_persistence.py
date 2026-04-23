@@ -16,7 +16,7 @@ from app.shared.task_metadata import (
     TaskType,
     snapshot_from_ruoyi_row,
 )
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 from app.shared.task_framework.status import TaskStatus
 
 def test_repository_upserts_lifecycle_and_preserves_long_term_fields() -> None:

@@ -19,7 +19,7 @@ from app.providers.protocols import (
     ProviderRuntimeConfig,
     TTSProvider,
 )
-from app.shared.ruoyi_ai_runtime_client import RuoYiAiRuntimeBinding, RuoYiAiRuntimeClient
+from app.shared.ruoyi.ai_runtime_client import RuoYiAiRuntimeBinding, RuoYiAiRuntimeClient
 
 logger = get_logger("app.providers.runtime_config_service")
 

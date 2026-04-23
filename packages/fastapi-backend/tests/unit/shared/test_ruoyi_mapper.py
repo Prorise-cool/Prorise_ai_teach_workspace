@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.shared.ruoyi_mapper import RuoYiMapper
+from app.shared.ruoyi.mapper import RuoYiMapper
 
 
 def test_ruoyi_mapper_normalizes_field_names_status_and_datetime() -> None:

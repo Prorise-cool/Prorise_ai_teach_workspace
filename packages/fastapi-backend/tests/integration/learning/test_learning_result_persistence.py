@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.features.learning.routes import get_learning_service
 from app.features.learning.service import LearningService
 from app.main import create_app
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 from tests.conftest import override_auth
 
 

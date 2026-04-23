@@ -8,7 +8,7 @@ import pytest
 
 from app.core.errors import IntegrationError
 from app.features.learning.service import LearningService
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 
 
 def _client_factory_from_handler(handler):

@@ -14,7 +14,7 @@ from app.features.learning.schemas import (
     LearningSourceType
 )
 from app.features.learning.service import LearningService
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 
 
 def test_learning_service_catalog_includes_all_long_term_result_types() -> None:

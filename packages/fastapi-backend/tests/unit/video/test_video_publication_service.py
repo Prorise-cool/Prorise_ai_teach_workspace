@@ -21,7 +21,7 @@ from app.features.video.pipeline.models import (
 from app.features.video.service import VideoService
 from app.infra.redis_client import RuntimeStore
 from app.shared.cos_client import CosClient
-from app.shared.ruoyi_auth import RuoYiRequestAuth
+from app.shared.ruoyi.auth import RuoYiRequestAuth
 from app.shared.task_framework.status import TaskStatus
 from app.shared.task_metadata import TaskMetadataSnapshot, TaskType
 

@@ -6,9 +6,9 @@ import pytest
 
 from app.core.errors import AppError
 from app.core.security import AccessContext
-from app.shared.ruoyi_auth import RuoYiRequestAuth
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_service_mixin import RuoYiServiceMixin
+from app.shared.ruoyi.auth import RuoYiRequestAuth
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.service_mixin import RuoYiServiceMixin
 
 
 class _DummyService(RuoYiServiceMixin):
@@ -35,7 +35,7 @@ def test_resolve_factory_uses_access_context_when_service_keeps_default_factory(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.shared.ruoyi_client.get_settings",
+        "app.shared.ruoyi.client.base.get_settings",
         lambda: SimpleNamespace(
             ruoyi_base_url="http://ruoyi.local",
             ruoyi_timeout_seconds=0.01,
@@ -80,7 +80,7 @@ def test_resolve_factory_prefers_explicit_request_auth_over_access_context(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "app.shared.ruoyi_client.get_settings",
+        "app.shared.ruoyi.client.base.get_settings",
         lambda: SimpleNamespace(
             ruoyi_base_url="http://ruoyi.local",
             ruoyi_timeout_seconds=0.01,

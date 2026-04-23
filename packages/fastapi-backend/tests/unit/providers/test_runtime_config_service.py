@@ -7,8 +7,8 @@ import pytest
 from app.providers.factory import ProviderFactory, build_default_registry
 from app.providers.protocols import ProviderCapability, ProviderNotFoundError
 from app.providers.runtime_config_service import ProviderRuntimeResolver
-from app.shared.ruoyi_ai_runtime_client import RuoYiAiRuntimeClient
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.ai_runtime_client import RuoYiAiRuntimeClient
+from app.shared.ruoyi.client import RuoYiClient
 
 
 def test_runtime_resolver_builds_video_stage_chain_from_ruoyi_runtime_config() -> None:

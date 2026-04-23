@@ -10,8 +10,8 @@ import pytest
 
 from app.core.errors import IntegrationError
 from app.core.logging import bind_trace_context, reset_trace_context
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_mapper import RuoYiMapper
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.mapper import RuoYiMapper
 
 
 def _run(coro):
@@ -94,7 +94,7 @@ def test_ruoyi_client_unwraps_single_response_and_applies_mapper() -> None:
 
 def test_ruoyi_client_from_settings_does_not_inject_implicit_authorization(monkeypatch) -> None:
     monkeypatch.setattr(
-        "app.shared.ruoyi_client.get_settings",
+        "app.shared.ruoyi.client.base.get_settings",
         lambda: SimpleNamespace(
             ruoyi_base_url="http://ruoyi.local",
             ruoyi_timeout_seconds=0.01,
@@ -421,7 +421,7 @@ def test_ruoyi_client_retries_timeout_then_succeeds(caplog) -> None:
     retry_records = [
         record
         for record in caplog.records
-        if record.name == "app.shared.ruoyi_client" and "retry" in record.getMessage()
+        if record.name == "app.shared.ruoyi.client" and "retry" in record.getMessage()
     ]
     assert retry_records
     assert retry_records[-1].request_id == "req_test_ruoyi"

@@ -17,7 +17,7 @@ from app.shared.long_term_records import (
 )
 from app.features.companion.service import CompanionService
 from app.features.knowledge.service import KnowledgeService
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 
 
 def _build_client_factory(state: dict[str, list[dict]]) -> callable:

@@ -8,7 +8,7 @@ from app.core.errors import IntegrationError
 from app.core.logging import get_logger
 from app.shared.ruoyi.models import build_retry_details
 
-logger = get_logger("app.shared.ruoyi_client")
+logger = get_logger("app.shared.ruoyi.client")
 
 
 class ErrorMapperMixin:

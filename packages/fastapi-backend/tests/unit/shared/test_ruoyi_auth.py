@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.core.security import AccessContext
-from app.shared.ruoyi_auth import RuoYiRequestAuth
+from app.shared.ruoyi.auth import RuoYiRequestAuth
 
 
 def test_ruoyi_request_auth_from_access_context_copies_token_and_client_id() -> None:

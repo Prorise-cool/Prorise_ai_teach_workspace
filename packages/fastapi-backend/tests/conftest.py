@@ -10,7 +10,7 @@ import pytest
 from fastapi import FastAPI
 
 from app.core.security import AccessContext, get_access_context
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 
 
 MOCK_ACCESS_CONTEXT = AccessContext(

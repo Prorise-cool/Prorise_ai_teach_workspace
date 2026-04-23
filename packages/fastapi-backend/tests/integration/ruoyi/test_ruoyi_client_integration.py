@@ -5,8 +5,8 @@ import httpx
 from fastapi import FastAPI, Request
 
 from app.core.logging import bind_trace_context, reset_trace_context
-from app.shared.ruoyi_client import RuoYiClient
-from app.shared.ruoyi_mapper import RuoYiMapper
+from app.shared.ruoyi.client import RuoYiClient
+from app.shared.ruoyi.mapper import RuoYiMapper
 
 
 def _run(coro):

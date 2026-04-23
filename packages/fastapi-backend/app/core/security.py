@@ -24,7 +24,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError, IntegrationError
 from app.core.logging import get_request_id
 from app.infra.redis_client import RuntimeStore, create_runtime_store
-from app.shared.ruoyi_client import RuoYiClient
+from app.shared.ruoyi.client import RuoYiClient
 
 AUTH_BEARER_PREFIX = "Bearer "
 SUPER_ADMIN_PERMISSION = "*:*:*"
