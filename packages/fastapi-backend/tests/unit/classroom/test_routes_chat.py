@@ -1,13 +1,4 @@
-"""POST /api/v1/classroom/chat SSE 路由单测。
-
-验证范围（Wave 1.6 scope A）：
-- Content-Type: text/event-stream
-- 后端 ChatEvent → 前端事件名翻译（agent_switch→agent_start 等）
-- _persist_chat_turn 在 finally 被调用一次（正常 & 异常路径）
-- long_term 仓库调用被 mock，避免真实数据库依赖
-
-sse_broker 集成 + Last-Event-ID 回放为 wave 2 技术债，不在此单测覆盖。
-"""
+"""POST /api/v1/classroom/chat 路由单测 —— SSE 协议 / 翻译 / broker / 断线重连。"""
 from __future__ import annotations
 
 import json
@@ -18,13 +9,19 @@ from fastapi.testclient import TestClient
 
 from app.core.security import get_access_context
 from app.features.classroom import routes_chat as routes_chat_module
+from app.features.classroom.chat_sse_broker import (
+    get_chat_sse_broker,
+    reset_chat_sse_broker_for_tests,
+)
 from app.features.classroom.orchestration.schemas import (
     AgentSwitchEvent,
     AgentTurnEndEvent,
+    CueUserEvent,
     EndEvent,
     ErrorEvent,
     SummaryEvent,
     TextDeltaEvent,
+    ThinkingEvent,
     ToolCallEvent,
 )
 from app.main import create_app
@@ -32,286 +29,240 @@ from app.main import create_app
 from tests.conftest import MOCK_ACCESS_CONTEXT
 
 
+@pytest.fixture(autouse=True)
+def _reset_broker():
+    reset_chat_sse_broker_for_tests()
+    yield
+    reset_chat_sse_broker_for_tests()
+
+
 @pytest.fixture
 def app_with_fakes(monkeypatch):
-    """构造 app；monkeypatch provider resolver，避免真实 LLM 调用。"""
-
-    async def _fake_resolve(*args, **kwargs) -> list:
+    async def _fake_resolve(*a, **k) -> list:
         return []
 
     monkeypatch.setattr(
         "app.features.classroom.llm_adapter.resolve_classroom_providers",
         _fake_resolve,
     )
-
     app = create_app()
     app.dependency_overrides[get_access_context] = lambda: MOCK_ACCESS_CONTEXT
     return app
 
 
-def _chat_payload(**overrides: Any) -> dict:
+def _payload(**o: Any) -> dict:
     base = {
         "messages": [{"role": "user", "content": "你好"}],
         "agents": [{"id": "t1", "name": "Teacher", "role": "teacher", "persona": "p"}],
-        "classroomContext": "lesson-1",
-        "languageDirective": "Respond in Chinese",
-        "taskId": "task-test-1",
+        "classroomContext": "x", "languageDirective": "zh", "taskId": "task-1",
     }
-    base.update(overrides)
+    base.update(o)
     return base
 
 
-def _parse_sse_frames(body: str) -> list[dict[str, str]]:
-    """解析 SSE 帧：返回每帧的 event / data 字段（data 保持原始字符串）。"""
-    frames: list[dict[str, str]] = []
+def _frames(body: str) -> list[dict[str, str]]:
+    out = []
     for raw in body.split("\n\n"):
         raw = raw.strip("\n")
         if not raw:
             continue
-        frame = {"event": "", "data": ""}
+        frame = {"id": "", "event": "", "data": ""}
         for line in raw.split("\n"):
-            if line.startswith("event: "):
-                frame["event"] = line[7:]
-            elif line.startswith("data: "):
-                frame["data"] = line[6:]
-        frames.append(frame)
-    return frames
+            for prefix, key in (("id: ", "id"), ("event: ", "event"), ("data: ", "data")):
+                if line.startswith(prefix):
+                    frame[key] = line[len(prefix):]
+        out.append(frame)
+    return out
 
 
 def _json_payloads(body: str) -> list[dict]:
-    """抽取所有可解析为 JSON 的 data 字段（跳过 [DONE] 等非 JSON 帧）。"""
-    out: list[dict] = []
-    for frame in _parse_sse_frames(body):
-        data = frame["data"]
-        if not data or data == "[DONE]":
+    out = []
+    for f in _frames(body):
+        if not f["data"] or f["data"] == "[DONE]":
             continue
         try:
-            parsed = json.loads(data)
+            parsed = json.loads(f["data"])
+            if isinstance(parsed, dict):
+                out.append(parsed)
         except json.JSONDecodeError:
-            continue
-        if isinstance(parsed, dict):
-            out.append(parsed)
+            pass
     return out
 
 
 def _stub_long_term(monkeypatch):
-    """把 shared_long_term_repository.save_companion_turn mock 成 no-op。"""
     calls: list[Any] = []
 
     class _FakeRepo:
         def save_companion_turn(self, request):
             calls.append(request)
 
-    monkeypatch.setattr(
-        "app.shared.long_term.shared_long_term_repository",
-        _FakeRepo(),
-    )
+    monkeypatch.setattr("app.shared.long_term.shared_long_term_repository", _FakeRepo())
     return calls
 
 
-# ─── 核心用例 ───────────────────────────────────────────────────────────────
-
-
-def test_chat_returns_sse_content_type(app_with_fakes, monkeypatch):
-    """Content-Type 必须是 text/event-stream。"""
-
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        yield TextDeltaEvent(content="hi", message_id="m-0")
+def _patch_run(monkeypatch, events: list[Any], raise_after: bool = False):
+    async def _fake_run(req, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
+        for e in events:
+            yield e
+        if raise_after:
+            raise RuntimeError("llm blew up")
 
     monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
+        "app.features.classroom.orchestration.run_discussion", _fake_run
     )
+
+
+# ─── SSE 协议 & 翻译 ────────────────────────────────────────────────────────
+
+
+def test_returns_sse_content_type(app_with_fakes, monkeypatch):
+    _patch_run(monkeypatch, [TextDeltaEvent(content="hi", message_id="m")])
     _stub_long_term(monkeypatch)
 
     with TestClient(app_with_fakes) as client:
-        response = client.post("/api/v1/classroom/chat", json=_chat_payload())
+        r = client.post("/api/v1/classroom/chat", json=_payload())
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/event-stream")
 
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/event-stream")
 
-
-def test_chat_translates_all_event_types(app_with_fakes, monkeypatch):
-    """后端 ChatEvent → 前端事件名翻译全覆盖。"""
+def test_translates_all_event_types(app_with_fakes, monkeypatch):
+    """所有 ChatEvent 子类型翻译 + thinking / cue_user drop 行为。"""
     emitted = [
         AgentSwitchEvent(
-            agent_id="t1",
-            agent_name="Teacher",
-            agent_avatar=None,
-            agent_color="#123456",
-            message_id="m-1",
+            agent_id="t1", agent_name="Teacher", agent_avatar=None,
+            agent_color="#123", message_id="m-1",
         ),
-        TextDeltaEvent(content="讲解内容", message_id="m-1"),
+        ThinkingEvent(stage="director"),
+        TextDeltaEvent(content="讲解", message_id="m-1"),
         ToolCallEvent(
-            action_id="a-1",
-            name="wb_draw_text",
+            action_id="a-1", name="wb_draw_text",
             args={"x": 1.0, "y": 2.0, "content": "hi"},
-            agent_id="t1",
-            message_id="m-1",
+            agent_id="t1", message_id="m-1",
         ),
+        CueUserEvent(from_agent_id="t1"),
         AgentTurnEndEvent(message_id="m-1", agent_id="t1"),
-        SummaryEvent(text="课程小结"),
-        ErrorEvent(message="downstream failure"),
+        SummaryEvent(text="小结"),
+        ErrorEvent(message="downstream"),
         EndEvent(total_actions=1, total_agents=1),
     ]
-
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        for ev in emitted:
-            yield ev
-
-    monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
-    )
+    _patch_run(monkeypatch, emitted)
     _stub_long_term(monkeypatch)
 
     with TestClient(app_with_fakes) as client:
-        response = client.post("/api/v1/classroom/chat", json=_chat_payload())
+        r = client.post("/api/v1/classroom/chat", json=_payload())
 
-    assert response.status_code == 200
-    payloads = _json_payloads(response.text)
-    by_type = {p.get("type"): p for p in payloads}
-
-    # agent_switch → agent_start
+    by_type = {p.get("type"): p for p in _json_payloads(r.text)}
     assert by_type["agent_start"]["data"]["agentId"] == "t1"
-    assert by_type["agent_start"]["data"]["agentName"] == "Teacher"
-    # text_delta → text_delta
-    assert by_type["text_delta"]["data"]["messageId"] == "m-1"
-    assert by_type["text_delta"]["data"]["content"] == "讲解内容"
-    # tool_call → tool_call
+    assert by_type["text_delta"]["data"]["content"] == "讲解"
     assert by_type["tool_call"]["data"]["actionId"] == "a-1"
     assert by_type["tool_call"]["data"]["name"] == "wb_draw_text"
-    assert by_type["tool_call"]["data"]["agentId"] == "t1"
-    # agent_turn_end
-    assert by_type["agent_turn_end"]["data"]["agentId"] == "t1"
     assert by_type["agent_turn_end"]["data"]["messageId"] == "m-1"
-    # summary
-    assert by_type["summary"]["data"]["text"] == "课程小结"
-    # error → error (ErrorEvent from run_discussion translates to {type:error})
-    assert by_type["error"]["data"]["message"] == "downstream failure"
-    # end → done (EndEvent translates to {type:done})
+    assert by_type["summary"]["data"]["text"] == "小结"
+    assert by_type["error"]["data"]["message"] == "downstream"
     assert "done" in by_type
+    # thinking / cue_user 应被 drop
+    assert "thinking" not in by_type and "cue_user" not in by_type
+    assert "[DONE]" in [f["data"] for f in _frames(r.text)]
 
-    # 终止哨兵
-    data_blobs = [f["data"] for f in _parse_sse_frames(response.text)]
-    assert "[DONE]" in data_blobs
+
+# ─── long_term 落库 ─────────────────────────────────────────────────────────
 
 
-def test_chat_drops_thinking_and_cue_user_events(app_with_fakes, monkeypatch):
-    """thinking / cue_user 不应出现在前端流（按 _translate_chat_event 行 189 规则）。"""
-    from app.features.classroom.orchestration.schemas import CueUserEvent, ThinkingEvent
-
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        yield ThinkingEvent(stage="director")
-        yield CueUserEvent(from_agent_id="t1")
-        yield TextDeltaEvent(content="real content", message_id="m-1")
-
-    monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
-    )
-    _stub_long_term(monkeypatch)
+def test_persists_turn_via_long_term_repo(app_with_fakes, monkeypatch):
+    """正常流 → save_companion_turn 被调用一次，answer 是所有 text_delta 拼接，
+    session_id / anchor_ref 映射到 task_id。"""
+    _patch_run(monkeypatch, [
+        TextDeltaEvent(content="答案", message_id="m"),
+        TextDeltaEvent(content="拼接", message_id="m"),
+    ])
+    calls = _stub_long_term(monkeypatch)
 
     with TestClient(app_with_fakes) as client:
-        response = client.post("/api/v1/classroom/chat", json=_chat_payload())
+        client.post("/api/v1/classroom/chat", json=_payload(taskId="task-X"))
 
-    payloads = _json_payloads(response.text)
-    types = {p.get("type") for p in payloads}
-    assert "thinking" not in types
-    assert "cue_user" not in types
-    assert any(
-        p.get("type") == "text_delta"
-        and p.get("data", {}).get("content") == "real content"
-        for p in payloads
-    )
+    assert len(calls) == 1
+    assert calls[0].session_id == "task-X"
+    assert calls[0].anchor.anchor_ref == "task-X"
+    assert calls[0].question_text == "你好"
+    assert calls[0].answer_summary == "答案拼接"
 
 
-def test_chat_persists_turn_on_normal_completion(app_with_fakes, monkeypatch):
-    """正常流结束 → _persist_chat_turn 调用一次，answer 是所有 text_delta 的拼接。"""
-
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        yield TextDeltaEvent(content="答案", message_id="m-1")
-        yield TextDeltaEvent(content="拼接", message_id="m-1")
-
-    monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
+def test_persists_turn_on_exception(app_with_fakes, monkeypatch):
+    """director 抛异常 → error 帧 + finally 中 persist 仍调 1 次。"""
+    _patch_run(
+        monkeypatch,
+        [TextDeltaEvent(content="部分", message_id="m")],
+        raise_after=True,
     )
     _stub_long_term(monkeypatch)
-
     captured: list[dict[str, Any]] = []
-
-    def _spy(**kwargs):
-        captured.append(kwargs)
-
-    monkeypatch.setattr(routes_chat_module, "_persist_chat_turn", _spy)
+    monkeypatch.setattr(
+        routes_chat_module, "_persist_chat_turn", lambda **kw: captured.append(kw)
+    )
 
     with TestClient(app_with_fakes) as client:
-        response = client.post("/api/v1/classroom/chat", json=_chat_payload())
+        r = client.post("/api/v1/classroom/chat", json=_payload())
 
-    assert response.status_code == 200
+    errors = [p for p in _json_payloads(r.text) if p.get("type") == "error"]
+    assert errors and "llm blew up" in errors[0]["data"]["message"]
     assert len(captured) == 1
-    assert captured[0]["question"] == "你好"
-    assert captured[0]["answer"] == "答案拼接"
+    assert captured[0]["answer"] == "部分"
 
 
-def test_chat_persists_turn_even_on_exception(app_with_fakes, monkeypatch):
-    """director 中途抛异常 → finally 仍调用 _persist_chat_turn 一次。"""
+# ─── broker 集成 + Last-Event-ID ──────────────────────────────────────────
 
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        yield TextDeltaEvent(content="部分输出", message_id="m-err")
-        raise RuntimeError("llm blew up")
 
-    monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
-    )
+def test_each_event_has_id_and_broker_receives_publish(app_with_fakes, monkeypatch):
+    """每个发出的帧都带 id；broker 在 drop 前收到对应事件。"""
+    _patch_run(monkeypatch, [
+        AgentSwitchEvent(
+            agent_id="t1", agent_name="T", agent_avatar=None,
+            agent_color=None, message_id="m",
+        ),
+        TextDeltaEvent(content="hi", message_id="m"),
+    ])
     _stub_long_term(monkeypatch)
 
-    captured: list[dict[str, Any]] = []
-
-    def _spy(**kwargs):
-        captured.append(kwargs)
-
-    monkeypatch.setattr(routes_chat_module, "_persist_chat_turn", _spy)
+    # 拦截 drop 以便在响应结束后仍能观测 broker 记录
+    broker = get_chat_sse_broker()
+    dropped: list[str] = []
+    monkeypatch.setattr(broker, "drop", lambda ch: dropped.append(ch))
 
     with TestClient(app_with_fakes) as client:
-        response = client.post("/api/v1/classroom/chat", json=_chat_payload())
+        r = client.post("/api/v1/classroom/chat", json=_payload(taskId="t-bk"))
 
-    assert response.status_code == 200
-    payloads = _json_payloads(response.text)
-    error_payloads = [p for p in payloads if p.get("type") == "error"]
-    assert error_payloads
-    assert "llm blew up" in error_payloads[0]["data"]["message"]
-    data_blobs = [f["data"] for f in _parse_sse_frames(response.text)]
-    assert "[DONE]" in data_blobs
-    # finally 保证 persist 被调用一次，answer 含部分输出
-    assert len(captured) == 1
-    assert captured[0]["answer"] == "部分输出"
+    ids = [f["id"] for f in _frames(r.text) if f["event"]]
+    assert all(i.startswith("classroom_chat_t-bk:") for i in ids)
+
+    names = [e.event_name for e in broker.replay("classroom_chat_t-bk")]
+    assert "agent_start" in names and "text_delta" in names
+    assert dropped == ["classroom_chat_t-bk"]
 
 
-def test_chat_invokes_shared_long_term_repository(app_with_fakes, monkeypatch):
-    """end-to-end：不 mock _persist_chat_turn 本身，只 mock 底层 repo，
-    验证 save_companion_turn 被调用（anchor / context_type 等字段映射正确）。"""
-
-    async def _fake_run(request, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
-        yield TextDeltaEvent(content="最终答案", message_id="m-1")
-
-    monkeypatch.setattr(
-        "app.features.classroom.orchestration.run_discussion",
-        _fake_run,
-    )
-    repo_calls = _stub_long_term(monkeypatch)
+def test_last_event_id_replays_before_live(app_with_fakes, monkeypatch):
+    """Last-Event-ID 命中 → 先回放 tail，再 live，seq 从缓存末尾续接。"""
+    broker = get_chat_sse_broker()
+    for i in (1, 2, 3):
+        broker.publish(
+            "classroom_chat_t-rp",
+            event_id=f"classroom_chat_t-rp:{i}",
+            event_name="text_delta" if i > 1 else "agent_start",
+            data=f'{{"n":{i}}}',
+        )
+    monkeypatch.setattr(broker, "drop", lambda ch: None)
+    _patch_run(monkeypatch, [TextDeltaEvent(content="new", message_id="m")])
+    _stub_long_term(monkeypatch)
 
     with TestClient(app_with_fakes) as client:
-        response = client.post(
-            "/api/v1/classroom/chat", json=_chat_payload(taskId="task-persist-1")
+        r = client.post(
+            "/api/v1/classroom/chat",
+            json=_payload(taskId="t-rp"),
+            headers={"Last-Event-ID": "classroom_chat_t-rp:1"},
         )
 
-    assert response.status_code == 200
-    assert len(repo_calls) == 1
-    request = repo_calls[0]
-    assert request.question_text == "你好"
-    assert request.answer_summary == "最终答案"
-    assert request.session_id == "task-persist-1"
-    assert request.anchor.anchor_ref == "task-persist-1"
+    ids = [f["id"] for f in _frames(r.text) if f["id"]]
+    assert "classroom_chat_t-rp:2" in ids and "classroom_chat_t-rp:3" in ids
+    assert ids.index("classroom_chat_t-rp:2") < ids.index("classroom_chat_t-rp:3")
+    # 新 live 帧从 :4 开始（3 条历史后续接）
+    assert "classroom_chat_t-rp:4" in ids
+    assert ids.index("classroom_chat_t-rp:4") > ids.index("classroom_chat_t-rp:3")

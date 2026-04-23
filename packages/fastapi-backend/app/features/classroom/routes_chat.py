@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from typing import Any, AsyncIterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from fastapi.responses import StreamingResponse
 
 from app.core.security import AccessContext, get_access_context
+from app.features.classroom.chat_sse_broker import ChatSseBroker, get_chat_sse_broker
 from app.features.classroom.schemas import ChatRequest
 
 logger = logging.getLogger(__name__)
@@ -21,8 +23,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _sse_event(data: str, event: str | None = None) -> str:
+def _sse_event(data: str, event: str | None = None, event_id: str | None = None) -> str:
+    """组装 SSE 帧；``event_id`` 对应 ``id:`` 字段，驱动浏览器 Last-Event-ID。"""
     lines = []
+    if event_id:
+        lines.append(f"id: {event_id}")
     if event:
         lines.append(f"event: {event}")
     lines.append(f"data: {data}")
@@ -34,10 +39,17 @@ def _sse_done() -> str:
     return _sse_event("[DONE]")
 
 
+def _channel_key(task_id: str | None) -> str:
+    """固定格式：``classroom_chat_{task_id or anon_<uuid>}``。"""
+    return f"classroom_chat_{task_id or f'anon_{uuid.uuid4().hex}'}"
+
+
 @router.post("/chat")
 async def classroom_chat(
     payload: ChatRequest,
     access_context: AccessContext = Depends(get_access_context),
+    last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
+    broker: ChatSseBroker = Depends(get_chat_sse_broker),
 ) -> StreamingResponse:
     """多智能体讨论 SSE 流。
 
@@ -103,26 +115,45 @@ async def classroom_chat(
 
     user_question = _extract_last_user_text(payload)
     answer_buffer: list[str] = []
+    channel = _channel_key(payload.task_id)
+    # 若 channel 已有缓存（断线重连场景），新事件序号从缓存末尾续接，避免 id 冲突
+    seq = len(broker.replay(channel))
+
+    def _emit(event_name: str, payload_dict: dict) -> str:
+        nonlocal seq
+        seq += 1
+        data = json.dumps(payload_dict, ensure_ascii=False)
+        event_id = f"{channel}:{seq}"
+        broker.publish(channel, event_id=event_id, event_name=event_name, data=data)
+        return _sse_event(data, event=event_name, event_id=event_id)
 
     async def _chat_stream() -> AsyncIterator[str]:
+        # 断线重连：先回放 Last-Event-ID 之后的缓存（若未知 ID 则全量）
+        if last_event_id:
+            for replayed in broker.replay(channel, after_event_id=last_event_id):
+                yield _sse_event(
+                    replayed.data,
+                    event=replayed.event_name,
+                    event_id=replayed.event_id,
+                )
+
         try:
             async for event in _run_discussion(orch_request, provider_chain):
                 payload_dict = _translate_chat_event(event)
                 if payload_dict is None:
                     continue
-                if payload_dict.get("type") == "text_delta":
+                event_name = str(payload_dict.get("type") or "message")
+                if event_name == "text_delta":
                     answer_buffer.append(
                         str((payload_dict.get("data") or {}).get("content") or "")
                     )
-                yield _sse_event(json.dumps(payload_dict, ensure_ascii=False))
+                yield _emit(event_name, payload_dict)
 
-            yield _sse_event(json.dumps({"type": "done"}))
+            yield _emit("done", {"type": "done"})
             yield _sse_done()
         except Exception as exc:  # noqa: BLE001
             logger.error("classroom.routes_chat.error %s", exc, exc_info=exc)
-            yield _sse_event(
-                json.dumps({"type": "error", "data": {"message": str(exc)}}, ensure_ascii=False)
-            )
+            yield _emit("error", {"type": "error", "data": {"message": str(exc)}})
             yield _sse_done()
         finally:
             _persist_chat_turn(
@@ -131,6 +162,7 @@ async def classroom_chat(
                 question=user_question,
                 answer="".join(answer_buffer),
             )
+            broker.drop(channel)
 
     return StreamingResponse(
         _chat_stream(),
