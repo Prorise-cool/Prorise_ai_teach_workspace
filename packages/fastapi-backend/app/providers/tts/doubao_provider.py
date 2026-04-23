@@ -11,22 +11,21 @@ import httpx
 
 from app.providers.http_utils import handle_provider_request_error, raise_for_provider_status, require_setting
 from app.providers.protocols import ProviderConfigurationError, ProviderResult, ProviderRuntimeConfig
+from app.shared.coerce_utils import coerce_float as _shared_coerce_float, coerce_int as _shared_coerce_int
 
 _SUCCESS_CODES = {0, 3000}
 
 
 def _coerce_float(value: Any, default: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
+    """向后兼容别名，转发到 ``app.shared.coerce_utils.coerce_float``。"""
+    result = _shared_coerce_float(value, default)
+    return float(default) if result is None else result
 
 
 def _coerce_int(value: Any, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
+    """向后兼容别名，转发到 ``app.shared.coerce_utils.coerce_int``。"""
+    result = _shared_coerce_int(value, default)
+    return int(default) if result is None else result
 
 
 def _read_mapping_value(mapping: Mapping[str, Any], *keys: str) -> Any:

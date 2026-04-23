@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.features.video.long_term.records import VideoPublicationSnapshot
+from app.shared.coerce_utils import coerce_int as _shared_coerce_int
 from app.features.video.pipeline.constants import (
     VIDEO_ARTIFACT_GRAPH_TEMPLATE,
     VIDEO_RESULT_DETAIL_TEMPLATE,
@@ -472,12 +473,8 @@ def _section_lecture_lines(
 
 
 def _coerce_int(value: Any) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return max(0, int(value))
-    except (TypeError, ValueError):
-        return None
+    """向后兼容别名，转发到 ``app.shared.coerce_utils.coerce_int``（夹紧到 >= 0）。"""
+    return _shared_coerce_int(value, default=None, clamp_min=0)
 
 
 def _clean_text(value: Any) -> str:
