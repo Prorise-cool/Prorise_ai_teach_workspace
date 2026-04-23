@@ -12,7 +12,6 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelRightClose,
   Sparkles,
   Sun,
   Trophy,
@@ -30,7 +29,7 @@ import { useDirectorChat } from '../hooks/use-director-chat';
 import { useScenePlayer } from '../hooks/use-scene-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
-import { ChatPanel } from '../components/chat/chat-panel';
+import { ChatArea } from '../components/chat/chat-area';
 import { SceneSidebar } from '../components/stage/scene-sidebar';
 import type { AgentSummary } from '../types/classroom';
 import type { AgentProfile } from '../types/agent';
@@ -61,6 +60,8 @@ export function ClassroomPlayPage() {
   // 边栏宽度受 store 持久化（W3c 已扩展）；折叠状态本地驱动
   const sidebarWidth = useClassroomStore((s) => s.sidebarWidth);
   const setSidebarWidth = useClassroomStore((s) => s.setSidebarWidth);
+  const chatAreaWidth = useClassroomStore((s) => s.chatAreaWidth);
+  const setChatAreaWidth = useClassroomStore((s) => s.setChatAreaWidth);
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark'),
   );
@@ -312,31 +313,24 @@ export function ClassroomPlayPage() {
         </div>
       </main>
 
-      {/* 右侧边栏 — 伴学助手 */}
-      <aside
-        className={`fixed right-0 top-0 z-30 flex h-full flex-col border-l border-border bg-card/95 backdrop-blur-md transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
-          companionOpen ? 'translate-x-0' : 'translate-x-full'
-        } w-[300px] shrink-0 xl:w-[340px]`}
+      {/* 右侧边栏 — 伴学助手（OpenMAIC 1:1：双 Tab + 拖拽宽度 + 玻璃感） */}
+      <div
+        className={`fixed right-0 top-0 z-30 h-full transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
+          companionOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+        }`}
       >
-        {/* 紧凑关闭按钮（仅移动端） */}
-        <button
-          type="button"
-          onClick={() => { setCompanionOpen(false); setMobileOverlayVisible(false); }}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden z-10"
-        >
-          <PanelRightClose className="h-4 w-4" />
-        </button>
-
-        <ChatPanel
-          classroomId={classroomId}
-          agents={agents}
+        <ChatArea
           messages={chat.messages}
-          isStreaming={chat.isStreaming}
           notes={notes}
+          isStreaming={chat.isStreaming}
+          currentSceneId={player.currentScene?.id ?? null}
           onSendMessage={chat.sendMessage}
-          onClose={companionOpen ? () => { setCompanionOpen(false); } : undefined}
+          collapsed={!companionOpen}
+          onCollapseChange={(c) => { setCompanionOpen(!c); setMobileOverlayVisible(false); }}
+          width={chatAreaWidth}
+          onWidthChange={setChatAreaWidth}
         />
-      </aside>
+      </div>
 
       {/* 课堂结束 —— 课后测试引导 */}
       {showPostClassCTA && (
