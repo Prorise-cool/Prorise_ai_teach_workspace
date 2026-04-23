@@ -16,7 +16,7 @@ export interface Classroom {
   stage: ClassroomStage;
   scenes: Scene[];
   agents: AgentSummary[];
-  jobId?: string; // FastAPI 后端任务 ID
+  taskId?: string; // FastAPI 后端任务 ID（Wave 1: 统一 task framework 命名）
 }
 
 /** 轻量元数据（用于列表展示） */
@@ -49,7 +49,7 @@ export type JobStatus =
   | 'failed';
 
 export interface ClassroomJobResponse {
-  jobId: string;
+  taskId: string;
   status: JobStatus;
   /** 完成状态下后端回传的完整课堂 JSON（含 scenes / agents / outline 等）。 */
   classroom?: Record<string, unknown> & {

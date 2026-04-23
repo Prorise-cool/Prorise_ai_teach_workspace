@@ -5,8 +5,8 @@
  * 后端状态机（FastAPI openmaic job_runner）:
  *   pending → generating_outline → generating_scenes → ready | failed
  *
- * 后端 /classroom/{id} 响应形状:
- *   { jobId, status, progress, message?, classroom?, error? }
+ * 后端 /classroom/generate/classroom/{taskId} 响应形状:
+ *   { taskId, status, progress, message?, classroom?, error? }
  *   其中 classroom 包含 scenes / agents / requirement 完整数据。
  */
 import { useCallback, useRef } from 'react';
@@ -34,8 +34,8 @@ export function useClassroomCreate() {
 
       store.getState().setGenerationProgress(0, '正在提交课堂生成任务...');
 
-      // 1. 提交任务 → 获取 jobId
-      const { jobId } = await adapter.submit(req, { signal: ac.signal });
+      // 1. 提交任务 → 获取 taskId
+      const { taskId } = await adapter.submit(req, { signal: ac.signal });
       store.getState().setGenerationProgress(5, '任务已提交，等待生成...');
 
       // 2. 轮询任务状态（后端已做 outline + agent profiles + scene 全链路编排）
@@ -47,7 +47,7 @@ export function useClassroomCreate() {
 
         let statusResp;
         try {
-          statusResp = await adapter.getStatus(jobId, { signal: ac.signal });
+          statusResp = await adapter.getStatus(taskId, { signal: ac.signal });
         } catch {
           pollCount++;
           continue;
@@ -71,7 +71,7 @@ export function useClassroomCreate() {
             scenes?: unknown[];
             agents?: Record<string, unknown>[];
           };
-          const localId = remoteClassroom.id ?? jobId;
+          const localId = remoteClassroom.id ?? taskId;
           const scenes = (Array.isArray(remoteClassroom.scenes) ? remoteClassroom.scenes : []) as unknown as import('../types/scene').Scene[];
           const agents = (Array.isArray(remoteClassroom.agents)
             ? (remoteClassroom.agents as Record<string, unknown>[])
@@ -108,7 +108,7 @@ export function useClassroomCreate() {
               avatar: (a.avatar ?? '') as string,
               color: (a.color ?? '#4A90D9') as string,
             })),
-            jobId,
+            taskId,
           };
           await saveClassroom(classroom);
           store.getState().setClassroom(classroom);

@@ -69,10 +69,10 @@ export interface ClassroomAdapter {
   submit(
     request: ClassroomCreateRequest,
     options?: ClassroomCallOptions,
-  ): Promise<{ jobId: string }>;
+  ): Promise<{ taskId: string }>;
   /** 轮询课堂任务状态。 */
   getStatus(
-    jobId: string,
+    taskId: string,
     options?: ClassroomCallOptions,
   ): Promise<ClassroomJobResponse>;
   /** SSE：流式生成场景大纲。 */
@@ -249,8 +249,8 @@ export function createRealClassroomAdapter(
   return {
     async submit(request, options) {
       try {
-        const response = await client.request<{ data: { jobId: string } }>({
-          url: `${BASE}/classroom`,
+        const response = await client.request<{ data: { taskId: string } }>({
+          url: `${BASE}/generate/classroom`,
           method: 'post',
           data: request,
           signal: options?.signal,
@@ -262,10 +262,10 @@ export function createRealClassroomAdapter(
       }
     },
 
-    async getStatus(jobId, options) {
+    async getStatus(taskId, options) {
       try {
         const response = await client.request<{ data: ClassroomJobResponse }>({
-          url: `${BASE}/classroom/${jobId}`,
+          url: `${BASE}/generate/classroom/${taskId}`,
           method: 'get',
           signal: options?.signal,
         });
@@ -418,11 +418,11 @@ function runMockClassroomOperation<T>(operation: () => T): Promise<T> {
 export function createMockClassroomAdapter(): ClassroomAdapter {
   return {
     submit() {
-      return runMockClassroomOperation(() => ({ jobId: 'mock-classroom-job' }));
+      return runMockClassroomOperation(() => ({ taskId: 'mock-classroom-task' }));
     },
-    getStatus(jobId) {
+    getStatus(taskId) {
       return runMockClassroomOperation<ClassroomJobResponse>(() => ({
-        jobId,
+        taskId,
         status: 'pending',
         progress: 0,
         message: 'mock pending',
