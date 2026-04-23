@@ -8,6 +8,7 @@ import {
   type ApiClient,
   type ApiRequestConfig,
 } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 
 /* 保持向后兼容：外部模块仍可从此处导入 resolveFastapiBaseUrl。 */
@@ -103,7 +104,7 @@ async function requestProbeData<T>(
   try {
     const response = await client.request<DataEnvelope<T>>(config);
 
-    return response.data.data;
+    return unwrapEnvelope(response);
   } catch (error) {
     throw mapAuthConsistencyError(error);
   }

@@ -3,6 +3,7 @@
  * 对齐 FastAPI `/api/v1/learning-coach/*` 端点，与冻结的 mocks/learning/v1 保持一致。
  */
 import type { ApiClient } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 import { learningCoachMockFixtures } from '@/services/mock/fixtures/learning-coach';
 import type { TaskDataEnvelope } from '@/types/task';
@@ -92,7 +93,7 @@ export function createRealLearningCoachAdapter(
         url: `/api/v1/learning-coach/entry${toQueryString(source)}`,
         method: 'get',
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async generateCheckpoint(request) {
       const response = await client.request<TaskDataEnvelope<CheckpointGeneratePayload>>({
@@ -100,7 +101,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async submitCheckpoint(request) {
       const response = await client.request<TaskDataEnvelope<CheckpointSubmitPayload>>({
@@ -108,7 +109,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async generateQuiz(request) {
       const response = await client.request<TaskDataEnvelope<QuizGeneratePayload>>({
@@ -116,7 +117,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async submitQuiz(request) {
       const response = await client.request<TaskDataEnvelope<QuizSubmitPayload>>({
@@ -124,14 +125,14 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async getQuizHistory({ quizId }) {
       const response = await client.request<TaskDataEnvelope<QuizHistoryPayload>>({
         url: `/api/v1/learning-coach/quiz/history/${encodeURIComponent(quizId)}`,
         method: 'get',
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async planPath(request) {
       const response = await client.request<TaskDataEnvelope<LearningPathPlanPayload>>({
@@ -139,7 +140,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async savePath(request) {
       const response = await client.request<TaskDataEnvelope<LearningPathSavePayload>>({
@@ -147,7 +148,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
     async coachAsk(request) {
       const response = await client.request<TaskDataEnvelope<CoachAskPayload>>({
@@ -155,7 +156,7 @@ export function createRealLearningCoachAdapter(
         method: 'post',
         data: request,
       });
-      return response.data.data;
+      return unwrapEnvelope(response);
     },
   };
 }

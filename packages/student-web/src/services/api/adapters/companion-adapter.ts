@@ -6,6 +6,7 @@ import {
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 
 import { pickAdapterImplementation } from './base-adapter';
@@ -219,7 +220,7 @@ export function createRealCompanionAdapter(
           signal: options?.signal,
         });
 
-        return toFrontendBootstrap(response.data.data);
+        return toFrontendBootstrap(unwrapEnvelope(response));
       } catch (error) {
         throw mapCompanionError(error);
       }
@@ -235,7 +236,7 @@ export function createRealCompanionAdapter(
           signal: options?.signal,
         });
 
-        return toFrontendAskResponse(response.data.data);
+        return toFrontendAskResponse(unwrapEnvelope(response));
       } catch (error) {
         throw mapCompanionError(error);
       }

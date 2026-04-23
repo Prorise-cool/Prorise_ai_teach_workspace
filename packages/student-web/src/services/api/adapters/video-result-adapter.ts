@@ -6,6 +6,7 @@ import {
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getMockVideoFailure,
@@ -456,7 +457,7 @@ export function createRealVideoResultAdapter(
           signal: options?.signal,
         });
 
-        return mapVideoResultPayload(response.data.data);
+        return mapVideoResultPayload(unwrapEnvelope(response));
       } catch (error) {
         throw mapVideoResultApiClientError(error);
       }
@@ -469,7 +470,7 @@ export function createRealVideoResultAdapter(
           signal: options?.signal,
         });
 
-        return mapVideoResultPayload(response.data.data);
+        return mapVideoResultPayload(unwrapEnvelope(response));
       } catch (error) {
         throw mapVideoResultApiClientError(error);
       }

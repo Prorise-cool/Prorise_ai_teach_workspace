@@ -6,6 +6,7 @@ import {
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 import {
   getMockVideoTaskCreateSuccess,
@@ -199,7 +200,7 @@ export function createRealVideoTaskAdapter(
           signal: options?.signal,
         });
 
-        return response.data.data;
+        return unwrapEnvelope(response);
       } catch (error) {
         throw mapVideoTaskApiClientError(error);
       }
@@ -212,7 +213,7 @@ export function createRealVideoTaskAdapter(
           signal: options?.signal,
         });
 
-        return response.data.data;
+        return unwrapEnvelope(response);
       } catch (error) {
         throw mapVideoTaskApiClientError(error);
       }
@@ -225,7 +226,7 @@ export function createRealVideoTaskAdapter(
           signal: options?.signal,
         });
 
-        return response.data.data;
+        return unwrapEnvelope(response);
       } catch (error) {
         throw mapVideoTaskApiClientError(error);
       }

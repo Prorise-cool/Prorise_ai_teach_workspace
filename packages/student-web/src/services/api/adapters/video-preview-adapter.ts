@@ -6,6 +6,7 @@ import {
   type ApiClient,
   isApiClientError,
 } from '@/services/api/client';
+import { unwrapEnvelope } from '@/services/api/envelope';
 import { fastapiClient } from '@/services/api/fastapi-client';
 import { getMockVideoPreview } from '@/services/mock/fixtures/video-pipeline';
 import type {
@@ -122,7 +123,7 @@ export function createRealVideoPreviewAdapter(
           signal: options?.signal,
         });
 
-        return response.data.data;
+        return unwrapEnvelope(response);
       } catch (error) {
         throw mapVideoPreviewApiClientError(error);
       }
