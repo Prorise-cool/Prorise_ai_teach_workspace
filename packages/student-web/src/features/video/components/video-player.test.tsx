@@ -7,8 +7,14 @@ import { VideoPlayer } from './video-player';
 
 const videojsMock = vi.hoisted(() => vi.fn());
 const onMock = vi.hoisted(() => vi.fn());
+const oneMock = vi.hoisted(() => vi.fn());
 const disposeMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn(() => null));
+// wave-0.2: VideoPlayer 在挂载时注册首次交互自动 unmute 钩子，
+// 该钩子内部会调用 player.muted() 与 player.volume()，
+// mock 必须实现 getter / setter 双模式（无参=getter, 有参=setter）。
+const mutedMock = vi.hoisted(() => vi.fn(() => false));
+const volumeMock = vi.hoisted(() => vi.fn(() => 1));
 
 vi.mock('video.js', () => ({
   default: videojsMock,
@@ -18,8 +24,11 @@ describe('VideoPlayer', () => {
   beforeEach(() => {
     videojsMock.mockReturnValue({
       on: onMock,
+      one: oneMock,
       dispose: disposeMock,
       error: errorMock,
+      muted: mutedMock,
+      volume: volumeMock,
     });
   });
 

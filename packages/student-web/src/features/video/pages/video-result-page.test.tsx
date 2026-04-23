@@ -46,6 +46,10 @@ vi.mock('@/features/video/components/video-player', async () => {
             isFullscreen: () => false,
             requestFullscreen: vi.fn(),
             exitFullscreen: vi.fn(),
+            // wave-0.2: video-result-page 通过 setInterval 轮询 player.muted()
+            // 来控制 “点击解除静音” 提示的可见性，mock 必须实现 getter 行为。
+            muted: () => false,
+            volume: () => 1,
           }) as never,
       }));
 
