@@ -7,7 +7,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { saveChatHistory } from '../db/classroom-db';
 import { streamChat } from '../api/openmaic-adapter';
-import { useClassroomStore } from '../store/classroom-store';
+import { useClassroomStore } from '../stores/classroom-store';
 import type { ChatMessage } from '../types/chat';
 
 export interface UseDirectorChatReturn {

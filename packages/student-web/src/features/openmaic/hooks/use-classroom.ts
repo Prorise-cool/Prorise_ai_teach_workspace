@@ -13,7 +13,7 @@ import { useCallback, useRef } from 'react';
 
 import { saveClassroom } from '../db/classroom-db';
 import { submitClassroom, getClassroomStatus } from '../api/openmaic-adapter';
-import { useClassroomStore } from '../store/classroom-store';
+import { useClassroomStore } from '../stores/classroom-store';
 import type { Classroom } from '../types/classroom';
 import type { ClassroomCreateRequest } from '../types/classroom';
 

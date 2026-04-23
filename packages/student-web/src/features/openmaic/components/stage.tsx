@@ -16,7 +16,7 @@ import { PBLRenderer } from './scene-renderers/pbl-renderer';
 import { AgentBubble } from './agent/agent-bubble';
 import { Whiteboard } from './whiteboard/whiteboard';
 import { useActionPlayer } from '../hooks/use-action-player';
-import { useClassroomStore } from '../store/classroom-store';
+import { useClassroomStore } from '../stores/classroom-store';
 
 interface StageProps {
   scene: Scene | null;

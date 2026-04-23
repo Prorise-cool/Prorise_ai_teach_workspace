@@ -21,7 +21,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { loadClassroom } from '../db/classroom-db';
 import { useDirectorChat } from '../hooks/use-director-chat';
 import { useScenePlayer } from '../hooks/use-scene-player';
-import { useClassroomStore } from '../store/classroom-store';
+import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
 import { ChatPanel } from '../components/chat/chat-panel';
 import type { Scene } from '../types/scene';

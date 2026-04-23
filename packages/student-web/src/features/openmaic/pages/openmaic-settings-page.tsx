@@ -5,7 +5,7 @@
 import { RotateCcw } from 'lucide-react';
 
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
-import { useOpenMAICSettingsStore } from '../store/settings-store';
+import { useOpenMAICSettingsStore } from '../stores/settings-store';
 
 export function OpenMAICSettingsPage() {
   const settings = useOpenMAICSettingsStore();
