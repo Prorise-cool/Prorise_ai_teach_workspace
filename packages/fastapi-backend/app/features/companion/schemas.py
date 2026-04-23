@@ -9,6 +9,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from app.features.common import BootstrapStatus
 from app.schemas.common import CamelCaseModel
 from app.shared.long_term.models import (
     AnchorContext,
@@ -29,9 +30,15 @@ class CompanionContextSource(str, Enum):
     DEGRADED = "degraded"
 
 
-class CompanionBootstrapData(BaseModel):
-    """伴学 bootstrap 返回给前端的实际数据。"""
+class CompanionBootstrapData(BootstrapStatus):
+    """伴学 bootstrap 返回给前端的实际数据。
 
+    继承 ``BootstrapStatus`` 以对齐其他 feature 的 ``feature/status/mode``
+    三件套（用于 OpenAPI Envelope 校验），同时保留伴学领域特有的扩展字段
+    （会话 ID、知识点等）通过 ``extra='allow'`` 透传给前端。
+    """
+
+    feature: str = "companion"
     task_id: str
     session_id: str
     context_source: CompanionContextSource = CompanionContextSource.REDIS
