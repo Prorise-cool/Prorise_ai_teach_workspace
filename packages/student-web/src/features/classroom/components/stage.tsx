@@ -65,12 +65,12 @@ export const Stage: FC<StageProps> = ({
 
     const order = scene.order ?? scene.outline?.order ?? 1;
 
+    // discriminated union — TS 自动 narrow content 类型，无需 as any
     switch (scene.type) {
       case 'slide':
         return (
           <SlideRenderer
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={scene.content as any}
+            content={scene.content}
             sceneTitle={scene.title}
             sceneOrder={order}
             spotlightId={spotlightId}
@@ -79,8 +79,7 @@ export const Stage: FC<StageProps> = ({
       case 'interactive':
         return (
           <InteractiveRenderer
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={scene.content as any}
+            content={scene.content}
             sceneTitle={scene.title}
             sceneOrder={order}
           />
@@ -88,18 +87,21 @@ export const Stage: FC<StageProps> = ({
       case 'pbl':
         return (
           <PBLRenderer
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            content={scene.content as any}
+            content={scene.content}
             sceneTitle={scene.title}
             sceneOrder={order}
           />
         );
-      default:
+      default: {
+        // exhaustive check — 新增 SceneType 时编译器报错
+        const _exhaustive: never = scene;
+        void _exhaustive;
         return (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             未知场景类型
           </div>
         );
+      }
     }
   };
 

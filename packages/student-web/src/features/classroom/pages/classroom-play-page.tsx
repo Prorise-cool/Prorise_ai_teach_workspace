@@ -27,6 +27,24 @@ import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
 import { ChatPanel } from '../components/chat/chat-panel';
 import type { Scene } from '../types/scene';
+import type { AgentSummary } from '../types/classroom';
+import type { AgentProfile } from '../types/agent';
+
+/**
+ * 把持久化在 Classroom.agents 里的 AgentSummary（轻量字段集）补齐成
+ * AgentProfile —— 仅缺的 persona / priority 字段以默认值填充，避免使用 `as any`。
+ */
+function summariesToProfiles(agents: AgentSummary[]): AgentProfile[] {
+  return agents.map((a, idx) => ({
+    id: a.id,
+    name: a.name,
+    role: a.role,
+    avatar: a.avatar,
+    color: a.color,
+    persona: '',
+    priority: idx + 1,
+  }));
+}
 
 export function ClassroomPlayPage() {
   const { classroomId } = useParams<{ classroomId: string }>();
@@ -54,8 +72,7 @@ export function ClassroomPlayPage() {
       setClassroom(c);
       // 从持久化的 classroom.agents 回灌 store.agents —— 避免刷新后教师气泡消失
       if (Array.isArray(c.agents) && c.agents.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAgents(c.agents as any);
+        setAgents(summariesToProfiles(c.agents));
       }
     });
   }, [classroomId, classroom, setClassroom, setAgents]);
@@ -66,8 +83,7 @@ export function ClassroomPlayPage() {
       const currentIds = agents.map((a) => a.id).join(',');
       const classroomIds = classroom.agents.map((a) => a.id).join(',');
       if (currentIds !== classroomIds) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setAgents(classroom.agents as any);
+        setAgents(summariesToProfiles(classroom.agents));
       }
     }
   }, [classroom, agents, setAgents]);
