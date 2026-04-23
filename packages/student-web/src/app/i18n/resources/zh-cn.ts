@@ -8,6 +8,7 @@ import { zhCnProfileOnboardingResources } from '@/app/i18n/resources/profile-onb
 import { zhCnUserSettingsResources } from '@/app/i18n/resources/user-settings-content';
 import { zhCnVideoResources } from '@/app/i18n/resources/video-content';
 import { zhCnOpenMAICResources } from '@/app/i18n/resources/openmaic-content';
+import { zhCnClassroomResources } from '@/app/i18n/resources/classroom-content';
 
 export const zhCnResources = {
   auth: {
@@ -177,5 +178,6 @@ export const zhCnResources = {
   ...zhCnVideoResources,
   ...zhCnLearningCenterResources,
   ...zhCnUserSettingsResources,
-  ...zhCnOpenMAICResources
+  ...zhCnOpenMAICResources,
+  ...zhCnClassroomResources
 } as const;
