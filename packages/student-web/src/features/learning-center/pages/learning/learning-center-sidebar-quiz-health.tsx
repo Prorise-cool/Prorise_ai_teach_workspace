@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Activity, TrendingUp } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -72,12 +71,14 @@ export function LearningCenterSidebarQuizHealth({ averageQuizScore }: LearningCe
           {t('learningCenter.page.quizHealthHint')}
         </p>
       )}
-      <Link
-        to="/history?resultType=wrongbook"
-        className="w-full border border-bordercolor-light dark:border-bordercolor-dark bg-bg-light dark:bg-bg-dark text-[13px] font-bold py-2.5 rounded-xl hover:border-text-primary dark:hover:border-text-primary-dark transition-colors text-text-primary dark:text-text-primary-dark shadow-sm flex items-center justify-center"
+      <div
+        role="button"
+        aria-disabled="true"
+        title={t('learningCenter.page.quizHealthCta')}
+        className="w-full border border-bordercolor-light dark:border-bordercolor-dark bg-bg-light dark:bg-bg-dark text-[13px] font-bold py-2.5 rounded-xl text-text-secondary dark:text-text-secondary-dark shadow-sm flex items-center justify-center opacity-60 cursor-not-allowed pointer-events-none select-none"
       >
-        {t('learningCenter.page.quizHealthCta')}
-      </Link>
+        {t('learningCenter.page.quizHealthCta')}（即将开放）
+      </div>
     </section>
   );
 }

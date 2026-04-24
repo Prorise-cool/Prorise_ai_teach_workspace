@@ -22,11 +22,9 @@ import {
   buildFilteredRecords,
   buildFolderCounts,
   buildFolderNameById,
+  type FavoritesFolderOption,
 } from './favorites-derivations';
 import { useFavoritesPageData } from '@/features/learning-center/hooks/use-favorites-page-data';
-
-const BUILTIN_FOLDER_SAMPLE_1 = 'builtin-folder:sample-1';
-const BUILTIN_FOLDER_SAMPLE_2 = 'builtin-folder:sample-2';
 
 export function FavoritesPage() {
   const { t } = useAppTranslation();
@@ -65,13 +63,7 @@ export function FavoritesPage() {
   const storedFolders = folderState.folders;
   const assignments = folderState.assignments;
 
-  const builtinFolderOptions = useMemo(
-    () => [
-      { folderId: BUILTIN_FOLDER_SAMPLE_1, name: t('learningCenter.favorites.folderSample1') },
-      { folderId: BUILTIN_FOLDER_SAMPLE_2, name: t('learningCenter.favorites.folderSample2') },
-    ],
-    [t],
-  );
+  const builtinFolderOptions = useMemo<FavoritesFolderOption[]>(() => [], []);
 
   const folderOptions = useMemo(
     () =>

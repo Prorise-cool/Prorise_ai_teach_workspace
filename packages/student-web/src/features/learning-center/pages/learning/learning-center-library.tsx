@@ -71,51 +71,53 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
           <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-bg-dark rotate-45 rounded-2xl z-0" />
         </Link>
 
-        <Link
-          to="/history?resultType=wrongbook"
-          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
+        <div
+          role="link"
+          aria-disabled="true"
+          title={t('learningCenter.page.libraryWrongbookSubtitle')}
+          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 flex flex-col justify-between h-36 relative overflow-hidden shadow-sm opacity-60 cursor-not-allowed pointer-events-none select-none"
         >
           <div className="flex justify-between items-start relative z-10">
-            <div className="w-10 h-10 rounded-xl bg-error/10 dark:bg-error/20 flex items-center justify-center border border-error/30 dark:border-error/20">
-              <BookX className="w-5 h-5 text-error" />
+            <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
+              <BookX className="w-5 h-5 text-text-tertiary dark:text-text-tertiary-dark" />
             </div>
-            <span className="text-[10px] font-black bg-error text-white px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
+            <span className="text-[10px] font-black bg-bordercolor-light dark:bg-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
               {t('learningCenter.page.libraryWrongbookBadge')}
             </span>
           </div>
           <div className="relative z-10 mt-4">
-            <h3 className="font-black text-[16px] text-text-primary dark:text-text-primary-dark">
+            <h3 className="font-black text-[16px] text-text-secondary dark:text-text-secondary-dark">
               {t('learningCenter.page.libraryWrongbookTitle')}
             </h3>
-            <p className="text-[12px] font-bold text-error mt-0.5">
+            <p className="text-[12px] font-medium text-text-tertiary dark:text-text-tertiary-dark mt-0.5">
               {t('learningCenter.page.libraryWrongbookSubtitle')}
             </p>
           </div>
-          <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-error/10 dark:bg-error/20 rotate-12 rounded-xl z-0" />
-        </Link>
+        </div>
 
-        <Link
-          to="/history?resultType=evidence"
-          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
+        <div
+          role="link"
+          aria-disabled="true"
+          title={t('learningCenter.page.libraryEvidenceSubtitle')}
+          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 flex flex-col justify-between h-36 relative overflow-hidden shadow-sm opacity-60 cursor-not-allowed pointer-events-none select-none"
         >
           <div className="flex justify-between items-start relative z-10">
             <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
-              <Paperclip className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
+              <Paperclip className="w-5 h-5 text-text-tertiary dark:text-text-tertiary-dark" />
             </div>
-            <span className="text-[10px] font-black font-mono bg-bordercolor-light dark:border-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
+            <span className="text-[10px] font-black bg-bordercolor-light dark:bg-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
               {t('learningCenter.page.libraryEvidenceBadge')}
             </span>
           </div>
           <div className="relative z-10 mt-4">
-            <h3 className="font-black text-[16px] text-text-primary dark:text-text-primary-dark">
+            <h3 className="font-black text-[16px] text-text-secondary dark:text-text-secondary-dark">
               {t('learningCenter.page.libraryEvidenceTitle')}
             </h3>
-            <p className="text-[12px] font-medium text-text-secondary dark:text-text-secondary-dark mt-0.5">
+            <p className="text-[12px] font-medium text-text-tertiary dark:text-text-tertiary-dark mt-0.5">
               {t('learningCenter.page.libraryEvidenceSubtitle')}
             </p>
           </div>
-          <div className="absolute -bottom-6 -right-2 w-20 h-10 bg-bg-light dark:bg-bg-dark rounded-full z-0" />
-        </Link>
+        </div>
       </div>
     </section>
   );
