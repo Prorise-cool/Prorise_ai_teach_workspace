@@ -49,6 +49,11 @@ export interface ClassroomStoreState {
   chatAreaWidth: number;
   // 左侧场景边栏宽度（px，可拖拽）
   sidebarWidth: number;
+  /**
+   * Phase 4：Companion 点击消息里 `[elem:xxx]` 药丸时，临时高亮画布上对应
+   * 元素的 id；`setHighlightedElementId(id, ttlMs)` 自带定时清零。
+   */
+  highlightedElementId: string | null;
   // 演示（全屏）模式
   isPresenting: boolean;
   // TTS 静音
@@ -80,6 +85,11 @@ export interface ClassroomStoreActions {
   setChatAreaWidth: (width: number) => void;
   setSidebarWidth: (width: number) => void;
   setIsPresenting: (presenting: boolean) => void;
+  /**
+   * Phase 4：高亮画布上指定 id 的元素。传 `null` 立即清除。
+   * 默认 3s 后自动清零（可通过 `ttlMs` 覆盖，`ttlMs <= 0` 表示永久直到下次调用）。
+   */
+  setHighlightedElementId: (id: string | null, ttlMs?: number) => void;
   setTTSMuted: (muted: boolean) => void;
   setTTSVolume: (volume: number) => void;
   setAutoPlayLecture: (enabled: boolean) => void;
@@ -105,12 +115,16 @@ const INITIAL_STATE: ClassroomStoreState = {
   chatAreaCollapsed: false,
   chatAreaWidth: 340,
   sidebarWidth: 220,
+  highlightedElementId: null,
   isPresenting: false,
   ttsMuted: false,
   ttsVolume: 1,
   autoPlayLecture: false,
   playbackSpeed: 1,
 };
+
+/** 管理 highlightedElementId 的自清定时器。跨调用共享，保证新调用能取消旧的。 */
+let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActions>()((set) => ({
   ...INITIAL_STATE,
@@ -161,6 +175,20 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
   setChatAreaWidth: (width) => set({ chatAreaWidth: width }),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
   setIsPresenting: (presenting) => set({ isPresenting: presenting }),
+
+  setHighlightedElementId: (id, ttlMs = 3000) => {
+    if (highlightTimer) {
+      clearTimeout(highlightTimer);
+      highlightTimer = null;
+    }
+    set({ highlightedElementId: id });
+    if (id && ttlMs > 0) {
+      highlightTimer = setTimeout(() => {
+        set({ highlightedElementId: null });
+        highlightTimer = null;
+      }, ttlMs);
+    }
+  },
   setTTSMuted: (muted) => set({ ttsMuted: muted }),
   setTTSVolume: (volume) => set({ ttsVolume: volume }),
   setAutoPlayLecture: (enabled) => set({ autoPlayLecture: enabled }),
@@ -192,6 +220,7 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
       currentSpotlightId: null,
       spotlightOptions: null,
       currentSpeech: null,
+      highlightedElementId: null,
       // 保留 UI 偏好
       sidebarCollapsed: state.sidebarCollapsed,
       chatAreaCollapsed: state.chatAreaCollapsed,

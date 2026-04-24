@@ -172,7 +172,12 @@ def build_peer_context_section(
 # ── Classroom state context ──────────────────────────────────────────────────
 
 def build_state_context(ctx: ClassroomContext) -> str:
-    """Build a brief description of the classroom state for the agent prompt."""
+    """Build a brief description of the classroom state for the agent prompt.
+
+    Phase 4：若 ``ctx`` 带有结构化字段（scene_title / scene_body / key_points /
+    recent_speech / canvas_summary），按结构化方式展开；缺失则回退到旧的
+    ``slide_content``。画布部分额外告知 LLM 可用 ``[elem:xxx]`` 指代具体元素。
+    """
     parts: list[str] = []
 
     if ctx.current_scene_type:
@@ -184,7 +189,29 @@ def build_state_context(ctx: ClassroomContext) -> str:
         }.get(ctx.current_scene_type, ctx.current_scene_type)
         parts.append(f"当前场景类型：{scene_label}")
 
-    if ctx.slide_content:
+    if ctx.scene_title:
+        parts.append(f"当前场景：{ctx.scene_title}")
+
+    if ctx.scene_body:
+        parts.append(f"场景正文：{ctx.scene_body[:SLIDE_CONTENT_PREVIEW_LIMIT]}")
+
+    if ctx.key_points:
+        joined = "、".join(p for p in ctx.key_points if p)[:SLIDE_CONTENT_PREVIEW_LIMIT]
+        if joined:
+            parts.append(f"关键要点：{joined}")
+
+    if ctx.recent_speech:
+        parts.append(f"最近旁白：{ctx.recent_speech[:SLIDE_CONTENT_PREVIEW_LIMIT]}")
+
+    if ctx.canvas_summary:
+        parts.append("画布元素：\n" + ctx.canvas_summary[:SLIDE_CONTENT_PREVIEW_LIMIT * 2])
+        parts.append(
+            "元素指代协议：当你需要让学生注意画布上的某个元素时，请使用 `[elem:xxx]` "
+            "的格式（xxx 为上面列出的元素 id），前端会自动把它渲染成可点击的药丸并高亮对应元素。"
+        )
+
+    # 旧 slide_content 只在没有结构化字段时兜底（避免与 canvas_summary 重复）
+    if ctx.slide_content and not (ctx.scene_title or ctx.scene_body or ctx.canvas_summary):
         parts.append(f"当前幻灯片内容：{ctx.slide_content[:SLIDE_CONTENT_PREVIEW_LIMIT]}")
 
     wb_state = "已打开" if ctx.whiteboard_open else "已关闭"

@@ -418,10 +418,30 @@ class AgentProfilesResponse(BaseModel):
     agents: list[AgentProfile] = Field(default_factory=list)
 
 
+class ChatContextPayload(BaseModel):
+    """Phase 4 · 结构化 classroom chat 上下文。
+
+    前端通过 ``build-classroom-context.ts`` 把当前场景、关键要点、最近旁白
+    与画布元素摘要塞进本 payload，替代过去的纯字符串 ``classroomContext``。
+    """
+
+    scene_id: str | None = Field(default=None, alias="sceneId")
+    scene_title: str | None = Field(default=None, alias="sceneTitle")
+    scene_body: str | None = Field(default=None, alias="sceneBody")
+    key_points: list[str] = Field(default_factory=list, alias="keyPoints")
+    recent_speech: str | None = Field(default=None, alias="recentSpeech")
+    canvas_summary: str | None = Field(default=None, alias="canvasSummary")
+
+    model_config = {"populate_by_name": True, "extra": "ignore"}
+
+
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(default_factory=list)
     agents: list[AgentProfile] = Field(default_factory=list)
-    classroom_context: str = Field(default="", alias="classroomContext")
+    # Phase 4: 接受旧 ``str`` 或新 ``ChatContextPayload``。向下兼容至少保留一个版本。
+    classroom_context: "str | ChatContextPayload" = Field(
+        default_factory=ChatContextPayload, alias="classroomContext"
+    )
     language_directive: str = Field(default="", alias="languageDirective")
     task_id: str | None = Field(default=None, alias="taskId")
 

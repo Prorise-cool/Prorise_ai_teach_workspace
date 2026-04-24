@@ -7,6 +7,7 @@
  */
 
 import type { AgentProfile } from './agent';
+import type { ClassroomChatContextPayload } from '../utils/build-classroom-context';
 
 export type SessionType = 'qa' | 'discussion';
 export type SessionStatus = 'idle' | 'active' | 'interrupted' | 'completed';
@@ -36,7 +37,11 @@ export interface ChatMessage {
 export interface ChatRequest {
   messages: Array<Pick<ChatMessage, 'role' | 'content' | 'agentId'>>;
   agents?: AgentProfile[];
-  classroomContext?: string;
+  /**
+   * Phase 4：支持两种形式 —— 旧 str（向下兼容旧前端）或结构化
+   * `ClassroomChatContextPayload`（后端 Pydantic Union 承接）。
+   */
+  classroomContext?: string | ClassroomChatContextPayload;
   languageDirective?: string;
   storeState?: {
     classroomId: string;
@@ -46,6 +51,22 @@ export interface ChatRequest {
     agentIds: string[];
     sessionType: SessionType;
   };
+  /** 任务 ID（broker 频道键）。 */
+  taskId?: string;
+}
+
+/**
+ * Phase 4 · 共享 Companion 侧栏向 classroom-adapter 发起 ask 时的参数。
+ * 只带问题文本 + 上下文 payload（classroomContext 结构化形式）+ taskId/session。
+ */
+export interface CompanionAskParams {
+  questionText: string;
+  classroomContext: ClassroomChatContextPayload;
+  agents?: AgentProfile[];
+  languageDirective?: string;
+  taskId?: string;
+  /** 会话历史（若 consumer 愿意维护），省略则只发当前问题。 */
+  history?: Array<Pick<ChatMessage, 'role' | 'content' | 'agentId'>>;
 }
 
 /** SSE 事件流事件类型 */

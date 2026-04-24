@@ -85,12 +85,24 @@ class DirectorState(BaseModel):
 # ── Discussion request ───────────────────────────────────────────────────────
 
 class ClassroomContext(BaseModel):
-    """Snapshot of the current classroom state (scene + whiteboard)."""
+    """Snapshot of the current classroom state (scene + whiteboard).
+
+    Phase 4: 新增结构化字段 scene_title / scene_body / key_points /
+    recent_speech / canvas_summary。老字段 slide_content 保留作为兼容位
+    （旧前端传一条字符串时我们把它塞到 slide_content）。
+    """
     current_scene_id: str | None = None
     current_scene_type: str | None = None  # "slide" | "quiz" | "interactive"
-    slide_content: str | None = None       # brief description of current slide
+    slide_content: str | None = None       # brief description of current slide (legacy/fallback)
     whiteboard_open: bool = False
     language_directive: str | None = None  # e.g. "Respond in Chinese"
+
+    # Phase 4: structured context fields
+    scene_title: str | None = None
+    scene_body: str | None = None
+    key_points: list[str] = Field(default_factory=list)
+    recent_speech: str | None = None
+    canvas_summary: str | None = None
 
 
 class UserProfile(BaseModel):

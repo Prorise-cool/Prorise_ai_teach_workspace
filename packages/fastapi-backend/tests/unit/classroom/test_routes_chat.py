@@ -239,6 +239,83 @@ def test_each_event_has_id_and_broker_receives_publish(app_with_fakes, monkeypat
     assert dropped == ["classroom_chat_t-bk"]
 
 
+# ─── Phase 4 · classroomContext Union 契约 ─────────────────────────────────
+
+
+def _collect_orch_context(monkeypatch) -> list[Any]:
+    """Patch run_discussion 以捕获传入的 orchestration ClassroomContext。"""
+    captured: list[Any] = []
+
+    async def _fake_run(req, chain) -> AsyncIterator:  # type: ignore[no-untyped-def]
+        captured.append(req.classroom_context)
+        if False:  # pragma: no cover — keep async generator shape
+            yield None
+
+    monkeypatch.setattr(
+        "app.features.classroom.orchestration.run_discussion", _fake_run
+    )
+    return captured
+
+
+def test_accepts_legacy_string_classroom_context(app_with_fakes, monkeypatch):
+    """旧前端：classroomContext 是 str → 走 slide_content 兼容路径。"""
+    captured = _collect_orch_context(monkeypatch)
+    _stub_long_term(monkeypatch)
+
+    payload = _payload(classroomContext="legacy-string-context")
+    with TestClient(app_with_fakes) as client:
+        r = client.post("/api/v1/classroom/chat", json=payload)
+    assert r.status_code == 200
+    assert len(captured) == 1
+    ctx = captured[0]
+    assert ctx.slide_content == "legacy-string-context"
+    assert ctx.scene_title is None
+    assert ctx.canvas_summary is None
+
+
+def test_accepts_phase4_structured_classroom_context(app_with_fakes, monkeypatch):
+    """Phase 4：前端传结构化 payload → 逐字段映射到 orchestration ctx。"""
+    captured = _collect_orch_context(monkeypatch)
+    _stub_long_term(monkeypatch)
+
+    payload = _payload(
+        classroomContext={
+            "sceneId": "s1",
+            "sceneTitle": "微积分基本定理",
+            "sceneBody": "牛顿-莱布尼茨公式",
+            "keyPoints": ["不定积分", "定积分"],
+            "recentSpeech": "刚讲了定积分",
+            "canvasSummary": "  1. [id:e1] text at (0,0)",
+        },
+    )
+    with TestClient(app_with_fakes) as client:
+        r = client.post("/api/v1/classroom/chat", json=payload)
+    assert r.status_code == 200
+    assert len(captured) == 1
+    ctx = captured[0]
+    assert ctx.scene_title == "微积分基本定理"
+    assert ctx.scene_body == "牛顿-莱布尼茨公式"
+    assert ctx.key_points == ["不定积分", "定积分"]
+    assert ctx.recent_speech == "刚讲了定积分"
+    assert ctx.canvas_summary == "  1. [id:e1] text at (0,0)"
+    # 同时 slide_content 也有摘要版（保兼容 prompt）
+    assert ctx.slide_content and "微积分基本定理" in ctx.slide_content
+
+
+def test_accepts_empty_dict_classroom_context(app_with_fakes, monkeypatch):
+    """默认空对象也要能通过校验（前端首次渲染场景未就绪）。"""
+    captured = _collect_orch_context(monkeypatch)
+    _stub_long_term(monkeypatch)
+
+    payload = _payload(classroomContext={})
+    with TestClient(app_with_fakes) as client:
+        r = client.post("/api/v1/classroom/chat", json=payload)
+    assert r.status_code == 200
+    ctx = captured[0]
+    assert ctx.scene_title is None
+    assert ctx.slide_content is None
+
+
 def test_last_event_id_replays_before_live(app_with_fakes, monkeypatch):
     """Last-Event-ID 命中 → 先回放 tail，再 live，seq 从缓存末尾续接。"""
     broker = get_chat_sse_broker()

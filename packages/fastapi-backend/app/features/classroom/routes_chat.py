@@ -17,7 +17,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.security import AccessContext, get_access_context
 from app.features.classroom.chat_sse_broker import ChatSseBroker, get_chat_sse_broker
-from app.features.classroom.schemas import ChatRequest
+from app.features.classroom.schemas import ChatContextPayload, ChatRequest
 
 logger = logging.getLogger(__name__)
 
@@ -111,9 +111,10 @@ async def classroom_chat(
         )
         for a in payload.agents
     ]
-    orch_context = OrchClassroomContext(
-        slide_content=payload.classroom_context or None,
-        language_directive=payload.language_directive or None,
+    orch_context = _to_orch_context(
+        payload.classroom_context,
+        payload.language_directive,
+        OrchClassroomContext,
     )
     orch_request = OrchDiscussionRequest(
         messages=orch_messages,
@@ -178,6 +179,59 @@ async def classroom_chat(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+def _to_orch_context(
+    raw: "str | ChatContextPayload",
+    language_directive: str,
+    ctx_cls: type,
+) -> Any:
+    """把 Phase 4 的新结构或旧 str 统一映射到 orchestration ``ClassroomContext``。
+
+    - 旧 ``str`` 直接塞到 ``slide_content`` 字段（保留既有 prompt 行为）。
+    - 新 ``ChatContextPayload`` 全量映射结构化字段，并把 ``canvas_summary``
+      拼进 ``slide_content`` 让不感知新字段的 prompt 片段仍然拿到摘要。
+    """
+
+    lang = language_directive or None
+
+    if isinstance(raw, ChatContextPayload):
+        parts: list[str] = []
+        if raw.scene_title:
+            parts.append(f"场景：{raw.scene_title}")
+        if raw.scene_body:
+            parts.append(f"正文：{raw.scene_body}")
+        if raw.canvas_summary:
+            parts.append(f"画布：\n{raw.canvas_summary}")
+        legacy_slide = "\n".join(parts) if parts else None
+        return ctx_cls(
+            current_scene_id=raw.scene_id,
+            slide_content=legacy_slide,
+            language_directive=lang,
+            scene_title=raw.scene_title,
+            scene_body=raw.scene_body,
+            key_points=list(raw.key_points or []),
+            recent_speech=raw.recent_speech,
+            canvas_summary=raw.canvas_summary,
+        )
+
+    # 旧字符串路径：保持 pre-Phase-4 行为
+    return ctx_cls(
+        slide_content=(raw or None),
+        language_directive=lang,
+    )
+
+
+def _context_scope_summary(raw: "str | ChatContextPayload") -> str | None:
+    """把 classroom_context 压成 long_term 记忆的 scope_summary（单行）。"""
+    if isinstance(raw, ChatContextPayload):
+        bits: list[str] = []
+        if raw.scene_title:
+            bits.append(raw.scene_title)
+        if raw.scene_body:
+            bits.append(raw.scene_body[:160])
+        return " / ".join(bits) if bits else None
+    return raw or None
 
 
 def _extract_last_user_text(payload: ChatRequest) -> str:
@@ -259,7 +313,7 @@ def _persist_chat_turn(
                 context_type=ContextType.CLASSROOM,
                 anchor_kind=AnchorKind.TOPIC,
                 anchor_ref=anchor_ref,
-                scope_summary=payload.classroom_context or None,
+                scope_summary=_context_scope_summary(payload.classroom_context),
             ),
             question_text=question or "(no user input)",
             answer_summary=answer[:1000] or "(empty answer)",

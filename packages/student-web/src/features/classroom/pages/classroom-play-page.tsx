@@ -4,22 +4,27 @@
  * 与 UI 设计稿 01-classroom.html 对应。
  */
 import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { CompanionSidebar } from '@/components/companion';
+import type {
+  CompanionDataAdapter,
+  CompanionQuickAction,
+} from '@/components/companion';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
+import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 
 import { loadClassroom } from '../db/classroom-db';
-import { useDirectorChat } from '../hooks/use-director-chat';
 import { useScenePlayer } from '../hooks/use-scene-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import { Stage } from '../components/stage';
-import { ChatArea } from '../components/chat/chat-area';
 import { ClassroomHeader } from '../components/classroom-header';
 import { SceneSidebar } from '../components/stage/scene-sidebar';
+import { buildClassroomContext } from '../utils/build-classroom-context';
 import type { AgentSummary } from '../types/classroom';
 import type { AgentProfile } from '../types/agent';
 
@@ -51,7 +56,6 @@ export function ClassroomPlayPage() {
   const sidebarWidth = useClassroomStore((s) => s.sidebarWidth);
   const setSidebarWidth = useClassroomStore((s) => s.setSidebarWidth);
   const chatAreaWidth = useClassroomStore((s) => s.chatAreaWidth);
-  const setChatAreaWidth = useClassroomStore((s) => s.setChatAreaWidth);
   const { themeMode, toggleThemeMode } = useThemeMode();
   const isDark = themeMode === 'dark';
 
@@ -107,7 +111,86 @@ export function ClassroomPlayPage() {
   }, [classroom, agents, setAgents]);
 
   const player = useScenePlayer();
-  const chat = useDirectorChat(classroomId ?? '');
+  const setHighlightedElementId = useClassroomStore(
+    (s) => s.setHighlightedElementId,
+  );
+
+  // Phase 4：把课堂 classroom-adapter 的 askCompanion 包装成共享侧栏的
+  // CompanionDataAdapter —— 同时把 agents 与 language directive 注入。
+  const companionAdapter = useMemo<CompanionDataAdapter>(() => {
+    const impl = resolveClassroomAdapter();
+    return {
+      ask(params) {
+        return (async function* () {
+          const ctx = params.contextSnapshot;
+          // metadata 承载 sceneId 等（来自 buildClassroomContext 产物）
+          const classroomContext =
+            (ctx.metadata as Record<string, unknown> | undefined)
+              ?.classroomContext ?? {};
+          for await (const event of impl.askCompanion({
+            questionText: params.questionText,
+            classroomContext:
+              classroomContext as Parameters<typeof impl.askCompanion>[0]['classroomContext'],
+            agents,
+            languageDirective: classroom?.stage?.languageDirective,
+            taskId: classroom?.taskId ?? classroomId,
+          })) {
+            yield event;
+          }
+        })();
+      },
+    };
+  }, [agents, classroom?.stage?.languageDirective, classroom?.taskId, classroomId]);
+
+  const currentScene = player.currentScene;
+  const getContextSnapshot = useCallback(() => {
+    const payload = buildClassroomContext({ classroom, scene: currentScene });
+    return {
+      text: JSON.stringify(payload),
+      metadata: { classroomContext: payload },
+    };
+  }, [classroom, currentScene]);
+
+  const companionQuickActions = useMemo<CompanionQuickAction[]>(
+    () => [
+      {
+        label: t('classroom.companion.quickExplain'),
+        prompt: t('classroom.companion.quickExplainPrompt'),
+      },
+      {
+        label: t('classroom.companion.quickKeyPoints'),
+        prompt: t('classroom.companion.quickKeyPointsPrompt'),
+      },
+      {
+        label: t('classroom.companion.quickExample'),
+        prompt: t('classroom.companion.quickExamplePrompt'),
+      },
+    ],
+    [t],
+  );
+
+  const anchorLabel = currentScene
+    ? t('classroom.companion.anchorLabel', {
+        title: currentScene.title,
+        order: currentScene.order ?? currentScene.outline?.order ?? '',
+      })
+    : null;
+
+  const handleElementReference = useCallback(
+    (elementId: string) => {
+      setHighlightedElementId(elementId, 3000);
+    },
+    [setHighlightedElementId],
+  );
+
+  const handleAskQuestion = useCallback(
+    async (_text: string) => {
+      // 底部 "提问" 输入现在由右侧 Companion 统一承接；保留回调链以兼容
+      // 老接口签名，实际打开侧栏即可。
+      setCompanionOpen(true);
+    },
+    [],
+  );
 
   const toggleDark = toggleThemeMode;
 
@@ -275,7 +358,7 @@ export function ClassroomPlayPage() {
           <Stage
             scene={player.currentScene}
             agents={agents}
-            messages={chat.messages}
+            messages={[]}
             isPlaying={player.playbackStatus === 'playing'}
             canGoNext={player.canGoNext}
             canGoPrev={player.canGoPrev}
@@ -283,30 +366,40 @@ export function ClassroomPlayPage() {
             onPause={player.pause}
             onNext={player.goNext}
             onPrev={player.goPrev}
-            onAskQuestion={chat.sendMessage}
+            onAskQuestion={handleAskQuestion}
             sceneIndex={player.currentScene
               ? player.scenes.findIndex((s) => s.id === player.currentScene?.id)
               : 0}
             scenesCount={player.scenes.length}
-            isStreaming={chat.isStreaming}
+            isStreaming={false}
           />
         </div>
       </main>
 
-      {/* 右侧边栏 — 伴学助手（OpenMAIC 1:1：双 Tab + 拖拽宽度 + 玻璃感） */}
+      {/* 右侧边栏 —— Phase 4 统一 Companion 侧栏（视频 / 课堂共享） */}
       <div
         className={`fixed right-0 top-0 z-30 h-full transition-transform duration-300 md:relative md:z-auto md:translate-x-0 ${
           companionOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
         }`}
+        style={{ width: companionOpen ? chatAreaWidth : 0 }}
       >
-        <ChatArea
-          messages={chat.messages}
-          isStreaming={chat.isStreaming}
-          onSendMessage={chat.sendMessage}
-          collapsed={!companionOpen}
-          onCollapseChange={(c) => { setCompanionOpen(!c); setMobileOverlayVisible(false); }}
-          width={chatAreaWidth}
-          onWidthChange={setChatAreaWidth}
+        <CompanionSidebar
+          isOpen={companionOpen}
+          onClose={() => {
+            setCompanionOpen(false);
+            setMobileOverlayVisible(false);
+          }}
+          adapter={companionAdapter}
+          getContextSnapshot={getContextSnapshot}
+          anchorLabel={anchorLabel}
+          quickActions={companionQuickActions}
+          onElementReference={handleElementReference}
+          theme="indigo"
+          sessionKey={classroomId}
+          title={t('classroom.companion.title')}
+          subtitle={t('classroom.companion.subtitle')}
+          emptyHint={t('classroom.companion.emptyHint')}
+          inputPlaceholder={t('classroom.companion.placeholder')}
         />
       </div>
 

@@ -33,6 +33,7 @@ import type {
 import type {
   ChatEvent,
   ChatRequest,
+  CompanionAskParams,
 } from '@/features/classroom/types/chat';
 import type {
   ClassroomCreateRequest,
@@ -108,6 +109,14 @@ export interface ClassroomAdapter {
     request: ChatRequest,
     options?: ClassroomCallOptions,
   ): AsyncIterable<ChatEvent>;
+  /**
+   * Phase 4 · 共享 Companion 侧栏入口：把一次 ask 封装成文本事件流。
+   * 底层复用 `streamChat`，只筛取 text_delta 与 error。
+   */
+  askCompanion(
+    params: CompanionAskParams,
+    options?: ClassroomCallOptions,
+  ): AsyncIterable<{ type: 'text'; content: string } | { type: 'error'; message: string }>;
   /** 测验自动评分。 */
   gradeQuiz(
     request: QuizGradeRequest,
@@ -353,6 +362,40 @@ export function createRealClassroomAdapter(
       })();
     },
 
+    askCompanion(params, options) {
+      const self = this;
+      return (async function* () {
+        // 只发单轮：history（若有）+ 当前 user 问题
+        const messages = [
+          ...(params.history ?? []),
+          { role: 'user' as const, content: params.questionText },
+        ];
+        const request: ChatRequest = {
+          messages,
+          agents: params.agents ?? [],
+          classroomContext: params.classroomContext,
+          languageDirective: params.languageDirective,
+          taskId: params.taskId,
+        };
+        try {
+          for await (const event of self.streamChat(request, options)) {
+            if (event.type === 'text_delta') {
+              const content = event.data?.content ?? '';
+              if (content) yield { type: 'text' as const, content };
+            } else if (event.type === 'error') {
+              yield { type: 'error' as const, message: event.data.message };
+              return;
+            } else if (event.type === 'done') {
+              return;
+            }
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : '未知错误';
+          yield { type: 'error' as const, message };
+        }
+      })();
+    },
+
     async gradeQuiz(request, options) {
       try {
         const response = await client.request<{ data: QuizGradeResult }>({
@@ -445,6 +488,11 @@ export function createMockClassroomAdapter(): ClassroomAdapter {
     streamChat() {
       return (async function* () {
         /* mock: empty stream */
+      })();
+    },
+    askCompanion() {
+      return (async function* () {
+        yield { type: 'text' as const, content: '(mock companion reply)' };
       })();
     },
     gradeQuiz() {

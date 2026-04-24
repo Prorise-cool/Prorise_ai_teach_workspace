@@ -163,6 +163,44 @@ def test_build_state_context_populated_scene_slide_truncates() -> None:
     assert "白板状态：已打开" in out
 
 
+def test_build_state_context_phase4_structured_fields_expand() -> None:
+    """Phase 4：结构化字段（scene_title/body/key_points/recent_speech/canvas_summary）
+    应逐项展开，并附带 `[elem:xxx]` 协议说明。"""
+    ctx = ClassroomContext(
+        current_scene_type="slide",
+        scene_title="微积分基本定理",
+        scene_body="牛顿-莱布尼茨公式将积分与原函数关联",
+        key_points=["不定积分", "定积分", "微积分基本定理"],
+        recent_speech="我们刚讲了定积分的几何意义",
+        canvas_summary="  1. [id:e1] text: \"∫f(x)dx\" at (200,120)",
+    )
+    out = build_state_context(ctx)
+    assert "当前场景：微积分基本定理" in out
+    assert "牛顿-莱布尼茨公式" in out
+    assert "不定积分、定积分、微积分基本定理" in out
+    assert "最近旁白：我们刚讲了定积分的几何意义" in out
+    assert "[id:e1]" in out
+    assert "[elem:xxx]" in out  # 协议说明应被注入
+
+
+def test_build_state_context_structured_fields_suppress_legacy_slide() -> None:
+    """当 scene_title / scene_body / canvas_summary 任一存在时，不要再重复
+    渲染老的 slide_content（避免 prompt 里画布内容出现两次）。"""
+    ctx = ClassroomContext(
+        scene_title="Foo",
+        slide_content="LEGACY_SLIDE_TEXT",
+    )
+    out = build_state_context(ctx)
+    assert "LEGACY_SLIDE_TEXT" not in out
+
+
+def test_build_state_context_legacy_slide_still_used_when_structured_absent() -> None:
+    """向下兼容：旧前端只传 slide_content 时继续工作。"""
+    ctx = ClassroomContext(slide_content="老字段占位内容")
+    out = build_state_context(ctx)
+    assert "当前幻灯片内容：老字段占位内容" in out
+
+
 # ── build_virtual_whiteboard_context ───────────────────────────────────────
 
 def test_whiteboard_context_empty_ledger_returns_empty() -> None:

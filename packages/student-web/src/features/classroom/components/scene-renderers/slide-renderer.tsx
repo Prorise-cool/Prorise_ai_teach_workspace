@@ -25,6 +25,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
+import { useClassroomStore } from '../../stores/classroom-store';
+
 import { SpotlightOverlay } from './spotlight-overlay';
 
 interface SlideElement {
@@ -65,6 +67,7 @@ export const SlideRenderer: FC<SlideRendererProps> = ({
   const { t } = useAppTranslation();
   const elements = content?.elements ?? [];
   const bgColor = content?.background?.color ?? '#ffffff';
+  const highlightedId = useClassroomStore((s) => s.highlightedElementId);
 
   // 按实际元素 bbox 计算 scale：
   // 后端生成的 elements 并不总是铺满 960×540，常见情况是 minX≈180 左侧留白。
@@ -192,7 +195,13 @@ export const SlideRenderer: FC<SlideRendererProps> = ({
           </div>
 
           {elements.map((el) => (
-            <SlideElementView key={el.id} element={el} offsetX={bbox.minX} offsetY={bbox.minY} />
+            <SlideElementView
+              key={el.id}
+              element={el}
+              offsetX={bbox.minX}
+              offsetY={bbox.minY}
+              highlighted={highlightedId === el.id}
+            />
           ))}
         </div>
       </div>
@@ -203,11 +212,12 @@ export const SlideRenderer: FC<SlideRendererProps> = ({
   );
 };
 
-const SlideElementView: FC<{ element: SlideElement; offsetX: number; offsetY: number }> = ({
-  element,
-  offsetX,
-  offsetY,
-}) => {
+const SlideElementView: FC<{
+  element: SlideElement;
+  offsetX: number;
+  offsetY: number;
+  highlighted?: boolean;
+}> = ({ element, offsetX, offsetY, highlighted = false }) => {
   const wrapperStyle: CSSProperties = {
     position: 'absolute',
     left: element.left - offsetX,
@@ -215,6 +225,10 @@ const SlideElementView: FC<{ element: SlideElement; offsetX: number; offsetY: nu
     width: element.width,
     height: element.height,
     boxSizing: 'border-box',
+    // Phase 4：Companion `[elem:xxx]` 点击高亮 —— 叠加 outline，不影响布局
+    outline: highlighted ? '2px solid var(--primary, #f5c547)' : undefined,
+    outlineOffset: highlighted ? 4 : undefined,
+    transition: 'outline-color 200ms ease',
   };
 
   if (element.type === 'text') {
