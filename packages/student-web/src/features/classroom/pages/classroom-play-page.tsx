@@ -531,14 +531,26 @@ function PublishToggle({ classroomId }: { classroomId: string }) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 渲染期日志：如果你连这条都看不到，说明浏览器跑的是旧 bundle，
+  // 需要硬刷新 (Cmd+Shift+R) 或重启 pnpm --filter student-web dev
+  // eslint-disable-next-line no-console
+  console.log(
+    '[PublishToggle] RENDER classroomId=%s isPublic=%s',
+    classroomId,
+    isPublic,
+  );
+
   // 挂载时 / classroomId 变化时拉一次当前状态，避免每次都默认显示"私有"
   useEffect(() => {
     const adapter = resolveClassroomPublicAdapter();
     const ac = new AbortController();
+    // eslint-disable-next-line no-console
+    console.log('[PublishToggle] useEffect fetch classroomId=%s', classroomId);
     void (async () => {
       try {
         const r = await adapter.getState(classroomId, { signal: ac.signal });
         if (!ac.signal.aborted) {
+          // eslint-disable-next-line no-console
           console.info(
             '[PublishToggle] initial state classroomId=%s published=%s',
             classroomId,
@@ -550,6 +562,7 @@ function PublishToggle({ classroomId }: { classroomId: string }) {
         // 读不到不影响可用性（点击时仍可 publish），但把 error 吐到 console
         // 方便定位是 endpoint 404 / Java 未重启 / 网络问题
         if (!ac.signal.aborted) {
+          // eslint-disable-next-line no-console
           console.warn('[PublishToggle] getState failed', err);
         }
       }
