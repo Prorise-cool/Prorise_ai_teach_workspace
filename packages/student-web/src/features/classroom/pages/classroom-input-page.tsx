@@ -26,9 +26,7 @@ import {
 	CLASSROOM_DURATION_PRESETS,
 	ClassroomInputAdvancedDialog,
 } from '@/features/classroom/components/classroom-input-advanced-dialog';
-import { ClassroomGeneratingOverlay } from '@/features/classroom/components/classroom-generating-overlay';
 import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
-import { useClassroomStore } from '@/features/classroom/stores/classroom-store';
 
 import '@/components/input-page/styles/input-page-shared.scss';
 import '@/features/classroom/styles/classroom-input-page.scss';
@@ -49,8 +47,6 @@ export function ClassroomInputPage() {
 	const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 	const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
 	const { create } = useClassroomCreate();
-	const generationProgress = useClassroomStore((s) => s.generationProgress);
-	const generationMessage = useClassroomStore((s) => s.generationMessage);
 
 	const {
 		isDragging,
@@ -110,16 +106,7 @@ export function ClassroomInputPage() {
 	const feedLoadMore = t('classroomInput.feedLoadMore');
 	const feedLoading = t('classroomInput.feedLoading');
 
-	const showGeneratingOverlay = isSubmitting && generationProgress > 0;
-
 	return (
-		<>
-		{showGeneratingOverlay && (
-			<ClassroomGeneratingOverlay
-				progress={generationProgress}
-				message={generationMessage ?? null}
-			/>
-		)}
 		<WorkspaceInputShell
 			rootClassName="xm-classroom-input"
 			navLinks={navLinks}
@@ -171,7 +158,7 @@ export function ClassroomInputPage() {
 									.catch(() => null);
 								pdfText = parsed?.text;
 							}
-							const classroomId = await create({
+							const taskId = await create({
 								requirement,
 								pdfText,
 								enableWebSearch: webSearchEnabled,
@@ -179,10 +166,9 @@ export function ClassroomInputPage() {
 								durationMinutes,
 								interactiveMode,
 							});
-							void navigate(`/classroom/play/${classroomId}`);
+							void navigate(`/classroom/generating/${taskId}`);
 						} catch (err) {
 							console.error('[ClassroomInput] 课堂生成失败:', err);
-						} finally {
 							setIsSubmitting(false);
 						}
 					}}
@@ -192,9 +178,7 @@ export function ClassroomInputPage() {
 						multiAgentHint,
 						placeholder,
 						submitLabel: isSubmitting
-							? generationProgress > 0
-								? `${generationMessage ?? t('classroom.inputPage.generatingPrefix')} ${Math.round(generationProgress)}%`
-								: t('openmaic.generation.generating')
+							? t('openmaic.generation.submitting')
 							: submitLabel,
 						toolUploadFile,
 						toolVoiceInput,
@@ -248,6 +232,5 @@ export function ClassroomInputPage() {
 			feedLoadMoreLabel={feedLoadMore}
 			feedLoadingLabel={feedLoading}
 		/>
-		</>
 	);
 }

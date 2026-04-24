@@ -1,28 +1,28 @@
 /**
- * 课堂生成与加载主 Hook。
- * 负责提交生成任务、轮询状态、存储到 IndexedDB、更新 Zustand store。
+ * 课堂生成主 Hook 集。
+ *
+ * 重构说明（Phase 2）：
+ * - `useClassroomCreate().create()` 现在只做提交 → 拿到 taskId 立即返回；
+ *   轮询与课堂保存由独立路由 `/classroom/generating/:taskId` 内部的
+ *   `usePollGeneration(taskId)` 接管。
  *
  * 后端状态机（FastAPI classroom job_runner）:
  *   pending → generating_outline → generating_scenes → ready | failed
- *
- * 后端 /classroom/generate/classroom/{taskId} 响应为统一信封
- *   { code, msg, data: { taskId, status, progress, message?, classroom?, error? } }
- * adapter 通过 ``unwrapEnvelope`` 解包后向本 Hook 暴露 ``data`` 负载，
- * 其中 ``classroom`` 包含 scenes / agents / requirement 完整数据。
  */
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 
 import { saveClassroom } from '../db/classroom-db';
 import { useClassroomStore } from '../stores/classroom-store';
-import type { Classroom } from '../types/classroom';
-import type { ClassroomCreateRequest } from '../types/classroom';
+import type { Classroom, ClassroomCreateRequest, ClassroomJobResponse } from '../types/classroom';
+import type { Scene } from '../types/scene';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_COUNT = 150; // ~5 分钟
 
+/** 提交课堂生成任务，返回后端 taskId。不再内部阻塞等待结果。 */
 export function useClassroomCreate() {
   const { t } = useAppTranslation();
   const store = useClassroomStore;
@@ -36,97 +36,9 @@ export function useClassroomCreate() {
       abortRef.current = ac;
 
       store.getState().setGenerationProgress(0, t('openmaic.generation.submitting'));
-
-      // 1. 提交任务 → 获取 taskId
       const { taskId } = await adapter.submit(req, { signal: ac.signal });
       store.getState().setGenerationProgress(5, t('openmaic.generation.generating'));
-
-      // 2. 轮询任务状态（后端已做 outline + agent profiles + scene 全链路编排）
-      let pollCount = 0;
-
-      while (pollCount < MAX_POLL_COUNT) {
-        if (ac.signal.aborted) throw new Error(t('classroom.common.userCancelled'));
-        await sleep(POLL_INTERVAL_MS);
-
-        let statusResp;
-        try {
-          statusResp = await adapter.getStatus(taskId, { signal: ac.signal });
-        } catch {
-          pollCount++;
-          continue;
-        }
-
-        // 用后端真实 progress；fallback 到递增估计
-        const serverProgress = typeof statusResp.progress === 'number' ? statusResp.progress : 0;
-        const progress = serverProgress > 0
-          ? serverProgress
-          : Math.min(95, 5 + (pollCount / MAX_POLL_COUNT) * 90);
-        store.getState().setGenerationProgress(progress, statusResp.message ?? t('openmaic.generation.generating'));
-
-        // 后端 ready 状态对应前端 completed
-        if (statusResp.status === 'ready' && statusResp.classroom) {
-          // 后端回传 JSON 形状由 FastAPI 约束但 TS 侧保留 unknown，需要显式转换
-          const remoteClassroom = statusResp.classroom as Record<string, unknown> & {
-            id?: string;
-            name?: string;
-            requirement?: string;
-            generatedAt?: number;
-            scenes?: unknown[];
-            agents?: Record<string, unknown>[];
-          };
-          const localId = remoteClassroom.id ?? taskId;
-          const scenes = (Array.isArray(remoteClassroom.scenes) ? remoteClassroom.scenes : []) as unknown as import('../types/scene').Scene[];
-          const agents = (Array.isArray(remoteClassroom.agents)
-            ? (remoteClassroom.agents as Record<string, unknown>[])
-            : []) as Record<string, unknown>[];
-
-          const classroom: Classroom = {
-            id: localId,
-            name: remoteClassroom.name ?? req.requirement.slice(0, 50),
-            requirement: remoteClassroom.requirement ?? req.requirement,
-            generatedAt: remoteClassroom.generatedAt ?? Date.now(),
-            updatedAt: Date.now(),
-            status: 'ready',
-            stage: {
-              id: localId,
-              name: remoteClassroom.name ?? req.requirement.slice(0, 50),
-              createdAt: remoteClassroom.generatedAt ?? Date.now(),
-              updatedAt: Date.now(),
-              agentIds: agents.map((a) => a.id as string),
-              generatedAgentConfigs: agents.map((a: Record<string, unknown>) => ({
-                id: a.id as string,
-                name: a.name as string,
-                role: a.role as string,
-                persona: (a.persona ?? '') as string,
-                avatar: (a.avatar ?? '') as string,
-                color: (a.color ?? '#4A90D9') as string,
-                priority: 1,
-              })),
-            },
-            scenes,
-            agents: agents.map((a: Record<string, unknown>) => ({
-              id: a.id as string,
-              name: a.name as string,
-              role: a.role as string,
-              avatar: (a.avatar ?? '') as string,
-              color: (a.color ?? '#4A90D9') as string,
-            })),
-            taskId,
-          };
-          await saveClassroom(classroom);
-          store.getState().setClassroom(classroom);
-          store.getState().setGenerationProgress(100, t('openmaic.generation.complete'));
-          return classroom.id;
-        }
-
-        if (statusResp.status === 'failed') {
-          throw new Error(statusResp.error ?? t('classroom.common.classroomGenerationFailed'));
-        }
-
-        pollCount++;
-      }
-
-      throw new Error(t('openmaic.generation.timeout'));
+      return taskId;
     },
     [store, adapter, t],
   );
@@ -136,6 +48,189 @@ export function useClassroomCreate() {
   }, []);
 
   return { create, cancel };
+}
+
+/** 独立路由等待页消费：轮询 taskId 状态直到 ready / failed / 超时。 */
+export interface UsePollGenerationResult {
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  progress: number;
+  stageLabel: string;
+  classroomId: string | null;
+  errorMessage: string | null;
+  cancel: () => void;
+}
+
+export function usePollGeneration(taskId: string | undefined): UsePollGenerationResult {
+  const { t } = useAppTranslation();
+  const store = useClassroomStore;
+  const adapter = resolveClassroomAdapter();
+  const abortRef = useRef<AbortController | null>(null);
+
+  const [state, setState] = useState<Omit<UsePollGenerationResult, 'cancel'>>({
+    status: 'pending',
+    progress: 0,
+    stageLabel: t('openmaic.generation.generating'),
+    classroomId: null,
+    errorMessage: null,
+  });
+
+  const cancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!taskId) return;
+    const ac = new AbortController();
+    abortRef.current = ac;
+    let cancelled = false;
+    let pollCount = 0;
+
+    async function loop() {
+      setState((prev) => ({ ...prev, status: 'processing' }));
+
+      while (!cancelled && pollCount < MAX_POLL_COUNT) {
+        if (ac.signal.aborted) {
+          return;
+        }
+        await sleep(POLL_INTERVAL_MS);
+        if (cancelled || ac.signal.aborted) return;
+
+        let statusResp: ClassroomJobResponse | null = null;
+        try {
+          statusResp = await adapter.getStatus(taskId as string, { signal: ac.signal });
+        } catch {
+          pollCount += 1;
+          continue;
+        }
+        if (cancelled || ac.signal.aborted) return;
+
+        const serverProgress = typeof statusResp.progress === 'number' ? statusResp.progress : 0;
+        const progress = serverProgress > 0
+          ? serverProgress
+          : Math.min(95, 5 + (pollCount / MAX_POLL_COUNT) * 90);
+        const stageLabel = statusResp.message ?? t('openmaic.generation.generating');
+        store.getState().setGenerationProgress(progress, stageLabel);
+        setState((prev) => ({ ...prev, progress, stageLabel }));
+
+        if (statusResp.status === 'ready' && statusResp.classroom) {
+          try {
+            const classroom = buildClassroomFromResponse(statusResp, taskId as string);
+            await saveClassroom(classroom);
+            store.getState().setClassroom(classroom);
+            store.getState().setGenerationProgress(100, t('openmaic.generation.complete'));
+            if (!cancelled) {
+              setState({
+                status: 'completed',
+                progress: 100,
+                stageLabel: t('openmaic.generation.complete'),
+                classroomId: classroom.id,
+                errorMessage: null,
+              });
+            }
+          } catch (err) {
+            if (!cancelled) {
+              setState({
+                status: 'failed',
+                progress: serverProgress,
+                stageLabel: t('classroom.generation.generationFailed'),
+                classroomId: null,
+                errorMessage: err instanceof Error ? err.message : String(err),
+              });
+            }
+          }
+          return;
+        }
+
+        if (statusResp.status === 'failed') {
+          if (!cancelled) {
+            setState({
+              status: 'failed',
+              progress: serverProgress,
+              stageLabel: t('classroom.generation.generationFailed'),
+              classroomId: null,
+              errorMessage: statusResp.error ?? t('classroom.common.classroomGenerationFailed'),
+            });
+          }
+          return;
+        }
+
+        pollCount += 1;
+      }
+
+      if (!cancelled) {
+        setState((prev) => ({
+          ...prev,
+          status: 'failed',
+          errorMessage: t('openmaic.generation.timeout'),
+        }));
+      }
+    }
+
+    void loop();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  // adapter/store/t 在实际使用中是稳定的（adapter 是模块级单例，store 是 Zustand，t 来自 i18next hook）。
+  // 把它们放入依赖会让 taskId 变更外再次触发，反而有重复轮询风险。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
+
+  return { ...state, cancel };
+}
+
+function buildClassroomFromResponse(statusResp: ClassroomJobResponse, taskId: string): Classroom {
+  const remoteClassroom = (statusResp.classroom ?? {}) as Record<string, unknown> & {
+    id?: string;
+    name?: string;
+    requirement?: string;
+    generatedAt?: number;
+    scenes?: unknown[];
+    agents?: Record<string, unknown>[];
+  };
+  const localId = remoteClassroom.id ?? taskId;
+  const scenes = (Array.isArray(remoteClassroom.scenes) ? remoteClassroom.scenes : []) as unknown as Scene[];
+  const agents = (Array.isArray(remoteClassroom.agents)
+    ? (remoteClassroom.agents as Record<string, unknown>[])
+    : []) as Record<string, unknown>[];
+  const requirement = (remoteClassroom.requirement as string) ?? '';
+  const fallbackName = requirement ? requirement.slice(0, 50) : '';
+  const name = (remoteClassroom.name as string) ?? fallbackName;
+
+  return {
+    id: localId,
+    name,
+    requirement,
+    generatedAt: remoteClassroom.generatedAt ?? Date.now(),
+    updatedAt: Date.now(),
+    status: 'ready',
+    stage: {
+      id: localId,
+      name,
+      createdAt: remoteClassroom.generatedAt ?? Date.now(),
+      updatedAt: Date.now(),
+      agentIds: agents.map((a) => a.id as string),
+      generatedAgentConfigs: agents.map((a) => ({
+        id: a.id as string,
+        name: a.name as string,
+        role: a.role as string,
+        persona: (a.persona ?? '') as string,
+        avatar: (a.avatar ?? '') as string,
+        color: (a.color ?? '#4A90D9') as string,
+        priority: 1,
+      })),
+    },
+    scenes,
+    agents: agents.map((a) => ({
+      id: a.id as string,
+      name: a.name as string,
+      role: a.role as string,
+      avatar: (a.avatar ?? '') as string,
+      color: (a.color ?? '#4A90D9') as string,
+    })),
+    taskId,
+  };
 }
 
 function sleep(ms: number): Promise<void> {

@@ -312,6 +312,21 @@ async function loadLearningPathRoute() {
 }
 
 /**
+ * 按需加载课堂生成等待页（Phase 2 独立路由）。
+ *
+ * 提交后先跳此路由，内部 2s 轮询 → ready 自动跳 `/classroom/play/:classroomId`。
+ */
+async function loadClassroomGeneratingRoute() {
+	const { ClassroomGeneratingPage } = await import(
+		'@/features/classroom/pages/classroom-generating-page'
+	);
+
+	return {
+		Component: ClassroomGeneratingPage
+	};
+}
+
+/**
  * 按需加载课堂播放页（幻灯片 + 白板 + 讨论）。
  *
  * Wave 1：原 features/openmaic 已合并进 features/classroom；
@@ -463,6 +478,10 @@ export function createAppRouter() {
 						{
 							path: 'path',
 							lazy: loadLearningPathRoute
+						},
+						{
+							path: 'classroom/generating/:taskId',
+							lazy: loadClassroomGeneratingRoute
 						},
 						{
 							path: 'classroom/play/:classroomId',

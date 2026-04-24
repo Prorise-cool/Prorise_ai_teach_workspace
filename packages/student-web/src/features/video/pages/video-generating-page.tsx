@@ -11,7 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
-import '@/features/video/components/task-generating-view.scss';
+import '@/components/generating/task-generating-shell.scss';
 import { cn } from '@/lib/utils';
 import { useFeedback } from '@/shared/feedback';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
