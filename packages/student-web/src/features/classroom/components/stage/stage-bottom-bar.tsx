@@ -1,23 +1,22 @@
 /**
- * 舞台底部栏 —— 从 stage.tsx 抽出的子组件，负责:
- *  - 后续探索操作胶囊（Checkpoint / Quiz 等）
- *  - 教师 AgentBubble（朗读态展示真实讲稿）
- *  - 主问答输入（向老师提问/打断）
+ * 舞台底部栏 —— 对应 OpenMAIC `components/roundtable/index.tsx` 的
+ * 中央交互区视觉语言（精简：单老师，无 listeners/语音录入/ProactiveCard）。
  *
- * 独立出来是为了让 stage.tsx 在 1:1 对标 OpenMAIC
- * `components/stage.tsx` 的三段式布局（sidebar | canvas | chat）时
- * 保持单文件 ≤ 500 行。视觉样式与 OpenMAIC `components/stage.tsx`
- * 底部 Roundtable + Composer 呼应；颜色全部走 token。
+ * 布局：[教师头像] [中央语音泡 rounded-2xl bg-card shadow-lg]
+ *       下方：[继续探索 pills] + [圆底输入条 + 圆形 primary 发送按钮]
+ *
+ * Props 接口保留 listeners 字段以减少父级改动，但**不再渲染**学生头像组。
  */
 import { ChevronRight } from 'lucide-react';
 import { useCallback, useState, type FC, type KeyboardEvent } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
+import { cn } from '@/lib/utils';
 
 import type { AgentProfile } from '../../types/agent';
 import type { Scene } from '../../types/scene';
 import type { ChatMessage } from '../../types/chat';
-import { AgentBubble } from '../agent/agent-bubble';
+import { AgentAvatar } from '../agent/agent-avatar';
 
 interface StageBottomBarProps {
   readonly teacher: AgentProfile | null;
@@ -33,7 +32,6 @@ interface StageBottomBarProps {
 
 export const StageBottomBar: FC<StageBottomBarProps> = ({
   teacher,
-  listeners,
   scene,
   currentSpeechText,
   isPlaying,
@@ -60,74 +58,86 @@ export const StageBottomBar: FC<StageBottomBarProps> = ({
     [handleSubmit],
   );
 
+  // 气泡只承载真实讲解文本（currentSpeechText）——
+  // 不再在切换场景时塞"正在播放 xx 场景"/"点击播放开始讲解"提示，
+  // 避免文字进出造成底部高度抖动，并符合产品体验要求：无缝切换。
+  const bubbleText = currentSpeechText ?? null;
+
   return (
-    <div className="shrink-0 py-3">
-      <div className="mx-auto max-w-5xl px-4 md:px-6">
-        {/* 后续探索操作胶囊 */}
-        {!isPlaying && scene && (
-          <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border bg-card/50 px-4 py-3">
-            <span className="text-xs text-muted-foreground">{t('classroom.chat.continueExplore')}</span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors"
-              >
-                {t('classroom.chat.sources')}
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-border bg-foreground px-3 py-1 text-[11px] text-background transition-colors hover:opacity-90"
-              >
-                {t('classroom.chat.checkpoint')}
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:bg-muted transition-colors"
-              >
-                {t('classroom.chat.formalQuiz')}
-              </button>
+    <div className="h-full flex flex-col border-t border-border bg-card/60 backdrop-blur-md">
+      {/* ── 主交互条：[教师头像] [中央语音泡]  —— flex-1 占满除输入条外的剩余高度 */}
+      <div className="flex-1 min-h-0 flex items-stretch gap-1.5 px-3 py-2">
+        {/* 左：教师头像 */}
+        {teacher && (
+          <div className="shrink-0 flex flex-col items-center justify-center gap-1 w-16 select-none">
+            <div className="transition-transform duration-200 hover:scale-110">
+              <AgentAvatar
+                name={teacher.name}
+                color={teacher.color}
+                avatar={teacher.avatar}
+                size="md"
+                showOnlineIndicator
+              />
             </div>
-          </div>
-        )}
-
-        {/* 教师气泡 —— 朗读时显示真实讲稿，否则提示点击播放 */}
-        {teacher && scene && (
-          <AgentBubble
-            agent={teacher}
-            text={
-              currentSpeechText ??
-              (isPlaying
-                ? t('classroom.chat.nowPlayingScene', { title: scene.title })
-                : t('classroom.chat.sceneHint', { title: scene.title }))
-            }
-            listeners={listeners}
-            isStreaming={isPlaying && !!currentSpeechText}
-          />
-        )}
-
-        {/* 问题输入 */}
-        {onAskQuestion && (
-          <div className="mt-3 flex h-9 items-center gap-2 rounded-full border border-border bg-background px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all md:h-10">
-            <input
-              value={questionInput}
-              onChange={(e) => setQuestionInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t('openmaic.classroom.askPlaceholder')}
-              disabled={isStreaming}
-              className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
-            />
-            <button
-              type="button"
-              onClick={() => void handleSubmit()}
-              disabled={!questionInput.trim() || isStreaming}
-              aria-label={t('classroom.chat.ariaAskSend')}
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-opacity disabled:opacity-40"
+            <span
+              className="max-w-full truncate px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase border border-border shadow-sm bg-card"
+              style={{ color: teacher.color }}
             >
-              <ChevronRight className="h-3 w-3" />
-            </button>
+              {teacher.name}
+            </span>
           </div>
         )}
+
+        {/* 中：语音泡 —— 去掉 max-h-36 约束，改由父容器 flex 分配 */}
+        <div
+          className={cn(
+            'relative flex-1 min-w-0 rounded-2xl bg-card shadow-lg border border-border overflow-hidden',
+            isPlaying && !!currentSpeechText && 'ring-1 ring-primary/40',
+          )}
+        >
+          {/* 气泡永远保留 h-full 的容器；有 speech 时渲染文字，没有时保留空白，
+              从而切换场景时气泡自身尺寸不再变化，canvas 宽度完全恒定。 */}
+          <div className="overflow-y-auto scrollbar-hide flex flex-col gap-2 p-3 h-full text-sm leading-relaxed text-foreground">
+            {bubbleText && <p className="whitespace-pre-wrap break-words">{bubbleText}</p>}
+            {isPlaying && !!currentSpeechText && (
+              <span className="inline-flex items-center gap-0.5 self-start">
+                <span className="h-1 w-1 animate-bounce rounded-full bg-muted-foreground [animation-delay:0s]" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.16s]" />
+                <span className="h-1 w-1 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.32s]" />
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 听众头像组已删除 —— 单老师模式 */}
       </div>
+
+      {/* ── 输入条：发送老师问题（对齐 OpenMAIC composer） ── */}
+      {onAskQuestion && (
+        <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 border-t border-border">
+          <input
+            value={questionInput}
+            onChange={(e) => setQuestionInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t('openmaic.classroom.askPlaceholder')}
+            disabled={isStreaming}
+            className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60 disabled:opacity-60"
+          />
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={!questionInput.trim() || isStreaming}
+            aria-label={t('classroom.chat.ariaAskSend')}
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all',
+              'hover:opacity-90 active:scale-90',
+              'disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',
+            )}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

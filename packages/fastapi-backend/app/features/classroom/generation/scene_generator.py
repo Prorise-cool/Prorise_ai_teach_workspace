@@ -69,6 +69,10 @@ async def generate_scene_actions(
     # Build content summary for the prompt
     content_summary = _summarize_content(content, scene_type)
 
+    # 从 slide content 里抽出真实 element id 清单，交给 LLM 作为 spotlight 的合法来源。
+    # 如果不这么做，LLM 会凭空编造 id（如 "title_area"）导致前端 spotlight 永远找不到 DOM。
+    available_elements = _extract_element_refs(content, scene_type)
+
     params = LLMCallParams(
         system=SCENE_ACTIONS_SYSTEM_PROMPT,
         prompt=build_scene_actions_user_prompt(
@@ -78,6 +82,7 @@ async def generate_scene_actions(
             content_summary=content_summary,
             agents=agents,
             language_directive=language_directive,
+            available_elements=available_elements,
         ),
     )
 
@@ -209,6 +214,33 @@ async def _generate_pbl_content(
             for i in range(pbl_config.get("issueCount", 3))
         ],
     }
+
+
+def _extract_element_refs(content: dict, scene_type: str) -> list[dict]:
+    """抽取 slide 场景的真实 element id 清单（仅 slide 场景）。
+
+    返回形如 [{"id": "text_title", "type": "text", "desc": "核心公式..."}, ...]，
+    供 scene_actions prompt 告知 LLM 哪些 elementId 才是合法的。
+    """
+    if scene_type != "slide":
+        return []
+    elements = content.get("elements", []) or []
+    refs: list[dict] = []
+    for el in elements:
+        el_id = el.get("id")
+        if not el_id:
+            continue
+        raw_desc = str(el.get("content") or "").strip()
+        # 去除 HTML 标签粗简单化：只保留可见字符摘要
+        desc = raw_desc.replace("\n", " ")
+        if len(desc) > 40:
+            desc = desc[:40] + "…"
+        refs.append({
+            "id": el_id,
+            "type": el.get("type", ""),
+            "desc": desc,
+        })
+    return refs
 
 
 def _summarize_content(content: dict, scene_type: str) -> str:

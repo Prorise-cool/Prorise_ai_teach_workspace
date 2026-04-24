@@ -13,30 +13,25 @@
  * 颜色全部走项目 token；字体走 var(--xm-font-sans)。本组件不直接消费 OpenMAIC
  * 的 settings store，而是用 local state + props 兜底，保证 ≤ 500 行硬限制。
  */
-import { useCallback, useMemo, useRef, useState, type FC, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type FC, type ReactNode } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 
 import { CanvasArea } from './canvas/canvas-area';
-import { AgentBubble } from './agent/agent-bubble';
 import { InteractiveRenderer } from './scene-renderers/interactive-renderer';
 import { PBLRenderer } from './scene-renderers/pbl-renderer';
 import { SlideRenderer } from './scene-renderers/slide-renderer';
 import { StageBottomBar } from './stage/stage-bottom-bar';
-import { Whiteboard } from './whiteboard/whiteboard';
-import type { WhiteboardHandle } from './whiteboard/whiteboard';
 import { useActionPlayer } from '../hooks/use-action-player';
 import { useClassroomStore } from '../stores/classroom-store';
 import type { AgentProfile } from '../types/agent';
-import type { ChatMessage, LectureNoteEntry } from '../types/chat';
+import type { ChatMessage } from '../types/chat';
 import type { Scene } from '../types/scene';
 
 interface StageProps {
   readonly scene: Scene | null;
   readonly agents: AgentProfile[];
   readonly messages: ChatMessage[];
-  /** 预留：父级从 ChatArea 里管理的笔记，保留 prop 形状不变。 */
-  readonly notes: LectureNoteEntry[];
   readonly isPlaying: boolean;
   readonly canGoNext: boolean;
   readonly canGoPrev: boolean;
@@ -114,23 +109,11 @@ export const Stage: FC<StageProps> = ({
   isStreaming = false,
 }) => {
   const { t } = useAppTranslation();
-  // 白板命令式 ref（use-action-player 通过它驱动 wb_draw_* / wb_clear / wb_delete）
-  const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const spotlightId = useClassroomStore((s) => s.currentSpotlightId);
   const currentSpeech = useClassroomStore((s) => s.currentSpeech);
 
-  // 本地 UI 态（尚未接入全局 settings store）
-  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
-
-  const openWhiteboard = useCallback(() => setWhiteboardOpen(true), []);
-  const closeWhiteboard = useCallback(() => setWhiteboardOpen(false), []);
-
-  // Action player 订阅当前场景的 speech/spotlight/wb_* 序列
-  useActionPlayer(scene, {
-    whiteboardRef,
-    onOpenWhiteboard: openWhiteboard,
-    onCloseWhiteboard: closeWhiteboard,
-  });
+  // Action player 订阅当前场景的 speech/spotlight 序列（白板 wb_* 已删除）
+  useActionPlayer(scene);
   const [ttsMuted, setTtsMuted] = useState(false);
   const [ttsVolume, setTtsVolume] = useState(0.8);
   const [autoPlayLecture, setAutoPlayLecture] = useState(false);
@@ -152,44 +135,30 @@ export const Stage: FC<StageProps> = ({
     else onPlay();
   }, [isPlaying, onPlay, onPause]);
 
-  const handleWhiteboardToggle = useCallback(() => {
-    setWhiteboardOpen((v) => !v);
-  }, []);
-
   const handleCycleSpeed = useCallback(() => {
     setPlaybackSpeed((s) => (s >= 2 ? 0.5 : s + 0.25));
   }, []);
 
-  // 渲染白板叠层
-  const renderWhiteboard = useCallback(
-    () => (
-      <div className="pointer-events-auto h-full w-full">
-        <Whiteboard
-          ref={whiteboardRef}
-          isOpen={whiteboardOpen}
-          onClose={closeWhiteboard}
-          className="h-full w-full"
-        />
-      </div>
-    ),
-    [whiteboardOpen, closeWhiteboard],
-  );
-
   if (!scene) {
     return (
       <div className="flex h-full flex-col">
-        <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-card shadow-xl ring-1 ring-border">
-          <div className="flex h-full items-center justify-center">
+        <div className="overflow-hidden relative flex-1 min-h-0 isolate">
+          <div className="flex h-full items-center justify-center bg-background">
             <p className="text-sm text-muted-foreground">{t('classroom.stage.choosePrompt')}</p>
           </div>
         </div>
         {teacher && (
-          <div className="mt-3">
-            <AgentBubble
-              agent={teacher}
-              text={t('classroom.stage.waitingScene')}
+          // 固定 h-[192px]：对齐 OpenMAIC Roundtable，保证 canvas 高度恒定、
+          // 避免底部气泡文字变化导致 aspect-[16/9] canvas 宽度抖动。
+          <div className="h-[192px] shrink-0">
+            <StageBottomBar
+              teacher={teacher}
               listeners={listeners}
+              scene={null}
+              currentSpeechText={null}
+              isPlaying={false}
               isStreaming={false}
+              onAskQuestion={onAskQuestion}
             />
           </div>
         )}
@@ -200,7 +169,7 @@ export const Stage: FC<StageProps> = ({
   return (
     <div className="flex h-full flex-col">
       {/* 画布 + 工具栏（OpenMAIC CanvasArea 视觉 1:1：flush edge，卡片 ring 由 CanvasArea 内部自带） */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="overflow-hidden relative flex-1 min-h-0 isolate">
         <CanvasArea
           currentScene={scene}
           currentSceneIndex={sceneIndex}
@@ -208,13 +177,11 @@ export const Stage: FC<StageProps> = ({
           mode="playback"
           engineState={engineState}
           isLiveSession={isStreaming}
-          whiteboardOpen={whiteboardOpen}
           sidebarCollapsed={false}
           chatCollapsed={false}
           onPrevSlide={onPrev}
           onNextSlide={onNext}
           onPlayPause={handlePlayPause}
-          onWhiteboardClose={handleWhiteboardToggle}
           isPresenting={isPresenting}
           onTogglePresentation={() => setIsPresenting((v) => !v)}
           ttsEnabled
@@ -227,20 +194,22 @@ export const Stage: FC<StageProps> = ({
           playbackSpeed={playbackSpeed}
           onCycleSpeed={handleCycleSpeed}
           renderScene={(s) => renderSceneContent(s, spotlightId, t('classroom.stage.unknownSceneType'))}
-          renderWhiteboard={whiteboardOpen ? renderWhiteboard : undefined}
         />
       </div>
 
-      {/* 底部教师气泡 + 主问答输入 */}
-      <StageBottomBar
-        teacher={teacher}
-        listeners={listeners}
-        scene={scene}
-        currentSpeechText={currentSpeech?.text ?? null}
-        isPlaying={isPlaying}
-        isStreaming={isStreaming}
-        onAskQuestion={onAskQuestion}
-      />
+      {/* 底部教师气泡 + 主问答输入 —— 固定 h-[192px] 对齐 OpenMAIC Roundtable，
+          保证 canvas 高度恒定，避免 scene 切换时气泡文字变化引起宽度抖动 */}
+      <div className="h-[192px] shrink-0">
+        <StageBottomBar
+          teacher={teacher}
+          listeners={listeners}
+          scene={scene}
+          currentSpeechText={currentSpeech?.text ?? null}
+          isPlaying={isPlaying}
+          isStreaming={isStreaming}
+          onAskQuestion={onAskQuestion}
+        />
+      </div>
     </div>
   );
 };

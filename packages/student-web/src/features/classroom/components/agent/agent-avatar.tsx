@@ -1,8 +1,14 @@
 /**
- * 智能体头像组件。
- * 展示智能体标识色圆圈，支持 fallback 文字 avatar。
+ * 智能体头像 —— 1:1 移植自 OpenMAIC 头像规格。
+ *
+ * 视觉要点：
+ *   - 圆形，背景 agent.color（inline 注入）
+ *   - 文字默认名字首字母，白色 bold
+ *   - 尺寸：sm / md / lg
+ *   - 可选图片头像（保留现有行为）
+ *   - 可选在线小圆点（保留现有行为）
  */
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 
 interface AgentAvatarProps {
   name: string;
@@ -13,9 +19,9 @@ interface AgentAvatarProps {
 }
 
 const SIZE_CLASS = {
-  sm: 'w-6 h-6 text-[10px]',
-  md: 'w-9 h-9 text-xs',
-  lg: 'w-10 h-10 text-sm',
+  sm: 'w-7 h-7 text-xs',
+  md: 'w-9 h-9 text-sm',
+  lg: 'w-12 h-12 text-base',
 } as const;
 
 const INDICATOR_SIZE = {
@@ -32,19 +38,23 @@ export const AgentAvatar: FC<AgentAvatarProps> = ({
   showOnlineIndicator = false,
 }) => {
   const initials = name.slice(0, 2);
+  const [imgBroken, setImgBroken] = useState(false);
+  // avatar 可能传入空字符串或加载失败 URL —— 都降级到首字母
+  const showImage = !!avatar && !imgBroken;
 
   return (
     <div className="relative shrink-0">
-      {avatar ? (
+      {showImage ? (
         <img
           src={avatar}
           alt={name}
+          onError={() => setImgBroken(true)}
           className={`${SIZE_CLASS[size]} rounded-full border-2 border-white object-cover shadow-sm`}
           style={{ borderColor: `${color}40` }}
         />
       ) : (
         <div
-          className={`${SIZE_CLASS[size]} flex items-center justify-center rounded-full font-bold text-white shadow-sm`}
+          className={`${SIZE_CLASS[size]} flex items-center justify-center rounded-full font-bold uppercase text-white shadow-sm shrink-0`}
           style={{ backgroundColor: color }}
           title={name}
         >

@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Play,
   Pause,
-  PencilLine,
   LayoutList,
   MessageSquare,
   Volume1,
@@ -38,7 +37,6 @@ export interface CanvasToolbarProps {
   readonly scenesCount: number;
   readonly engineState: 'idle' | 'playing' | 'paused';
   readonly isLiveSession?: boolean;
-  readonly whiteboardOpen: boolean;
   readonly sidebarCollapsed?: boolean;
   readonly chatCollapsed?: boolean;
   readonly onToggleSidebar?: () => void;
@@ -46,7 +44,6 @@ export interface CanvasToolbarProps {
   readonly onPrevSlide: () => void;
   readonly onNextSlide: () => void;
   readonly onPlayPause: () => void;
-  readonly onWhiteboardClose: () => void;
   readonly showStopDiscussion?: boolean;
   readonly onStopDiscussion?: () => void;
   readonly isPresenting?: boolean;
@@ -61,7 +58,6 @@ export interface CanvasToolbarProps {
   readonly onToggleAutoPlay?: () => void;
   readonly playbackSpeed?: number;
   readonly onCycleSpeed?: () => void;
-  readonly whiteboardElementCount?: number;
 }
 
 /* 紧凑控件按钮基类 —— 1:1 OpenMAIC */
@@ -97,7 +93,6 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
   scenesCount,
   engineState,
   isLiveSession,
-  whiteboardOpen,
   sidebarCollapsed,
   chatCollapsed,
   onToggleSidebar,
@@ -105,7 +100,6 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
   onPrevSlide,
   onNextSlide,
   onPlayPause,
-  onWhiteboardClose,
   showStopDiscussion,
   onStopDiscussion,
   isPresenting,
@@ -120,7 +114,6 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
   onToggleAutoPlay,
   playbackSpeed = 1,
   onCycleSpeed,
-  whiteboardElementCount = 0,
 }) => {
   const { t } = useAppTranslation();
   const canGoPrev = currentSceneIndex > 0;
@@ -365,25 +358,6 @@ export const CanvasToolbar: FC<CanvasToolbarProps> = ({
             </button>
           )}
 
-          {/* 白板 */}
-          <button
-            type="button"
-            onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              onWhiteboardClose();
-            }}
-            className={cn(
-              ctrlBtn,
-              'w-6 h-6',
-              whiteboardOpen ? 'text-primary' : 'text-muted-foreground',
-            )}
-            title={whiteboardOpen ? t('classroom.canvas.closeWhiteboard') : t('classroom.canvas.openWhiteboard')}
-          >
-            <PencilLine className="w-3.5 h-3.5" />
-            {!whiteboardOpen && whiteboardElementCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-primary rounded-full" />
-            )}
-          </button>
         </div>
       </div>
 

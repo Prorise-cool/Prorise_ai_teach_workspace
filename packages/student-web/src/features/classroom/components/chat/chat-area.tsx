@@ -1,24 +1,16 @@
 /**
- * 聊天面板（右侧边栏）—— 1:1 移植自 OpenMAIC `components/chat/chat-area.tsx`。
+ * 聊天面板（右侧边栏）—— 单 Tab 互动答疑版（笔记功能已删除）。
  *
- * 视觉要点：
+ * 视觉要点（保留 OpenMAIC 1:1）：
  *   - 左侧 1.5px 拖拽手柄（默认 340 / 范围 240-560）
- *   - 顶部双 Tab：讲稿笔记 / 互动答疑（带 amber 未读小圆点）
  *   - 玻璃感背景 + backdrop-blur + 阴影
  *   - 折叠按钮在右上
  *
  * 行为要点：
- *   - chat-panel 的旧消息列表 + 输入框被这里取代；采用 LectureNotesView + MessageList
- *   - 由父级注入 messages / notes / onSendMessage / isStreaming / 折叠态
- *
- * 颜色全部走 token；OpenMAIC 用的 purple/violet 高亮 → primary。
+ *   - 仅"互动答疑"消息列表 + 输入框，无 Tab 切换
+ *   - 由父级注入 messages / onSendMessage / isStreaming / 折叠态
  */
-import {
-  ArrowUp,
-  BookOpen,
-  MessageSquare,
-  PanelRightClose,
-} from 'lucide-react';
+import { ArrowUp, MessageSquare, PanelRightClose } from 'lucide-react';
 import {
   useCallback,
   useRef,
@@ -31,15 +23,12 @@ import {
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { cn } from '@/lib/utils';
 
-import type { ChatMessage, LectureNoteEntry } from '../../types/chat';
-import { LectureNotesView } from './lecture-notes-view';
+import type { ChatMessage } from '../../types/chat';
 import { MessageList } from './message-list';
 
 interface ChatAreaProps {
   messages: ChatMessage[];
-  notes: LectureNoteEntry[];
   isStreaming: boolean;
-  currentSceneId?: string | null;
   onSendMessage: (text: string) => Promise<void>;
   collapsed?: boolean;
   onCollapseChange?: (collapsed: boolean) => void;
@@ -52,13 +41,9 @@ const DEFAULT_WIDTH = 340;
 const MIN_WIDTH = 240;
 const MAX_WIDTH = 560;
 
-type ChatTab = 'lecture' | 'chat';
-
 export const ChatArea: FC<ChatAreaProps> = ({
   messages,
-  notes,
   isStreaming,
-  currentSceneId,
   onSendMessage,
   collapsed = false,
   onCollapseChange,
@@ -69,7 +54,6 @@ export const ChatArea: FC<ChatAreaProps> = ({
   const { t } = useAppTranslation();
   const [internalWidth, setInternalWidth] = useState(width ?? DEFAULT_WIDTH);
   const currentWidth = width ?? internalWidth;
-  const [activeTab, setActiveTab] = useState<ChatTab>('lecture');
   const [inputValue, setInputValue] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);
@@ -117,7 +101,6 @@ export const ChatArea: FC<ChatAreaProps> = ({
     if (!text || isStreaming) return;
     setInputValue('');
     await onSendMessage(text);
-    setActiveTab('chat');
   }, [inputValue, isStreaming, onSendMessage]);
 
   const handleKeyDown = useCallback(
@@ -130,10 +113,6 @@ export const ChatArea: FC<ChatAreaProps> = ({
     [handleSend],
   );
 
-  // 互动答疑 tab 在 lecture 视图下有未读时，显示 amber pulse
-  const hasUnreadChat =
-    activeTab === 'lecture' && messages.some((m) => m.role === 'assistant');
-
   const displayWidth = collapsed ? 0 : currentWidth;
 
   return (
@@ -143,7 +122,9 @@ export const ChatArea: FC<ChatAreaProps> = ({
         transition: isDragging ? 'none' : 'width 0.3s ease',
       }}
       className={cn(
-        'bg-card/80 backdrop-blur-xl border-l border-border shadow-[-2px_0_24px_rgba(0,0,0,0.02)] flex flex-col shrink-0 z-20 relative overflow-visible',
+        // h-full 保证外层拿到父级 fixed h-full 的满高，
+        // 否则作为非 flex 子项的块级元素只占内容高，下方会出现大片留白。
+        'h-full bg-card/80 backdrop-blur-xl border-l border-border shadow-[-2px_0_24px_rgba(0,0,0,0.02)] flex flex-col shrink-0 z-20 relative overflow-visible',
         className,
       )}
     >
@@ -158,22 +139,11 @@ export const ChatArea: FC<ChatAreaProps> = ({
       )}
 
       <div className={cn('flex flex-col w-full h-full overflow-hidden', collapsed && 'hidden')}>
-        {/* Tab 头 */}
-        <div className="h-10 flex items-center gap-1 shrink-0 mt-3 mb-1 px-3">
-          <div className="flex-1 flex items-center gap-1 rounded-lg bg-muted/60 p-0.5">
-            <TabButton
-              active={activeTab === 'lecture'}
-              onClick={() => setActiveTab('lecture')}
-              icon={<BookOpen className="w-3.5 h-3.5" />}
-              label={t('classroom.chat.tabLecture')}
-            />
-            <TabButton
-              active={activeTab === 'chat'}
-              onClick={() => setActiveTab('chat')}
-              icon={<MessageSquare className="w-3.5 h-3.5" />}
-              label={t('classroom.chat.tabQa')}
-              badge={hasUnreadChat}
-            />
+        {/* 顶部标题栏 */}
+        <div className="h-10 flex items-center justify-between shrink-0 mt-3 mb-1 px-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+            <MessageSquare className="w-3.5 h-3.5 text-primary" />
+            {t('classroom.chat.tabQa')}
           </div>
 
           {onCollapseChange && (
@@ -188,16 +158,12 @@ export const ChatArea: FC<ChatAreaProps> = ({
           )}
         </div>
 
-        {/* 内容 */}
-        {activeTab === 'lecture' ? (
-          <LectureNotesView notes={notes} currentSceneId={currentSceneId} />
-        ) : (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
-            <MessageList messages={messages} />
-          </div>
-        )}
+        {/* 消息列表 —— 用 flex + min-h-0 让内部空状态能够正确撑满 */}
+        <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overflow-x-hidden scrollbar-hide">
+          <MessageList messages={messages} />
+        </div>
 
-        {/* 输入框 —— 仅在 chat tab 时高亮；lecture tab 下也允许提问，发送后自动切到 chat */}
+        {/* 输入框 */}
         <div className="shrink-0 border-t border-border p-3">
           <div className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -224,31 +190,3 @@ export const ChatArea: FC<ChatAreaProps> = ({
     </div>
   );
 };
-
-const TabButton: FC<{
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  badge?: boolean;
-}> = ({ active, onClick, icon, label, badge }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cn(
-      'relative flex-1 flex items-center justify-center gap-1 h-8 rounded-md text-xs font-medium transition-colors',
-      active
-        ? 'bg-card text-foreground shadow-sm'
-        : 'text-muted-foreground hover:text-foreground',
-    )}
-  >
-    {icon}
-    {label}
-    {badge && (
-      <span className="absolute top-1 right-2 flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-      </span>
-    )}
-  </button>
-);

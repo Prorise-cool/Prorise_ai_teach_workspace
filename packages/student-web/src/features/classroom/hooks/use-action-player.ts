@@ -2,10 +2,13 @@
  * Action 播放器 Hook。
  *
  * 按序执行当前场景的 action 队列，驱动：
- *   - spotlight/laser: 设置 currentSpotlightId（由 SlideRenderer 消费做高亮）
- *   - speech:          设置 currentSpeech 并通过 `speechSynthesis` 朗读
- *   - 白板动作:        通过 whiteboardRef 命令式 API 驱动 Whiteboard 渲染
- *   - discussion:      P1：占位（未来接 Team C director graph）
+ *   - spotlight: setSpotlight + 1.6s 后 clearSpotlight（黑屏聚光，由 SpotlightOverlay 消费）
+ *   - laser:     旧字段兼容（不触发 SpotlightOverlay）
+ *   - speech:    设置 currentSpeech 并通过 `speechSynthesis` 朗读
+ *   - discussion: P1 占位
+ *
+ * 已删除：白板（wb_*）所有动作分支与 WhiteboardHandle 依赖。
+ * 旧数据中残留的 wb_* / laser_pointer 动作会落到 default 分支被静默忽略。
  *
  * 生命周期：
  *   - 当 playbackStatus 从 idle → playing 切换，从 currentActionIndex 或 0 开始
@@ -13,52 +16,34 @@
  *   - pause/stop 取消 speechSynthesis
  */
 import { useEffect, useRef } from 'react';
-import type { RefObject } from 'react';
 
-import type { WhiteboardHandle } from '../components/whiteboard/whiteboard';
 import { useClassroomStore } from '../stores/classroom-store';
 import type {
   Action,
   LaserAction,
   SpeechAction,
   SpotlightAction,
-  WbDeleteAction,
-  WbDrawLatexAction,
-  WbDrawLineAction,
-  WbDrawShapeAction,
-  WbDrawTextAction,
 } from '../types/action';
 import type { Scene } from '../types/scene';
 
-interface ActionPlayerOptions {
-  /** 白板 handle；缺省时 wb_* 动作退化为占位 sleep。 */
-  whiteboardRef?: RefObject<WhiteboardHandle | null>;
-  /** wb_open 触发：通知上层打开白板。 */
-  onOpenWhiteboard?: () => void;
-  /** wb_close 触发：通知上层收起白板。 */
-  onCloseWhiteboard?: () => void;
-}
+type ActionPlayerOptions = Record<string, never>;
 
 const SPOTLIGHT_DURATION_MS = 1600;
 const LASER_DURATION_MS = 900;
 const SPEECH_FALLBACK_MS_PER_CHAR = 80; // 没有语音合成时的停留节奏
-const WB_DRAW_DWELL_MS = 600;
-const WB_TRANSITION_MS = 300;
 
 export function useActionPlayer(
   currentScene: Scene | null,
-  options: ActionPlayerOptions = {},
+  _options: ActionPlayerOptions = {},
 ): void {
   const playbackStatus = useClassroomStore((s) => s.playbackStatus);
   const setCurrentSpotlightId = useClassroomStore((s) => s.setCurrentSpotlightId);
+  const setSpotlight = useClassroomStore((s) => s.setSpotlight);
+  const clearSpotlight = useClassroomStore((s) => s.clearSpotlight);
   const setCurrentSpeech = useClassroomStore((s) => s.setCurrentSpeech);
   const setCurrentActionIndex = useClassroomStore((s) => s.setCurrentActionIndex);
   const setPlaybackStatus = useClassroomStore((s) => s.setPlaybackStatus);
   const resetPlayback = useClassroomStore((s) => s.resetPlayback);
-
-  // 稳定化 options，避免上层每次渲染重启 action 队列
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
 
   // Active run identifier so effect teardown can signal cancellation without
   // touching DOM APIs synchronously (React strict-mode double-invoke friendly).
@@ -89,15 +74,14 @@ export function useActionPlayer(
         const action = actions[i];
         await executeAction(action, () => cancelled || runIdRef.current !== myRunId, {
           setSpotlightId: setCurrentSpotlightId,
+          setSpotlight,
+          clearSpotlight,
           setSpeech: setCurrentSpeech,
-          whiteboardRef: optionsRef.current.whiteboardRef,
-          onOpenWhiteboard: optionsRef.current.onOpenWhiteboard,
-          onCloseWhiteboard: optionsRef.current.onCloseWhiteboard,
         });
       }
       if (cancelled || runIdRef.current !== myRunId) return;
       // 播放到尾：清理并标记暂停（保留最后场景）
-      setCurrentSpotlightId(null);
+      clearSpotlight();
       setCurrentSpeech(null);
       setPlaybackStatus('paused');
     };
@@ -113,17 +97,21 @@ export function useActionPlayer(
     playbackStatus,
     setCurrentActionIndex,
     setCurrentSpotlightId,
+    setSpotlight,
+    clearSpotlight,
     setCurrentSpeech,
     setPlaybackStatus,
   ]);
 }
 
 interface Setters {
+  /** 通用高亮（laser 复用）：只设 currentSpotlightId 不设 spotlightOptions，不触发 SpotlightOverlay。 */
   setSpotlightId: (id: string | null) => void;
+  /** Spotlight 全量效果（与 OpenMAIC setSpotlight 对齐，附带 options 触发压暗 overlay）。 */
+  setSpotlight: (elementId: string, options?: { dimness?: number }) => void;
+  /** 清除 Spotlight（elementId + options 同时清）。 */
+  clearSpotlight: () => void;
   setSpeech: (speech: { agentId: string | null; text: string } | null) => void;
-  whiteboardRef?: RefObject<WhiteboardHandle | null>;
-  onOpenWhiteboard?: () => void;
-  onCloseWhiteboard?: () => void;
 }
 
 async function executeAction(
@@ -131,15 +119,20 @@ async function executeAction(
   isCancelled: () => boolean,
   setters: Setters,
 ): Promise<void> {
-  const { setSpotlightId, setSpeech, whiteboardRef, onOpenWhiteboard, onCloseWhiteboard } = setters;
+  const { setSpotlightId, setSpotlight, clearSpotlight, setSpeech } = setters;
   if (isCancelled()) return;
 
   switch (action.type) {
-    case 'spotlight':
-      setSpotlightId((action as SpotlightAction).elementId);
+    case 'spotlight': {
+      // 对齐 OpenMAIC lib/action/engine.ts::executeSpotlight：
+      //   setSpotlight(action.elementId, { dimness: action.dimOpacity ?? 0.5 });
+      //   scheduleEffectClear()  // 我们在此直接 sleep 等效
+      const a = action as SpotlightAction;
+      setSpotlight(a.elementId, { dimness: a.dimOpacity ?? 0.5 });
       await sleep(SPOTLIGHT_DURATION_MS, isCancelled);
-      setSpotlightId(null);
+      clearSpotlight();
       return;
+    }
 
     case 'laser':
       setSpotlightId((action as LaserAction).elementId);
@@ -150,93 +143,17 @@ async function executeAction(
     case 'speech': {
       const a = action as SpeechAction;
       setSpeech({ agentId: null, text: a.text });
-      await speakText(a.text, a.speed ?? 1.0, isCancelled);
+      // 优先播放后端预合成的 audio_url（Edge TTS）。
+      // 失败或为空时降级到浏览器 SpeechSynthesis —— Chrome 的 autoplay policy
+      // 对 speechSynthesis 态度不稳定，有时静默 drop，所以 audio_url 才是主路径。
+      let played = false;
+      if (a.audioUrl) {
+        played = await playAudioUrl(a.audioUrl, a.speed ?? 1.0, isCancelled);
+      }
+      if (!played && !isCancelled()) {
+        await speakText(a.text, a.speed ?? 1.0, isCancelled);
+      }
       if (!isCancelled()) setSpeech(null);
-      return;
-    }
-
-    case 'wb_open':
-      onOpenWhiteboard?.();
-      await sleep(WB_TRANSITION_MS, isCancelled);
-      return;
-
-    case 'wb_close':
-      onCloseWhiteboard?.();
-      await sleep(WB_TRANSITION_MS, isCancelled);
-      return;
-
-    case 'wb_clear':
-      whiteboardRef?.current?.clear();
-      await sleep(WB_TRANSITION_MS, isCancelled);
-      return;
-
-    case 'wb_delete': {
-      const a = action as WbDeleteAction;
-      whiteboardRef?.current?.deleteElement(a.elementId);
-      await sleep(WB_TRANSITION_MS, isCancelled);
-      return;
-    }
-
-    case 'wb_draw_text': {
-      const a = action as WbDrawTextAction;
-      whiteboardRef?.current?.drawText({
-        elementId: a.elementId,
-        content: a.content,
-        x: a.x,
-        y: a.y,
-        width: a.width,
-        height: a.height,
-        fontSize: a.fontSize,
-        color: a.color,
-      });
-      await sleep(WB_DRAW_DWELL_MS, isCancelled);
-      return;
-    }
-
-    case 'wb_draw_shape': {
-      const a = action as WbDrawShapeAction;
-      whiteboardRef?.current?.drawShape(a.shape, {
-        elementId: a.elementId,
-        x: a.x,
-        y: a.y,
-        width: a.width,
-        height: a.height,
-        fillColor: a.fillColor,
-      });
-      await sleep(WB_DRAW_DWELL_MS, isCancelled);
-      return;
-    }
-
-    case 'wb_draw_latex': {
-      const a = action as WbDrawLatexAction;
-      whiteboardRef?.current?.drawLatex({
-        elementId: a.elementId,
-        latex: a.latex,
-        x: a.x,
-        y: a.y,
-        width: a.width,
-        height: a.height,
-        color: a.color,
-      });
-      await sleep(WB_DRAW_DWELL_MS, isCancelled);
-      return;
-    }
-
-    case 'wb_draw_line': {
-      const a = action as WbDrawLineAction;
-      whiteboardRef?.current?.drawLine({
-        elementId: a.elementId,
-        startX: a.startX,
-        startY: a.startY,
-        endX: a.endX,
-        endY: a.endY,
-        color: a.color,
-        width: a.width,
-        style: a.style,
-        arrowStart: a.points?.[0] === 'arrow',
-        arrowEnd: a.points?.[1] === 'arrow',
-      });
-      await sleep(WB_DRAW_DWELL_MS, isCancelled);
       return;
     }
 
@@ -260,6 +177,38 @@ function sleep(ms: number, isCancelled: () => boolean): Promise<void> {
       window.setTimeout(tick, Math.min(ms - elapsed, 100));
     };
     tick();
+  });
+}
+
+/**
+ * 播放后端预合成的音频文件（通常是 Edge TTS 生成的 mp3）。
+ * 返回 true 表示播放成功（或自然播完）；false 表示 URL 加载失败/被浏览器拦截
+ *   —— 调用方应降级到 speechSynthesis。
+ */
+function playAudioUrl(
+  url: string,
+  rate: number,
+  isCancelled: () => boolean,
+): Promise<boolean> {
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const audio = new Audio(url);
+    audio.playbackRate = Math.max(0.5, Math.min(2.0, rate));
+    let settled = false;
+    const done = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      try { audio.pause(); } catch { /* noop */ }
+      window.clearInterval(cancelCheck);
+      resolve(ok);
+    };
+    audio.addEventListener('ended', () => done(true));
+    audio.addEventListener('error', () => done(false));
+    // 取消轮询：stop 时让 promise 直接 resolve(true)，跳过降级。
+    const cancelCheck = window.setInterval(() => {
+      if (isCancelled()) done(true);
+    }, 200);
+    audio.play().catch(() => done(false));
   });
 }
 

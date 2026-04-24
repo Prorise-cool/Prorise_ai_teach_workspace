@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 # Actions that only make sense in slide scenes
 SLIDE_ONLY_ACTIONS: frozenset[str] = frozenset({"spotlight", "laser_pointer"})
 
+# Actions removed by product decision (whiteboard + laser).
+# Filtered defensively so legacy DB records / cached prompts can't reintroduce them.
+BLOCKED_ACTIONS: frozenset[str] = frozenset({
+    "wb_open", "wb_close", "wb_clear", "wb_delete",
+    "wb_draw_text", "wb_draw_shape", "wb_draw_latex", "wb_draw_line",
+    "laser", "laser_pointer",
+})
+
 
 def _strip_code_fences(text: str) -> str:
     """Remove ```json ... ``` or ``` ... ``` wrappers."""
@@ -114,6 +122,13 @@ def parse_actions_from_structured_output(
         stripped = before_count - len(actions)
         if stripped:
             logger.info("Stripped %d slide-only action(s) from %s scene", stripped, scene_type)
+
+    # Step 6b: Filter blocked actions (whiteboard + laser, removed by product decision)
+    before_count = len(actions)
+    actions = [a for a in actions if a.get("type") not in BLOCKED_ACTIONS]
+    stripped = before_count - len(actions)
+    if stripped:
+        logger.info("Stripped %d blocked action(s) (whiteboard/laser removed)", stripped)
 
     # Step 7: Filter by allowedActions whitelist
     if allowed_actions:

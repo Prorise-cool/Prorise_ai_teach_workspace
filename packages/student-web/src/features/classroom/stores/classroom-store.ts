@@ -8,6 +8,16 @@ import type { Classroom } from '../types/classroom';
 import type { Scene, PlaybackStatus } from '../types/scene';
 import type { AgentProfile } from '../types/agent';
 
+/**
+ * Spotlight 选项（与 OpenMAIC `lib/store/canvas.ts::SpotlightOptions` 对齐）。
+ * radius 保留字段（当前未使用），dimness 是压暗层 alpha，transition 预留毫秒数。
+ */
+export interface SpotlightOptions {
+  radius?: number;
+  dimness?: number;
+  transition?: number;
+}
+
 export interface ClassroomStoreState {
   // 当前课堂
   classroom: Classroom | null;
@@ -21,12 +31,12 @@ export interface ClassroomStoreState {
   generationProgress: number;
   // 生成中的消息提示
   generationMessage: string;
-  // 白板是否打开
-  whiteboardOpen: boolean;
   // 当前 action 播放索引（-1 表示未开始）
   currentActionIndex: number;
   // 当前高亮的元素 ID（受 spotlight/laser 动作驱动）
   currentSpotlightId: string | null;
+  // Spotlight 渲染选项（dimness 等）；未激活时为 null
+  spotlightOptions: SpotlightOptions | null;
   // 当前讲述的语音内容（驱动教师气泡）
   currentSpeech: { agentId: string | null; text: string } | null;
 
@@ -58,9 +68,12 @@ export interface ClassroomStoreActions {
   setPlaybackStatus: (status: PlaybackStatus) => void;
   setAgents: (agents: AgentProfile[]) => void;
   setGenerationProgress: (progress: number, message?: string) => void;
-  setWhiteboardOpen: (open: boolean) => void;
   setCurrentActionIndex: (index: number) => void;
   setCurrentSpotlightId: (id: string | null) => void;
+  /** 开启 Spotlight：等价 OpenMAIC `setSpotlight(elementId, options?)`。 */
+  setSpotlight: (elementId: string, options?: SpotlightOptions) => void;
+  /** 关闭 Spotlight：等价 OpenMAIC `clearSpotlight()`。 */
+  clearSpotlight: () => void;
   setCurrentSpeech: (speech: { agentId: string | null; text: string } | null) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setChatAreaCollapsed: (collapsed: boolean) => void;
@@ -72,6 +85,7 @@ export interface ClassroomStoreActions {
   setAutoPlayLecture: (enabled: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
   resetPlayback: () => void;
+  resetClassroom: () => void;
   reset: () => void;
 }
 
@@ -82,9 +96,9 @@ const INITIAL_STATE: ClassroomStoreState = {
   agents: [],
   generationProgress: 0,
   generationMessage: '',
-  whiteboardOpen: false,
   currentActionIndex: -1,
   currentSpotlightId: null,
+  spotlightOptions: null,
   currentSpeech: null,
   // OpenMAIC parity defaults
   sidebarCollapsed: false,
@@ -119,11 +133,26 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
   setGenerationProgress: (progress, message) =>
     set({ generationProgress: progress, generationMessage: message ?? '' }),
 
-  setWhiteboardOpen: (open) => set({ whiteboardOpen: open }),
-
   setCurrentActionIndex: (index) => set({ currentActionIndex: index }),
 
   setCurrentSpotlightId: (id) => set({ currentSpotlightId: id }),
+
+  setSpotlight: (elementId, options = {}) =>
+    set({
+      currentSpotlightId: elementId,
+      spotlightOptions: {
+        radius: 200,
+        dimness: 0.7,
+        transition: 300,
+        ...options,
+      },
+    }),
+
+  clearSpotlight: () =>
+    set({
+      currentSpotlightId: null,
+      spotlightOptions: null,
+    }),
 
   setCurrentSpeech: (speech) => set({ currentSpeech: speech }),
 
@@ -141,8 +170,39 @@ export const useClassroomStore = create<ClassroomStoreState & ClassroomStoreActi
     set({
       currentActionIndex: -1,
       currentSpotlightId: null,
+      spotlightOptions: null,
       currentSpeech: null,
     }),
+
+  /**
+   * 切换课堂时调用：清空 classroom/scenes/agents/playback，但保留 UI 偏好
+   * （sidebarWidth / chatAreaWidth / ttsVolume 等用户设置）。
+   * 修复 TTS 跨课堂串：旧 currentSceneId 残留会让 useActionPlayer 在新课堂数据
+   * 加载前继续读旧 scene.actions 触发 speechSynthesis。
+   */
+  resetClassroom: () =>
+    set((state) => ({
+      classroom: null,
+      currentSceneId: null,
+      playbackStatus: 'idle',
+      agents: [],
+      generationProgress: 0,
+      generationMessage: '',
+      currentActionIndex: -1,
+      currentSpotlightId: null,
+      spotlightOptions: null,
+      currentSpeech: null,
+      // 保留 UI 偏好
+      sidebarCollapsed: state.sidebarCollapsed,
+      chatAreaCollapsed: state.chatAreaCollapsed,
+      sidebarWidth: state.sidebarWidth,
+      chatAreaWidth: state.chatAreaWidth,
+      isPresenting: false,
+      ttsMuted: state.ttsMuted,
+      ttsVolume: state.ttsVolume,
+      autoPlayLecture: state.autoPlayLecture,
+      playbackSpeed: state.playbackSpeed,
+    })),
 
   reset: () => set(INITIAL_STATE),
 }));

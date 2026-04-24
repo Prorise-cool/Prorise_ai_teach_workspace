@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
+import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 
 import { loadClassroom } from '../db/classroom-db';
 import { useDirectorChat } from '../hooks/use-director-chat';
@@ -51,10 +52,8 @@ export function ClassroomPlayPage() {
   const setSidebarWidth = useClassroomStore((s) => s.setSidebarWidth);
   const chatAreaWidth = useClassroomStore((s) => s.chatAreaWidth);
   const setChatAreaWidth = useClassroomStore((s) => s.setChatAreaWidth);
-  const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains('dark'),
-  );
-  const [notes] = useState([] as never[]);
+  const { themeMode, toggleThemeMode } = useThemeMode();
+  const isDark = themeMode === 'dark';
 
   // Load classroom from DB into store
   const classroom = useClassroomStore((s) => s.classroom);
@@ -71,6 +70,12 @@ export function ClassroomPlayPage() {
       return;
     }
     setLoadStatus('loading');
+    // 切换课堂前 reset：清掉旧 currentSceneId / playbackStatus / agents
+    // 否则 useActionPlayer 会用旧 scene.actions 继续跑 speechSynthesis 队列，
+    // 导致用户进入新课堂仍听到第一节 TTS。
+    if (useClassroomStore.getState().classroom?.id !== classroomId) {
+      useClassroomStore.getState().resetClassroom();
+    }
     void loadClassroom(classroomId).then((c) => {
       if (!c) {
         setLoadStatus('missing');
@@ -81,6 +86,11 @@ export function ClassroomPlayPage() {
       // 从持久化的 classroom.agents 回灌 store.agents —— 避免刷新后教师气泡消失
       if (Array.isArray(c.agents) && c.agents.length > 0) {
         setAgents(summariesToProfiles(c.agents));
+      }
+      // 自动选中第 1 个场景（OpenMAIC 行为：进入课堂直接进 scene 1，不显示"选择场景"空态）
+      const firstScene = c.scenes?.[0];
+      if (firstScene) {
+        useClassroomStore.getState().setCurrentScene(firstScene.id);
       }
     });
   }, [classroomId, classroom, setClassroom, setAgents]);
@@ -99,21 +109,11 @@ export function ClassroomPlayPage() {
   const player = useScenePlayer();
   const chat = useDirectorChat(classroomId ?? '');
 
-  const toggleDark = useCallback(() => {
-    const next = !isDark;
-    document.documentElement.classList.toggle('dark', next);
-    setIsDark(next);
-  }, [isDark]);
+  const toggleDark = toggleThemeMode;
 
   const openMobileOutline = useCallback(() => {
     setOutlineOpen(true);
     setCompanionOpen(false);
-    setMobileOverlayVisible(true);
-  }, []);
-
-  const openMobileCompanion = useCallback(() => {
-    setCompanionOpen(true);
-    setOutlineOpen(false);
     setMobileOverlayVisible(true);
   }, []);
 
@@ -160,7 +160,7 @@ export function ClassroomPlayPage() {
           title={t('classroom.playPage.noIdTitle')}
           description={t('classroom.playPage.noIdDescription')}
           action={
-            <Button onClick={() => void navigate('/openmaic')} variant="outline">
+            <Button onClick={() => void navigate('/classroom/input')} variant="outline">
               {t('classroom.playPage.backToList')}
             </Button>
           }
@@ -200,8 +200,8 @@ export function ClassroomPlayPage() {
   const courseTitle = classroom?.name ?? null;
 
   return (
-    <div className="relative flex h-screen w-screen overflow-hidden bg-muted/30">
-      {/* 背景纹理 */}
+    <div className="relative flex h-screen w-screen overflow-hidden bg-background">
+      {/* 背景纹理 —— 保留琥珀金系细网格（OpenMAIC 是纯 gray-50，我们在此延续既有品牌底） */}
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
@@ -247,17 +247,16 @@ export function ClassroomPlayPage() {
             scenes={player.scenes}
             currentSceneId={player.currentScene?.id ?? null}
             collapsed={!outlineOpen}
-            onCollapseChange={(c) => { setOutlineOpen(!c); setMobileOverlayVisible(false); }}
             onSceneSelect={(id) => player.goToScene(id)}
             width={sidebarWidth}
             onWidthChange={setSidebarWidth}
-            onLogoClick={() => void navigate('/openmaic')}
+            onLogoClick={() => void navigate('/')}
           />
         )}
       </div>
 
-      {/* 主内容区 */}
-      <main className="flex flex-1 min-w-0 flex-col">
+      {/* 主内容区 —— OpenMAIC `components/stage.tsx:946` 同型 min-w-0 relative，支撑内部 absolute 定位的 overlay */}
+      <main className="relative flex flex-1 min-w-0 flex-col overflow-hidden">
         <ClassroomHeader
           courseLabel={courseLabel}
           courseTitle={courseTitle}
@@ -266,18 +265,17 @@ export function ClassroomPlayPage() {
           outlineOpen={outlineOpen}
           onToggleOutline={() => setOutlineOpen((v) => !v)}
           onOpenMobileOutline={openMobileOutline}
-          companionOpen={companionOpen}
-          onToggleCompanion={() => { setCompanionOpen((v) => !v); openMobileCompanion(); }}
-          onBackHome={() => void navigate('/openmaic')}
+          onBackHome={() => void navigate('/')}
         />
 
-        {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2 */}
-        <div className="flex flex-1 min-h-0">
+        {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2。
+            注意：必须用块级（不是 flex）包裹 Stage，否则 Stage 作为 flex-row 子项
+            默认 width: auto，canvas aspect-[16/9] 没有宽度参照会塌缩成窄条。 */}
+        <div className="flex-1 min-h-0">
           <Stage
             scene={player.currentScene}
             agents={agents}
             messages={chat.messages}
-            notes={notes}
             isPlaying={player.playbackStatus === 'playing'}
             canGoNext={player.canGoNext}
             canGoPrev={player.canGoPrev}
@@ -303,9 +301,7 @@ export function ClassroomPlayPage() {
       >
         <ChatArea
           messages={chat.messages}
-          notes={notes}
           isStreaming={chat.isStreaming}
-          currentSceneId={player.currentScene?.id ?? null}
           onSendMessage={chat.sendMessage}
           collapsed={!companionOpen}
           onCollapseChange={(c) => { setCompanionOpen(!c); setMobileOverlayVisible(false); }}

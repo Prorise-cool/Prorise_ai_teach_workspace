@@ -57,15 +57,3 @@ export type ChatEvent =
   | { type: 'done'; data: { totalAgents: number; totalTurns: number } }
   | { type: 'error'; data: { message: string } };
 
-/** 课堂笔记条目 */
-export interface LectureNoteEntry {
-  sceneId: string;
-  sceneTitle: string;
-  sceneOrder: number;
-  items: LectureNoteItem[];
-  completedAt: number;
-}
-
-export type LectureNoteItem =
-  | { kind: 'speech'; text: string }
-  | { kind: 'action'; type: string; label?: string };

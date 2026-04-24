@@ -210,3 +210,63 @@ body {
     transform: scaleY(1);
   }
 }
+
+/**
+ * OpenMAIC 课堂结果页移植 —— 关键帧对齐参考实现 `references/OpenMAIC/app/globals.css`。
+ * `shimmer` 已在 `surface-utils.css` 定义，此处不再重复。
+ */
+
+@keyframes wave {
+  0%, 100% {
+    height: 30%;
+  }
+  50% {
+    height: 100%;
+  }
+}
+
+@keyframes interactive-mode-breathe {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes breathing-bar-1 {
+  0%, 100% {
+    height: 3px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+@keyframes breathing-bar-2 {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+@keyframes breathing-bar-3 {
+  0%, 100% {
+    height: 3px;
+  }
+  50% {
+    height: 11px;
+  }
+}
+
+@utility scrollbar-hide {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

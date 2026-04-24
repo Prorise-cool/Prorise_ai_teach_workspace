@@ -16,7 +16,6 @@
  * 调用 + 三栏 main，整个 page 更清爽。
  */
 import {
-  Bot,
   ChevronLeft,
   Menu,
   Moon,
@@ -42,9 +41,6 @@ interface ClassroomHeaderProps {
   readonly onToggleOutline: () => void;
   /** 移动端汉堡菜单回调 */
   readonly onOpenMobileOutline: () => void;
-  /** 右侧伴学助手开关 */
-  readonly companionOpen: boolean;
-  readonly onToggleCompanion: () => void;
   /** 返回首页 */
   readonly onBackHome: () => void;
   /** 额外插槽：右侧 pill 最左侧可插入（预留导出按钮等） */
@@ -59,21 +55,19 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
   outlineOpen,
   onToggleOutline,
   onOpenMobileOutline,
-  companionOpen,
-  onToggleCompanion,
   onBackHome,
   trailingExtras,
 }) => {
   const { t } = useAppTranslation();
   return (
-    <header className="flex h-20 shrink-0 items-center justify-between gap-4 border-b border-border bg-card/60 px-6 md:px-8 backdrop-blur-md">
+    <header className="relative z-10 flex h-20 shrink-0 items-center justify-between gap-4 bg-transparent px-6 md:px-8">
       {/* 左侧：菜单 + 标题 */}
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {/* 移动端汉堡 */}
         <button
           type="button"
           onClick={onOpenMobileOutline}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:hidden"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
           aria-label={t('classroom.header.ariaOpenOutline')}
         >
           <Menu className="h-4 w-4" />
@@ -82,7 +76,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
         <button
           type="button"
           onClick={onToggleOutline}
-          className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent md:flex"
+          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:flex"
           aria-label={outlineOpen ? t('classroom.header.ariaCollapseOutline') : t('classroom.header.ariaExpandOutline')}
         >
           {outlineOpen ? (
@@ -92,12 +86,12 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           )}
         </button>
 
-        <div className="min-w-0">
-          <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <div className="flex min-w-0 flex-col">
+          <span className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {courseLabel}
-          </p>
+          </span>
           {courseTitle ? (
-            <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-lg">
+            <h1 className="truncate text-xl font-bold tracking-tight text-foreground">
               {courseTitle}
             </h1>
           ) : (
@@ -106,13 +100,13 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
         </div>
       </div>
 
-      {/* 右侧玻璃感 pill —— 1:1 对标 OpenMAIC header 的 bg-white/60 backdrop-blur-md pill */}
-      <div className="flex items-center gap-1 rounded-full border border-border/40 bg-card/60 px-2 py-1 shadow-sm backdrop-blur-md">
+      {/* 右侧玻璃药丸 —— 对齐 OpenMAIC header.tsx:100 的 `bg-white/60 backdrop-blur-md rounded-full` 控制条 */}
+      <div className="flex shrink-0 items-center gap-1 rounded-full border border-border/40 bg-card/60 px-2 py-1.5 shadow-sm backdrop-blur-md">
         {trailingExtras}
         <button
           type="button"
           onClick={onToggleDark}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           title={isDark ? t('classroom.header.toggleLight') : t('classroom.header.toggleDark')}
         >
           {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -120,20 +114,8 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
         <div className="mx-1 h-4 w-px bg-border" />
         <button
           type="button"
-          onClick={onToggleCompanion}
-          className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-accent ${
-            companionOpen ? 'text-primary' : 'text-muted-foreground'
-          }`}
-          title={t('classroom.header.companion')}
-          aria-pressed={companionOpen}
-        >
-          <Bot className="h-3.5 w-3.5" />
-        </button>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <button
-          type="button"
           onClick={onBackHome}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           title={t('classroom.header.backHome')}
           aria-label={t('classroom.header.backHome')}
         >

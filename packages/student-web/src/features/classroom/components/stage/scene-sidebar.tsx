@@ -18,8 +18,6 @@ import {
   Cpu,
   Globe,
   MousePointer2,
-  PanelLeftClose,
-  PieChart,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -49,7 +47,6 @@ interface SceneSidebarProps {
   readonly scenes: Scene[];
   readonly currentSceneId: string | null;
   readonly collapsed: boolean;
-  readonly onCollapseChange: (collapsed: boolean) => void;
   readonly onSceneSelect: (sceneId: string) => void;
   readonly pendingEntry?: PendingSceneEntry | null;
   readonly width?: number;
@@ -72,7 +69,6 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
   scenes,
   currentSceneId,
   collapsed,
-  onCollapseChange,
   onSceneSelect,
   pendingEntry,
   width,
@@ -130,7 +126,7 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
         width: displayWidth,
         transition: isDraggingRef.current ? 'none' : 'width 0.3s ease',
       }}
-      className="bg-card/80 backdrop-blur-xl border-r border-border shadow-[2px_0_24px_rgba(0,0,0,0.02)] flex flex-col shrink-0 z-20 relative overflow-visible"
+      className="h-full bg-card/80 backdrop-blur-xl border-r border-border shadow-[2px_0_24px_rgba(0,0,0,0.02)] flex flex-col shrink-0 z-20 relative overflow-visible"
     >
       {/* 拖拽手柄 */}
       {!collapsed && (
@@ -143,32 +139,24 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
       )}
 
       <div className={cn('flex flex-col w-full h-full overflow-hidden', collapsed && 'hidden')}>
-        {/* Logo / 折叠头 */}
-        <div className="h-10 flex items-center justify-between shrink-0 relative mt-3 mb-1 px-3">
+        {/* Logo —— 折叠按钮已合并到 ClassroomHeader，避免重复 */}
+        <div className="h-10 flex items-center shrink-0 relative mt-3 mb-1 px-3">
           <button
             type="button"
             onClick={onLogoClick}
-            className="flex items-center gap-2 cursor-pointer rounded-lg px-1.5 -mx-1.5 py-1 -my-1 hover:bg-accent active:scale-[0.97] transition-all duration-150"
+            className="flex items-center gap-2 cursor-pointer rounded-lg px-1.5 -mx-1.5 py-1 -my-1 hover:bg-accent/60 active:scale-[0.97] transition-all duration-150"
             title={t('classroom.common.backHome')}
           >
             {logo ?? (
               <span className="text-sm font-bold tracking-tight text-foreground">{t('classroom.stage.xiaomaiBrand')}</span>
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => onCollapseChange(true)}
-            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center bg-muted text-muted-foreground ring-1 ring-border/40 hover:bg-accent hover:text-foreground active:scale-90 transition-all duration-200"
-            aria-label={t('classroom.stage.ariaCollapseSidebar')}
-          >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* 场景列表 */}
+        {/* 场景列表 —— OpenMAIC scene-sidebar.tsx:143 使用 scrollbar-hide 隐藏滚动条 */}
         <div
           data-testid="scene-list"
-          className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-2 pt-1"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-2 pt-1 scrollbar-hide"
         >
           {scenes.map((scene, index) => {
             const isActive = currentSceneId === scene.id;
@@ -193,7 +181,7 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
                       className={cn(
                         'text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shrink-0',
                         isActive
-                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
                           : 'bg-muted text-muted-foreground',
                       )}
                     >
@@ -247,8 +235,8 @@ export const SceneSidebar: FC<SceneSidebarProps> = ({
   );
 };
 
-/** 场景缩略图 —— OpenMAIC quiz/interactive/pbl 三种模板 1:1 移植，
- *  slide 类型暂用图标占位（缩略图渲染需要单独的 ThumbnailSlide 组件）。 */
+/** 场景缩略图 —— 为 slide / interactive / pbl 三种类型提供差异化的视觉模板，
+ *  让列表一眼可识别场景结构而不是一片空白。 */
 const SceneThumbnail: FC<{ scene: Scene; icon: typeof BookOpen }> = ({ scene, icon: Icon }) => {
   if (scene.type === 'interactive') {
     return (
@@ -310,11 +298,49 @@ const SceneThumbnail: FC<{ scene: Scene; icon: typeof BookOpen }> = ({ scene, ic
     );
   }
 
-  // slide / fallback —— icon + label
+  // slide —— 用 slide 的元素数据生成简化的内容预览（标题条 + 几行 block）
+  if (scene.type === 'slide') {
+    const slideContent = scene.content as { elements?: Array<{ type: string }> } | undefined;
+    const elements = slideContent?.elements ?? [];
+    const textCount = elements.filter((el) => el?.type === 'text').length;
+    const shapeCount = elements.filter((el) => el?.type === 'shape').length;
+    // 没有元素时降级到 icon；有元素就画结构化版式
+    if (elements.length === 0) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground/50">
+          <Icon className="w-4 h-4" />
+          <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">slide</span>
+        </div>
+      );
+    }
+    // 最多画 4 行文本 block，模拟真实 slide 版式
+    const textLines = Math.min(textCount, 4);
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-1.5 flex flex-col gap-1">
+        {/* 标题条 */}
+        <div className="h-1 w-3/5 rounded-full bg-amber-400/70 dark:bg-amber-500/60" />
+        <div className="h-px w-full bg-amber-200/50 dark:bg-amber-700/30" />
+        {/* 文本行 */}
+        <div className="flex-1 flex flex-col justify-center gap-0.5">
+          {Array.from({ length: textLines }).map((_, i) => (
+            <div
+              key={i}
+              className="h-0.5 rounded-full bg-amber-300/50 dark:bg-amber-600/30"
+              style={{ width: `${100 - i * 15}%` }}
+            />
+          ))}
+          {shapeCount > 0 && (
+            <div className="mt-0.5 h-2 w-10 rounded bg-amber-200/40 dark:bg-amber-700/20 ring-1 ring-amber-300/40 dark:ring-amber-600/30" />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // exhaustive fallback（scene.type 已被上面三个分支穷尽，理论上不会到这里）
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground/50">
       <Icon className="w-4 h-4" />
-      <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">{scene.type}</span>
     </div>
   );
 };
@@ -346,7 +372,7 @@ const PendingSceneCard: FC<{
             className={cn(
               'text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center shrink-0',
               isActive && !isFailed
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
                 : 'bg-muted text-muted-foreground',
             )}
           >
