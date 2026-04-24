@@ -86,6 +86,9 @@ async def create_classroom_generation(
             requirement=payload.requirement,
             pdf_text=payload.pdf_text,
             user_id=access_context.user_id,
+            scene_count=payload.scene_count,
+            duration_minutes=payload.duration_minutes,
+            interactive_mode=payload.interactive_mode,
         )
     except Exception:
         delete_classroom_runtime_auth(runtime_store, task_id=task_id)

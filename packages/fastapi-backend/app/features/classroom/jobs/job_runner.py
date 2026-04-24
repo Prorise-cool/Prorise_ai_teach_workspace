@@ -48,6 +48,9 @@ def run_classroom_generation(
     requirement: str,
     pdf_text: str | None = None,
     user_id: str | None = None,
+    scene_count: int | None = None,
+    duration_minutes: int | None = None,
+    interactive_mode: bool = False,
 ) -> None:
     """后台任务：编排完整课堂生成 pipeline。
 
@@ -58,9 +61,15 @@ def run_classroom_generation(
     4. SpeechAction 预合成 Edge TTS（best-effort）
     5. 持久化：Redis 运行结果 + RuoYi xm_classroom_session 终态
        + LongTerm 仓库 + xm_session_artifact（best-effort）
+
+    Phase 1: ``scene_count`` / ``duration_minutes`` / ``interactive_mode``
+    透传到 outline_generator；interactive_mode 在 Phase 5 真正消费 prompt。
     """
     asyncio.run(_async_run_classroom_generation(
         task_id, requirement, pdf_text, user_id,
+        scene_count=scene_count,
+        duration_minutes=duration_minutes,
+        interactive_mode=interactive_mode,
     ))
 
 
@@ -69,6 +78,10 @@ async def _async_run_classroom_generation(
     requirement: str,
     pdf_text: str | None,
     user_id: str | None,
+    *,
+    scene_count: int | None = None,
+    duration_minutes: int | None = None,
+    interactive_mode: bool = False,
 ) -> None:
     from app.features.classroom.generation.outline_generator import generate_scene_outlines
     from app.features.classroom.generation.scene_generator import (
@@ -87,6 +100,11 @@ async def _async_run_classroom_generation(
 
     runtime_state = _make_runtime_state_store()
 
+    logger.info(
+        "classroom.job_runner.started task_id=%s scene_count=%s duration_minutes=%s interactive_mode=%s",
+        task_id, scene_count, duration_minutes, interactive_mode,
+    )
+
     async def _chain(stage: str):
         return await resolve_classroom_providers(
             stage, access_token=access_token, client_id=client_id,
@@ -102,6 +120,8 @@ async def _async_run_classroom_generation(
             requirement=requirement,
             provider_chain=outline_chain,
             pdf_text=pdf_text,
+            scene_count=scene_count,
+            duration_minutes=duration_minutes,
         )
         language_directive = outline_result.get("languageDirective", "")
         outlines = outline_result.get("outlines", [])

@@ -8,9 +8,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import {
-	LayoutTemplate,
-} from 'lucide-react';
+import { LayoutTemplate, SlidersHorizontal } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import {
@@ -20,9 +18,14 @@ import {
 	useBrowserAsr,
 	WorkspaceInputShell
 } from '@/components/input-page';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
+import {
+	CLASSROOM_DURATION_PRESETS,
+	ClassroomInputAdvancedDialog,
+} from '@/features/classroom/components/classroom-input-advanced-dialog';
 import { ClassroomGeneratingOverlay } from '@/features/classroom/components/classroom-generating-overlay';
 import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
 import { useClassroomStore } from '@/features/classroom/stores/classroom-store';
@@ -41,6 +44,10 @@ export function ClassroomInputPage() {
 	const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 	const [text, setText] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [sceneCount, setSceneCount] = useState<number>(10);
+	const [durationMinutes, setDurationMinutes] = useState<number>(CLASSROOM_DURATION_PRESETS[1] ?? 15);
+	const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
+	const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
 	const { create } = useClassroomCreate();
 	const generationProgress = useClassroomStore((s) => s.generationProgress);
 	const generationMessage = useClassroomStore((s) => s.generationMessage);
@@ -81,6 +88,18 @@ export function ClassroomInputPage() {
 	const toolVoiceInput = t('classroomInput.toolVoiceInput');
 
 	const toolWebSearch = t('classroomInput.toolWebSearch');
+	const advancedTriggerLabel = t('classroomInput.advanced.triggerLabel');
+	const advancedDialogTitle = t('classroomInput.advanced.dialogTitle');
+	const advancedDialogDescription = t('classroomInput.advanced.dialogDescription');
+	const advancedDoneLabel = t('classroomInput.advanced.doneLabel');
+	const advancedSceneCountLabel = t('classroomInput.advanced.sceneCountLabel');
+	const advancedSceneCountHint = t('classroomInput.advanced.sceneCountHint');
+	const advancedDurationLabel = t('classroomInput.advanced.durationLabel');
+	const advancedDurationUnit = t('classroomInput.advanced.durationUnit');
+	const advancedInteractiveLabel = t('classroomInput.advanced.interactiveLabel');
+	const advancedInteractiveHint = t('classroomInput.advanced.interactiveHint');
+	const advancedInteractiveOn = t('classroomInput.advanced.interactiveOn');
+	const advancedInteractiveOff = t('classroomInput.advanced.interactiveOff');
 	const suggestionsLabel = t('classroomInput.suggestionsLabel');
 	const suggestions = t('classroomInput.suggestions', {
 		returnObjects: true
@@ -113,6 +132,7 @@ export function ClassroomInputPage() {
 			titleLine1={titleLine1}
 			titleGradient={titleGradient}
 			card={
+				<Dialog open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
 				<ClassroomInputCard
 					text={text}
 					onTextChange={event => {
@@ -155,6 +175,9 @@ export function ClassroomInputPage() {
 								requirement,
 								pdfText,
 								enableWebSearch: webSearchEnabled,
+								sceneCount,
+								durationMinutes,
+								interactiveMode,
 							});
 							void navigate(`/classroom/play/${classroomId}`);
 						} catch (err) {
@@ -177,7 +200,42 @@ export function ClassroomInputPage() {
 						toolVoiceInput,
 						toolWebSearch
 					}}
+					advancedTrigger={
+						<DialogTrigger asChild>
+							<button
+								type="button"
+								className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+								aria-label={advancedTriggerLabel}
+							>
+								<SlidersHorizontal className="h-3.5 w-3.5" />
+								{advancedTriggerLabel}
+							</button>
+						</DialogTrigger>
+					}
 				/>
+				<ClassroomInputAdvancedDialog
+					sceneCount={sceneCount}
+					durationMinutes={durationMinutes}
+					interactiveMode={interactiveMode}
+					onSceneCountChange={setSceneCount}
+					onDurationChange={setDurationMinutes}
+					onInteractiveChange={setInteractiveMode}
+					onClose={() => setIsAdvancedOpen(false)}
+					labels={{
+						advancedTitle: advancedDialogTitle,
+						advancedDescription: advancedDialogDescription,
+						advancedDone: advancedDoneLabel,
+						sceneCountLabel: advancedSceneCountLabel,
+						sceneCountHint: advancedSceneCountHint,
+						durationLabel: advancedDurationLabel,
+						durationUnit: advancedDurationUnit,
+						interactiveLabel: advancedInteractiveLabel,
+						interactiveHint: advancedInteractiveHint,
+						interactiveOn: advancedInteractiveOn,
+						interactiveOff: advancedInteractiveOff,
+					}}
+				/>
+				</Dialog>
 			}
 			suggestionsLabel={suggestionsLabel}
 			suggestions={suggestions}

@@ -40,6 +40,8 @@ async def generate_scene_outlines(
     pdf_text: str | None = None,
     research_context: str = "None",
     user_profile: str = "",
+    scene_count: int | None = None,
+    duration_minutes: int | None = None,
 ) -> dict:
     """Generate scene outlines (one-shot, returns parsed dict).
 
@@ -59,6 +61,8 @@ async def generate_scene_outlines(
             ),
             research_context=research_context,
             user_profile=user_profile,
+            scene_count=scene_count,
+            duration_minutes=duration_minutes,
         ),
     )
 

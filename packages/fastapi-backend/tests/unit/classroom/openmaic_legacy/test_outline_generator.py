@@ -114,6 +114,60 @@ async def test_generate_scene_outlines_raises_on_empty_outlines():
 
 
 @pytest.mark.asyncio
+async def test_generate_scene_outlines_injects_hard_constraints_into_prompt():
+    """Phase 1: scene_count / duration_minutes 必须以硬性约束文本注入 user prompt。"""
+
+    captured: dict[str, str] = {}
+
+    class CapturingProvider:
+        provider_id = "stub-capture"
+
+        async def generate(self, prompt: str) -> ProviderResult:
+            captured["prompt"] = prompt
+            return ProviderResult(
+                provider="stub-capture",
+                content=_VALID_OUTLINE_JSON,
+                metadata={},
+            )
+
+    provider = CapturingProvider()
+    await generate_scene_outlines(
+        "教我微积分基础",
+        [provider],
+        scene_count=15,
+        duration_minutes=30,
+    )
+
+    prompt = captured["prompt"]
+    assert "恰好生成 15 个场景" in prompt
+    assert "总时长约 30 分钟" in prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_scene_outlines_omits_constraints_when_not_specified():
+    """未提供 scene_count / duration_minutes 时不注入硬性约束段落。"""
+
+    captured: dict[str, str] = {}
+
+    class CapturingProvider:
+        provider_id = "stub-capture"
+
+        async def generate(self, prompt: str) -> ProviderResult:
+            captured["prompt"] = prompt
+            return ProviderResult(
+                provider="stub-capture",
+                content=_VALID_OUTLINE_JSON,
+                metadata={},
+            )
+
+    await generate_scene_outlines("教我微积分基础", [CapturingProvider()])
+
+    prompt = captured["prompt"]
+    assert "硬性约束" not in prompt
+    assert "恰好生成" not in prompt
+
+
+@pytest.mark.asyncio
 async def test_stream_scene_outlines_yields_at_least_one_chunk():
     provider = _make_stub_with_response(_VALID_OUTLINE_JSON)
     chunks = []

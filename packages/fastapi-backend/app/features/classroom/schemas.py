@@ -333,6 +333,8 @@ class ClassroomCreateRequest(BaseModel):
     pdf_images: list[dict[str, Any]] = Field(default_factory=list, alias="pdfImages")
     web_search_enabled: bool = Field(default=False, alias="webSearchEnabled")
     interactive_mode: bool = Field(default=False, alias="interactiveMode")
+    scene_count: int | None = Field(default=None, ge=1, le=30, alias="sceneCount")
+    duration_minutes: int | None = Field(default=None, ge=5, le=120, alias="durationMinutes")
 
     model_config = {"populate_by_name": True}
 

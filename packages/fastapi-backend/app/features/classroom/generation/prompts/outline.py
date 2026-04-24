@@ -141,10 +141,25 @@ def build_outline_user_prompt(
     research_context: str = "None",
     user_profile: str = "",
     media_generation_policy: str = "",
+    scene_count: int | None = None,
+    duration_minutes: int | None = None,
 ) -> str:
     """Build the user prompt for outline generation."""
     user_profile_section = f"\n{user_profile}\n" if user_profile else ""
     media_policy_section = f"\n{media_generation_policy}\n" if media_generation_policy else ""
+
+    hard_constraints: list[str] = []
+    if scene_count is not None:
+        hard_constraints.append(f"- 恰好生成 {scene_count} 个场景")
+    if duration_minutes is not None:
+        hard_constraints.append(f"- 总时长约 {duration_minutes} 分钟")
+    hard_constraints_section = (
+        "\n## 硬性约束（必须严格遵守）\n\n"
+        + "\n".join(hard_constraints)
+        + "\n\n---\n"
+        if hard_constraints
+        else ""
+    )
 
     return f"""请根据以下课程需求生成场景大纲。
 
@@ -155,8 +170,7 @@ def build_outline_user_prompt(
 {requirement}
 
 ---
-{user_profile_section}
-
+{user_profile_section}{hard_constraints_section}
 ## 语言上下文
 
 通过应用系统提示中的决策规则推断课程语言指令。

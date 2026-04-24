@@ -177,7 +177,21 @@ export const zhCnEntryCommonResources = {
     feedTitle: '探索优质课堂案例',
     feedDesc: '看看大家都在用小麦学什么系统课程',
     feedLoadMore: '加载更多案例',
-    feedLoading: '正在为您检索课程...'
+    feedLoading: '正在为您检索课程...',
+    advanced: {
+      triggerLabel: '高级',
+      dialogTitle: '高级设置',
+      dialogDescription: '调整生成的场景数量、目标时长和互动风格。',
+      doneLabel: '完成',
+      sceneCountLabel: '场景数量',
+      sceneCountHint: '将严格约束 LLM 生成恰好此数量的场景（1-30）',
+      durationLabel: '目标时长',
+      durationUnit: '分钟',
+      interactiveLabel: '互动优先模式',
+      interactiveHint: '启用后优先生成互动场景（需 Phase 5 支持后生效）',
+      interactiveOn: '已开启',
+      interactiveOff: '已关闭',
+    }
   },
 } as const;
 
@@ -363,6 +377,20 @@ export const enUsEntryCommonResources = {
     feedTitle: 'Explore Quality Classrooms',
     feedDesc: 'See what systematic courses others are learning with XiaoMai',
     feedLoadMore: 'Load more classrooms',
-    feedLoading: 'Searching courses...'
+    feedLoading: 'Searching courses...',
+    advanced: {
+      triggerLabel: 'Advanced',
+      dialogTitle: 'Advanced settings',
+      dialogDescription: 'Tune the number of scenes, target duration and interactive style.',
+      doneLabel: 'Done',
+      sceneCountLabel: 'Scene count',
+      sceneCountHint: 'Strictly constrain the LLM to generate exactly this many scenes (1-30)',
+      durationLabel: 'Target duration',
+      durationUnit: 'min',
+      interactiveLabel: 'Interactive-first mode',
+      interactiveHint: 'Prefer interactive scenes when enabled (takes effect once Phase 5 lands)',
+      interactiveOn: 'On',
+      interactiveOff: 'Off',
+    }
   },
 } as const;

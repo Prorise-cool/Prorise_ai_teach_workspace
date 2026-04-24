@@ -2,7 +2,7 @@
  * 文件说明：课堂输入页核心输入卡片组件。
  * 保留课堂页既有视觉与交互语义，仅把冗余结构从页面容器中下沉为可复用组件。
  */
-import type { ChangeEventHandler, RefObject } from 'react';
+import type { ChangeEventHandler, ReactNode, RefObject } from 'react';
 import { ArrowRight, FileText, Globe, Mic, Paperclip, X } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
@@ -53,7 +53,14 @@ type ClassroomInputCardProps = {
     toolUploadFile: string;
     toolVoiceInput: string;
     toolWebSearch: string;
+    advancedSettings?: string;
+    advancedSummary?: string;
   };
+  /**
+   * 高级参数摘要药丸，点击触发外部弹窗；不传则不显示按钮。
+   * 外部负责包裹 `Dialog` + `DialogTrigger`，这里只渲染触发按钮的 content。
+   */
+  advancedTrigger?: ReactNode;
 };
 
 /**
@@ -80,6 +87,7 @@ export function ClassroomInputCard({
   onFileChange,
   onSubmit,
   labels,
+  advancedTrigger,
 }: ClassroomInputCardProps) {
   const { t } = useAppTranslation();
   const classNames = createInputWorkspaceCardClassNames('xm-classroom-input');
@@ -189,6 +197,8 @@ export function ClassroomInputCard({
             <Globe className="h-3.5 w-3.5" />
             {labels.toolWebSearch}
           </button>
+
+          {advancedTrigger ? <>{advancedTrigger}</> : null}
         </>
       }
       submitAction={
