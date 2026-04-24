@@ -63,6 +63,7 @@ class VideoPublicationService(RuoYiServiceMixin):
         self,
         task_ref_id: str,
         *,
+        work_type: str = "video",
         access_context: "AccessContext | None" = None,
         request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoPublicationSnapshot | None:
@@ -70,6 +71,9 @@ class VideoPublicationService(RuoYiServiceMixin):
 
         Args:
             task_ref_id: 任务唯一标识。
+            work_type: xm_user_work.work_type 过滤（默认 "video"，课堂等传 "classroom"）。
+                RuoYi 端 getVideoPublication 端点接受 workType 查询参数，
+                没传时 Java 侧默认回退 "video" 保持向后兼容。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
             request_auth: 可选的显式请求鉴权信息，适用于公开列表等非路由上下文。
         """
@@ -80,6 +84,7 @@ class VideoPublicationService(RuoYiServiceMixin):
                     endpoint,
                     resource=self._RESOURCE,
                     operation="get",
+                    params={"workType": work_type},
                 )
         except IntegrationError as exc:
             if exc.code == "RUOYI_NOT_FOUND":

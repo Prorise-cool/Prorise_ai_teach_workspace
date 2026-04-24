@@ -161,6 +161,42 @@ async def unpublish_classroom_task(
     return ClassroomPublishResult(task_id=task_id, published=False, published_at=None)
 
 
+async def get_classroom_publication_state(
+    classroom_service: "ClassroomService",
+    task_id: str,
+    *,
+    access_context: "AccessContext",
+    publication_service: VideoPublicationService | None = None,
+) -> ClassroomPublishResult:
+    """读当前课堂的公开状态（给前端 PublishToggle 挂载时查询初始态）。
+
+    无记录（从未发布过）→ published=False。
+    """
+    # 归属校验：按任务所属用户读；匿名 / 他人无权读取详细 snapshot
+    snapshot = await classroom_service.get_task(task_id, access_context=access_context)
+    if snapshot is None:
+        raise AppError(
+            code="COMMON_NOT_FOUND",
+            message="课堂任务不存在",
+            status_code=404,
+            task_id=task_id,
+        )
+
+    pub_service = publication_service or _default_publication_service()
+    publication = await pub_service.get_publication(
+        task_id,
+        work_type=WORK_TYPE_CLASSROOM,
+        access_context=access_context,
+    )
+    if publication is None:
+        return ClassroomPublishResult(task_id=task_id, published=False, published_at=None)
+    return ClassroomPublishResult(
+        task_id=task_id,
+        published=publication.is_public,
+        published_at=publication.published_at,
+    )
+
+
 async def list_published_classrooms(
     *,
     page: int = 1,

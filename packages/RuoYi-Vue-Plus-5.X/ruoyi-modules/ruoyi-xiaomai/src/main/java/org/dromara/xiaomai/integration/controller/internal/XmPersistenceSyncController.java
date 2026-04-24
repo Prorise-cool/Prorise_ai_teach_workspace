@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -63,9 +64,13 @@ public class XmPersistenceSyncController {
     }
 
     @GetMapping("/video/publications/{taskRefId}")
-    public R<XmPersistenceSyncVo.VideoPublicationSyncVo> getVideoPublication(@PathVariable String taskRefId) {
-        XmPersistenceSyncVo.VideoPublicationSyncVo data = xmPersistenceSyncService.getVideoPublication(taskRefId);
-        return data == null ? R.fail("Video publication not found") : R.ok(data);
+    public R<XmPersistenceSyncVo.VideoPublicationSyncVo> getVideoPublication(
+        @PathVariable String taskRefId,
+        @RequestParam(value = "workType", required = false, defaultValue = "video") String workType
+    ) {
+        XmPersistenceSyncVo.VideoPublicationSyncVo data =
+            xmPersistenceSyncService.getPublicationByWorkType(workType, taskRefId);
+        return data == null ? R.fail("Publication not found") : R.ok(data);
     }
 
     @GetMapping("/video/publications")

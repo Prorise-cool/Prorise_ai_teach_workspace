@@ -531,6 +531,21 @@ function PublishToggle({ classroomId }: { classroomId: string }) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 挂载时 / classroomId 变化时拉一次当前状态，避免每次都默认显示"私有"
+  useEffect(() => {
+    const adapter = resolveClassroomPublicAdapter();
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const r = await adapter.getState(classroomId, { signal: ac.signal });
+        if (!ac.signal.aborted) setIsPublic(r.published);
+      } catch {
+        // 读不到不影响可用性（用户点击时仍可发 publish），静默忽略
+      }
+    })();
+    return () => ac.abort();
+  }, [classroomId]);
+
   const handleToggle = useCallback(async () => {
     if (isPending) return;
     setIsPending(true);

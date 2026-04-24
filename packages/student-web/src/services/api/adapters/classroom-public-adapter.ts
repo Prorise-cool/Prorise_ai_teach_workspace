@@ -44,6 +44,8 @@ export const DEFAULT_CLASSROOM_PUBLIC_QUERY: ClassroomPublicListQuery = {
 };
 
 export interface ClassroomPublicAdapter {
+  /** 读取课堂当前公开状态（挂载初始化 / 手动刷新）。 */
+  getState(taskId: string, options?: { signal?: AbortSignal }): Promise<ClassroomPublishResult>;
   publish(taskId: string, options?: { signal?: AbortSignal }): Promise<ClassroomPublishResult>;
   unpublish(taskId: string, options?: { signal?: AbortSignal }): Promise<ClassroomPublishResult>;
   listPublic(
@@ -81,6 +83,18 @@ function createRealClassroomPublicAdapter(
   client: ApiClient = fastapiClient,
 ): ClassroomPublicAdapter {
   return {
+    async getState(taskId, options) {
+      try {
+        const res = await client.request<{ data: ClassroomPublishResult }>({
+          url: `${BASE}/tasks/${encodeURIComponent(taskId)}/publish`,
+          method: 'get',
+          signal: options?.signal,
+        });
+        return unwrapEnvelope(res);
+      } catch (err) {
+        throw mapError(err);
+      }
+    },
     async publish(taskId, options) {
       try {
         const res = await client.request<{ data: ClassroomPublishResult }>({

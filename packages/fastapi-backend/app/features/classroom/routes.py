@@ -28,6 +28,7 @@ from app.features.classroom.schemas import (
 from app.features.classroom.publication import (
     ClassroomPublishResult,
     PublishedClassroomCardPage,
+    get_classroom_publication_state,
     list_published_classrooms,
     publish_classroom_task,
     unpublish_classroom_task,
@@ -177,6 +178,18 @@ async def replay_classroom_session(
 
 
 # ── 公开发布 ────────────────────────────────────────────────────────────────
+
+
+@router.get("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+async def get_classroom_publish_state(
+    task_id: str,
+    access_context: AccessContext = Depends(get_access_context),
+    service: ClassroomService = Depends(get_classroom_service),
+) -> ClassroomPublishResult:
+    """读取当前课堂的公开状态，给前端 PublishToggle 挂载时初始化。"""
+    return await get_classroom_publication_state(
+        service, task_id, access_context=access_context,
+    )
 
 
 @router.post("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
