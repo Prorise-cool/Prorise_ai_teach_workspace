@@ -178,6 +178,7 @@ export const zhCnEntryCommonResources = {
     feedDesc: '看看大家都在用小麦学什么系统课程',
     feedLoadMore: '加载更多案例',
     feedLoading: '正在为您检索课程...',
+    feedComingSoon: '公开课堂即将开放，敬请期待',
     advanced: {
       triggerLabel: '高级',
       dialogTitle: '高级设置',
@@ -378,6 +379,7 @@ export const enUsEntryCommonResources = {
     feedDesc: 'See what systematic courses others are learning with XiaoMai',
     feedLoadMore: 'Load more classrooms',
     feedLoading: 'Searching courses...',
+    feedComingSoon: 'Public classrooms launching soon — stay tuned',
     advanced: {
       triggerLabel: 'Advanced',
       dialogTitle: 'Advanced settings',
