@@ -16,7 +16,7 @@
  * 调用 + 三栏 main，整个 page 更清爽。
  */
 import {
-  ChevronLeft,
+  Home,
   Menu,
   Moon,
   PanelLeftClose,
@@ -119,7 +119,7 @@ export const ClassroomHeader: FC<ClassroomHeaderProps> = ({
           title={t('classroom.header.backHome')}
           aria-label={t('classroom.header.backHome')}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <Home className="h-3.5 w-3.5" />
         </button>
       </div>
     </header>
