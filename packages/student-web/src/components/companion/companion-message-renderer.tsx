@@ -9,6 +9,7 @@
  * 点击药丸：调用 `onElementReference(elementId)`，课堂侧会在 store 上设
  * `highlightedElementId`，Stage 的元素 DOM 会在 3s 内叠加 outline。
  */
+import { Crosshair } from 'lucide-react';
 import type { FC } from 'react';
 import { memo, useMemo } from 'react';
 
@@ -60,6 +61,16 @@ export function parseCompanionMessage(content: string): Segment[] {
   return out;
 }
 
+/** 把 pill 序号渲染成圆圈数字 ①②③…（1-20）。超过 20 退化为 (N)。 */
+function renderPillLabel(index: number): string {
+  if (index < 1) return '';
+  if (index <= 20) {
+    // Unicode 带圈数字：U+2460 = ①，U+2461 = ②，...
+    return String.fromCharCode(0x2460 + index - 1);
+  }
+  return `(${index})`;
+}
+
 export const CompanionMessageRenderer: FC<CompanionMessageRendererProps> = memo(
   ({ content, onElementReference, className }) => {
     const segments = useMemo(() => parseCompanionMessage(content), [content]);
@@ -68,13 +79,16 @@ export const CompanionMessageRenderer: FC<CompanionMessageRendererProps> = memo(
       return <span className={className}>{content}</span>;
     }
 
+    let pillCounter = 0;
     return (
       <span className={className}>
         {segments.map((seg, idx) => {
           if (seg.kind === 'text') {
             return <span key={idx}>{seg.text}</span>;
           }
-          // pill
+          // pill —— 隐藏内部元素 id，显示图标 + 序号
+          pillCounter += 1;
+          const label = renderPillLabel(pillCounter);
           const clickable = !!onElementReference;
           return (
             <button
@@ -82,17 +96,18 @@ export const CompanionMessageRenderer: FC<CompanionMessageRendererProps> = memo(
               type="button"
               disabled={!clickable}
               onClick={() => onElementReference?.(seg.elementId)}
+              title={clickable ? `定位到课堂第 ${pillCounter} 处引用` : undefined}
               className={cn(
-                'mx-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors',
+                'mx-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition-colors align-baseline',
                 'bg-primary/10 text-primary ring-1 ring-primary/30',
                 clickable
                   ? 'hover:bg-primary/20 active:bg-primary/30 cursor-pointer'
                   : 'cursor-default opacity-70',
               )}
-              aria-label={`Reference element ${seg.elementId}`}
+              aria-label={`定位到幻灯片第 ${pillCounter} 处引用 (${seg.elementId})`}
             >
-              <span aria-hidden="true">◆</span>
-              <code className="font-mono">{seg.elementId}</code>
+              <Crosshair className="h-3 w-3" aria-hidden="true" />
+              <span>{label}</span>
             </button>
           );
         })}
