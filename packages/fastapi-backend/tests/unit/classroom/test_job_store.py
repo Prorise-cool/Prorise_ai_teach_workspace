@@ -100,3 +100,78 @@ def test_ready_does_not_surface_stale_error(store: ClassroomRuntimeStateStore) -
 
 def test_job_store_alias_is_same_class() -> None:
     assert JobStore is ClassroomRuntimeStateStore
+
+
+# ── Phase 3：任务框架协议桥接 ───────────────────────────────────────────────
+
+
+def test_create_publishes_task_framework_snapshot_and_event(
+    store: ClassroomRuntimeStateStore,
+) -> None:
+    """create() 后应可通过 load_task_recovery_state 拿到 snapshot + connected 事件。"""
+    store.create("t-sse-1", user_id="u-1", request_id="req-1")
+
+    recovery = store._store.load_task_recovery_state("t-sse-1")
+    assert recovery.snapshot is not None
+    assert recovery.snapshot["taskType"] == "classroom"
+    assert recovery.snapshot["status"] == "pending"
+    assert recovery.snapshot["userId"] == "u-1"
+    assert len(recovery.events) >= 1
+    assert recovery.events[0].task_id == "t-sse-1"
+
+
+def test_set_status_appends_progress_event_with_classroom_status_context(
+    store: ClassroomRuntimeStateStore,
+) -> None:
+    store.create("t-sse-2", user_id="u-2", request_id=None)
+    store.set_status("t-sse-2", "generating_outline", message="生成大纲中…")
+
+    recovery = store._store.load_task_recovery_state("t-sse-2")
+    progress_events = [e for e in recovery.events if e.event == "progress"]
+    assert progress_events, "expected at least one progress event after set_status"
+    latest = progress_events[-1]
+    assert latest.status == "processing"
+    assert latest.message == "生成大纲中…"
+    assert latest.context.get("classroomStatus") == "generating_outline"
+
+
+def test_set_result_emits_completed_event_with_task_status_completed(
+    store: ClassroomRuntimeStateStore,
+) -> None:
+    store.create("t-sse-3", user_id="u-3")
+    store.set_result("t-sse-3", {"id": "cls-1", "scenes": []})
+
+    recovery = store._store.load_task_recovery_state("t-sse-3")
+    completed = [e for e in recovery.events if e.event == "completed"]
+    assert completed, "expected a completed event after set_result"
+    evt = completed[-1]
+    assert evt.status == "completed"
+    assert evt.progress == 100
+    assert evt.context.get("result", {}).get("classroomId") == "cls-1"
+
+
+def test_set_error_emits_failed_event_with_error_code(
+    store: ClassroomRuntimeStateStore,
+) -> None:
+    store.create("t-sse-4", user_id="u-4")
+    store.set_error("t-sse-4", "LLM timeout")
+
+    recovery = store._store.load_task_recovery_state("t-sse-4")
+    failed = [e for e in recovery.events if e.event == "failed"]
+    assert failed, "expected a failed event after set_error"
+    evt = failed[-1]
+    assert evt.status == "failed"
+    assert evt.error_code == "TASK_UNHANDLED_EXCEPTION"
+    assert evt.message == "LLM timeout"
+
+
+def test_snapshot_user_id_preserved_for_owner_check(
+    store: ClassroomRuntimeStateStore,
+) -> None:
+    """SSE 端点会按 snapshot.userId 做归属校验，meta 中的 userId 必须一路透传。"""
+    store.create("t-sse-5", user_id="owner-123")
+    store.set_progress("t-sse-5", 42)
+
+    recovery = store._store.load_task_recovery_state("t-sse-5")
+    assert recovery.snapshot is not None
+    assert recovery.snapshot["userId"] == "owner-123"

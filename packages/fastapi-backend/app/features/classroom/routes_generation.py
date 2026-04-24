@@ -74,7 +74,11 @@ async def create_classroom_generation(
 
     runtime_store = _get_runtime_store(request)
     runtime_state = ClassroomRuntimeStateStore(runtime_store)
-    runtime_state.create(task_id)
+    runtime_state.create(
+        task_id,
+        user_id=access_context.user_id,
+        request_id=access_context.request_id,
+    )
     save_classroom_runtime_auth(
         runtime_store, task_id=task_id, access_context=access_context,
     )

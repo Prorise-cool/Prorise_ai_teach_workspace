@@ -1,10 +1,13 @@
 /**
  * 课堂生成主 Hook 集。
  *
- * 重构说明（Phase 2）：
- * - `useClassroomCreate().create()` 现在只做提交 → 拿到 taskId 立即返回；
- *   轮询与课堂保存由独立路由 `/classroom/generating/:taskId` 内部的
- *   `usePollGeneration(taskId)` 接管。
+ * Phase 3 更新：
+ * - 等待页的进度流由 `useGenerationTask({ module: 'classroom' })` 统一托管，
+ *   内部走 `/api/v1/classroom/tasks/{id}/events` SSE（断线自动降级到
+ *   `/api/v1/classroom/tasks/{id}/status` 快照轮询）。
+ * - `usePollGeneration` 保留公开签名不变，只是内部改为 SSE 为主、并在
+ *   收到 completed 事件时再拉一次 `/generate/classroom/{task_id}` 拿
+ *   完整的 classroom payload（SSE 事件只携带最小状态，不把大结果下发）。
  *
  * 后端状态机（FastAPI classroom job_runner）:
  *   pending → generating_outline → generating_scenes → ready | failed
@@ -13,14 +16,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
+import { useGenerationTask } from '@/shared/hooks/use-generation-task';
 
 import { saveClassroom } from '../db/classroom-db';
 import { useClassroomStore } from '../stores/classroom-store';
 import type { Classroom, ClassroomCreateRequest, ClassroomJobResponse } from '../types/classroom';
 import type { Scene } from '../types/scene';
-
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_COUNT = 150; // ~5 分钟
 
 /** 提交课堂生成任务，返回后端 taskId。不再内部阻塞等待结果。 */
 export function useClassroomCreate() {
@@ -50,7 +51,7 @@ export function useClassroomCreate() {
   return { create, cancel };
 }
 
-/** 独立路由等待页消费：轮询 taskId 状态直到 ready / failed / 超时。 */
+/** 独立路由等待页消费：SSE 订阅 taskId 进度；完成后自动拉取完整 classroom。 */
 export interface UsePollGenerationResult {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
@@ -64,120 +65,87 @@ export function usePollGeneration(taskId: string | undefined): UsePollGeneration
   const { t } = useAppTranslation();
   const store = useClassroomStore;
   const adapter = resolveClassroomAdapter();
-  const abortRef = useRef<AbortController | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const [classroomId, setClassroomId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const [state, setState] = useState<Omit<UsePollGenerationResult, 'cancel'>>({
-    status: 'pending',
-    progress: 0,
-    stageLabel: t('openmaic.generation.generating'),
-    classroomId: null,
-    errorMessage: null,
+  const sse = useGenerationTask({
+    taskId,
+    module: 'classroom',
+    onCompleted: useCallback(() => {
+      // SSE 收到 completed，拉取完整 classroom 数据并写入本地 store + IndexedDB。
+      if (!taskId) return;
+      const ac = new AbortController();
+      fetchAbortRef.current?.abort();
+      fetchAbortRef.current = ac;
+
+      void (async () => {
+        try {
+          const statusResp = await adapter.getStatus(taskId, { signal: ac.signal });
+          if (ac.signal.aborted) return;
+          if (statusResp.status !== 'ready' || !statusResp.classroom) {
+            setFetchError(statusResp.error ?? t('classroom.common.classroomGenerationFailed'));
+            return;
+          }
+          const classroom = buildClassroomFromResponse(statusResp, taskId);
+          await saveClassroom(classroom);
+          store.getState().setClassroom(classroom);
+          store.getState().setGenerationProgress(100, t('openmaic.generation.complete'));
+          setClassroomId(classroom.id);
+        } catch (err) {
+          if (ac.signal.aborted) return;
+          setFetchError(err instanceof Error ? err.message : String(err));
+        }
+      })();
+    }, [taskId, adapter, store, t]),
   });
 
-  const cancel = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
-
+  // 把 SSE 的 stageLabel / progress 同步到 classroom store，供其他页面感知。
   useEffect(() => {
     if (!taskId) return;
-    const ac = new AbortController();
-    abortRef.current = ac;
-    let cancelled = false;
-    let pollCount = 0;
+    const label = sse.stageLabel || t('openmaic.generation.generating');
+    store.getState().setGenerationProgress(sse.progress, label);
+  }, [sse.progress, sse.stageLabel, taskId, store, t]);
 
-    async function loop() {
-      setState((prev) => ({ ...prev, status: 'processing' }));
+  const cancel = useCallback(() => {
+    fetchAbortRef.current?.abort();
+  }, []);
 
-      while (!cancelled && pollCount < MAX_POLL_COUNT) {
-        if (ac.signal.aborted) {
-          return;
-        }
-        await sleep(POLL_INTERVAL_MS);
-        if (cancelled || ac.signal.aborted) return;
+  useEffect(() => () => fetchAbortRef.current?.abort(), []);
 
-        let statusResp: ClassroomJobResponse | null = null;
-        try {
-          statusResp = await adapter.getStatus(taskId as string, { signal: ac.signal });
-        } catch {
-          pollCount += 1;
-          continue;
-        }
-        if (cancelled || ac.signal.aborted) return;
+  const stageLabel = sse.stageLabel || t('openmaic.generation.generating');
 
-        const serverProgress = typeof statusResp.progress === 'number' ? statusResp.progress : 0;
-        const progress = serverProgress > 0
-          ? serverProgress
-          : Math.min(95, 5 + (pollCount / MAX_POLL_COUNT) * 90);
-        const stageLabel = statusResp.message ?? t('openmaic.generation.generating');
-        store.getState().setGenerationProgress(progress, stageLabel);
-        setState((prev) => ({ ...prev, progress, stageLabel }));
-
-        if (statusResp.status === 'ready' && statusResp.classroom) {
-          try {
-            const classroom = buildClassroomFromResponse(statusResp, taskId as string);
-            await saveClassroom(classroom);
-            store.getState().setClassroom(classroom);
-            store.getState().setGenerationProgress(100, t('openmaic.generation.complete'));
-            if (!cancelled) {
-              setState({
-                status: 'completed',
-                progress: 100,
-                stageLabel: t('openmaic.generation.complete'),
-                classroomId: classroom.id,
-                errorMessage: null,
-              });
-            }
-          } catch (err) {
-            if (!cancelled) {
-              setState({
-                status: 'failed',
-                progress: serverProgress,
-                stageLabel: t('classroom.generation.generationFailed'),
-                classroomId: null,
-                errorMessage: err instanceof Error ? err.message : String(err),
-              });
-            }
-          }
-          return;
-        }
-
-        if (statusResp.status === 'failed') {
-          if (!cancelled) {
-            setState({
-              status: 'failed',
-              progress: serverProgress,
-              stageLabel: t('classroom.generation.generationFailed'),
-              classroomId: null,
-              errorMessage: statusResp.error ?? t('classroom.common.classroomGenerationFailed'),
-            });
-          }
-          return;
-        }
-
-        pollCount += 1;
-      }
-
-      if (!cancelled) {
-        setState((prev) => ({
-          ...prev,
-          status: 'failed',
-          errorMessage: t('openmaic.generation.timeout'),
-        }));
-      }
-    }
-
-    void loop();
-
-    return () => {
-      cancelled = true;
-      ac.abort();
+  // 最终状态合成：completed 必须在 classroom payload 拉回后才真正落定。
+  if (sse.status === 'failed' || fetchError) {
+    return {
+      status: 'failed',
+      progress: sse.progress,
+      stageLabel: t('classroom.generation.generationFailed'),
+      classroomId: null,
+      errorMessage: fetchError ?? sse.error?.message ?? t('classroom.common.classroomGenerationFailed'),
+      cancel,
     };
-  // adapter/store/t 在实际使用中是稳定的（adapter 是模块级单例，store 是 Zustand，t 来自 i18next hook）。
-  // 把它们放入依赖会让 taskId 变更外再次触发，反而有重复轮询风险。
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskId]);
+  }
 
-  return { ...state, cancel };
+  if (sse.status === 'completed' && classroomId) {
+    return {
+      status: 'completed',
+      progress: 100,
+      stageLabel: t('openmaic.generation.complete'),
+      classroomId,
+      errorMessage: null,
+      cancel,
+    };
+  }
+
+  return {
+    status: sse.status === 'completed' ? 'processing' : sse.status,
+    progress: sse.progress,
+    stageLabel,
+    classroomId: null,
+    errorMessage: null,
+    cancel,
+  };
 }
 
 function buildClassroomFromResponse(statusResp: ClassroomJobResponse, taskId: string): Classroom {
@@ -231,8 +199,4 @@ function buildClassroomFromResponse(statusResp: ClassroomJobResponse, taskId: st
     })),
     taskId,
   };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
