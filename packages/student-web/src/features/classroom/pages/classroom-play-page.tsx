@@ -3,7 +3,18 @@
  * 三栏布局：课程大纲 | 主画布（幻灯片+白板）| 智能体讨论。
  * 与 UI 设计稿 01-classroom.html 对应。
  */
-import { ArrowRight, Globe2, Layers, Loader2, Lock, Sparkles, Trophy, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Globe2,
+  Layers,
+  Loader2,
+  Lock,
+  PanelRightClose,
+  PanelRightOpen,
+  Sparkles,
+  Trophy,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -350,7 +361,32 @@ export function ClassroomPlayPage() {
           onToggleOutline={() => setOutlineOpen((v) => !v)}
           onOpenMobileOutline={openMobileOutline}
           onBackHome={() => void navigate('/')}
-          trailingExtras={classroomId ? <PublishToggle classroomId={classroomId} /> : null}
+          trailingExtras={
+            <>
+              {classroomId ? <PublishToggle classroomId={classroomId} /> : null}
+              <button
+                type="button"
+                onClick={() => setCompanionOpen((v) => !v)}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                title={
+                  companionOpen
+                    ? t('classroom.chat.ariaCollapsePanel')
+                    : t('classroom.header.companion')
+                }
+                aria-label={
+                  companionOpen
+                    ? t('classroom.chat.ariaCollapsePanel')
+                    : t('classroom.header.companion')
+                }
+              >
+                {companionOpen ? (
+                  <PanelRightClose className="h-3.5 w-3.5" />
+                ) : (
+                  <PanelRightOpen className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </>
+          }
         />
 
         {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2。
