@@ -1070,6 +1070,109 @@
 	50% { opacity: 0; }
 }
 
+/* ================= GENERATING 字母扫描动画 (对齐 Ux/07-课堂等待页/01-generating.html) ================= */
+.xm-generating-loader-wrapper {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2.75rem;
+	font-weight: 900;
+	user-select: none;
+	color: var(--xm-generating-text);
+	letter-spacing: 0.1em;
+	overflow: hidden;
+	font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif);
+	text-transform: uppercase;
+	transition: color 0.5s ease;
+}
+
+.xm-generating-loader {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background-color: transparent;
+	mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+	-webkit-mask: repeating-linear-gradient(90deg, transparent 0, transparent 8px, #000 8px, #000 12px);
+}
+
+.xm-generating-loader::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image:
+		radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--xm-generating-text) 90%, transparent) 0%, transparent 50%),
+		radial-gradient(circle at 45% 45%, color-mix(in srgb, var(--xm-color-brand-500, #f5c547) 80%, transparent) 0%, transparent 45%);
+	mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+	-webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 8%, #000 24%);
+	animation: loader-transform 2.2s infinite alternate ease-in-out,
+		loader-opacity 4.2s infinite;
+}
+
+.xm-generating-loader-letter {
+	position: relative;
+	display: inline-block;
+	opacity: 0.15;
+	animation: loader-letter-anim 4.2s infinite linear;
+	z-index: 2;
+}
+
+.xm-generating-loader-letter:nth-child(1) { animation-delay: 0.1s; }
+.xm-generating-loader-letter:nth-child(2) { animation-delay: 0.22s; }
+.xm-generating-loader-letter:nth-child(3) { animation-delay: 0.34s; }
+.xm-generating-loader-letter:nth-child(4) { animation-delay: 0.46s; }
+.xm-generating-loader-letter:nth-child(5) { animation-delay: 0.58s; }
+.xm-generating-loader-letter:nth-child(6) { animation-delay: 0.70s; }
+.xm-generating-loader-letter:nth-child(7) { animation-delay: 0.82s; }
+.xm-generating-loader-letter:nth-child(8) { animation-delay: 0.94s; }
+.xm-generating-loader-letter:nth-child(9) { animation-delay: 1.06s; }
+.xm-generating-loader-letter:nth-child(10) { animation-delay: 1.18s; }
+
+@keyframes loader-transform {
+	0% { transform: translate(-60%); }
+	100% { transform: translate(60%); }
+}
+
+@keyframes loader-opacity {
+	0%, 100% { opacity: 0; }
+	18% { opacity: 1; }
+	64% { opacity: 0.2; }
+}
+
+@keyframes loader-letter-anim {
+	0% {
+		opacity: 0.15;
+		filter: blur(0);
+	}
+	6% {
+		opacity: 1;
+		filter: blur(0);
+		transform: scale(1.03) translateY(-2px);
+	}
+	22% {
+		opacity: 0.4;
+	}
+	100% {
+		opacity: 0.15;
+		filter: blur(2px);
+	}
+}
+
+/* progress-fill 微调：加发光效果（对齐设计稿 .progress-fill::after） */
+.xm-generating-progress-fill {
+	position: relative;
+
+	&::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 9999px;
+		box-shadow: 0 0 16px color-mix(in srgb, var(--xm-color-brand-500, #f5c547) 70%, transparent);
+		opacity: 0.7;
+		pointer-events: none;
+	}
+}
+
 @media (max-width: 1100px) {
 	.xm-generating-shell {
 		&__layout {

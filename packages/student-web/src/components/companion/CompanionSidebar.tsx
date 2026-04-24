@@ -34,6 +34,8 @@ import type {
   CompanionTheme,
 } from './types';
 
+import './companion-sidebar.scss';
+
 /* ---------- 内部消息结构（不向外暴露） ---------- */
 
 interface LocalMessage {

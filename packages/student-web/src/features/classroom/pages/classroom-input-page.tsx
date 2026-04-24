@@ -22,10 +22,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { CLASSROOM_FEED_MOCK_CARDS } from '@/components/community-feed';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
-import {
-	CLASSROOM_DURATION_PRESETS,
-	ClassroomInputAdvancedDialog,
-} from '@/features/classroom/components/classroom-input-advanced-dialog';
+import { ClassroomInputAdvancedDialog } from '@/features/classroom/components/classroom-input-advanced-dialog';
 import { useClassroomCreate } from '@/features/classroom/hooks/use-classroom';
 
 import '@/components/input-page/styles/input-page-shared.scss';
@@ -43,7 +40,6 @@ export function ClassroomInputPage() {
 	const [text, setText] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [sceneCount, setSceneCount] = useState<number>(10);
-	const [durationMinutes, setDurationMinutes] = useState<number>(CLASSROOM_DURATION_PRESETS[1] ?? 15);
 	const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 	const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
 	const { create } = useClassroomCreate();
@@ -90,8 +86,6 @@ export function ClassroomInputPage() {
 	const advancedDoneLabel = t('classroomInput.advanced.doneLabel');
 	const advancedSceneCountLabel = t('classroomInput.advanced.sceneCountLabel');
 	const advancedSceneCountHint = t('classroomInput.advanced.sceneCountHint');
-	const advancedDurationLabel = t('classroomInput.advanced.durationLabel');
-	const advancedDurationUnit = t('classroomInput.advanced.durationUnit');
 	const advancedInteractiveLabel = t('classroomInput.advanced.interactiveLabel');
 	const advancedInteractiveHint = t('classroomInput.advanced.interactiveHint');
 	const advancedInteractiveOn = t('classroomInput.advanced.interactiveOn');
@@ -163,7 +157,6 @@ export function ClassroomInputPage() {
 								pdfText,
 								enableWebSearch: webSearchEnabled,
 								sceneCount,
-								durationMinutes,
 								interactiveMode,
 							});
 							void navigate(`/classroom/generating/${taskId}`);
@@ -199,10 +192,8 @@ export function ClassroomInputPage() {
 				/>
 				<ClassroomInputAdvancedDialog
 					sceneCount={sceneCount}
-					durationMinutes={durationMinutes}
 					interactiveMode={interactiveMode}
 					onSceneCountChange={setSceneCount}
-					onDurationChange={setDurationMinutes}
 					onInteractiveChange={setInteractiveMode}
 					onClose={() => setIsAdvancedOpen(false)}
 					labels={{
@@ -211,8 +202,6 @@ export function ClassroomInputPage() {
 						advancedDone: advancedDoneLabel,
 						sceneCountLabel: advancedSceneCountLabel,
 						sceneCountHint: advancedSceneCountHint,
-						durationLabel: advancedDurationLabel,
-						durationUnit: advancedDurationUnit,
 						interactiveLabel: advancedInteractiveLabel,
 						interactiveHint: advancedInteractiveHint,
 						interactiveOn: advancedInteractiveOn,

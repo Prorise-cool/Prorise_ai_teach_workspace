@@ -214,6 +214,14 @@ async def _async_run_classroom_generation(
             })
 
             progress = 30 + int(60 * (idx + 1) / max(total, 1))
+            # 每个场景就绪时发一条带具体标题的 status message，让等待页的
+            # 日志流显示"已完成 N/M：XXX"，消除生成过程对用户的黑箱感。
+            scene_title_for_log = str(outline.get("title") or scene_id)
+            runtime_state.set_status(
+                task_id,
+                "generating_scenes",
+                message=f"已完成 {idx + 1}/{total}：{scene_title_for_log}",
+            )
             runtime_state.set_progress(task_id, progress)
 
             # 白板动作落 LongTerm 仓库（best-effort，不阻断主流程）

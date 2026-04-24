@@ -6,7 +6,7 @@
 @use 'partials/result-header';
 @use 'partials/video-dock';
 @use 'partials/publish-banner';
-@use 'partials/companion-sidebar';
+// companion-sidebar 已迁移到 components/companion/companion-sidebar.scss，由 CompanionSidebar.tsx 自 import
 
 .xm-video-result {
   display: flex;

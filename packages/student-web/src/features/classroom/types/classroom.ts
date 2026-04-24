@@ -75,8 +75,6 @@ export interface ClassroomCreateRequest {
   agentIds?: string[];
   /** 目标场景数量（1-30），由高级设置弹窗暴露。后端对齐 `sceneCount` alias。 */
   sceneCount?: number;
-  /** 目标课堂总时长（5-120 分钟）。后端对齐 `durationMinutes` alias。 */
-  durationMinutes?: number;
-  /** 是否启用互动场景模式（Phase 5 真正消费；Phase 1 仅透传字段）。 */
+  /** 是否启用互动场景模式（走 interactive-outlines prompt 集）。 */
   interactiveMode?: boolean;
 }
