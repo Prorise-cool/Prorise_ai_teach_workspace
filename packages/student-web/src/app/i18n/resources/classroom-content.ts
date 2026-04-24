@@ -138,6 +138,14 @@ export const zhCnClassroomResources = {
       interactiveNotLoaded: '交互式内容暂未加载',
       slideNoElements: '幻灯片没有渲染元素',
     },
+    interactive: {
+      widget_default: '沙箱模式',
+      widget_simulation: '模拟',
+      widget_diagram: '图示',
+      widget_code: '代码',
+      widget_game: '游戏',
+      widget_visualization3d: '3D 可视化',
+    },
     inlineAction: {
       spotlight: '聚光',
       laser: '激光',
@@ -351,6 +359,14 @@ export const enUsClassroomResources = {
       projectTasksLabel: 'Project Tasks',
       interactiveNotLoaded: 'Interactive content not loaded',
       slideNoElements: 'Slide has no renderable elements',
+    },
+    interactive: {
+      widget_default: 'Sandbox',
+      widget_simulation: 'Simulation',
+      widget_diagram: 'Diagram',
+      widget_code: 'Code',
+      widget_game: 'Game',
+      widget_visualization3d: '3D Viz',
     },
     inlineAction: {
       spotlight: 'Spotlight',

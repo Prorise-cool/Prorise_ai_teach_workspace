@@ -89,6 +89,7 @@ async def _async_run_classroom_generation(
         generate_scene_actions,
         generate_scene_content,
     )
+    from app.features.classroom.generation.widget_generator import generate_widget_html
     from app.features.classroom.llm_adapter import (
         resolve_classroom_providers,
         resolve_classroom_tts_provider,
@@ -122,6 +123,7 @@ async def _async_run_classroom_generation(
             pdf_text=pdf_text,
             scene_count=scene_count,
             duration_minutes=duration_minutes,
+            interactive_mode=interactive_mode,
         )
         language_directive = outline_result.get("languageDirective", "")
         outlines = outline_result.get("outlines", [])
@@ -142,6 +144,7 @@ async def _async_run_classroom_generation(
         # ── Stage 2: 场景内容 + 动作 + Speech 预合成 ─────────────────────
         content_chain = await _chain("scene_content")
         actions_chain = await _chain("scene_actions")
+        widget_chain = await _chain("widget_html")
         tts_chain = await resolve_classroom_tts_provider(
             access_token=access_token, client_id=client_id,
         )
@@ -150,12 +153,46 @@ async def _async_run_classroom_generation(
         total = len(outlines)
         for idx, outline in enumerate(outlines):
             scene_id = outline.get("id") or f"scene_{idx + 1}"
-            content = await generate_scene_content(
-                outline=outline,
-                provider_chain=content_chain,
-                language_directive=language_directive,
-                agents=agents,
-            )
+            scene_type = outline.get("type", "slide")
+
+            # Interactive 场景：单独走 widget_html 生成管道；失败则把 type
+            # 回落成 slide，走常规 slide content 生成，避免前端拿到空 iframe。
+            if scene_type == "interactive":
+                widget_html = await generate_widget_html(
+                    outline=outline,
+                    provider_chain=widget_chain,
+                    language_directive=language_directive,
+                )
+                if widget_html:
+                    content = {
+                        "widgetHtml": widget_html,
+                        "widgetType": (
+                            outline.get("widgetType") or outline.get("widget_type")
+                        ),
+                        "widgetOutline": (
+                            outline.get("widgetOutline") or outline.get("widget_outline")
+                        ),
+                    }
+                else:
+                    logger.warning(
+                        "classroom.job_runner.widget_html_failed scene_id=%s → 回落 slide",
+                        scene_id,
+                    )
+                    scene_type = "slide"
+                    content = await generate_scene_content(
+                        outline=outline,
+                        provider_chain=content_chain,
+                        language_directive=language_directive,
+                        agents=agents,
+                    )
+            else:
+                content = await generate_scene_content(
+                    outline=outline,
+                    provider_chain=content_chain,
+                    language_directive=language_directive,
+                    agents=agents,
+                )
+
             actions = await generate_scene_actions(
                 outline=outline,
                 content=content,
@@ -169,7 +206,7 @@ async def _async_run_classroom_generation(
 
             scenes.append({
                 "id": scene_id,
-                "type": outline.get("type", "slide"),
+                "type": scene_type,
                 "title": outline.get("title", ""),
                 "content": content,
                 "actions": actions,

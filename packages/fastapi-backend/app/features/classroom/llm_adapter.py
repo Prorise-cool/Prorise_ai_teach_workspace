@@ -30,6 +30,7 @@ CLASSROOM_LLM_STAGE_CODES = {
     "scene_actions",
     "agent_profiles",
     "director",
+    "widget_html",
 }
 
 

@@ -46,8 +46,24 @@ export interface SlideContent {
   elements?: SlideElement[];
 }
 
-/** 交互式（iframe srcDoc 或 URL） */
+/**
+ * 交互式场景内容（Phase 5）。
+ *
+ * ``widgetHtml`` 是后端 `generation.widget_generator` 按 `widgetType`
+ * 产出的自包含 HTML，前端通过 `<iframe srcDoc>` 渲染；`html` / `url`
+ * 保留供历史数据与外链场景。
+ */
+export type WidgetType =
+  | 'simulation'
+  | 'diagram'
+  | 'code'
+  | 'game'
+  | 'visualization3d';
+
 export interface InteractiveContent {
+  widgetHtml?: string;
+  widgetType?: WidgetType;
+  widgetOutline?: Record<string, unknown>;
   html?: string;
   url?: string;
 }

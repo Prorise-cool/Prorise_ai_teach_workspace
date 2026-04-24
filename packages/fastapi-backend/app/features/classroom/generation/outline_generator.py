@@ -10,6 +10,10 @@ from collections.abc import AsyncIterator
 from typing import Sequence
 
 from app.features.classroom.generation.json_repair import parse_json_response
+from app.features.classroom.generation.prompts.interactive_outline import (
+    INTERACTIVE_OUTLINE_SYSTEM_PROMPT,
+    build_interactive_outline_user_prompt,
+)
 from app.features.classroom.generation.prompts.outline import (
     OUTLINE_SYSTEM_PROMPT,
     build_outline_user_prompt,
@@ -42,6 +46,7 @@ async def generate_scene_outlines(
     user_profile: str = "",
     scene_count: int | None = None,
     duration_minutes: int | None = None,
+    interactive_mode: bool = False,
 ) -> dict:
     """Generate scene outlines (one-shot, returns parsed dict).
 
@@ -51,20 +56,36 @@ async def generate_scene_outlines(
     ``RuntimeError``，由 ``job_runner`` 的外层 try 接住并把任务标为
     failed。不再返回占位大纲 —— 用户看到 1 个通用场景的"课堂"比看到
     报错更困惑。
+
+    Phase 5：``interactive_mode=True`` 切换到 interactive_outline prompt，
+    输出为裸数组 ``[...]``；``interactive_mode=False`` 走默认 wrapper 版
+    ``{languageDirective, outlines}``。下方解析兼容两种 shape。
     """
-    params = LLMCallParams(
-        system=OUTLINE_SYSTEM_PROMPT,
-        prompt=build_outline_user_prompt(
-            requirement=requirement,
-            pdf_content=(
-                pdf_text[:MAX_PDF_CONTENT_CHARS] if pdf_text else "None"
+    pdf_trimmed = pdf_text[:MAX_PDF_CONTENT_CHARS] if pdf_text else "None"
+    if interactive_mode:
+        params = LLMCallParams(
+            system=INTERACTIVE_OUTLINE_SYSTEM_PROMPT,
+            prompt=build_interactive_outline_user_prompt(
+                requirement=requirement,
+                pdf_content=pdf_trimmed,
+                research_context=research_context,
+                user_profile=user_profile,
+                scene_count=scene_count,
+                duration_minutes=duration_minutes,
             ),
-            research_context=research_context,
-            user_profile=user_profile,
-            scene_count=scene_count,
-            duration_minutes=duration_minutes,
-        ),
-    )
+        )
+    else:
+        params = LLMCallParams(
+            system=OUTLINE_SYSTEM_PROMPT,
+            prompt=build_outline_user_prompt(
+                requirement=requirement,
+                pdf_content=pdf_trimmed,
+                research_context=research_context,
+                user_profile=user_profile,
+                scene_count=scene_count,
+                duration_minutes=duration_minutes,
+            ),
+        )
 
     response = await call_llm(params, provider_chain)
     parsed = parse_json_response(response)

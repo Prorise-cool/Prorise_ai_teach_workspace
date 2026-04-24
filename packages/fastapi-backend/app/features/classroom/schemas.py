@@ -272,9 +272,21 @@ class QuizContent(BaseModel):
 
 
 class InteractiveContent(BaseModel):
-    html: str
+    """互动场景内容 — iframe 内嵌 HTML（Phase 5）。
+
+    ``widget_html`` 是 Phase 5 引入的自包含 HTML 文档，按 ``widget_type``
+    由 ``generation.widget_generator`` 生成，前端 ``<iframe srcDoc>`` 渲染。
+    老字段 ``html`` / ``url`` 保留供历史数据与外链场景使用。
+    """
+    html: str | None = None
     css: str | None = None
     js: str | None = None
+    url: str | None = None
+    widget_html: str | None = Field(default=None, alias="widgetHtml")
+    widget_type: str | None = Field(default=None, alias="widgetType")
+    widget_outline: dict[str, Any] | None = Field(default=None, alias="widgetOutline")
+
+    model_config = {"populate_by_name": True}
 
 
 class PBLIssue(BaseModel):
