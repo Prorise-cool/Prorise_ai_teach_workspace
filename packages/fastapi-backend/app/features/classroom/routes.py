@@ -178,51 +178,58 @@ async def replay_classroom_session(
 
 
 # ── 公开发布 ────────────────────────────────────────────────────────────────
+#
+# 所有响应都用 build_success_envelope 包成 {code, msg, data: payload}，
+# 对齐前端 unwrapEnvelope(response).data.data 的约定，避免前端拿到 undefined。
 
 
-@router.get("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+@router.get("/tasks/{task_id}/publish")
 async def get_classroom_publish_state(
     task_id: str,
     access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
-) -> ClassroomPublishResult:
+) -> dict[str, object]:
     """读取当前课堂的公开状态，给前端 PublishToggle 挂载时初始化。"""
-    return await get_classroom_publication_state(
+    payload = await get_classroom_publication_state(
         service, task_id, access_context=access_context,
     )
+    return build_success_envelope(payload)
 
 
-@router.post("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+@router.post("/tasks/{task_id}/publish")
 async def publish_classroom(
     task_id: str,
     access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
-) -> ClassroomPublishResult:
+) -> dict[str, object]:
     """将已完成的课堂公开发布（写入 xm_user_work, work_type=classroom）。"""
-    return await publish_classroom_task(
+    payload = await publish_classroom_task(
         service, task_id, access_context=access_context,
     )
+    return build_success_envelope(payload, msg="公开发布成功")
 
 
-@router.delete("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+@router.delete("/tasks/{task_id}/publish")
 async def unpublish_classroom(
     task_id: str,
     access_context: AccessContext = Depends(get_access_context),
     service: ClassroomService = Depends(get_classroom_service),
-) -> ClassroomPublishResult:
+) -> dict[str, object]:
     """取消已公开的课堂。"""
-    return await unpublish_classroom_task(
+    payload = await unpublish_classroom_task(
         service, task_id, access_context=access_context,
     )
+    return build_success_envelope(payload, msg="已取消公开")
 
 
-@router.get("/published", response_model=PublishedClassroomCardPage)
+@router.get("/published")
 async def list_public_classrooms(
     page_num: int = Query(default=1, alias="pageNum", ge=1),
     page_size: int = Query(default=12, alias="pageSize", ge=1, le=50),
     access_context: AccessContext = Depends(get_access_context),
-) -> PublishedClassroomCardPage:
+) -> dict[str, object]:
     """分页查询所有已公开的课堂卡片。"""
-    return await list_published_classrooms(
+    payload = await list_published_classrooms(
         page=page_num, page_size=page_size, access_context=access_context,
     )
+    return build_success_envelope(payload)
