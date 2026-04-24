@@ -132,9 +132,13 @@ export function CompanionSidebar({
     [],
   );
 
-  // 自动滚到底
+  // 自动滚到底 —— 显式 `inline: 'nearest'` 避免触发水平滚动
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    bottomRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end',
+      inline: 'nearest',
+    });
   }, [messages]);
 
   const sendMessage = useCallback(
@@ -301,7 +305,7 @@ export function CompanionSidebar({
               <p className="xm-companion__empty-text">{resolvedEmpty}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 px-3 py-3">
+            <div className="flex min-w-0 flex-col gap-3 px-3 py-3">
               {messages.map((msg) => (
                 <CompanionBubble
                   key={msg.id}
@@ -373,7 +377,7 @@ const CompanionBubble: FC<{
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm whitespace-pre-wrap">
+        <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-sm text-primary-foreground shadow-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
           {message.content}
         </div>
       </div>
@@ -385,7 +389,7 @@ const CompanionBubble: FC<{
       <div className="flex flex-col max-w-[85%]">
         <div
           className={cn(
-            'rounded-2xl rounded-bl-sm border bg-card px-3 py-2 text-sm text-foreground whitespace-pre-wrap',
+            'rounded-2xl rounded-bl-sm border bg-card px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]',
             message.errored
               ? 'border-destructive/40 text-destructive'
               : 'border-border',

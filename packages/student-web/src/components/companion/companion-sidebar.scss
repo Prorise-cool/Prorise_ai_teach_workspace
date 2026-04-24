@@ -193,7 +193,9 @@
 
   &__chat {
     flex: 1;
+    min-width: 0; // 防止 flex 子项撑破容器（长消息 / URL）
     overflow-y: auto;
+    overflow-x: hidden; // 防止 scrollIntoView 因横向溢出触发窗口横滚
     padding: var(--xm-spacing-5, 1.25rem);
     display: flex;
     flex-direction: column;
