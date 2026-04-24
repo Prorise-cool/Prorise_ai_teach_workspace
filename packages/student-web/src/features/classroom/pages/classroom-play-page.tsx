@@ -538,9 +538,20 @@ function PublishToggle({ classroomId }: { classroomId: string }) {
     void (async () => {
       try {
         const r = await adapter.getState(classroomId, { signal: ac.signal });
-        if (!ac.signal.aborted) setIsPublic(r.published);
-      } catch {
-        // 读不到不影响可用性（用户点击时仍可发 publish），静默忽略
+        if (!ac.signal.aborted) {
+          console.info(
+            '[PublishToggle] initial state classroomId=%s published=%s',
+            classroomId,
+            r.published,
+          );
+          setIsPublic(r.published);
+        }
+      } catch (err) {
+        // 读不到不影响可用性（点击时仍可 publish），但把 error 吐到 console
+        // 方便定位是 endpoint 404 / Java 未重启 / 网络问题
+        if (!ac.signal.aborted) {
+          console.warn('[PublishToggle] getState failed', err);
+        }
       }
     })();
     return () => ac.abort();

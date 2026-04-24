@@ -183,18 +183,31 @@ async def get_classroom_publication_state(
         )
 
     pub_service = publication_service or _default_publication_service()
-    publication = await pub_service.get_publication(
-        task_id,
-        work_type=WORK_TYPE_CLASSROOM,
-        access_context=access_context,
-    )
-    if publication is None:
-        return ClassroomPublishResult(task_id=task_id, published=False, published_at=None)
-    return ClassroomPublishResult(
-        task_id=task_id,
-        published=publication.is_public,
-        published_at=publication.published_at,
-    )
+    # 策略：扫一页公开列表找这个 task_ref_id。
+    # 为什么不用 get_publication 单条查？因为 Java 侧 GET 端点历史上是
+    # hardcode 'video' 的；改 workType 查询参数需要 Java 重启才能生效。
+    # 用已经工作的 list 接口更稳，1 次 HTTP 就能结束，兼容性高。
+    # 已发布 → 在 list 里命中；未发布 / 已取消 → 不在 list，视作"私有"，
+    # 这对 PublishToggle UI 显示而言两者等价。
+    try:
+        publication_page = await pub_service.list_publications(
+            page=1, page_size=100, work_type=WORK_TYPE_CLASSROOM,
+            access_context=access_context,
+        )
+        for item in publication_page.rows:
+            if item.task_ref_id == task_id:
+                return ClassroomPublishResult(
+                    task_id=task_id,
+                    published=item.is_public,
+                    published_at=item.published_at,
+                )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "classroom.get_publication_state.list_failed task_id=%s error=%s",
+            task_id, exc,
+        )
+    # 未找到 / 查询失败 → 视为未公开（不阻断按钮可用性）
+    return ClassroomPublishResult(task_id=task_id, published=False, published_at=None)
 
 
 async def list_published_classrooms(
