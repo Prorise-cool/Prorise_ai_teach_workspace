@@ -3,7 +3,7 @@
  * 三栏布局：课程大纲 | 主画布（幻灯片+白板）| 智能体讨论。
  * 与 UI 设计稿 01-classroom.html 对应。
  */
-import { ArrowRight, Layers, Sparkles, Trophy, X } from 'lucide-react';
+import { ArrowRight, Globe2, Layers, Loader2, Lock, Sparkles, Trophy, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -17,6 +17,7 @@ import { EmptyState, LoadingState } from '@/components/states';
 import { Button } from '@/components/ui/button';
 import { useThemeMode } from '@/shared/hooks/use-theme-mode';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
+import { resolveClassroomPublicAdapter } from '@/services/api/adapters/classroom-public-adapter';
 
 import { loadClassroom } from '../db/classroom-db';
 import { useScenePlayer } from '../hooks/use-scene-player';
@@ -349,6 +350,7 @@ export function ClassroomPlayPage() {
           onToggleOutline={() => setOutlineOpen((v) => !v)}
           onOpenMobileOutline={openMobileOutline}
           onBackHome={() => void navigate('/')}
+          trailingExtras={classroomId ? <PublishToggle classroomId={classroomId} /> : null}
         />
 
         {/* 中央画布 —— 对齐 OpenMAIC 全屏无 padding：CanvasArea 内部自身有 p-2。
@@ -481,3 +483,66 @@ function PostClassCTA({ courseTitle, onStartQuiz, onDismiss }: PostClassCTAProps
   );
 }
 
+
+/**
+ * 课堂公开 / 取消公开切换按钮 —— 注入到 ClassroomHeader 的 trailingExtras 插槽。
+ * 点击 publish → POST /api/v1/classroom/tasks/{id}/publish；再点 → DELETE。
+ * 初始状态默认私有（未知公开态则视作未发布，用户第一次点击即公开）。
+ */
+function PublishToggle({ classroomId }: { classroomId: string }) {
+  const { t } = useAppTranslation();
+  const [isPublic, setIsPublic] = useState(false);
+  const [isPending, setIsPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleToggle = useCallback(async () => {
+    if (isPending) return;
+    setIsPending(true);
+    setErrorMessage(null);
+    const adapter = resolveClassroomPublicAdapter();
+    try {
+      if (isPublic) {
+        const r = await adapter.unpublish(classroomId);
+        setIsPublic(r.published);
+      } else {
+        const r = await adapter.publish(classroomId);
+        setIsPublic(r.published);
+      }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : '操作失败');
+    } finally {
+      setIsPending(false);
+    }
+  }, [classroomId, isPending, isPublic]);
+
+  const activeTitle = isPublic
+    ? t('classroom.publish.unpublishHint')
+    : t('classroom.publish.publishHint');
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleToggle()}
+      disabled={isPending}
+      title={errorMessage ?? activeTitle}
+      aria-label={activeTitle}
+      className={
+        'flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors ' +
+        (isPublic
+          ? 'bg-primary/10 text-primary hover:bg-primary/20'
+          : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground')
+      }
+    >
+      {isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : isPublic ? (
+        <Globe2 className="h-3.5 w-3.5" />
+      ) : (
+        <Lock className="h-3.5 w-3.5" />
+      )}
+      <span>
+        {isPublic ? t('classroom.publish.stateOn') : t('classroom.publish.stateOff')}
+      </span>
+    </button>
+  );
+}

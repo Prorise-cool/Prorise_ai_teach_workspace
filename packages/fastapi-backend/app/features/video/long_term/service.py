@@ -92,6 +92,7 @@ class VideoPublicationService(RuoYiServiceMixin):
         *,
         page: int = 1,
         page_size: int = 12,
+        work_type: str = "video",
         access_context: "AccessContext | None" = None,
         request_auth: "RuoYiRequestAuth | None" = None,
     ) -> VideoPublicationPage:
@@ -100,6 +101,8 @@ class VideoPublicationService(RuoYiServiceMixin):
         Args:
             page: 页码。
             page_size: 每页条数。
+            work_type: xm_user_work.work_type 筛选（默认 "video"，课堂等传 "classroom"）。
+                RuoYi 端 VideoPublicationQueryBo.workType 天然支持任意值。
             access_context: 可选的已认证用户上下文，提供时使用用户 token 调用 RuoYi。
             request_auth: 可选的显式请求鉴权信息，适用于公开列表等非路由上下文。
         """
@@ -109,7 +112,7 @@ class VideoPublicationService(RuoYiServiceMixin):
                 resource=self._RESOURCE,
                 operation="page",
                 params={
-                    "workType": "video",
+                    "workType": work_type,
                     "isPublic": 1,
                     "status": "normal",
                     "pageNum": page,

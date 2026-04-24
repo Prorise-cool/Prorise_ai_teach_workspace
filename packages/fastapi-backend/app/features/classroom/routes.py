@@ -25,6 +25,13 @@ from app.features.classroom.schemas import (
     ClassroomTaskMetadataPreviewResponse,
     ClassroomTaskMetadataSnapshot,
 )
+from app.features.classroom.publication import (
+    ClassroomPublishResult,
+    PublishedClassroomCardPage,
+    list_published_classrooms,
+    publish_classroom_task,
+    unpublish_classroom_task,
+)
 from app.features.classroom.service import ClassroomService
 from app.schemas.common import ErrorResponseEnvelope, TaskSnapshotResponseEnvelope, build_success_envelope
 from app.schemas.examples import build_feature_bootstrap_example
@@ -167,3 +174,42 @@ async def replay_classroom_session(
 ) -> ClassroomTaskMetadataPageResponse:
     """回放指定会话的课堂任务记录。"""
     return await service.replay_session(session_id, access_context=access_context)
+
+
+# ── 公开发布 ────────────────────────────────────────────────────────────────
+
+
+@router.post("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+async def publish_classroom(
+    task_id: str,
+    access_context: AccessContext = Depends(get_access_context),
+    service: ClassroomService = Depends(get_classroom_service),
+) -> ClassroomPublishResult:
+    """将已完成的课堂公开发布（写入 xm_user_work, work_type=classroom）。"""
+    return await publish_classroom_task(
+        service, task_id, access_context=access_context,
+    )
+
+
+@router.delete("/tasks/{task_id}/publish", response_model=ClassroomPublishResult)
+async def unpublish_classroom(
+    task_id: str,
+    access_context: AccessContext = Depends(get_access_context),
+    service: ClassroomService = Depends(get_classroom_service),
+) -> ClassroomPublishResult:
+    """取消已公开的课堂。"""
+    return await unpublish_classroom_task(
+        service, task_id, access_context=access_context,
+    )
+
+
+@router.get("/published", response_model=PublishedClassroomCardPage)
+async def list_public_classrooms(
+    page_num: int = Query(default=1, alias="pageNum", ge=1),
+    page_size: int = Query(default=12, alias="pageSize", ge=1, le=50),
+    access_context: AccessContext = Depends(get_access_context),
+) -> PublishedClassroomCardPage:
+    """分页查询所有已公开的课堂卡片。"""
+    return await list_published_classrooms(
+        page=page_num, page_size=page_size, access_context=access_context,
+    )

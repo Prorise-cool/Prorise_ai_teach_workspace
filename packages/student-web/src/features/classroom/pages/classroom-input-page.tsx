@@ -19,6 +19,7 @@ import {
 	WorkspaceInputShell
 } from '@/components/input-page';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { ClassroomPublicFeed } from '@/features/classroom/components/classroom-public-feed';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
 import { ClassroomInputAdvancedDialog } from '@/features/classroom/components/classroom-input-advanced-dialog';
@@ -220,15 +221,18 @@ export function ClassroomInputPage() {
 			feedLoadMoreLabel={feedLoadMore}
 			feedLoadingLabel={feedLoading}
 			feedSlot={
-				<div className="w-full max-w-7xl mx-auto px-4 py-12">
-					<div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-12 text-center">
-						<div className="text-base font-semibold text-foreground">{feedTitle}</div>
-						<p className="text-sm text-muted-foreground max-w-md">{feedDesc}</p>
-						<div className="mt-2 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-							{t('classroomInput.feedComingSoon')}
-						</div>
-					</div>
-				</div>
+				<ClassroomPublicFeed
+					labels={{
+						title: feedTitle,
+						description: feedDesc,
+						emptyTitle: t('classroomInput.feedEmptyTitle'),
+						emptyDescription: t('classroomInput.feedEmptyDesc'),
+						errorTitle: t('classroomInput.feedErrorTitle'),
+						errorDescription: t('classroomInput.feedErrorDesc'),
+						viewActionLabel: t('classroomInput.feedViewAction'),
+						publicBadgeLabel: t('classroomInput.feedPublicBadge'),
+					}}
+				/>
 			}
 		/>
 	);

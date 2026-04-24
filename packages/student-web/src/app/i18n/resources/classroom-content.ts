@@ -215,6 +215,12 @@ export const zhCnClassroomResources = {
       tip2: '大纲确认后会自动合成教师旁白与画布动作。',
       tip3: '完成后自动跳转播放页，你也可以继续留在此页观察进度。',
     },
+    publish: {
+      stateOn: '已公开',
+      stateOff: '私有',
+      publishHint: '点击公开到发现区',
+      unpublishHint: '点击取消公开',
+    },
     companion: {
       title: '伴学助手',
       subtitle: '基于当前场景的互动答疑',
@@ -436,6 +442,12 @@ export const enUsClassroomResources = {
       tip1: 'Multi-agent team is analyzing key points and structuring scenes.',
       tip2: 'Once the outline is ready we will craft narration and canvas actions.',
       tip3: 'You will be redirected to playback automatically; feel free to stay here.',
+    },
+    publish: {
+      stateOn: 'Public',
+      stateOff: 'Private',
+      publishHint: 'Click to publish to Discover',
+      unpublishHint: 'Click to unpublish',
     },
     companion: {
       title: 'Study Companion',
