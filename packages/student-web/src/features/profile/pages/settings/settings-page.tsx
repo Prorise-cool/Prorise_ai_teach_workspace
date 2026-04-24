@@ -82,12 +82,13 @@ export function SettingsPage() {
   const [kickingTokenId, setKickingTokenId] = useState<string | null>(null);
 
   // profile 加载完成后，一次性把后端偏好灌入前端 UI state。
+  // 注意：主题 themeMode 故意不在这里自动同步——
+  // 用户反馈进 settings 会被意外切到 profile.themeMode（常见场景是 DB 存 'system'
+  // 而 OS 偏好是 dark，造成"进设置页突然变黑"），其他页面又没有同步逻辑，体验不一致。
+  // 主题改由 handleThemeChange 在用户点击切换时写回 profile 持久化，读取侧不再强行应用。
   useEffect(() => {
     if (!profile) return;
     setNotificationEnabled(profile.notificationEnabled);
-    if (profile.themeMode && profile.themeMode !== themeMode) {
-      setThemeMode(profile.themeMode);
-    }
     const nextLocale = resolveViewLocale(profile.language);
     if (nextLocale !== locale) {
       setLocale(nextLocale);

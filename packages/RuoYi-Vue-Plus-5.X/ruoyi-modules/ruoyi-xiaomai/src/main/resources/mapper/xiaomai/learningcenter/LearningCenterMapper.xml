@@ -327,7 +327,7 @@
             COALESCE(lp.source_result_id, CAST(lp.path_id AS CHAR)) AS source_result_id,
             lp.source_session_id AS source_session_id,
             lp.status AS status,
-            '学习路径' AS display_title,
+            COALESCE(lp.path_title, '学习路径') AS display_title,
             lp.path_summary AS summary,
             lp.detail_ref AS detail_ref,
             COALESCE(lp.source_time, lp.update_time, lp.create_time) AS source_time,
