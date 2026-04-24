@@ -193,11 +193,22 @@ public class XmPersistenceSyncService {
                 throw new ServiceException("视频公开记录版本冲突，请重试");
             }
         }
-        return getVideoPublication(record.getTaskRefId());
+        // 用 sync 请求里的 workType 回读，避免 classroom / 其它 work_type 记录
+        // 被 hardcode='video' 的 select 漏掉，导致 FastAPI 收到 null 报 '响应格式异常'。
+        return videoPublicationMapper.selectByTaskRefId(
+            normalizeWorkType(record.getWorkType()),
+            record.getTaskRefId()
+        );
     }
 
     public XmPersistenceSyncVo.VideoPublicationSyncVo getVideoPublication(String taskRefId) {
-        return videoPublicationMapper.selectByTaskRefId("video", taskRefId);
+        return getPublicationByWorkType("video", taskRefId);
+    }
+
+    public XmPersistenceSyncVo.VideoPublicationSyncVo getPublicationByWorkType(
+        String workType, String taskRefId
+    ) {
+        return videoPublicationMapper.selectByTaskRefId(normalizeWorkType(workType), taskRefId);
     }
 
     public TableDataInfo<XmPersistenceSyncVo.VideoPublicationSyncVo> listVideoPublications(
