@@ -213,7 +213,7 @@ export function ClassroomInputPage() {
 			suggestionsLabel={suggestionsLabel}
 			suggestions={suggestions}
 			onSuggestionSelect={pill => {
-				console.log(`[ClassroomInput] 建议: ${pill}`);
+				setText(pill);
 			}}
 			feedTitle={feedTitle}
 			feedDescription={feedDesc}

@@ -98,7 +98,8 @@ export function LearningCenterPage() {
     }
 
     if (record.resultType === 'classroom') {
-      return '/classroom/input';
+      const target = record.detailRef || record.sourceResultId;
+      return target ? `/classroom/play/${encodeURIComponent(target)}` : '/classroom/input';
     }
 
     return `/history?resultType=${encodeURIComponent(record.resultType)}`;

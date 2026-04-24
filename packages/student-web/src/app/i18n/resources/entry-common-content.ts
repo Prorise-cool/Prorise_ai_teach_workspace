@@ -159,7 +159,7 @@ export const zhCnEntryCommonResources = {
   },
   /** Story 1-6：课堂输入页文案。 */
   classroomInput: {
-    badgeLabel: 'Classroom Builder',
+    badgeLabel: '多智能体课堂',
     titleLine1: '输入主题，',
     titleGradient: '即刻生成完整虚拟课堂',
     placeholder:

@@ -47,7 +47,11 @@ export function HistoryRecordCardClassroom({
 
         <div className="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
           <Link
-            to="/classroom/input"
+            to={
+              record.detailRef || record.sourceResultId
+                ? `/classroom/play/${encodeURIComponent(record.detailRef || record.sourceResultId)}`
+                : '/classroom/input'
+            }
             className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
           >
             {t('learningCenter.history.continueLearning')}{' '}
