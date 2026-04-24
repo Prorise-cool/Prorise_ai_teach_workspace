@@ -42,6 +42,17 @@ public class XmPersistenceSyncController {
         return data == null ? R.fail("Companion turn not found") : R.ok(data);
     }
 
+    /**
+     * 按 user_id 分页列出伴学对话轮次，供 FastAPI /api/v1/companion/history 代理。
+     */
+    @GetMapping("/companion/turns")
+    public TableDataInfo<XmPersistenceSyncVo.CompanionTurnSyncVo> listCompanionTurns(
+        @RequestParam("userId") String userId,
+        PageQuery pageQuery
+    ) {
+        return xmPersistenceSyncService.listCompanionTurnsByUser(userId, pageQuery);
+    }
+
     @GetMapping("/companion/sessions/{sessionId}/replay")
     public R<XmPersistenceSyncVo.SessionReplaySyncVo> replaySession(@PathVariable String sessionId) {
         return R.ok(xmPersistenceSyncService.replaySession(sessionId));

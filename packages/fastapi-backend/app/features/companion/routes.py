@@ -119,3 +119,26 @@ async def replay_companion_session(
 ) -> SessionReplaySnapshot:
     """回放指定会话的伴学对话。"""
     return await service.replay_session(session_id, access_context=access_context)
+
+
+@router.get("/history")
+async def list_companion_history(
+    pageNum: int = 1,
+    pageSize: int = 10,
+    access_context: AccessContext = Depends(get_access_context),
+    service: CompanionService = Depends(get_companion_service),
+) -> dict[str, object]:
+    """按当前登录用户分页列出伴学对话轮次。
+
+    供学习中心 / 历史记录页"伴学"记录点击跳回放入口使用。
+    """
+    user_id = access_context.user_id or ""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing user_id in access context")
+    total, rows = await service.list_turns_by_user(
+        user_id=user_id,
+        page_num=pageNum,
+        page_size=pageSize,
+        access_context=access_context,
+    )
+    return build_success_envelope({"total": total, "rows": [row.model_dump(mode="json") for row in rows]})

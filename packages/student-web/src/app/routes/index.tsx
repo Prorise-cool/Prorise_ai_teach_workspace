@@ -118,6 +118,19 @@ async function loadFavoritesRoute() {
 }
 
 /**
+ * 按需加载错题本页（Epic 9 P0 收口）。
+ *
+ * @returns React Router 可消费的懒加载路由定义。
+ */
+async function loadWrongbookRoute() {
+	const { WrongbookPage } = await import('@/features/wrongbook/pages/wrongbook-page');
+
+	return {
+		Component: WrongbookPage
+	};
+}
+
+/**
  * 按需加载个人资料页（Epic 9）。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -356,6 +369,45 @@ async function loadClassroomSettingsRoute() {
 }
 
 /**
+ * 按需加载学习路径列表页（xm_learning_path 消费端闭环）。
+ */
+async function loadLearningPathsRoute() {
+	const { LearningPathsPage } = await import(
+		'@/features/learning-path/pages/learning-paths-page'
+	);
+
+	return {
+		Component: LearningPathsPage
+	};
+}
+
+/**
+ * 按需加载学习路径详情页。
+ */
+async function loadLearningPathDetailRoute() {
+	const { LearningPathDetailPage } = await import(
+		'@/features/learning-path/pages/learning-path-detail-page'
+	);
+
+	return {
+		Component: LearningPathDetailPage
+	};
+}
+
+/**
+ * 按需加载学习路径规划触发页。
+ */
+async function loadLearningPathPlannerRoute() {
+	const { LearningPathPlannerPage } = await import(
+		'@/features/learning-path/pages/learning-path-planner-page'
+	);
+
+	return {
+		Component: LearningPathPlannerPage
+	};
+}
+
+/**
  * 按需加载公开视频结果详情页路由。
  *
  * @returns React Router 可消费的懒加载路由定义。
@@ -367,6 +419,21 @@ async function loadPublicVideoResultRoute() {
 
 	return {
 		Component: VideoResultPage
+	};
+}
+
+/**
+ * 按需加载伴学会话回放页（Learning Center P0 闭环）。
+ *
+ * 路由 `/companion/replay/:sessionId`，供历史记录 / 学习中心跳转使用。
+ */
+async function loadCompanionReplayRoute() {
+	const { CompanionReplayPage } = await import(
+		'@/features/companion/pages/companion-replay-page'
+	);
+
+	return {
+		Component: CompanionReplayPage
 	};
 }
 
@@ -422,6 +489,10 @@ export function createAppRouter() {
 						{
 							path: 'favorites',
 							lazy: loadFavoritesRoute
+						},
+						{
+							path: 'wrongbook',
+							lazy: loadWrongbookRoute
 						},
 						{
 							path: 'profile',
@@ -490,6 +561,22 @@ export function createAppRouter() {
 						{
 							path: 'classroom/settings',
 							lazy: loadClassroomSettingsRoute
+						},
+						{
+							path: 'companion/replay/:sessionId',
+							lazy: loadCompanionReplayRoute
+						},
+						{
+							path: 'learning-paths',
+							lazy: loadLearningPathsRoute
+						},
+						{
+							path: 'learning-paths/new',
+							lazy: loadLearningPathPlannerRoute
+						},
+						{
+							path: 'learning-paths/:pathId',
+							lazy: loadLearningPathDetailRoute
 						}
 					]
 				},

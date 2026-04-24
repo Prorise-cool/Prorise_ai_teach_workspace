@@ -221,6 +221,12 @@ export function FavoritesPage() {
       return target ? `/classroom/play/${encodeURIComponent(target)}` : '/classroom/input';
     }
 
+    if (record.resultType === 'companion') {
+      const target =
+        record.sourceSessionId || record.detailRef || record.sourceResultId;
+      return target ? `/companion/replay/${encodeURIComponent(target)}` : '/history';
+    }
+
     return '/history';
   };
 

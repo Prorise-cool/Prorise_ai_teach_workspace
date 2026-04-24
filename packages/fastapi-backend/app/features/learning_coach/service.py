@@ -727,8 +727,30 @@ class LearningCoachService:
                 )
             ]
 
-            # wrongbook：按错题写入（MVP：仅沉淀 questionId + 摘要字段）
+            # wrongbook：按错题写入，从 items_full 取真实题干/选项/解析。
+            # 只展示选项标签 + 文字（避免直接落 optionId，前端无意义）。
+            items_by_qid = {str(item.get("questionId")): item for item in items_full}
             for wrong_id in wrong_questions[:10]:
+                item_full = items_by_qid.get(wrong_id) or {}
+                stem = str(item_full.get("stem") or wrong_id)
+                options = item_full.get("options") or []
+                option_lookup: dict[str, str] = {}
+                if isinstance(options, list):
+                    for option in options:
+                        if not isinstance(option, dict):
+                            continue
+                        oid = str(option.get("optionId") or "")
+                        label = str(option.get("label") or "")
+                        text = str(option.get("text") or "")
+                        option_lookup[oid] = f"{label}. {text}".strip(". ") if label or text else oid
+
+                selected_oid = str(item_full.get("selectedOptionId") or "")
+                correct_oid = str(item_full.get("correctOptionId") or "")
+                wrong_answer_text = option_lookup.get(selected_oid, selected_oid)
+                reference_answer_text = option_lookup.get(correct_oid, correct_oid)
+                explanation = str(item_full.get("explanation") or "")
+                analysis = explanation or f"正确答案：{reference_answer_text}"
+
                 records.append(
                     LearningResultInput(
                         result_type=LearningResultType.WRONGBOOK,
@@ -738,10 +760,10 @@ class LearningCoachService:
                         source_result_id=f"{quiz_id}:{wrong_id}",
                         occurred_at=_now(),
                         updated_at=_now(),
-                        question_text=wrong_id,
-                        wrong_answer_text="",
-                        reference_answer_text="",
-                        analysis_summary="错题已沉淀，待补齐题干与答案文本",
+                        question_text=stem[:2000],
+                        wrong_answer_text=wrong_answer_text[:1000],
+                        reference_answer_text=reference_answer_text[:1000],
+                        analysis_summary=analysis[:1000],
                         status=LearningResultStatus.COMPLETED,
                         detail_ref=f"{quiz_id}:{wrong_id}",
                     )

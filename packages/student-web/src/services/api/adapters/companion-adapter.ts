@@ -51,6 +51,35 @@ export class CompanionAdapterError extends Error {
 
 /* ---------- Adapter 接口 ---------- */
 
+export interface CompanionHistoryTurn {
+  turnId: string;
+  sessionId: string;
+  userId: string;
+  contextType: string;
+  anchor: {
+    contextType: string;
+    anchorKind: string;
+    anchorRef: string;
+    scopeSummary?: string | null;
+  };
+  questionText: string;
+  answerSummary: string;
+  sourceSummary?: string | null;
+  persistenceStatus: string;
+  /** ISO-8601 时间戳；后端回包字段名 create_time。 */
+  createTime: string;
+}
+
+export interface CompanionHistoryPage {
+  total: number;
+  rows: CompanionHistoryTurn[];
+}
+
+export interface CompanionSessionReplay {
+  sessionId: string;
+  companionTurns: CompanionHistoryTurn[];
+}
+
 export interface CompanionAdapter {
   bootstrap(
     taskId: string,
@@ -61,6 +90,16 @@ export interface CompanionAdapter {
     request: CompanionAskRequest,
     options?: CompanionQueryOptions,
   ): Promise<CompanionAskResponse>;
+
+  listHistory(
+    params: { pageNum?: number; pageSize?: number },
+    options?: { signal?: AbortSignal },
+  ): Promise<CompanionHistoryPage>;
+
+  getSessionReplay(
+    sessionId: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<CompanionSessionReplay>;
 }
 
 /* ---------- 错误映射 ---------- */
@@ -176,6 +215,49 @@ function toFrontendAskResponse(data: BackendAskResponseData): CompanionAskRespon
   };
 }
 
+type BackendCompanionTurnSnapshot = {
+  turn_id: string;
+  session_id: string;
+  user_id: string;
+  context_type: string;
+  anchor: BackendAnchorContext;
+  question_text: string;
+  answer_summary: string;
+  source_summary?: string | null;
+  persistence_status: string;
+  created_at: string;
+};
+
+type BackendHistoryResponseData = {
+  total: number;
+  rows: BackendCompanionTurnSnapshot[];
+};
+
+type BackendSessionReplayData = {
+  session_id: string;
+  companion_turns: BackendCompanionTurnSnapshot[];
+};
+
+function toFrontendCompanionTurn(data: BackendCompanionTurnSnapshot): CompanionHistoryTurn {
+  return {
+    turnId: data.turn_id,
+    sessionId: data.session_id,
+    userId: data.user_id,
+    contextType: data.context_type,
+    anchor: {
+      contextType: data.anchor.context_type,
+      anchorKind: data.anchor.anchor_kind,
+      anchorRef: data.anchor.anchor_ref,
+      scopeSummary: data.anchor.scope_summary ?? null,
+    },
+    questionText: data.question_text,
+    answerSummary: data.answer_summary,
+    sourceSummary: data.source_summary ?? null,
+    persistenceStatus: data.persistence_status,
+    createTime: data.created_at,
+  };
+}
+
 function toFrontendBootstrap(data: BackendBootstrapResponseData): CompanionBootstrapResponse {
   return {
     taskId: data.task_id,
@@ -200,6 +282,12 @@ export function createMockCompanionAdapter(): CompanionAdapter {
         request,
       );
       return Promise.resolve(fixture);
+    },
+    listHistory() {
+      return Promise.resolve({ total: 0, rows: [] });
+    },
+    getSessionReplay(sessionId) {
+      return Promise.resolve({ sessionId, companionTurns: [] });
     },
   };
 }
@@ -237,6 +325,44 @@ export function createRealCompanionAdapter(
         });
 
         return toFrontendAskResponse(unwrapEnvelope(response));
+      } catch (error) {
+        throw mapCompanionError(error);
+      }
+    },
+    async listHistory(params, options) {
+      try {
+        const pageNum = params.pageNum ?? 1;
+        const pageSize = params.pageSize ?? 10;
+        const response = await client.request<
+          CompanionEnvelope<BackendHistoryResponseData>
+        >({
+          url: `/api/v1/companion/history?pageNum=${pageNum}&pageSize=${pageSize}`,
+          method: 'get',
+          signal: options?.signal,
+        });
+        const data = unwrapEnvelope(response);
+        return {
+          total: data.total ?? 0,
+          rows: (data.rows ?? []).map(toFrontendCompanionTurn),
+        };
+      } catch (error) {
+        throw mapCompanionError(error);
+      }
+    },
+    async getSessionReplay(sessionId, options) {
+      try {
+        // 这个端点直接返回 SessionReplaySnapshot（不包 envelope），
+        // 不要走 unwrapEnvelope。
+        const response = await client.request<BackendSessionReplayData>({
+          url: `/api/v1/companion/sessions/${encodeURIComponent(sessionId)}/replay`,
+          method: 'get',
+          signal: options?.signal,
+        });
+        const data = response.data;
+        return {
+          sessionId: data.session_id,
+          companionTurns: (data.companion_turns ?? []).map(toFrontendCompanionTurn),
+        };
       } catch (error) {
         throw mapCompanionError(error);
       }

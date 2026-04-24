@@ -71,29 +71,28 @@ export function LearningCenterLibrary({ total, favoritesTotal }: LearningCenterL
           <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-bg-dark rotate-45 rounded-2xl z-0" />
         </Link>
 
-        <div
-          role="link"
-          aria-disabled="true"
-          title={t('learningCenter.page.libraryWrongbookSubtitle')}
-          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 flex flex-col justify-between h-36 relative overflow-hidden shadow-sm opacity-60 cursor-not-allowed pointer-events-none select-none"
+        <Link
+          to="/wrongbook"
+          className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark rounded-2xl p-5 hover-card-soft flex flex-col justify-between h-36 group relative overflow-hidden shadow-sm"
         >
           <div className="flex justify-between items-start relative z-10">
             <div className="w-10 h-10 rounded-xl bg-bg-light dark:bg-bg-dark flex items-center justify-center border border-bordercolor-light dark:border-bordercolor-dark">
-              <BookX className="w-5 h-5 text-text-tertiary dark:text-text-tertiary-dark" />
+              <BookX className="w-5 h-5 text-text-primary dark:text-text-primary-dark" />
             </div>
-            <span className="text-[10px] font-black bg-bordercolor-light dark:bg-bordercolor-dark text-text-secondary dark:text-text-secondary-dark px-2 py-1 rounded-sm uppercase tracking-widest">
+            <span className="text-[10px] font-black font-mono bg-text-primary dark:bg-text-primary-dark text-surface-light dark:text-surface-dark px-2 py-1 rounded-sm uppercase tracking-widest shadow-sm">
               {t('learningCenter.page.libraryWrongbookBadge')}
             </span>
           </div>
           <div className="relative z-10 mt-4">
-            <h3 className="font-black text-[16px] text-text-secondary dark:text-text-secondary-dark">
+            <h3 className="font-black text-[16px] text-text-primary dark:text-text-primary-dark">
               {t('learningCenter.page.libraryWrongbookTitle')}
             </h3>
-            <p className="text-[12px] font-medium text-text-tertiary dark:text-text-tertiary-dark mt-0.5">
+            <p className="text-[12px] font-medium text-text-secondary dark:text-text-secondary-dark mt-0.5">
               {t('learningCenter.page.libraryWrongbookSubtitle')}
             </p>
           </div>
-        </div>
+          <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-bg-light dark:bg-bg-dark rounded-full z-0" />
+        </Link>
 
         <div
           role="link"

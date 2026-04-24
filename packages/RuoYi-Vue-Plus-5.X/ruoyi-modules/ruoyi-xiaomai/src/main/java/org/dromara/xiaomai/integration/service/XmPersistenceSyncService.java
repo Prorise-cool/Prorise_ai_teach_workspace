@@ -141,6 +141,29 @@ public class XmPersistenceSyncService {
         return replay;
     }
 
+    /**
+     * 按 user_id 分页查询伴学对话轮次（Learning Center 历史页跳详情用）。
+     *
+     * <p>只返回轮次本身，不聚合白板动作；白板重放走 replaySession。</p>
+     */
+    public TableDataInfo<XmPersistenceSyncVo.CompanionTurnSyncVo> listCompanionTurnsByUser(
+        String userId, PageQuery pageQuery
+    ) {
+        PageQuery resolved = pageQuery == null
+            ? new PageQuery(PageQuery.DEFAULT_PAGE_SIZE, PageQuery.DEFAULT_PAGE_NUM)
+            : pageQuery;
+        Page<XmCompanionTurn> page = companionTurnMapper.selectPage(
+            resolved.build(),
+            Wrappers.<XmCompanionTurn>lambdaQuery()
+                .eq(StringUtils.isNotBlank(userId), XmCompanionTurn::getUserId, userId)
+                .orderByDesc(XmCompanionTurn::getTurnTime, XmCompanionTurn::getTurnId)
+        );
+        List<XmPersistenceSyncVo.CompanionTurnSyncVo> rows = page.getRecords().stream()
+            .map(turn -> toCompanionVo(turn, List.of()))
+            .toList();
+        return new TableDataInfo<>(rows, page.getTotal());
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public XmPersistenceSyncVo.KnowledgeChatSyncVo syncKnowledgeChat(XmPersistenceSyncBo.KnowledgeChatSyncBo bo) {
         Date now = new Date();

@@ -4,12 +4,22 @@ import { MessageSquare, MessagesSquare, Star, Trash2 } from 'lucide-react';
 import { formatHistoryShortTime, getHistoryTypeLabel } from './history-utils';
 import type { HistoryRecordCardWithFavoriteProps } from './history-record-card-props';
 
+function resolveDefaultDetailTo(record: HistoryRecordCardWithFavoriteProps['record']): string {
+  if (record.resultType === 'companion') {
+    const target =
+      record.sourceSessionId || record.detailRef || record.sourceResultId;
+    return target ? `/companion/replay/${encodeURIComponent(target)}` : '/history';
+  }
+  return '/history';
+}
+
 export function HistoryRecordCardDefault({
   record,
   t,
   onToggleFavorite,
   onRemoveHistory,
 }: HistoryRecordCardWithFavoriteProps) {
+  const detailTo = resolveDefaultDetailTo(record);
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark border border-bordercolor-light dark:border-bordercolor-dark hover-card-soft rounded-2xl p-5 md:p-6 flex flex-col sm:flex-row gap-5 md:gap-6 items-start sm:items-center shadow-sm"
@@ -40,7 +50,7 @@ export function HistoryRecordCardDefault({
 
         <div className="flex items-center justify-between mt-4 md:mt-0 pt-4 md:pt-2 border-t border-bordercolor-light dark:border-bordercolor-dark md:border-t-0 md:border-transparent">
           <Link
-            to="/history"
+            to={detailTo}
             className="bg-secondary dark:bg-bg-dark border border-bordercolor-light dark:border-bordercolor-dark text-text-primary dark:text-text-primary-dark px-4 py-2 rounded-lg text-[12px] font-bold hover:border-text-primary dark:hover:border-text-primary-dark btn-transition shadow-sm flex items-center gap-1.5"
           >
             <MessagesSquare className="w-3.5 h-3.5" /> {t('learningCenter.history.openDetail')}

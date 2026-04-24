@@ -287,6 +287,38 @@ class LearningPathSaveEnvelope(CamelCaseModel):
     data: LearningPathSavePayload
 
 
+# ── Path list / detail（xm_learning_path 消费端闭环） ─────────────
+
+class LearningPathSnapshot(CamelCaseModel):
+    """学习路径列表项快照，对齐 RuoYi LearningCenterRecordVo（result_type=path）。"""
+
+    path_id: str = Field(min_length=1, max_length=128)
+    record_id: str | None = Field(default=None, max_length=128)
+    path_title: str | None = Field(default=None, max_length=255)
+    path_summary: str | None = Field(default=None, max_length=2000)
+    source_type: str | None = Field(default=None, max_length=32)
+    source_session_id: str | None = Field(default=None, max_length=128)
+    status: str | None = Field(default=None, max_length=32)
+    source_time: datetime | None = None
+    favorite: bool | None = None
+
+
+class LearningPathListPayload(CamelCaseModel):
+    total: int = Field(ge=0)
+    rows: list[LearningPathSnapshot]
+
+
+class LearningPathListEnvelope(CamelCaseModel):
+    code: int = 200
+    msg: str = "path 列表加载成功"
+    data: LearningPathListPayload
+
+
+class LearningPathDetailEnvelope(CamelCaseModel):
+    code: int = 200
+    msg: str = "path 详情加载成功"
+    data: LearningPathSnapshot
+
 
 # ── Coach chat（quiz 侧栏 AI 辅导对话） ─────────────────────────────
 

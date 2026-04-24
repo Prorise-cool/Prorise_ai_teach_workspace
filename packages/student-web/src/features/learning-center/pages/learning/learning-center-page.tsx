@@ -102,6 +102,13 @@ export function LearningCenterPage() {
       return target ? `/classroom/play/${encodeURIComponent(target)}` : '/classroom/input';
     }
 
+    if (record.resultType === 'companion') {
+      // 优先 sourceSessionId，其次 detailRef / sourceResultId；都没有时退回历史列表。
+      const target =
+        record.sourceSessionId || record.detailRef || record.sourceResultId;
+      return target ? `/companion/replay/${encodeURIComponent(target)}` : '/history';
+    }
+
     return `/history?resultType=${encodeURIComponent(record.resultType)}`;
   };
 

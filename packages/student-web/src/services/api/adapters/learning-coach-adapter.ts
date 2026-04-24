@@ -14,9 +14,12 @@ import type {
   CoachAskRequest,
   LearningCoachEntryPayload,
   LearningCoachSource,
+  LearningPathListPayload,
+  LearningPathListQuery,
   LearningPathPlanPayload,
   LearningPathPlanRequest,
   LearningPathSavePayload,
+  LearningPathSnapshot,
   QuizGeneratePayload,
   QuizHistoryPayload,
   QuizSubmitPayload,
@@ -70,6 +73,8 @@ export interface LearningCoachAdapter {
   getQuizHistory(query: QuizHistoryQuery): Promise<QuizHistoryPayload>;
   planPath(request: LearningPathPlanRequest): Promise<LearningPathPlanPayload>;
   savePath(request: LearningPathSaveRequest): Promise<LearningPathSavePayload>;
+  listPaths(query: LearningPathListQuery): Promise<LearningPathListPayload>;
+  getPath(query: { pathId: string }): Promise<LearningPathSnapshot>;
   coachAsk(request: CoachAskRequest): Promise<CoachAskPayload>;
 }
 
@@ -150,6 +155,24 @@ export function createRealLearningCoachAdapter(
       });
       return unwrapEnvelope(response);
     },
+    async listPaths({ userId, pageNum = 1, pageSize = 10 }) {
+      const url = new URL('http://xiaomai.local/api/v1/learning-coach/paths');
+      url.searchParams.set('userId', userId);
+      url.searchParams.set('pageNum', String(pageNum));
+      url.searchParams.set('pageSize', String(pageSize));
+      const response = await client.request<TaskDataEnvelope<LearningPathListPayload>>({
+        url: `${url.pathname}${url.search}`,
+        method: 'get',
+      });
+      return unwrapEnvelope(response);
+    },
+    async getPath({ pathId }) {
+      const response = await client.request<TaskDataEnvelope<LearningPathSnapshot>>({
+        url: `/api/v1/learning-coach/paths/${encodeURIComponent(pathId)}`,
+        method: 'get',
+      });
+      return unwrapEnvelope(response);
+    },
     async coachAsk(request) {
       const response = await client.request<TaskDataEnvelope<CoachAskPayload>>({
         url: '/api/v1/learning-coach/coach-ask',
@@ -186,6 +209,34 @@ export function createMockLearningCoachAdapter(): LearningCoachAdapter {
     },
     savePath() {
       return Promise.resolve(learningCoachMockFixtures.path.saveSuccess.data);
+    },
+    listPaths() {
+      const planned = learningCoachMockFixtures.path.planSuccess.data;
+      const snapshot: LearningPathSnapshot = {
+        pathId: planned.pathId,
+        pathTitle: planned.pathTitle,
+        pathSummary: planned.pathSummary,
+        sourceType: planned.source.sourceType,
+        sourceSessionId: planned.source.sourceSessionId,
+        status: 'completed',
+        sourceTime: new Date().toISOString(),
+        favorite: false,
+      };
+      return Promise.resolve({ total: 1, rows: [snapshot] });
+    },
+    getPath({ pathId }) {
+      const planned = learningCoachMockFixtures.path.planSuccess.data;
+      const snapshot: LearningPathSnapshot = {
+        pathId,
+        pathTitle: planned.pathTitle,
+        pathSummary: planned.pathSummary,
+        sourceType: planned.source.sourceType,
+        sourceSessionId: planned.source.sourceSessionId,
+        status: 'completed',
+        sourceTime: new Date().toISOString(),
+        favorite: false,
+      };
+      return Promise.resolve(snapshot);
     },
     coachAsk(request) {
       // mock：简单回复包含题目 id，便于前端调试切换

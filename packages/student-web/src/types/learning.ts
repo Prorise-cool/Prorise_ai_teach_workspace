@@ -177,3 +177,30 @@ export interface LearningPathSavePayload {
   persisted: boolean;
   persistedAt?: string | null;
 }
+
+export interface LearningPathSnapshot {
+  pathId: string;
+  recordId?: string | null;
+  pathTitle?: string | null;
+  pathSummary?: string | null;
+  sourceType?: string | null;
+  sourceSessionId?: string | null;
+  status?: string | null;
+  sourceTime?: string | null;
+  favorite?: boolean | null;
+}
+
+export interface LearningPathListPayload {
+  total: number;
+  rows: LearningPathSnapshot[];
+}
+
+export interface LearningPathListQuery {
+  userId: string;
+  pageNum?: number;
+  pageSize?: number;
+}
+
+export interface LearningPathPlanRequestExtended extends LearningPathPlanRequest {
+  sourceSessionId?: string;
+}

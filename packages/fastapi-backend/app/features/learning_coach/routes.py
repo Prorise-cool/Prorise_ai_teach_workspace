@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.config import get_settings
 from app.core.security import AccessContext, get_access_context
+from app.features.learning_coach.paths_reader import LearningPathsReader
 from app.features.learning_coach.schemas import (
     CheckpointGenerateEnvelope,
     CheckpointGenerateRequest,
@@ -20,6 +21,9 @@ from app.features.learning_coach.schemas import (
     CoachAskRequest,
     LearningCoachEntryEnvelope,
     LearningCoachSource,
+    LearningPathDetailEnvelope,
+    LearningPathListEnvelope,
+    LearningPathListPayload,
     LearningPathPlanEnvelope,
     LearningPathPlanRequest,
     LearningPathSaveEnvelope,
@@ -226,6 +230,50 @@ async def learning_path_save(
         access_context=access_context,
     )
     return LearningPathSaveEnvelope(data=payload)
+
+
+@router.get("/paths", response_model=LearningPathListEnvelope)
+async def learning_paths_list(
+    user_id: str | None = Query(default=None, alias="userId"),
+    page_num: int = Query(default=1, ge=1, le=1000, alias="pageNum"),
+    page_size: int = Query(default=10, ge=1, le=100, alias="pageSize"),
+    access_context: AccessContext = Depends(get_access_context),
+) -> LearningPathListEnvelope:
+    """学习路径列表（只读）：代理到 RuoYi `/xiaomai/learning-center/history?resultType=path`。
+
+    `userId` 仅用于日志；RuoYi 端按登录态 user 返回，避免跨用户越权。
+    """
+    reader = LearningPathsReader()
+    total, rows = await reader.list_paths(
+        user_id=user_id or access_context.user_id or "",
+        page_num=page_num,
+        page_size=page_size,
+        access_context=access_context,
+    )
+    return LearningPathListEnvelope(
+        data=LearningPathListPayload(total=total, rows=rows),
+    )
+
+
+@router.get("/paths/{path_id}", response_model=LearningPathDetailEnvelope)
+async def learning_paths_detail(
+    path_id: str,
+    access_context: AccessContext = Depends(get_access_context),
+) -> LearningPathDetailEnvelope:
+    """学习路径详情（只读快照，不含 stages）。
+
+    stages/steps 明细目前只在规划态内存 + 前端 localStorage 中；持久化层
+    （xm_learning_path）仅留 title/summary/step_count 等元数据。
+    """
+    reader = LearningPathsReader()
+    snapshot = await reader.get_path(
+        path_id=path_id,
+        user_id=access_context.user_id or "",
+        access_context=access_context,
+    )
+    if snapshot is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="path not found")
+    return LearningPathDetailEnvelope(data=snapshot)
 
 
 def _parse_diagnostics_allowlist(raw: str) -> frozenset[str]:

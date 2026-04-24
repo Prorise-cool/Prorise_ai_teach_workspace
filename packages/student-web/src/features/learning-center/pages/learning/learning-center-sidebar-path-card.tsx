@@ -1,4 +1,5 @@
 import { Compass } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import type { ActiveLearningPath } from '@/types/learning-center';
@@ -12,9 +13,9 @@ export function LearningCenterSidebarPathCard({ path }: LearningCenterSidebarPat
 
   if (!path) {
     return (
-      <section
-        aria-disabled="true"
-        className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 relative overflow-hidden block shadow-md opacity-60 cursor-not-allowed select-none"
+      <Link
+        to="/learning-paths/new"
+        className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 relative overflow-hidden block shadow-md hover:shadow-lg btn-transition"
       >
         <div className="absolute -right-6 -top-6 opacity-[0.08]">
           <Compass className="w-32 h-32 text-surface-light dark:text-brand" />
@@ -24,29 +25,30 @@ export function LearningCenterSidebarPathCard({ path }: LearningCenterSidebarPat
             <h2 className="text-xs font-bold uppercase tracking-widest text-surface-light/70 dark:text-text-secondary-dark">
               {t('learningCenter.page.currentPathSectionTitle')}
             </h2>
-            <span className="text-[10px] font-bold bg-surface-light/20 dark:bg-bordercolor-dark text-surface-light dark:text-text-secondary-dark px-2 py-0.5 rounded">
-              即将开放
+            <span className="text-[10px] font-bold bg-brand text-primary-foreground px-2 py-0.5 rounded shadow-sm">
+              去规划
             </span>
           </div>
           <h3 className="text-xl md:text-2xl font-black mb-3 tracking-tight">
             还没有学习路径
           </h3>
           <p className="text-[13px] font-medium text-surface-light/70 dark:text-text-secondary-dark leading-relaxed">
-            学习路径规划功能开发中，敬请期待。
+            去规划一条，让小麦陪你一步步攻坚。
           </p>
         </div>
-      </section>
+      </Link>
     );
   }
 
-  const { completedStepCount, totalStepCount, title } = path;
+  const { completedStepCount, totalStepCount, title, pathId } = path;
   const progressPercent =
     totalStepCount > 0 ? Math.round((completedStepCount / totalStepCount) * 100) : 0;
   const progressRatio = `${completedStepCount}/${totalStepCount}`;
 
   return (
-    <section
-      className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 relative overflow-hidden block shadow-md"
+    <Link
+      to={`/learning-paths/${encodeURIComponent(pathId)}`}
+      className="view-enter stagger-1 bg-text-primary dark:bg-surface-dark text-surface-light dark:text-text-primary-dark border border-transparent dark:border-bordercolor-dark rounded-2xl p-6 md:p-8 relative overflow-hidden block shadow-md hover:shadow-lg btn-transition"
     >
       <div className="absolute -right-6 -top-6 opacity-[0.08]">
         <Compass className="w-32 h-32 text-surface-light dark:text-brand" />
@@ -74,6 +76,6 @@ export function LearningCenterSidebarPathCard({ path }: LearningCenterSidebarPat
           />
         </div>
       </div>
-    </section>
+    </Link>
   );
 }

@@ -136,6 +136,43 @@ class CompanionService(RuoYiServiceMixin):
             endpoint=f"/internal/xiaomai/companion/sessions/{session_id}/replay",
         )
 
+    async def list_turns_by_user(
+        self,
+        *,
+        user_id: str,
+        page_num: int = 1,
+        page_size: int = 10,
+        access_context: "AccessContext | None" = None,
+    ) -> tuple[int, list[CompanionTurnSnapshot]]:
+        """分页列出指定用户的伴学对话轮次。
+
+        返回 ``(total, rows)``；rows 以 ``turn_time DESC`` 排序。
+        白板动作不在此接口返回，如需完整上下文请调用 replay_session。
+        """
+        params = {
+            "userId": user_id,
+            "pageNum": max(1, page_num),
+            "pageSize": max(1, min(page_size, 100)),
+        }
+        async with self._resolve_authenticated_factory(access_context)() as client:
+            result = await client.get_page(
+                "/internal/xiaomai/companion/turns",
+                resource=self._RESOURCE,
+                operation="list",
+                params=params,
+            )
+        rows: list[CompanionTurnSnapshot] = []
+        for raw in result.rows:
+            try:
+                rows.append(companion_turn_from_ruoyi_data(raw))
+            except (KeyError, TypeError, ValueError, ValidationError) as exc:
+                raise self._invalid_response_error(
+                    operation="list",
+                    endpoint="/internal/xiaomai/companion/turns",
+                    reason=str(exc),
+                ) from exc
+        return result.total, rows
+
     def _parse_companion_turn(
         self,
         payload: dict[str, object],
