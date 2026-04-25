@@ -20,8 +20,10 @@ ENV PYTHONUNBUFFERED=1 \
     LANG=C.UTF-8
 
 # ---- 系统依赖（manim 渲染 + LaTeX + 字体 + ffmpeg + curl 健康检查）-------
+# 注：build-essential / python3-dev / pkg-config 编译 numpy/scipy/manim 等
+# native 扩展时必需，**保留不 purge**（多占 ~200MB，换 pip install 成功率）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        # manim 渲染核心
+        # 编译工具链（pip install 需要）
         libcairo2-dev libpango1.0-dev pkg-config build-essential python3-dev \
         # LaTeX 精简（避免 texlive-full 4GB+）
         texlive-latex-base texlive-latex-extra texlive-fonts-recommended \
@@ -33,7 +35,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # 音视频 + 工具
         ffmpeg curl tini \
     && fc-cache -fv \
-    && apt-get purge -y --auto-remove build-essential python3-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # ---- 应用依赖（先拷 pyproject 触发 layer 缓存）----------------------------
