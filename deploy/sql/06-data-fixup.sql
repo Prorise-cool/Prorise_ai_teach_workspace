@@ -136,12 +136,18 @@ SELECT u.user_id, 5
 -- ---------------------------------------------------------------------------
 -- 9) MinIO OSS 公网域名配置（避免浏览器拿到 http://minio:9000/... 而 ERR_NAME_NOT_RESOLVED）
 --    前置：1panel openresty 已加 /oss/ → 127.0.0.1:19000 反代（详见 README）
---    domain=https://xm.prorisehub.com/oss + is_https=Y → 上传后返回 URL 公网可读
---    历史 sys_oss / xm_user_profile.avatar_url / xm_user_work.cover_url / sys_social.avatar 也批量回写
+--
+--    ⚠ 关键：is_https 必须保持 'N'。
+--    RuoYi-Plus OssClient 把 is_https 同时用于 S3 内部 endpoint 协议 + public URL 协议。
+--    我们的容器内 MinIO 只监听 HTTP:9000，is_https=Y 会让 S3 客户端去 https://minio:9000
+--    握 TLS → 120 秒超时 → 上传失败。
+--
+--    domain 以 https:// 开头时 getUrl() 会直接用 domain 做 public URL 前缀，不再依赖 is_https。
+--    所以正确组合是：endpoint=minio:9000 + is_https=N + domain=https://xm.prorisehub.com/oss
 -- ---------------------------------------------------------------------------
 UPDATE sys_oss_config
    SET domain = 'https://xm.prorisehub.com/oss',
-       is_https = 'Y',
+       is_https = 'N',
        update_time = NOW()
  WHERE config_key IN ('minio','image');
 
