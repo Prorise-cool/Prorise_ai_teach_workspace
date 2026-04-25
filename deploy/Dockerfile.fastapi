@@ -33,8 +33,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # CJK 字体
         fonts-noto-cjk fonts-noto-cjk-extra fonts-wqy-microhei fonts-wqy-zenhei \
         fontconfig \
-        # 音视频 + 工具
-        ffmpeg curl tini \
+        # 音视频 + 工具（sox：manim_voiceover 音频处理依赖）
+        ffmpeg sox libsox-fmt-all curl tini \
     && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 
