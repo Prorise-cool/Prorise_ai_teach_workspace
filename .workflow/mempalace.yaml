@@ -1,6 +1,0 @@
-wing: workflow
-rooms:
-- name: planning
-  description: Files from specs/
-- name: general
-  description: Files that don't fit other rooms

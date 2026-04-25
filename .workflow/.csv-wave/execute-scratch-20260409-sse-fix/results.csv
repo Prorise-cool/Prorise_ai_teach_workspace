@@ -1,2 +1,0 @@
-id,status,findings,files_modified,tests_passed,error
-"TASK-001","completed","Root cause fixed in student-web SSE transport by switching from response.text() buffering to ReadableStream incremental parsing; transient identity compatibility added for connected/heartbeat.","packages/student-web/src/services/sse/index.ts;packages/student-web/src/services/sse/task-event-stream.test.ts","eslint/vitest/tsc passed",""
