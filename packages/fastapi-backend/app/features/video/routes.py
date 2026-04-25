@@ -142,13 +142,13 @@ async def preprocess_image(
 
 @router.get("/assets/{asset_key:path}", include_in_schema=False)
 async def get_local_video_asset(asset_key: str) -> Response:
-    """开发态读取本地落盘的视频流水线产物。"""
-    settings = get_settings()
-    if settings.environment != "development":
-        raise HTTPException(
-            status_code=404, detail="Asset route is only available in development"
-        )
+    """读取本地落盘的视频流水线产物。
 
+    生产架构同样走"本地磁盘 + fastapi 静态分发"模式
+    （由 ``FASTAPI_COS_BASE_URL`` 指向同站反代），
+    因此不再限制 environment=development。
+    """
+    settings = get_settings()
     store = LocalAssetStore.from_settings(settings)
     try:
         file_path = store.resolve_path_from_key(asset_key)
