@@ -1338,11 +1338,16 @@ class VideoPipelineService:
                         )
                 understanding_steps = converted or None
 
+            # title 来源是 understanding.topic_summary（250-450 字解题摘要）or preview.summary
+            # or ctx.knowledge_point。前者会超 200 字 → topic_hint 字段上限校验失败 →
+            # Pydantic 抛 ValidationError → 整个预生成 task 挂掉，cache 永远空。
+            # topic_hint 只是短提示，截 180 字（留余量）；完整摘要走 topic_summary 字段。
+            topic_hint_safe = (title or "").strip()[:180] or None
             source = LearningCoachSource(
                 source_type=LearningCoachSourceType.VIDEO,
                 source_session_id=task_id,
                 source_task_id=task_id,
-                topic_hint=(title or None) if not understanding_summary else (title or None),
+                topic_hint=topic_hint_safe,
                 topic_summary=understanding_summary,
                 knowledge_points=understanding_kps,
                 solution_steps=understanding_steps,
