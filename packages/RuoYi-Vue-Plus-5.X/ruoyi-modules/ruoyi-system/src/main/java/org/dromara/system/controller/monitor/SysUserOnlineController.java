@@ -5,6 +5,7 @@ import cn.dev33.satoken.exception.NotLoginException;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.constant.CacheConstants;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.domain.dto.UserOnlineDTO;
@@ -30,10 +31,33 @@ import java.util.stream.Collectors;
  *
  * @author Lion Li
  */
+@Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/monitor/online")
 public class SysUserOnlineController extends BaseController {
+
+    /**
+     * 读取单条 ONLINE_TOKEN 缓存；遇到历史脏数据（codec 不兼容导致反序列化异常）时
+     * 记 warn 并删除该 key 让其自愈，返回 null 由调用方 filter 掉，避免整个监控接口 500。
+     *
+     * 相关：Redisson TypedJsonJacksonCodec + default typing(NON_FINAL) 要求
+     * WRAPPER_ARRAY 格式；codec 升级前写入的 key 读不了会抛 MismatchedInputException。
+     */
+    private UserOnlineDTO readOnlineTokenSafely(String token) {
+        String key = CacheConstants.ONLINE_TOKEN_KEY + token;
+        try {
+            return RedisUtils.getCacheObject(key);
+        } catch (Exception ex) {
+            log.warn("读取在线 token 缓存失败，清理脏 key 让其自愈：{}，原因：{}", key, ex.getMessage());
+            try {
+                RedisUtils.deleteObject(key);
+            } catch (Exception ignored) {
+                // 删除失败不再放大异常，脏 key 会随 TTL 过期
+            }
+            return null;
+        }
+    }
 
     /**
      * 获取在线用户监控列表
@@ -53,7 +77,7 @@ public class SysUserOnlineController extends BaseController {
             if (StpUtil.stpLogic.getTokenActiveTimeoutByToken(token) < -1) {
                 continue;
             }
-            userOnlineDTOList.add(RedisUtils.getCacheObject(CacheConstants.ONLINE_TOKEN_KEY + token));
+            userOnlineDTOList.add(readOnlineTokenSafely(token));
         }
         if (StringUtils.isNotEmpty(ipaddr) && StringUtils.isNotEmpty(userName)) {
             userOnlineDTOList = StreamUtils.filter(userOnlineDTOList, userOnline ->
@@ -101,7 +125,7 @@ public class SysUserOnlineController extends BaseController {
         List<String> tokenIds = StpUtil.getTokenValueListByLoginId(StpUtil.getLoginIdAsString());
         List<UserOnlineDTO> userOnlineDTOList = tokenIds.stream()
             .filter(token -> StpUtil.stpLogic.getTokenActiveTimeoutByToken(token) >= -1)
-            .map(token -> (UserOnlineDTO) RedisUtils.getCacheObject(CacheConstants.ONLINE_TOKEN_KEY + token))
+            .map(this::readOnlineTokenSafely)
             .collect(Collectors.toList());
         //复制和处理 SysUserOnline 对象列表
         Collections.reverse(userOnlineDTOList);
