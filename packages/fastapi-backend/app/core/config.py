@@ -197,7 +197,12 @@ class Settings(BaseSettings):
     # 历史默认为相对路径 "data/uploads/video"，依赖进程 CWD = 仓库根；这里
     # 固化为绝对路径，避免 worker 与 fastapi 因 CWD 差异导致 vision 读不到图。
     video_image_storage_root: str = Field(
-        default=str(PROJECT_ROOT.parents[1] / "data" / "uploads" / "video"),
+        # 容器化部署 PROJECT_ROOT=/app 没有 parents[1]；fallback 到 PROJECT_ROOT 内
+        # 生产强制由 env FASTAPI_VIDEO_IMAGE_STORAGE_ROOT 覆盖（compose 已注入 /data/uploads/video）
+        default=str(
+            (PROJECT_ROOT.parents[1] if len(PROJECT_ROOT.parents) >= 2 else PROJECT_ROOT)
+            / "data" / "uploads" / "video"
+        ),
         alias="FASTAPI_VIDEO_IMAGE_STORAGE_ROOT",
     )
     video_render_quality: str = Field(default="l", alias="FASTAPI_VIDEO_RENDER_QUALITY")
