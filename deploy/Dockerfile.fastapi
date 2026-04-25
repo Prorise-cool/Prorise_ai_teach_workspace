@@ -44,7 +44,8 @@ COPY packages/fastapi-backend/pyproject.toml ./pyproject.toml
 COPY packages/fastapi-backend/README.md ./README.md
 
 # 先装运行时第三方库（pyproject 列出的） + manim 渲染所需
-RUN pip install --upgrade pip setuptools wheel \
+# 注：setuptools<81，因为 81+ 移除了 pkg_resources（manim_voiceover 仍依赖）
+RUN pip install --upgrade pip wheel "setuptools<81" \
     && pip install \
         "fastapi>=0.115,<1.0" \
         "uvicorn[standard]>=0.34,<1.0" \
