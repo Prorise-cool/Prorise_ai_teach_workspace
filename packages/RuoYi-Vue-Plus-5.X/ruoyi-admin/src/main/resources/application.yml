@@ -46,6 +46,9 @@ user:
     maxRetryCount: 5
     # 密码锁定时间（默认10分钟）
     lockTime: 10
+  register:
+    # 注册时自动绑定的默认角色 ID（逗号分隔），留空则不绑定。5=学员
+    defaultRoleIds: 5
 
 # Spring配置
 spring:

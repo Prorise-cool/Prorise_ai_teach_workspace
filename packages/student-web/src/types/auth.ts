@@ -20,8 +20,8 @@ export const AUTH_FORBIDDEN_STATUS = 403;
 /** 认证回跳参数名。 */
 export const AUTH_RETURN_TO_QUERY_KEY = "returnTo";
 
-/** 默认认证回跳地址。 */
-export const DEFAULT_AUTH_RETURN_TO = "/";
+/** 默认认证回跳地址（登录成功后无 returnTo 参数时跳转到默认课堂入口页）。 */
+export const DEFAULT_AUTH_RETURN_TO = "/classroom/input";
 
 /** 默认租户编号。 */
 export const AUTH_DEFAULT_TENANT_ID = "000000";

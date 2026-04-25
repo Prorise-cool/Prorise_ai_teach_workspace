@@ -3,6 +3,7 @@ package org.dromara.web.service;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.dromara.common.core.constant.Constants;
 import org.dromara.common.core.constant.GlobalConstants;
 import org.dromara.common.core.domain.model.RegisterBody;
@@ -22,13 +23,17 @@ import org.dromara.system.domain.SysUser;
 import org.dromara.system.domain.bo.SysUserBo;
 import org.dromara.system.mapper.SysUserMapper;
 import org.dromara.system.service.ISysUserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
 
 /**
  * 注册校验方法
  *
  * @author Lion Li
  */
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class SysRegisterService {
@@ -36,6 +41,13 @@ public class SysRegisterService {
     private final ISysUserService userService;
     private final SysUserMapper userMapper;
     private final CaptchaProperties captchaProperties;
+
+    /**
+     * 注册时自动绑定的默认角色 ID 列表（逗号分隔）。
+     * 例如 "5" 表示绑定学员角色；留空则不绑定（保留 RuoYi 原始行为）。
+     */
+    @Value("${user.register.defaultRoleIds:}")
+    private String defaultRoleIds;
 
     /**
      * 注册
@@ -69,7 +81,41 @@ public class SysRegisterService {
         if (!regFlag) {
             throw new UserException("user.register.error");
         }
+        bindDefaultRoles(tenantId, username);
         recordLogininfor(tenantId, username, Constants.REGISTER, MessageUtils.message("user.register.success"));
+    }
+
+    /**
+     * 给刚注册的用户绑定默认角色，避免新用户因 sys_user_role 无记录而被全局 Sa-Token 权限拦截。
+     * 失败仅打日志、不阻断注册流程（保证注册可用性）。
+     */
+    private void bindDefaultRoles(String tenantId, String username) {
+        if (StringUtils.isBlank(defaultRoleIds)) {
+            return;
+        }
+        Long[] roleIds = Arrays.stream(defaultRoleIds.split(","))
+            .map(String::trim)
+            .filter(StringUtils::isNotBlank)
+            .map(Long::parseLong)
+            .toArray(Long[]::new);
+        if (roleIds.length == 0) {
+            return;
+        }
+        try {
+            TenantHelper.dynamic(tenantId, () -> {
+                SysUser created = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUserName, username)
+                    .select(SysUser::getUserId));
+                if (created == null) {
+                    log.warn("[register] 绑定默认角色失败: 找不到刚注册的用户 username={}", username);
+                    return null;
+                }
+                userService.insertUserAuth(created.getUserId(), roleIds);
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("[register] 绑定默认角色异常 username={} roleIds={}", username, defaultRoleIds, e);
+        }
     }
 
     /**

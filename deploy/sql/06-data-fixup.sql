@@ -101,6 +101,38 @@ TRUNCATE TABLE sys_oper_log;
 -- SELECT COUNT(*) AS oss_left FROM sys_oss;
 -- SELECT COUNT(*) AS vtask_left FROM xm_video_task;
 
+-- ---------------------------------------------------------------------------
+-- 8) 学员角色 + 学生端最小权限种子（修复：新注册用户被 ruoyi/fastapi 全局 403）
+--    - role_id=5 学员角色（tenant=000000，data_scope=5 仅本人）
+--    - menu_id=21300 注册 video:task:add 功能权限（fastapi 创建视频任务硬要求）
+--    - sys_role_menu 绑定 role_id=5 → menu_id=21300
+--    - sys_user_role 回填：所有现存无角色的 sys_user 自动补 role_id=5
+--    全部 INSERT IGNORE，幂等重跑安全
+-- ---------------------------------------------------------------------------
+INSERT IGNORE INTO sys_role
+  (role_id, tenant_id, role_name, role_key, role_sort, data_scope,
+   menu_check_strictly, dept_check_strictly, status, del_flag, remark, create_time)
+VALUES
+  (5, '000000', '学员', 'student', 5, '5',
+   1, 1, '0', '0', '学生端默认角色（注册自动绑定）', NOW());
+
+INSERT IGNORE INTO sys_menu
+  (menu_id, menu_name, parent_id, order_num, path, component, query_param,
+   is_frame, is_cache, menu_type, visible, status, perms, icon, remark, create_time)
+VALUES
+  (21300, '视频任务创建', 0, 0, '', NULL, NULL,
+   1, 0, 'F', '1', '0', 'video:task:add', '#', 'fastapi 校验权限：创建视频任务', NOW());
+
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (5, 21300);
+
+INSERT IGNORE INTO sys_user_role (user_id, role_id)
+SELECT u.user_id, 5
+  FROM sys_user u
+  LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+ WHERE ur.user_id IS NULL
+   AND u.user_type = 'sys_user'
+   AND u.del_flag = '0';
+
 SET FOREIGN_KEY_CHECKS=1;
 
 -- ============================================================================
