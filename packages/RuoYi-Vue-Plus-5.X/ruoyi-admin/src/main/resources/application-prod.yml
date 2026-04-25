@@ -1,6 +1,11 @@
 --- # 临时文件存储位置 避免临时文件被系统清理报错
 spring.servlet.multipart.location: /ruoyi/server/temp
 
+--- # 用户注册：生产环境强制给新用户绑定学员角色（role_id=5）
+# 否则 sys_user_role 为空，所有 video:task:* / classroom:session:* 接口 403。
+# dev profile 不需要这条（避免污染本地 DB），保留空字符串即可。
+user.register.defaultRoleIds: 5
+
 --- # 监控中心配置
 spring.boot.admin.client:
   # 增加客户端开关
