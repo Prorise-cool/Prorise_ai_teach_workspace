@@ -110,9 +110,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # 首次启动建空 bucket，幂等
+  # 首次启动建空 bucket，幂等（一次性工具容器，跑完即退出）
   minio-init:
-    image: minio/mc:RELEASE.2025-04-22T17-50-32Z
+    image: minio/mc:latest
     container_name: xm-minio-init
     depends_on:
       minio:

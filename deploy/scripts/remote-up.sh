@@ -18,30 +18,49 @@ git fetch origin deploy/prod
 git reset --hard origin/deploy/prod
 git submodule update --init --recursive 2>/dev/null || true
 
-# ---- 2. 把 artifacts 还原到工作树 -----------------------------------------
-step "2/8 还原 jar / dist / .env.prod"
-install -m 644 "$ART/ruoyi-admin.jar"               packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/target/ruoyi-admin.jar
-install -m 644 "$ART/ruoyi-monitor-admin.jar"       packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-monitor-admin/target/ruoyi-monitor-admin.jar
-install -m 644 "$ART/ruoyi-snailjob-server.jar"     packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-snailjob-server/target/ruoyi-snailjob-server.jar
-
-mkdir -p packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/target \
-         packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-monitor-admin/target \
-         packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-snailjob-server/target
-
+# ---- 2. 还原 dist + .env.prod；jar 看是否本地传了 -------------------------
+step "2/8 还原 dist / .env.prod"
 rm -rf packages/ruoyi-plus-soybean/dist packages/student-web/dist
 tar -xzf "$ART/admin-dist.tar.gz"   -C packages/ruoyi-plus-soybean
 tar -xzf "$ART/student-dist.tar.gz" -C packages/student-web
-
 install -m 600 "$ART/.env.prod" deploy/.env.prod
+
+# ---- 2.5. 编译 jar：本地传了直接用，否则服务器 docker maven build ---------
+ADMIN_JAR=packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/target/ruoyi-admin.jar
+MONITOR_JAR=packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-monitor-admin/target/ruoyi-monitor-admin.jar
+SNAILJOB_JAR=packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-snailjob-server/target/ruoyi-snailjob-server.jar
+
+mkdir -p $(dirname "$ADMIN_JAR") $(dirname "$MONITOR_JAR") $(dirname "$SNAILJOB_JAR")
+
+if [[ -f "$ART/ruoyi-admin.jar" ]]; then
+  step "2.5/8 使用本地预编译 jar"
+  install -m 644 "$ART/ruoyi-admin.jar"             "$ADMIN_JAR"
+  install -m 644 "$ART/ruoyi-monitor-admin.jar"     "$MONITOR_JAR"
+  install -m 644 "$ART/ruoyi-snailjob-server.jar"   "$SNAILJOB_JAR"
+else
+  step "2.5/8 服务器侧 docker maven 编译 jar（首次约 5-8 分钟，含依赖下载）"
+  mkdir -p "$HOME/.m2"
+  docker run --rm \
+    -v "$ROOT/packages/RuoYi-Vue-Plus-5.X:/build" \
+    -v "$HOME/.m2:/root/.m2" \
+    -w /build \
+    maven:3.9-eclipse-temurin-21 \
+    mvn -B clean package -P prod -Dmaven.test.skip=true -T 1C \
+        -pl ruoyi-admin,ruoyi-extend/ruoyi-monitor-admin,ruoyi-extend/ruoyi-snailjob-server -am
+  for f in "$ADMIN_JAR" "$MONITOR_JAR" "$SNAILJOB_JAR"; do
+    [[ -f "$f" ]] || { echo "[remote-up] ❌ jar 编译失败：$f 不存在"; exit 1; }
+  done
+  echo "[remote-up]   ✅ 三个 jar 编译完成"
+fi
 
 # ---- 3. compose build -----------------------------------------------------
 step "3/8 docker compose build"
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env.prod build
 
-# ---- 4. 起基础设施层 -----------------------------------------------------
+# ---- 4. 起基础设施层（edge-tts 复用宿主已有容器，不在本 compose 内）-----
 step "4/8 启动 mysql / redis / minio + minio-init"
 docker compose -f deploy/docker-compose.yml --env-file deploy/.env.prod up -d \
-  mysql redis minio minio-init edge-tts
+  mysql redis minio minio-init
 
 # 等 mysql healthy
 echo "[remote-up] 等 mysql healthy..."
