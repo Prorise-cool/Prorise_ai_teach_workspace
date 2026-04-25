@@ -16,6 +16,7 @@ import org.dromara.common.core.utils.ServletUtils;
 import org.dromara.common.core.utils.SpringUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.log.event.LogininforEvent;
+import org.dromara.common.mybatis.helper.DataPermissionHelper;
 import org.dromara.common.redis.utils.RedisUtils;
 import org.dromara.common.tenant.helper.TenantHelper;
 import org.dromara.common.web.config.properties.CaptchaProperties;
@@ -101,19 +102,25 @@ public class SysRegisterService {
         if (roleIds.length == 0) {
             return;
         }
+        // 注册请求可能携带旧的 frozen Authorization 头，会触发 MyBatis 数据权限拦截器调用
+        // LoginHelper.getLoginUser() 进而抛 NotLoginException(token 已被冻结)。
+        // 用 DataPermissionHelper.ignore() 直接短路掉数据权限处理，全程不读上下文 token。
         try {
-            TenantHelper.dynamic(tenantId, () -> {
-                SysUser created = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                    .eq(SysUser::getUserName, username)
-                    .select(SysUser::getUserId));
-                if (created == null) {
-                    log.warn("[register] 绑定默认角色失败: 找不到刚注册的用户 username={}", username);
+            DataPermissionHelper.ignore(() ->
+                TenantHelper.dynamic(tenantId, () -> {
+                    SysUser created = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                        .eq(SysUser::getUserName, username)
+                        .select(SysUser::getUserId));
+                    if (created == null) {
+                        log.warn("[register] 绑定默认角色失败: 找不到刚注册的用户 username={}", username);
+                        return null;
+                    }
+                    userService.insertUserAuth(created.getUserId(), roleIds);
                     return null;
-                }
-                userService.insertUserAuth(created.getUserId(), roleIds);
-                return null;
-            });
-        } catch (Exception e) {
+                })
+            );
+        } catch (Throwable e) {
+            // Throwable 而非 Exception：MyBatis/Tenant 包装层有可能抛非 Exception 子类（如 UndeclaredThrowableException 已处理，但 Error 也兜住）
             log.error("[register] 绑定默认角色异常 username={} roleIds={}", username, defaultRoleIds, e);
         }
     }
