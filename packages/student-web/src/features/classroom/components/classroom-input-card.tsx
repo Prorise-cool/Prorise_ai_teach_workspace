@@ -3,7 +3,7 @@
  * 保留课堂页既有视觉与交互语义，仅把冗余结构从页面容器中下沉为可复用组件。
  */
 import type { ChangeEventHandler, ReactNode, RefObject } from 'react';
-import { ArrowRight, FileText, Globe, Mic, Paperclip, X } from 'lucide-react';
+import { ArrowRight, FileText, Mic, Paperclip, X } from 'lucide-react';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { InputWorkspaceCardFrame } from '@/components/input-page/input-workspace-card-frame';
@@ -15,10 +15,6 @@ type ClassroomInputCardProps = {
   text: string;
   /** 文本变化回调。 */
   onTextChange: ChangeEventHandler<HTMLTextAreaElement>;
-  /** 是否开启联网搜索。 */
-  webSearchEnabled: boolean;
-  /** 切换联网搜索回调。 */
-  onToggleWebSearch: () => void;
   /** 是否正在语音输入。 */
   isRecording: boolean;
   /** 切换语音输入回调。 */
@@ -52,7 +48,6 @@ type ClassroomInputCardProps = {
     submitLabel: string;
     toolUploadFile: string;
     toolVoiceInput: string;
-    toolWebSearch: string;
     advancedSettings?: string;
     advancedSummary?: string;
   };
@@ -72,8 +67,6 @@ type ClassroomInputCardProps = {
 export function ClassroomInputCard({
   text,
   onTextChange,
-  webSearchEnabled,
-  onToggleWebSearch,
   isRecording,
   onToggleRecording,
   isDragging,
@@ -91,9 +84,6 @@ export function ClassroomInputCard({
 }: ClassroomInputCardProps) {
   const { t } = useAppTranslation();
   const classNames = createInputWorkspaceCardClassNames('xm-classroom-input');
-  const dividerClassName = `${classNames.root}-divider`;
-  const toggleClassName = `${classNames.root}-toggle`;
-  const toggleActiveClassName = `${toggleClassName}--active`;
   const toolButtonClassName = `${classNames.root}-tool-btn`;
   const submitClassName = `${classNames.root}-submit`;
 
@@ -182,20 +172,6 @@ export function ClassroomInputCard({
             {isRecording ? (
               <span className="absolute inset-0 rounded-md bg-[color:var(--xm-color-brand-500)] opacity-20 animate-ping" />
             ) : null}
-          </button>
-
-          <div className={dividerClassName} />
-
-          <button
-            type="button"
-            className={cn(
-              toggleClassName,
-              webSearchEnabled && toggleActiveClassName
-            )}
-            onClick={onToggleWebSearch}
-          >
-            <Globe className="h-3.5 w-3.5" />
-            {labels.toolWebSearch}
           </button>
 
           {advancedTrigger ? <>{advancedTrigger}</> : null}

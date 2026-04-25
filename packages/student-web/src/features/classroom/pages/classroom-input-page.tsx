@@ -37,7 +37,6 @@ import '@/features/classroom/styles/classroom-input-page.scss';
 export function ClassroomInputPage() {
 	const { t } = useAppTranslation();
 	const navigate = useNavigate();
-	const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 	const [text, setText] = useState('');
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [sceneCount, setSceneCount] = useState<number>(10);
@@ -83,7 +82,6 @@ export function ClassroomInputPage() {
 	const toolUploadFile = t('classroomInput.toolUploadFile');
 	const toolVoiceInput = t('classroomInput.toolVoiceInput');
 
-	const toolWebSearch = t('classroomInput.toolWebSearch');
 	const advancedTriggerLabel = t('classroomInput.advanced.triggerLabel');
 	const advancedDialogTitle = t('classroomInput.advanced.dialogTitle');
 	const advancedDialogDescription = t('classroomInput.advanced.dialogDescription');
@@ -124,10 +122,6 @@ export function ClassroomInputPage() {
 					onTextChange={event => {
 						setText(event.target.value);
 					}}
-					webSearchEnabled={webSearchEnabled}
-					onToggleWebSearch={() => {
-						setWebSearchEnabled(prev => !prev);
-					}}
 					isRecording={isRecording}
 					onToggleRecording={toggleRecording}
 					isDragging={isDragging}
@@ -160,7 +154,6 @@ export function ClassroomInputPage() {
 							const taskId = await create({
 								requirement,
 								pdfText,
-								enableWebSearch: webSearchEnabled,
 								sceneCount,
 								interactiveMode,
 							});
@@ -180,13 +173,12 @@ export function ClassroomInputPage() {
 							: submitLabel,
 						toolUploadFile,
 						toolVoiceInput,
-						toolWebSearch
 					}}
 					advancedTrigger={
 						<DialogTrigger asChild>
 							<button
 								type="button"
-								className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+								className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
 								aria-label={advancedTriggerLabel}
 							>
 								<SlidersHorizontal className="h-3.5 w-3.5" />
