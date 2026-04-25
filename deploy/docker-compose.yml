@@ -229,12 +229,7 @@ services:
     ports:
       - "${HOST_RUOYI_PORT}:8080"
     networks: [backend, edge]
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-      start_period: 90s
+    # healthcheck 由 Dockerfile.ruoyi 提供（curl GET /，避开 actuator 401）
 
   # === FastAPI 应用层 =======================================================
 
