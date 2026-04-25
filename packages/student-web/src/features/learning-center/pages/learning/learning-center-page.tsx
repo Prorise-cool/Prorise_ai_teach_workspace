@@ -163,7 +163,7 @@ export function LearningCenterPage() {
   const streakBadge = (
     <button
       type="button"
-      className="hidden md:inline-flex items-center gap-2 rounded-full border border-transparent bg-text-primary dark:bg-surface-dark px-4 py-2 text-sm font-bold text-surface-light dark:text-text-primary-dark dark:border-bordercolor-dark shadow-sm transition-transform duration-200 hover:scale-[1.02]"
+      className="hidden md:inline-flex items-center gap-2 rounded-full border border-bordercolor-light dark:border-bordercolor-dark bg-surface-light dark:bg-surface-dark px-4 py-2 text-sm font-bold text-text-primary dark:text-text-primary-dark shadow-sm transition-transform duration-200 hover:scale-[1.02]"
     >
       <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand/20 dark:bg-brand/10">
         <Flame className="h-3 w-3 fill-brand text-brand" />

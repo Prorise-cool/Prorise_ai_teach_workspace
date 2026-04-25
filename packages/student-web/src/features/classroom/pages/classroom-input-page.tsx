@@ -19,6 +19,7 @@ import {
 	WorkspaceInputShell
 } from '@/components/input-page';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { useWorkspaceTaskBell } from '@/components/workspace-task-bell';
 import { ClassroomPublicFeed } from '@/features/classroom/components/classroom-public-feed';
 import { resolveClassroomAdapter } from '@/services/api/adapters/classroom-adapter';
 import { ClassroomInputCard } from '@/features/classroom/components/classroom-input-card';
@@ -43,6 +44,9 @@ export function ClassroomInputPage() {
 	const [interactiveMode, setInteractiveMode] = useState<boolean>(false);
 	const [isAdvancedOpen, setIsAdvancedOpen] = useState<boolean>(false);
 	const { create } = useClassroomCreate();
+	const { slot: workspaceUtilitySlot } = useWorkspaceTaskBell({
+		mutationScope: 'classroom-input',
+	});
 
 	const {
 		isDragging,
@@ -105,6 +109,7 @@ export function ClassroomInputPage() {
 			rootClassName="xm-classroom-input"
 			navLinks={navLinks}
 			workspaceRoutes={wsRoutes}
+			workspaceUtilitySlot={workspaceUtilitySlot}
 			content={{
 				className: 'xm-classroom-input__content'
 			}}

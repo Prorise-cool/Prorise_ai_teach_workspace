@@ -2,29 +2,13 @@
  * 文件说明：Story 1.4 的公开首页入口页。
  * 负责承接课堂主入口、跳转到独立落地页，并保持首页默认不鉴权。
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
-import { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useAppTranslation } from '@/app/i18n/use-app-translation';
 import { GlobalTopNav } from '@/components/navigation/global-top-nav';
 import { Button } from '@/components/ui/button';
-import { VideoTaskCenter } from '@/features/video/components/video-task-center';
-import {
-	readDraftVideoTaskTitle,
-	type VideoWorkspaceTaskItem,
-} from '@/features/video/components/video-workspace-task-shared';
-import { useVideoWorkspaceTasks } from '@/features/video/hooks/use-video-workspace-tasks';
-import {
-	cacheCancelledVideoTask,
-	clearVideoTaskDetailQueries,
-	pruneVideoWorkspaceTaskFromCache,
-	VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-} from '@/features/video/utils/task-center-cache';
-import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
-import { useFeedback } from '@/shared/feedback';
-import { useAuthSessionStore } from '@/stores/auth-session-store';
+import { useWorkspaceTaskBell } from '@/components/workspace-task-bell';
 
 import '@/features/home/styles/entry-pages.scss';
 
@@ -40,107 +24,13 @@ type EntryNavLink = {
  */
 export function HomePage() {
 	const { t } = useAppTranslation();
-	const { notify } = useFeedback();
-	const navigate = useNavigate();
-	const queryClient = useQueryClient();
-	const session = useAuthSessionStore((state) => state.session);
-	const videoTaskAdapter = useMemo(() => resolveVideoTaskAdapter(), []);
 	const navLinks = t('entryNav.links', {
 		returnObjects: true
 	}) as EntryNavLink[];
-	const workspaceTasksQuery = useVideoWorkspaceTasks({
-		enabled: Boolean(session?.accessToken),
+	const { slot: workspaceUtilitySlot } = useWorkspaceTaskBell({
+		gateOnAuth: true,
+		mutationScope: 'home',
 	});
-	const cancelTaskMutation = useMutation({
-		mutationKey: ['video', 'workspace', 'home-cancel-task'],
-		mutationFn: (taskId: string) => videoTaskAdapter.cancelTask(taskId),
-		onSuccess: async (snapshot, taskId) => {
-			cacheCancelledVideoTask(queryClient, snapshot);
-			await Promise.allSettled([
-				queryClient.invalidateQueries({
-					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'task-preview', taskId],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'result', taskId],
-				}),
-			]);
-
-			notify({
-				title: t('video.generating.cancelTaskSuccess'),
-				tone: 'success',
-			});
-		},
-		onError: (error) => {
-			notify({
-				title: t('video.generating.cancelTaskFailed'),
-				description:
-					error instanceof Error
-						? error.message
-						: t('video.generating.cancelTaskFailed'),
-				tone: 'error',
-			});
-		},
-	});
-	const deleteTaskMutation = useMutation({
-		mutationKey: ['video', 'workspace', 'home-delete-task'],
-		mutationFn: (taskId: string) => videoTaskAdapter.deleteTask(taskId),
-		onSuccess: async (_result, taskId) => {
-			pruneVideoWorkspaceTaskFromCache(queryClient, taskId);
-			clearVideoTaskDetailQueries(queryClient, taskId);
-			await Promise.allSettled([
-				queryClient.invalidateQueries({
-					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-				}),
-			]);
-			notify({
-				title: t('entryNav.taskCenter.deleteSuccess'),
-				tone: 'success',
-			});
-		},
-		onError: (error) => {
-			notify({
-				title: t('entryNav.taskCenter.deleteFailed'),
-				description:
-					error instanceof Error
-						? error.message
-						: t('entryNav.taskCenter.deleteFailed'),
-				tone: 'error',
-			});
-		},
-	});
-	const workspaceTaskItems = useMemo<VideoWorkspaceTaskItem[]>(
-		() =>
-			workspaceTasksQuery.data?.items.map((item) => ({
-				...item,
-				title: readDraftVideoTaskTitle(
-					item.taskId,
-					item.title || t('entryNav.taskCenter.fallbackTitle'),
-				),
-			})) ?? [],
-		[workspaceTasksQuery.data?.items, t],
-	);
-	const workspaceUtilitySlot = session?.accessToken ? (
-		<VideoTaskCenter
-			items={workspaceTaskItems}
-			total={workspaceTaskItems.length}
-			isCancellingTaskId={
-				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
-			}
-			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-			onEnterTask={(taskId) => {
-				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
-				void navigate(
-					item?.lifecycleStatus === 'completed'
-						? `/video/${taskId}`
-						: `/video/${taskId}/generating`,
-				);
-			}}
-		/>
-	) : null;
 
 	return (
 		<main className="xm-entry-home">

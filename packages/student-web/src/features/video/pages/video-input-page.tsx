@@ -2,7 +2,6 @@
  * 文件说明：视频讲解输入页容器。
  * 页面容器负责表单装配与提交，公共输入页壳层由共享组件承接。
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Sparkles } from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useMemo, useRef } from 'react';
@@ -16,27 +15,15 @@ import {
 	WorkspaceInputShell,
 	useBrowserAsr,
 } from '@/components/input-page';
+import { useWorkspaceTaskBell } from '@/components/workspace-task-bell';
 import { VideoInputCard } from '@/features/video/components/video-input-card';
-import { VideoTaskCenter } from '@/features/video/components/video-task-center';
 import { VideoPublicFeed } from '@/features/video/components/video-public-feed';
-import {
-	readDraftVideoTaskTitle,
-	type VideoWorkspaceTaskItem,
-} from '@/features/video/components/video-workspace-task-shared';
 import { useVideoCreate } from '@/features/video/hooks/use-video-create';
-import { useVideoWorkspaceTasks } from '@/features/video/hooks/use-video-workspace-tasks';
 import {
 	type VideoInputFormValues,
 	type VideoInputValidationMessages,
 	createVideoInputFormSchema,
 } from '@/features/video/schemas/video-input-schema';
-import {
-	cacheCancelledVideoTask,
-	clearVideoTaskDetailQueries,
-	pruneVideoWorkspaceTaskFromCache,
-	VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-} from '@/features/video/utils/task-center-cache';
-import { resolveVideoTaskAdapter } from '@/services/api/adapters/video-task-adapter';
 import { useFeedback } from '@/shared/feedback';
 import {
 	VIDEO_DEFAULT_QUALITY_PRESET,
@@ -59,10 +46,11 @@ export function VideoInputPage() {
 	const { notify } = useFeedback();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const queryClient = useQueryClient();
 	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 	const handledWorkspaceToastRef = useRef<string | null>(null);
-	const videoTaskAdapter = useMemo(() => resolveVideoTaskAdapter(), []);
+	const { slot: workspaceUtilitySlot, items: workspaceTaskItems } = useWorkspaceTaskBell({
+		mutationScope: 'video-input',
+	});
 	const validationMessages = useMemo<VideoInputValidationMessages>(() => ({
 		durationRange: t('videoInput.validation.durationRange'),
 		sectionCountRange: t('videoInput.validation.sectionCountRange'),
@@ -93,40 +81,6 @@ export function VideoInputPage() {
 		mode: 'onSubmit',
 	});
 	const createMutation = useVideoCreate();
-	const workspaceTasksQuery = useVideoWorkspaceTasks();
-	const cancelTaskMutation = useMutation({
-		mutationKey: ['video', 'workspace', 'cancel-task'],
-		mutationFn: (taskId: string) => videoTaskAdapter.cancelTask(taskId),
-		onSuccess: async (snapshot, taskId) => {
-			cacheCancelledVideoTask(queryClient, snapshot);
-			await Promise.allSettled([
-				queryClient.invalidateQueries({
-					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'task-preview', taskId],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: ['video', 'result', taskId],
-				}),
-			]);
-
-			notify({
-				title: t('video.generating.cancelTaskSuccess'),
-				tone: 'success',
-			});
-		},
-		onError: (error) => {
-			notify({
-				title: t('video.generating.cancelTaskFailed'),
-				description:
-					error instanceof Error
-						? error.message
-						: t('video.generating.cancelTaskFailed'),
-				tone: 'error',
-			});
-		},
-	});
 	const { clearErrors, control, handleSubmit, formState, setValue } = form;
 
 	const { isRecording, toggleRecording } = useBrowserAsr((transcript) => {
@@ -252,44 +206,6 @@ export function VideoInputPage() {
 			setValue,
 		],
 	);
-	const deleteTaskMutation = useMutation({
-		mutationKey: ['video', 'workspace', 'delete-task'],
-		mutationFn: (taskId: string) => videoTaskAdapter.deleteTask(taskId),
-		onSuccess: async (_result, taskId) => {
-			pruneVideoWorkspaceTaskFromCache(queryClient, taskId);
-			clearVideoTaskDetailQueries(queryClient, taskId);
-			await Promise.allSettled([
-				queryClient.invalidateQueries({
-					queryKey: VIDEO_WORKSPACE_ACTIVE_TASKS_QUERY_KEY,
-				}),
-			]);
-			notify({
-				title: t('entryNav.taskCenter.deleteSuccess'),
-				tone: 'success',
-			});
-		},
-		onError: (error) => {
-			notify({
-				title: t('entryNav.taskCenter.deleteFailed'),
-				description:
-					error instanceof Error
-						? error.message
-						: t('entryNav.taskCenter.deleteFailed'),
-				tone: 'error',
-			});
-		},
-	});
-	const workspaceTaskItems = useMemo<VideoWorkspaceTaskItem[]>(
-		() =>
-			workspaceTasksQuery.data?.items.map((item) => ({
-				...item,
-				title: readDraftVideoTaskTitle(
-					item.taskId,
-					item.title || t('entryNav.taskCenter.fallbackTitle'),
-				),
-			})) ?? [],
-		[workspaceTasksQuery.data?.items, t],
-	);
 	const workspaceToast = searchParams.get('toast');
 
 	useEffect(() => {
@@ -321,26 +237,6 @@ export function VideoInputPage() {
 			});
 		}
 	}, [notify, searchParams, t, workspaceToast]);
-
-	const workspaceUtilitySlot = (
-		<VideoTaskCenter
-			items={workspaceTaskItems}
-			total={workspaceTaskItems.length}
-			isCancellingTaskId={
-				cancelTaskMutation.isPending ? cancelTaskMutation.variables ?? null : null
-			}
-			onCancel={(taskId) => cancelTaskMutation.mutate(taskId)}
-			onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-			onEnterTask={(taskId) => {
-				const item = workspaceTaskItems.find((entry) => entry.taskId === taskId);
-				void navigate(
-					item?.lifecycleStatus === 'completed'
-						? `/video/${taskId}`
-						: `/video/${taskId}/generating`,
-				);
-			}}
-		/>
-	);
 
 	return (
 		<WorkspaceInputShell
