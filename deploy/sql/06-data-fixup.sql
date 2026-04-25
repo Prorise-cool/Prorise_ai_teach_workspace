@@ -116,14 +116,26 @@ VALUES
   (5, '000000', '学员', 'student', 5, '5',
    1, 1, '0', '0', '学生端默认角色（注册自动绑定）', NOW());
 
+-- 学生端使用的全部 fastapi/ruoyi 受保护接口对应的功能权限种子
+-- video:task:* 用于 fastapi /video/task* 转发；classroom:session:* 用于 /classroom/session*
 INSERT IGNORE INTO sys_menu
   (menu_id, menu_name, parent_id, order_num, path, component, query_param,
    is_frame, is_cache, menu_type, visible, status, perms, icon, remark, create_time)
 VALUES
-  (21300, '视频任务创建', 0, 0, '', NULL, NULL,
-   1, 0, 'F', '1', '0', 'video:task:add', '#', 'fastapi 校验权限：创建视频任务', NOW());
+  (21300, '视频任务创建', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'video:task:add',         '#', '学生端必备：创建视频任务',  NOW()),
+  (21301, '视频任务列表', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'video:task:list',        '#', '学生端必备：列表查询',      NOW()),
+  (21302, '视频任务查询', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'video:task:query',       '#', '学生端必备：详情查询',      NOW()),
+  (21303, '视频任务修改', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'video:task:edit',        '#', '学生端必备：状态修改',      NOW()),
+  (21304, '视频任务删除', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'video:task:remove',      '#', '学生端必备：删除任务',      NOW()),
+  (21310, '课堂会话列表', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'classroom:session:list', '#', '学生端必备：课堂列表',      NOW()),
+  (21311, '课堂会话查询', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'classroom:session:query','#', '学生端必备：课堂详情',      NOW()),
+  (21312, '课堂会话新增', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'classroom:session:add',  '#', '学生端必备：创建课堂',      NOW()),
+  (21313, '课堂会话修改', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'classroom:session:edit', '#', '学生端必备：修改课堂',      NOW()),
+  (21314, '课堂会话删除', 0, 0, '', NULL, NULL, 1, 0, 'F', '1', '0', 'classroom:session:remove','#', '学生端必备：删除课堂',     NOW());
 
-INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (5, 21300);
+INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
+  (5, 21300), (5, 21301), (5, 21302), (5, 21303), (5, 21304),
+  (5, 21310), (5, 21311), (5, 21312), (5, 21313), (5, 21314);
 
 INSERT IGNORE INTO sys_user_role (user_id, role_id)
 SELECT u.user_id, 5
