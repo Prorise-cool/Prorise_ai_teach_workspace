@@ -48,8 +48,8 @@ EXPOSE ${MAIN_PORT}
 
 # 健康检查：actuator/health 是 RuoYi/Spring Boot Admin/SnailJob 三者共有端点
 HEALTHCHECK --interval=20s --timeout=5s --start-period=90s --retries=10 \
-  CMD curl -fsS "http://127.0.0.1:${MAIN_PORT}/actuator/health" \
-        || curl -fsS "http://127.0.0.1:${MAIN_PORT}/" \
+  CMD curl -fsS -o /dev/null "http://127.0.0.1:${SERVER_PORT}/actuator/health" \
+        || curl -fs -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SERVER_PORT}/" | grep -qE '^(200|401)$' \
         || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java -Djava.security.egd=file:/dev/./urandom \
