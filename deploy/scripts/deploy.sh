@@ -20,20 +20,37 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ART="$ROOT/deploy/_artifacts"
 mkdir -p "$ART"
 
-REMOTE_HOST="${REMOTE_HOST:-prorise@38.76.207.214}"
+[[ -f "$ROOT/deploy/.env.prod" ]] || { echo "❌ deploy/.env.prod 不存在，先 cp .env.prod.example 并填值"; exit 1; }
+# 加载 .env.prod 取 SERVER_HOST/SERVER_SSH_PASSWORD
+set -a; . "$ROOT/deploy/.env.prod"; set +a
+
+REMOTE_HOST="${REMOTE_HOST:-${SERVER_HOST:-prorise@38.76.207.214}}"
 REMOTE_ROOT="${REMOTE_ROOT:-/home/prorise/xm-prod}"
 SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30}"
+
+# 选 ssh 包装器：有密码 → sshpass；无密码 → 假定 ssh-copy-id 已配
+if [[ -n "${SERVER_SSH_PASSWORD:-}" ]]; then
+  command -v sshpass >/dev/null 2>&1 || { echo "❌ 需要 sshpass：brew install sshpass"; exit 1; }
+  SSH="sshpass -p $SERVER_SSH_PASSWORD ssh $SSH_OPTS"
+  SCP="sshpass -p $SERVER_SSH_PASSWORD scp $SSH_OPTS"
+  RSYNC="sshpass -p $SERVER_SSH_PASSWORD rsync"
+  RSYNC_RSH="ssh $SSH_OPTS"
+else
+  SSH="ssh $SSH_OPTS"
+  SCP="scp $SSH_OPTS"
+  RSYNC="rsync"
+  RSYNC_RSH="ssh $SSH_OPTS"
+fi
 
 step() { printf "\n\033[1;35m[deploy] %s\033[0m\n" "$*"; }
 
 # ---- 0. 前置检查 ----------------------------------------------------------
 step "0/5 前置检查"
-[[ -f "$ROOT/deploy/.env.prod" ]] || { echo "❌ deploy/.env.prod 不存在，先 cp .env.prod.example 并填值"; exit 1; }
-ssh $SSH_OPTS -o BatchMode=yes "$REMOTE_HOST" "true" 2>/dev/null \
-  || { echo "❌ ssh 免密未配置：先 ssh-copy-id $REMOTE_HOST"; exit 1; }
-ssh $SSH_OPTS "$REMOTE_HOST" "test -d $REMOTE_ROOT/.git" \
-  || { echo "❌ 服务器 $REMOTE_ROOT 未 git clone，请先：ssh $REMOTE_HOST 'git clone <repo> $REMOTE_ROOT && cd $REMOTE_ROOT && git checkout deploy/prod'"; exit 1; }
-echo "[deploy]   ✅ 本地 .env.prod 存在 / ssh 通畅 / 服务器仓库就绪"
+$SSH "$REMOTE_HOST" "true" 2>/dev/null \
+  || { echo "❌ ssh 连不上 $REMOTE_HOST（密码错误或网络）"; exit 1; }
+$SSH "$REMOTE_HOST" "test -d $REMOTE_ROOT/.git" 2>/dev/null \
+  || { echo "❌ 服务器 $REMOTE_ROOT 未 git clone（需先初始化）"; exit 1; }
+echo "[deploy]   ✅ ssh 通畅 / 服务器仓库就绪"
 
 # ---- 1. 推 git ------------------------------------------------------------
 step "1/5 推送 deploy/prod 分支到 origin"
@@ -58,10 +75,15 @@ fi
 # ---- 4. 准备 artifacts 包 -------------------------------------------------
 step "4/5 准备 artifacts 上传包"
 
-# 4.1 jar（直接使用 build 出来的路径）
-cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/target/ruoyi-admin.jar"                          "$ART/"
-cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-monitor-admin/target/ruoyi-monitor-admin.jar"     "$ART/"
-cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-snailjob-server/target/ruoyi-snailjob-server.jar" "$ART/"
+# 4.1 jar 不再本地传输；服务器侧用 docker maven 镜像编译（见 remote-up.sh）
+# 仅当 BUILD_JARS_LOCAL=1 时才本地编译并上传
+if [[ "${BUILD_JARS_LOCAL:-0}" == "1" ]]; then
+  cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-admin/target/ruoyi-admin.jar"                                    "$ART/"
+  cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-monitor-admin/target/ruoyi-monitor-admin.jar"       "$ART/"
+  cp -f "$ROOT/packages/RuoYi-Vue-Plus-5.X/ruoyi-extend/ruoyi-snailjob-server/target/ruoyi-snailjob-server.jar"   "$ART/"
+else
+  rm -f "$ART/"ruoyi-*.jar
+fi
 
 # 4.2 dist tar
 tar -czf "$ART/admin-dist.tar.gz"   -C "$ROOT/packages/ruoyi-plus-soybean"   dist
@@ -75,13 +97,13 @@ ls -lh "$ART/" | awk 'NR>1 {printf "[deploy]   %s %s\n", $5, $9}'
 # ---- 5. 上传 + 触发远端 --------------------------------------------------
 step "5/5 上传 artifacts 并触发服务器部署"
 
-ssh $SSH_OPTS "$REMOTE_HOST" "mkdir -p $REMOTE_ROOT/_artifacts"
-rsync -azP -e "ssh $SSH_OPTS" "$ART/" "$REMOTE_HOST:$REMOTE_ROOT/_artifacts/"
+$SSH "$REMOTE_HOST" "mkdir -p $REMOTE_ROOT/_artifacts"
+$RSYNC -azP -e "$RSYNC_RSH" "$ART/" "$REMOTE_HOST:$REMOTE_ROOT/_artifacts/"
 
-# 把 remote-up.sh 也一起送上去（避免依赖 git pull 的版本同步问题）
-scp $SSH_OPTS "$SCRIPT_DIR/remote-up.sh" "$REMOTE_HOST:$REMOTE_ROOT/_artifacts/remote-up.sh"
+# 把 remote-up.sh 也一起送上去
+$SCP "$SCRIPT_DIR/remote-up.sh" "$REMOTE_HOST:$REMOTE_ROOT/_artifacts/remote-up.sh"
 
-ssh $SSH_OPTS "$REMOTE_HOST" "
+$SSH "$REMOTE_HOST" "
   cd $REMOTE_ROOT &&
   chmod +x _artifacts/remote-up.sh &&
   REMOTE_ROOT='$REMOTE_ROOT' bash _artifacts/remote-up.sh

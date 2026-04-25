@@ -9,8 +9,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$ROOT"
 
-SKIP_JARS="${SKIP_JARS:-0}"
+# 默认 SKIP_JARS=1：jar 在服务器侧用 docker maven 镜像构建，不本地传
+# 如需本地预 build（调试用）：BUILD_JARS_LOCAL=1 ./build-local.sh
+SKIP_JARS="${SKIP_JARS:-1}"
 SKIP_FE="${SKIP_FE:-0}"
+[[ "${BUILD_JARS_LOCAL:-0}" == "1" ]] && SKIP_JARS=0
 
 # ---- 1. RuoYi jars ---------------------------------------------------------
 if [[ "$SKIP_JARS" != "1" ]]; then
