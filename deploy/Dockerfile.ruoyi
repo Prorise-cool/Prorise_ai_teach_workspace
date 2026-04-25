@@ -1,0 +1,60 @@
+# ============================================================================
+# RuoYi Java 通用 Dockerfile（admin / monitor / snailjob 三服务共用）
+# build context = packages/RuoYi-Vue-Plus-5.X
+# 前置：本地已执行 mvn package -P prod，三个 target/*.jar 已就位
+#
+# 通过 build args 区分服务：
+#   docker build \
+#     --build-arg JAR_PATH=ruoyi-admin/target/ruoyi-admin.jar \
+#     --build-arg WORK_SUBDIR=server \
+#     --build-arg MAIN_PORT=8080
+# ============================================================================
+
+FROM bellsoft/liberica-openjdk-rocky:21.0.8-cds
+
+LABEL maintainer="Prorise <prorise@xm.prorisehub.com>"
+
+# ---- build args（compose 传入）-------------------------------------------
+ARG JAR_PATH
+ARG WORK_SUBDIR=server
+ARG MAIN_PORT=8080
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TZ=Asia/Shanghai \
+    JAVA_OPTS="" \
+    SERVER_PORT=${MAIN_PORT} \
+    SNAIL_PORT=28080 \
+    APP_HOME=/ruoyi/${WORK_SUBDIR}
+
+# ---- 系统补齐：curl（healthcheck）+ tzdata --------------------------------
+RUN microdnf install -y curl tzdata \
+    && microdnf clean all \
+    && ln -sf /usr/share/zoneinfo/$TZ /etc/localtime
+
+# ---- 应用目录 + 非 root 用户 ----------------------------------------------
+RUN groupadd -r ruoyi && useradd -r -g ruoyi -d ${APP_HOME} -s /sbin/nologin ruoyi \
+    && mkdir -p ${APP_HOME}/logs ${APP_HOME}/temp \
+    && chown -R ruoyi:ruoyi /ruoyi
+
+WORKDIR ${APP_HOME}
+
+# 拷 jar（COPY 失败说明 mvn package 没跑或 JAR_PATH 错）
+COPY --chown=ruoyi:ruoyi ${JAR_PATH} ./app.jar
+
+USER ruoyi
+
+EXPOSE ${MAIN_PORT}
+
+# 健康检查：actuator/health 是 RuoYi/Spring Boot Admin/SnailJob 三者共有端点
+HEALTHCHECK --interval=20s --timeout=5s --start-period=90s --retries=10 \
+  CMD curl -fsS "http://127.0.0.1:${MAIN_PORT}/actuator/health" \
+        || curl -fsS "http://127.0.0.1:${MAIN_PORT}/" \
+        || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java -Djava.security.egd=file:/dev/./urandom \
+  -Dserver.port=${SERVER_PORT} \
+  -Dsnail-job.port=${SNAIL_PORT} \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  ${JAVA_OPTS} \
+  -jar app.jar"]

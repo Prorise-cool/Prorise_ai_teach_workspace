@@ -1,0 +1,22 @@
+# ============================================================================
+# admin-fe（ruoyi-plus-soybean）静态文件镜像
+# build context = 仓库根目录
+# 前置：本地已 pnpm --filter ruoyi-plus-soybean build，dist 已生成
+# ============================================================================
+
+FROM nginx:1.27-alpine
+
+LABEL maintainer="Prorise"
+
+# 删默认 conf，放自定义
+RUN rm /etc/nginx/conf.d/default.conf
+COPY deploy/nginx-fe/admin-fe.conf /etc/nginx/conf.d/default.conf
+
+# 拷已 build 好的 dist（COPY 失败 = 本地没跑 pnpm build）
+COPY packages/ruoyi-plus-soybean/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+# nginx:alpine 自带 healthcheck 不便，由 compose 通过 wget 检测根路径
+
+CMD ["nginx", "-g", "daemon off;"]

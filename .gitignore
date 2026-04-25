@@ -39,6 +39,9 @@ coverage/
 .env.local
 .env.*.local
 !.env.example
+# 生产部署密钥（仅 example 进 git）
+deploy/.env.prod
+!deploy/.env.prod.example
 
 # ===========================================
 # Logs
@@ -193,3 +196,6 @@ references/manim-to-video-claw/*.egg-info/
 .cursor/
 # Reference projects (external examples)
 references/
+
+# 部署产物缓存（jar/dist tar/dump.sql.gz/.env.prod 副本，全是密钥）
+deploy/_artifacts/

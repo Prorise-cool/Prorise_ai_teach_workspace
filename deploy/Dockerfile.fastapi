@@ -1,0 +1,81 @@
+# ============================================================================
+# FastAPI 单镜像（API + Worker 共用）
+# build context = 仓库根目录（compose 已设置）
+#   docker compose -f deploy/docker-compose.yml build fastapi
+#
+# 入口分流（见 fastapi-entrypoint.sh）：
+#   command: api      → uvicorn app.main:app
+#   command: worker   → dramatiq app.worker
+#   command: shell    → /bin/bash 进容器调试
+# ============================================================================
+
+FROM python:3.11-slim AS base
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Shanghai \
+    LANG=C.UTF-8
+
+# ---- 系统依赖（manim 渲染 + LaTeX + 字体 + ffmpeg + curl 健康检查）-------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        # manim 渲染核心
+        libcairo2-dev libpango1.0-dev pkg-config build-essential python3-dev \
+        # LaTeX 精简（避免 texlive-full 4GB+）
+        texlive-latex-base texlive-latex-extra texlive-fonts-recommended \
+        texlive-lang-chinese texlive-xetex texlive-luatex \
+        dvisvgm ghostscript \
+        # CJK 字体
+        fonts-noto-cjk fonts-noto-cjk-extra fonts-wqy-microhei fonts-wqy-zenhei \
+        fontconfig \
+        # 音视频 + 工具
+        ffmpeg curl tini \
+    && fc-cache -fv \
+    && apt-get purge -y --auto-remove build-essential python3-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- 应用依赖（先拷 pyproject 触发 layer 缓存）----------------------------
+WORKDIR /app
+COPY packages/fastapi-backend/pyproject.toml ./pyproject.toml
+COPY packages/fastapi-backend/README.md ./README.md
+
+# 先装运行时第三方库（pyproject 列出的） + manim 渲染所需
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install \
+        "fastapi>=0.115,<1.0" \
+        "uvicorn[standard]>=0.34,<1.0" \
+        "pydantic-settings>=2.7,<3.0" \
+        "dramatiq[redis]>=1.17,<2.0" \
+        "python-multipart>=0.0.20,<1.0" \
+        "httpx>=0.28,<1.0" \
+        "openai>=1.30,<2.0" \
+        "cryptography>=44.0,<45.0" \
+        "Jinja2>=3.1,<4.0" \
+        "langgraph>=0.2,<1.0" \
+        "langchain-core>=0.3,<1.0" \
+        "pypdf>=5.0,<6.0" \
+        "partial-json-parser>=0.2,<1.0" \
+        "manim==0.19.0" \
+        "manim-voiceover" \
+        "numpy" "scipy" "sympy" "matplotlib" "aiofiles"
+
+# ---- 拷应用代码（最后一层，改代码不重装依赖）-----------------------------
+COPY packages/fastapi-backend/app ./app
+
+# 非 root 运行
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app \
+    && mkdir -p /app/.runtime/video-assets /app/.runtime/secrets /data/uploads/video \
+    && chown -R app:app /app /data
+
+# ---- entrypoint -----------------------------------------------------------
+COPY deploy/fastapi-entrypoint.sh /usr/local/bin/fastapi-entrypoint.sh
+RUN chmod +x /usr/local/bin/fastapi-entrypoint.sh
+
+USER app
+EXPOSE 8090
+
+# tini 收尸僵尸进程；entrypoint 按 $1 分流到 api / worker / shell
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/fastapi-entrypoint.sh"]
+CMD ["api"]

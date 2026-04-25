@@ -1,0 +1,65 @@
+# build context 排除清单（影响所有 Dockerfile 的 COPY 速度）
+# 控制在尽量小的体积，docker compose build 才不会慢得离谱
+
+# --- VCS / IDE ---
+.git
+.github
+.vscode
+.idea
+.serena
+.ccw
+.agent
+.agents
+
+# --- 缓存 / 临时 ---
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.turbo
+**/.next
+**/.nuxt
+
+# --- 运行时产物（重灾区，610MB+ 视频）---
+**/.runtime
+**/.venv
+**/venv
+**/dist
+!packages/ruoyi-plus-soybean/dist
+!packages/student-web/dist
+**/build
+**/coverage
+**/target
+!packages/RuoYi-Vue-Plus-5.X/**/target
+data
+tmp
+logs
+*.log
+
+# --- 工作区杂项 ---
+.workflow
+_bmad-output
+mocks
+references
+docs
+images
+Ux
+update_video_input_card.sh
+bench_video_pipeline.sh
+*.png
+!packages/**/*.png
+
+# --- 环境 / 密钥 ---
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+
+# --- macOS ---
+.DS_Store
+**/.DS_Store
+
+# --- pnpm ---
+pnpm-lock.yaml.bak
