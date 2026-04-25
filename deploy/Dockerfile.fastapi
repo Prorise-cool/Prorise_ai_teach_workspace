@@ -9,7 +9,8 @@
 #   command: shell    → /bin/bash 进容器调试
 # ============================================================================
 
-FROM python:3.11-slim AS base
+# Python 3.12：支持 PEP 701 嵌套 f-string（业务代码 scene_slide.py 依赖）
+FROM python:3.12-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
