@@ -133,6 +133,34 @@ SELECT u.user_id, 5
    AND u.user_type = 'sys_user'
    AND u.del_flag = '0';
 
+-- ---------------------------------------------------------------------------
+-- 9) MinIO OSS 公网域名配置（避免浏览器拿到 http://minio:9000/... 而 ERR_NAME_NOT_RESOLVED）
+--    前置：1panel openresty 已加 /oss/ → 127.0.0.1:19000 反代（详见 README）
+--    domain=https://xm.prorisehub.com/oss + is_https=Y → 上传后返回 URL 公网可读
+--    历史 sys_oss / xm_user_profile.avatar_url / xm_user_work.cover_url / sys_social.avatar 也批量回写
+-- ---------------------------------------------------------------------------
+UPDATE sys_oss_config
+   SET domain = 'https://xm.prorisehub.com/oss',
+       is_https = 'Y',
+       update_time = NOW()
+ WHERE config_key IN ('minio','image');
+
+UPDATE sys_oss
+   SET url = REPLACE(url, 'http://minio:9000', 'https://xm.prorisehub.com/oss')
+ WHERE url LIKE 'http://minio:9000%';
+
+UPDATE xm_user_profile
+   SET avatar_url = REPLACE(avatar_url, 'http://minio:9000', 'https://xm.prorisehub.com/oss')
+ WHERE avatar_url LIKE 'http://minio:9000%';
+
+UPDATE xm_user_work
+   SET cover_url = REPLACE(cover_url, 'http://minio:9000', 'https://xm.prorisehub.com/oss')
+ WHERE cover_url LIKE 'http://minio:9000%';
+
+UPDATE sys_social
+   SET avatar = REPLACE(avatar, 'http://minio:9000', 'https://xm.prorisehub.com/oss')
+ WHERE avatar LIKE 'http://minio:9000%';
+
 SET FOREIGN_KEY_CHECKS=1;
 
 -- ============================================================================

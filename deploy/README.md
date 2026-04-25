@@ -100,6 +100,7 @@ deploy/
         ├── /prod-api/           → 127.0.0.1:18080  (ruoyi-java，剥前缀)
         ├── /xiaomai/ /system/ /monitor/ /api/user/ /api/public/
         │                        → 127.0.0.1:18080  (ruoyi-java，不剥前缀)
+        ├── /oss/                → 127.0.0.1:19000  (MinIO S3 API，剥前缀，公网读图)
         └── /minio/console/      → 127.0.0.1:19001  (可选，建议 IP 白名单)
 
 仅内网 backend 网络：mysql:3306, redis:6379, ruoyi-monitor:9090, ruoyi-snailjob:8800
@@ -137,6 +138,16 @@ location /prod-api/ {
 
 location ~ ^/(xiaomai|system|monitor|api/user|api/public)/ {
     proxy_pass http://127.0.0.1:18080;
+}
+
+location ^~ /oss/ {
+    proxy_pass http://127.0.0.1:19000/;   # 末尾 / 剥掉 /oss/，给 MinIO path-style: /<bucket>/<key>
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    client_max_body_size 50m;
 }
 ```
 
