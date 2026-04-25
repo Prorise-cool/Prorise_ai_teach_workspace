@@ -47,10 +47,10 @@ USER ruoyi
 EXPOSE ${MAIN_PORT}
 
 # 健康检查：actuator/health 是 RuoYi/Spring Boot Admin/SnailJob 三者共有端点
+# 用根路径 / 当 healthcheck（admin/monitor/snailjob 都返回 200）
+# actuator 默认要登录会 401，不适合做 healthcheck
 HEALTHCHECK --interval=20s --timeout=5s --start-period=90s --retries=10 \
-  CMD curl -fsS -o /dev/null "http://127.0.0.1:${SERVER_PORT}/actuator/health" \
-        || curl -fs -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SERVER_PORT}/" | grep -qE '^(200|401)$' \
-        || exit 1
+  CMD curl -fsS -o /dev/null "http://127.0.0.1:${SERVER_PORT}/" || exit 1
 
 ENTRYPOINT ["sh", "-c", "exec java -Djava.security.egd=file:/dev/./urandom \
   -Dserver.port=${SERVER_PORT} \
