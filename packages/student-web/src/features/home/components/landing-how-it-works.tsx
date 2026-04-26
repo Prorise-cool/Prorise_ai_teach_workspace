@@ -25,12 +25,12 @@ export function LandingHowItWorks() {
 					<h3 className="text-4xl font-bold">{t('landing.howItWorks.title')}</h3>
 				</div>
 
-				<div className="mx-auto max-w-[1120px]">
+				<div className="mx-auto max-w-[1280px]">
 					{stepItems.map((item, index) => (
 						<div
 							key={item.title}
 							className={cn(
-								'mb-8 flex items-center gap-6',
+								'mb-16 flex items-center gap-10',
 								index % 2 === 1
 									? 'flex-col-reverse lg:flex-row-reverse'
 									: 'flex-col lg:flex-row'
@@ -47,11 +47,11 @@ export function LandingHowItWorks() {
 							</div>
 
 							<div className="relative flex flex-1 items-center justify-center">
-								<div className="absolute h-60 w-48 rounded-full bg-primary/20 blur-3xl" />
+								<div className="absolute h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
 								<img
 									src={item.imageSrc}
 									alt={item.imageAlt}
-									className="relative mx-auto w-[220px] object-contain md:w-[280px] lg:w-[320px]"
+									className="relative mx-auto w-full max-w-[560px] rounded-[var(--xm-radius-lg)] object-contain shadow-lg ring-1 ring-border/40 md:max-w-[640px] lg:max-w-[720px]"
 								/>
 							</div>
 						</div>

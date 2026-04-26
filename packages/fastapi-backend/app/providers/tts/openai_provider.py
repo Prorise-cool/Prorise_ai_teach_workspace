@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 from typing import Mapping
 
 import httpx
@@ -17,19 +18,38 @@ from app.providers.protocols import (
 
 _OPENAI_TTS_PATH = "/audio/speech"
 
+logger = logging.getLogger(__name__)
+
 
 class OpenAITTSProvider:
     """OpenAI /v1/audio/speech 兼容 TTS Provider。
 
     适用于 Edge TTS (travisvn/openai-edge-tts) 等提供 OpenAI 兼容接口的服务。
+
+    base_url 支持逗号分隔多个候选地址（例如
+    ``http://edge-tts:5050,http://localhost:5050``），调用时按顺序探测，
+    首个成功的端点会被 pin 住供后续请求复用。这样同一条 provider 配置
+    可同时覆盖容器网络（生产）与宿主机端口直连（本地开发）两种场景。
     """
 
     def __init__(self, config: ProviderRuntimeConfig) -> None:
         self.config = config
         self.provider_id = config.provider_id
 
-        base_url = require_setting(config, "base_url")
-        self._endpoint = base_url.rstrip("/") + _OPENAI_TTS_PATH
+        raw_base_url = require_setting(config, "base_url")
+        endpoints = [
+            url.strip().rstrip("/") + _OPENAI_TTS_PATH
+            for url in raw_base_url.split(",")
+            if url.strip()
+        ]
+        if not endpoints:
+            raise ProviderConfigurationError(
+                f"{config.provider_id} base_url 为空"
+            )
+        self._endpoints: list[str] = endpoints
+        self._active_endpoint: str | None = (
+            endpoints[0] if len(endpoints) == 1 else None
+        )
 
         self._api_key = require_setting(config, "api_key")
         if not self._api_key.isascii():
@@ -58,45 +78,72 @@ class OpenAITTSProvider:
         self, text: str, voice_config: object | None = None
     ) -> ProviderResult:
         voice = self._resolve_voice(voice_config)
-
         client = await self._get_client()
-        resp = await client.post(
-            self._endpoint,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": self._model,
-                "voice": voice,
-                "input": text,
-            },
-        )
-        raise_for_provider_status(self.provider_id, resp)
+        payload = {"model": self._model, "voice": voice, "input": text}
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
 
-        content_type = resp.headers.get("content-type", "")
-        if "audio" not in content_type:
-            raise ConnectionError(
-                f"{self.provider_id} returned non-audio response: {content_type}"
+        if self._active_endpoint is not None:
+            candidates = [self._active_endpoint]
+        else:
+            candidates = list(self._endpoints)
+
+        last_exc: Exception | None = None
+        for endpoint in candidates:
+            try:
+                resp = await client.post(endpoint, headers=headers, json=payload)
+                raise_for_provider_status(self.provider_id, resp)
+            except (httpx.RequestError, ConnectionError) as exc:
+                last_exc = exc
+                if self._active_endpoint == endpoint:
+                    # pinned endpoint 挂了，重置以便下次重新探测
+                    self._active_endpoint = None
+                logger.warning(
+                    "TTS endpoint unreachable, trying next  provider=%s endpoint=%s error=%s",
+                    self.provider_id,
+                    endpoint,
+                    exc,
+                )
+                continue
+
+            content_type = resp.headers.get("content-type", "")
+            if "audio" not in content_type:
+                raise ConnectionError(
+                    f"{self.provider_id} returned non-audio response: {content_type}"
+                )
+
+            if self._active_endpoint != endpoint:
+                logger.info(
+                    "TTS endpoint pinned  provider=%s endpoint=%s",
+                    self.provider_id,
+                    endpoint,
+                )
+                self._active_endpoint = endpoint
+
+            audio_format = "mp3"
+            if "ogg" in content_type:
+                audio_format = "ogg"
+            elif "wav" in content_type:
+                audio_format = "wav"
+
+            return ProviderResult(
+                provider=self.provider_id,
+                content=text,
+                metadata={
+                    "audioBase64": base64.b64encode(resp.content).decode("ascii"),
+                    "audioFormat": audio_format,
+                    "voice": voice,
+                    "model": self._model,
+                    "priority": self.config.priority,
+                },
             )
 
-        audio_format = "mp3"
-        if "ogg" in content_type:
-            audio_format = "ogg"
-        elif "wav" in content_type:
-            audio_format = "wav"
-
-        return ProviderResult(
-            provider=self.provider_id,
-            content=text,
-            metadata={
-                "audioBase64": base64.b64encode(resp.content).decode("ascii"),
-                "audioFormat": audio_format,
-                "voice": voice,
-                "model": self._model,
-                "priority": self.config.priority,
-            },
-        )
+        assert last_exc is not None
+        raise ConnectionError(
+            f"{self.provider_id} all base_url candidates failed: {last_exc}"
+        ) from last_exc
 
     def _resolve_voice(self, voice_config: object | None) -> str:
         if voice_config is None:

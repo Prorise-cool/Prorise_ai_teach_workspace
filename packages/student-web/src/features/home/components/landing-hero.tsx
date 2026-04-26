@@ -48,8 +48,8 @@ export function LandingHero() {
 					<img
 						src={
 							themeMode === 'dark'
-								? '/entry/hero-image-dark.jpg'
-								: '/entry/hero-image-light.jpg'
+								? 'https://bu.dusays.com/2026/04/26/69edb518ac673.png'
+								: 'https://bu.dusays.com/2026/04/26/69edb504f119c.png'
 						}
 						alt={t('landing.hero.imageAlt')}
 						className="xm-landing-hero-image w-full rounded-[var(--xm-radius-xl)] border border-t-2 border-[color:var(--xm-color-primary)] object-cover"

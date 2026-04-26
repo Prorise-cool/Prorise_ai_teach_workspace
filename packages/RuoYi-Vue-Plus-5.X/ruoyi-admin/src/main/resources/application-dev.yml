@@ -268,3 +268,6 @@ justauth:
       client-id: 10**********6
       client-secret: 1f7d08**********5b7**********29e
       redirect-uri: ${justauth.address}/social-callback?source=gitea
+
+--- # 注册默认角色（与 prod 对齐：学员角色 5）
+user.register.defaultRoleIds: 5

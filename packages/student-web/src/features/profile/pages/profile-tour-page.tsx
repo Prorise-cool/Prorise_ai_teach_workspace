@@ -2,7 +2,7 @@
  * 文件说明：用户配置引导的产品导览页。
  * 复刻设计稿的三步导览流程，并在结束时标记 onboarding 完成。
  */
-import { ArrowLeft, ImagePlus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -36,6 +36,11 @@ export function ProfileTourPage() {
       }) as Array<{ title: string; description: string }>,
     [t]
   );
+  const tourImages = [
+    'https://bu.dusays.com/2026/04/26/69edad8f1e6a0.gif',
+    'https://bu.dusays.com/2026/04/26/69edad8f12791.gif',
+    'https://bu.dusays.com/2026/04/26/69edad90345de.gif'
+  ];
   const returnTo = resolveProfileReturnTo(searchParams.get('returnTo'));
   const currentLanguage =
     appI18n.resolvedLanguage === 'en-US'
@@ -158,21 +163,21 @@ export function ProfileTourPage() {
                     ease: [0.22, 1, 0.36, 1]
                   }}
                 >
-                  <img 
-                    className="xm-profile-onboarding__gif-preview" 
-                    src="" 
-                    alt="Demo GIF placeholder" 
-                    style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0 }} 
+                  <img
+                    className="xm-profile-onboarding__gif-preview"
+                    src={tourImages[currentStep]}
+                    alt={t('profileSetup.tour.placeholderLabel', {
+                      index: currentStep + 1,
+                      title: currentSlide.title
+                    })}
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
                   />
-                  <div className="xm-profile-onboarding__placeholder-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <ImagePlus size={28} />
-                    <span>
-                      {t('profileSetup.tour.placeholderLabel', {
-                        index: currentStep + 1,
-                        title: currentSlide.title
-                      })}
-                    </span>
-                  </div>
                 </motion.div>
               </AnimatePresence>
             </div>
