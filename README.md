@@ -1,27 +1,41 @@
 # Prorise AI Teach Workspace
 
-> AI 教学视频智能体 —— 基于多 Agent 协作的自动化教学视频生成 SaaS 平台。
+> 🎓 **AI 教学视频智能体** —— 基于多 Agent 协作的自动化教学视频生成 SaaS 平台
+>
+> 让任何老师在 5 分钟内把"知识点 → 解题视频"自动产出，让任何学生在浏览器里观看、回放并发起 AI 答疑。
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/)
+[![Manim](https://img.shields.io/badge/Manim-0.19-FF6F00)](https://www.manim.community/)
 [![pnpm](https://img.shields.io/badge/pnpm-10.5-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
-[![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](./LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-24+-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](./LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-success)]()
+
+> ⚠️ **版权与许可** — 本仓库受 **商业专有许可（Proprietary License）** 保护。
+> 全部源代码、文档、设计资产、提示词、数据库结构与商业逻辑均为 **Prorise AI Teach Team** 的商业秘密与受著作权法保护的作品。
+> 未经书面授权，**严禁复制、修改、分发、反向工程、训练 AI 模型或用于任何商业用途**。详见 [`LICENSE`](./LICENSE)。
 
 ---
 
 ## 📑 目录
 
 - [核心特性](#-核心特性)
+- [系统架构一览](#-系统架构一览)
 - [技术栈](#-技术栈)
+- [业务领域](#-业务领域)
 - [仓库目录树](#-仓库目录树)
+- [目录详解：每一个顶层目录在做什么](#-目录详解每一个顶层目录在做什么)
 - [快速本地运行](#-快速本地运行)
 - [完整脚本速查](#-完整脚本速查)
 - [文档导航](#-文档导航)
 - [部署](#-部署)
+- [团队协作与贡献](#-团队协作与贡献)
 - [赛事信息](#-赛事信息)
-- [许可证](#-许可证)
+- [版权与许可证](#-版权与许可证)
 
 ---
 
@@ -36,6 +50,77 @@
 | **沙箱化渲染** | Manim 脚本 AST 静态扫描 + Docker 隔离执行，杜绝代码注入与污染宿主 |
 | **双前端栈** | React 19 学生端 + Vue 3 教务后台，按用户角色定制体验 |
 | **企业级文档** | 32 篇手册覆盖 arc42 + 4+1 + C4 + ISO 29119 + SRE/DORA |
+
+---
+
+## 🏛 系统架构一览
+
+```mermaid
+flowchart TB
+    subgraph Users[使用方]
+        T[👨‍🏫 老师]
+        S[👨‍🎓 学生]
+        A[🛡 教务管理员]
+    end
+
+    subgraph Edge[Edge / 反代]
+        N[Nginx]
+    end
+
+    subgraph Frontend[前端]
+        SF[学生端 SPA<br/>React 19 + Vite]
+        AF[管理后台 SPA<br/>Vue 3 Soybean]
+    end
+
+    subgraph Backend[后端]
+        FA[FastAPI 主进程<br/>REST + SSE 编排]
+        FW[Dramatiq Worker<br/>视频管线 / 长任务]
+        RJ[RuoYi-Plus<br/>账号 / RBAC / 配额]
+    end
+
+    subgraph Providers[AI Provider 抽象层]
+        L[LLM Providers<br/>OpenAI / Gemini / Qwen]
+        TT[TTS Providers<br/>OpenAI / 豆包]
+        ML[MLLM<br/>视觉自修反馈]
+    end
+
+    subgraph Data[数据底座]
+        MY[(MySQL 8)]
+        RE[(Redis 7)]
+        MI[(MinIO)]
+    end
+
+    subgraph Sandbox[渲染沙箱]
+        MN[Manim Docker<br/>+ LaTeX + 中文字体]
+    end
+
+    T -->|生产视频| AF
+    S -->|学习 / 答疑| SF
+    A -->|平台治理| AF
+    SF --> N --> FA
+    AF --> N --> RJ
+    FA -.鉴权.-> RJ
+    FA -->|enqueue| RE
+    FW -->|consume| RE
+    FW --> Providers
+    FW --> MN
+    FA --> MY
+    FW --> MY
+    FA --> MI
+    FW --> MI
+
+    style Users fill:#e3f2fd
+    style Frontend fill:#fff3e0
+    style Backend fill:#e8f5e9
+    style Providers fill:#fce4ec
+    style Data fill:#f3e5f5
+    style Sandbox fill:#fff8e1
+```
+
+> 📊 **图说：** 学生与教师走双前端 → Nginx 反代 → FastAPI 编排 + Dramatiq Worker → AI Provider 抽象层 + Manim 沙箱 → 关系库 / 缓存 / 对象存储。
+>
+> 📚 完整架构（含 4+1 视图、C4 容器图、运行时序图、部署拓扑、ADR 决策记录）请见
+> [`docs/01开发人员手册/003-架构设计/0001-系统架构总览.md`](./docs/01开发人员手册/003-架构设计/0001-系统架构总览.md)。
 
 ---
 
@@ -54,6 +139,23 @@
 | **动画引擎** | Manim Community Edition | 0.19.0 |
 | **包管理** | pnpm workspace + uv | pnpm 10.5 |
 | **部署** | Docker + Docker Compose | 24+ |
+
+---
+
+## 🎯 业务领域
+
+平台围绕「**教学场景下的 AI 助教**」展开，按领域划分为 6 个有界上下文（Bounded Context）：
+
+| 领域 | 中文 | 核心能力 | 主负责包 |
+|---|---|---|---|
+| **video** | 视频生产 | 题目 → 分镜 → Manim 代码 → 渲染 → TTS → 合成 | `packages/fastapi-backend/app/features/video/` |
+| **classroom** | 课堂服务 | 教师备课、教案管理、班级编排 | `packages/fastapi-backend/app/features/classroom/` |
+| **learning** | 学习中心 | 学习路径、错题本、学情追踪 | `packages/fastapi-backend/app/features/learning/` |
+| **companion** | AI 答疑 | 多轮对话、上下文保持、图片理解 | `packages/fastapi-backend/app/features/companion/` |
+| **knowledge** | 知识库 | 题库、知识点、教辅资料 | `packages/fastapi-backend/app/features/knowledge/` |
+| **auth + RBAC** | 账号与权限 | 登录、角色、配额、组织 | `packages/RuoYi-Vue-Plus-5.X/` （Java 端持有） |
+
+> 💡 **架构原则：** 账号体系由 RuoYi 持有，AI 能力由 FastAPI 提供，凭据通过 Bearer Token 透传。Provider 配置通过管理后台动态下发，业务代码不直连任何第三方 SDK。
 
 ---
 
@@ -170,6 +272,131 @@ Prorise_ai_teach_workspace/
     ├── pnpm-workspace.yaml
     └── pnpm-lock.yaml
 ```
+
+---
+
+## 🔍 目录详解：每一个顶层目录在做什么
+
+> 这一节回答两个问题：**这目录里放什么？为什么需要它？**
+
+### 📦 `packages/` —— 主代码工作区
+
+这是 **整个仓库唯一允许存放业务源代码** 的地方，按 pnpm workspace 多包管理。所有进程入口、依赖锁、测试都在这里。
+
+| 子包 | 角色 | 主语言 | 包名 | 进程数 |
+|---|---|---|---|---|
+| `fastapi-backend/` | AI 后端 + 视频管线 + Provider 路由 | Python 3.11+ | `prorise-fastapi-backend` | 2（主进程 + Worker） |
+| `student-web/` | 学生端 SPA（学习、答疑、视频播放） | TypeScript | `@xiaomai/student-web` | 1 |
+| `ruoyi-plus-soybean/` | 教务管理后台 SPA | TypeScript | `ruoyi-vue-plus` | 1 |
+| `RuoYi-Vue-Plus-5.X/` | Java 管理后台后端（账号 / RBAC / 配额） | Java 17+ | Maven 多模块 | 2（admin + snailjob） |
+
+**为什么是这样划分：** 学生端（高并发、读为主）与管理后台（低频、写为主）走双栈双入口；账号在 Java（成熟 RuoYi 生态），AI 在 Python（生态最成熟）。
+
+### 📚 `docs/` —— 开发者文档
+
+| 子目录 | 内容 | 体量 |
+|---|---|---|
+| `01开发人员手册/` | ⭐ 32 篇企业级开发手册（arc42 + 4+1 + C4 + ISO 29119 + SRE/DORA） | ~11000 行 |
+| `02 团队协作进度/` | Sprint 周报、回顾、协作记录 | 增量 |
+| `INDEX.md` | 文档总索引 | — |
+
+**面向对象：** 新人 onboarding、架构评审、合规审计、AI Agent 检索（含 0000-AI 快速导航索引）。
+
+### 🎯 `_bmad-output/` —— 唯一事实来源（SoT）
+
+> ⚠️ **铁律：** 仓库内任何关于产品需求、架构决策、Epic/Story、实施进度的事实，**全部以 `_bmad-output/` 为准**。其他文档与此处冲突，以本目录为准。
+
+| 子目录 | 角色 |
+|---|---|
+| `INDEX.md` | SoT 索引主入口 |
+| `project-context.md` | 项目语境快照（一文了解项目） |
+| `mempalace.yaml` | MemPalace 索引（AI 记忆检索入口） |
+| `planning-artifacts/` | PRD / 架构 / Epic 分片 |
+| `implementation-artifacts/` | Story / 实施记录 / 验收清单 |
+| `research/` | 调研报告（含技术选型、参考项目对标） |
+| `brainstorming/` | 头脑风暴归档 |
+
+**协作规则：** 任何 PR 必须挂在某个 Epic / Story 下，不挂不开 PR。
+
+### 🧠 `_bmad/` —— BMAD 流程系统
+
+BMAD 方法论的脚手架与模板（不含项目业务）。**仅修改不删除**。详见 `AGENTS.md`。
+
+### 📜 `contracts/` —— 接口契约（OpenAPI / JSON Schema）
+
+按业务域划分目录的接口契约源文件，是 **前后端协作的事实底稿**。
+
+```
+contracts/
+├── _shared/        # 共享错误模型、分页、SSE 事件类型
+├── auth/           # 登录、令牌、RBAC
+├── center/         # 教务中心
+├── classroom/      # 课堂服务
+├── companion/      # AI 答疑
+├── evidence/       # 学习证据
+├── learning/       # 学习中心
+├── task/  tasks/   # 任务编排
+└── video/          # 视频生产
+```
+
+**协作规则：** 修改接口必须先改契约，再改代码；契约版本变更必须双轨过渡。详见 [`004-开发规范/0005-契约与Mock资产规范`](./docs/01开发人员手册/004-开发规范/0005-契约与Mock资产规范.md)。
+
+### 🚢 `deploy/` —— 部署编排
+
+| 文件 | 用途 |
+|---|---|
+| `docker-compose.yml` | 生产环境编排（mysql / redis / minio / fastapi / fastapi-worker / ruoyi-java / ruoyi-snailjob / ruoyi-monitor / edge / minio-init） |
+| `Dockerfile.fastapi` | Python 后端镜像（多阶段构建） |
+| `Dockerfile.ruoyi` | Java 后端镜像 |
+| `Dockerfile.admin-fe` / `Dockerfile.student-fe` | 前端静态镜像（nginx-alpine） |
+| `nginx-fe/` | 反向代理配置（路由分发、SSE 不缓冲、HTTPS） |
+| `scripts/` | 数据库初始化、健康检查、备份恢复 |
+| `.env.prod.example` | 生产环境变量模板（端口 / 密码 / 域名） |
+
+**网络分区：** `edge`（外网入口）+ `backend`（后端进程）+ `prorise-internal`（数据底座，不暴露）。
+
+### 🐳 `docker/` —— 辅助 Docker 资源
+
+非生产部署用的 Docker 资源（本地工具镜像、调试容器、实验性沙箱）。生产编排在 `deploy/` 下。
+
+### 🎨 `mocks/` —— Mock 资产
+
+与 `contracts/` 配套的 Mock 数据，前端在断网或后端未就绪时使用。
+
+### 🔧 `scripts/` —— 仓库级脚本
+
+跨包工具脚本（如批量 lint、批量发版预演、数据迁移）。包内脚本应放各 package 的 `scripts/` 子目录。
+
+### 🔍 `references/` —— 参考项目
+
+**只读** 的第三方参考实现（`OpenMAIC` 多智能体课堂、`manim-to-video-claw` 视频流水线、`ManimCat` 等）。**严禁** 引用 `references/*` 路径作为运行时依赖。
+
+### 📄 顶层文档与配置
+
+| 文件 | 角色 |
+|---|---|
+| `README.md` | ⭐ 本文（仓库门面） |
+| `INDEX.md` | 仓库全局索引（更新频率最高） |
+| `ARCHITECTURE.md` | 架构导航入口 |
+| `AGENTS.md` | AI Agent 工作约定（MCP 调用规则、文档回写） |
+| `CLAUDE.md` | Claude Code 项目级指令 |
+| `CONTRIBUTING.md` | 贡献流程 |
+| `LICENSE` | ⚠️ 商业专有许可（Proprietary） |
+| `mempalace.yaml` | MemPalace 项目根索引 |
+| `package.json` | pnpm workspace 根（脚本命令在此） |
+| `pnpm-workspace.yaml` | workspace 包列表 |
+| `pnpm-lock.yaml` | 依赖锁（**必须 commit**） |
+
+### 📐 命名约定速查
+
+| 命名 | 含义 |
+|---|---|
+| `xm_` 前缀 | 数据库表（"小麦"业务前缀） |
+| `@xiaomai/*` | npm 包作用域 |
+| `_bmad-output/` | SoT，绝对权威 |
+| `references/` | 只读参考，不可引入 |
+| `_artifacts/`、`.runtime/` | 运行时产物，**不进 git** |
+| `docs/01开发人员手册/000X-*.md` | 4 位编号的章节文件 |
 
 ---
 
@@ -404,9 +631,24 @@ docker compose --env-file .env.prod up -d
 
 ---
 
-## 🤝 贡献
+## 🤝 团队协作与贡献
 
-请阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md) 与 [`AGENTS.md`](./AGENTS.md)。提交规范遵循 [Conventional Commits 1.0](https://www.conventionalcommits.org/)，PR 必须挂 `_bmad-output/` Epic / Story。
+> 本仓库 **不接受** 来自外部的 Pull Request。仅授权研发成员在内部开展工作。
+
+**内部协作流程：**
+
+1. **看记忆** — 任务开始前先查 [`mempalace.yaml`](./mempalace.yaml) 与 [`_bmad-output/INDEX.md`](./_bmad-output/INDEX.md)
+2. **挂 Story** — 所有改动必须挂在某个 Epic / Story 下，无 Story 不开 PR
+3. **走 GitHub Flow** — Issue → 短分支 → Draft PR → Review → Squash and merge
+4. **遵循规范**：
+   - 编码：[`004-开发规范/0001-编码规范`](./docs/01开发人员手册/004-开发规范/0001-编码规范.md)
+   - Git：[`004-开发规范/0002-Git工作流`](./docs/01开发人员手册/004-开发规范/0002-Git工作流.md)（Conventional Commits）
+   - 评审：[`004-开发规范/0003-代码审查标准`](./docs/01开发人员手册/004-开发规范/0003-代码审查标准.md)（Google CL 标准）
+   - BMAD：[`004-开发规范/0004-BMAD开发流程`](./docs/01开发人员手册/004-开发规范/0004-BMAD开发流程.md)
+   - 契约：[`004-开发规范/0005-契约与Mock资产规范`](./docs/01开发人员手册/004-开发规范/0005-契约与Mock资产规范.md)
+5. **回写文档** — 任务结束必须回写 `_bmad-output/INDEX.md` 与相关 sprint-status
+
+详见 [`CONTRIBUTING.md`](./CONTRIBUTING.md) + [`AGENTS.md`](./AGENTS.md) + [`CLAUDE.md`](./CLAUDE.md)。
 
 ---
 
@@ -415,10 +657,46 @@ docker compose --env-file .env.prod up -d
 - **赛事**：教育智能体应用创新赛（高职组）
 - **截止**：2026-04-25
 - **平台**：腾讯云智能体开发平台
-- **腾讯云产品文档**：见 [`docs/01开发人员手册/000-腾讯云产品文档/`](./docs/01开发人员手册/000-腾讯云产品文档/)
+- **腾讯云产品文档**：[`docs/01开发人员手册/000-腾讯云产品文档/`](./docs/01开发人员手册/000-腾讯云产品文档/)
 
 ---
 
-## 📜 许可证
+## ⚖️ 版权与许可证
 
-本项目采用 [Unlicense](./LICENSE) 许可证。
+> 🚫 **本仓库不是开源项目。**
+
+**版权所有 © 2026 Prorise AI Teach Team. All Rights Reserved.**
+
+本仓库受 **商业专有许可（Proprietary Commercial License）** 保护。
+
+| 严禁行为 | 说明 |
+|---|---|
+| ❌ 复制、镜像、缓存 | 不得复制本仓库到任何外部位置 |
+| ❌ 修改、衍生 | 不得制作派生作品 |
+| ❌ 分发、再许可、销售 | 不得以任何方式公开或转授权 |
+| ❌ 反向工程 | 不得反编译、解密、提取算法 |
+| ❌ AI 训练 | 不得用于训练任何机器学习模型 |
+| ❌ 竞品与公开发表 | 不得用于竞品开发、商业 SaaS、对外培训或学术发表 |
+
+| ✅ 仅允许行为 | 条件 |
+|---|---|
+| 经书面授权的内部研发 | 在本仓库内部、为本项目目的 |
+| 商业合作授权 | 签署正式商业许可协议后 |
+
+**侵权后果：** 立即终止授权 + 停止侵害 + 销毁副本 + 民事赔偿 + 行政查处 + 刑事追责。详见 [`LICENSE`](./LICENSE) 第 8 条。
+
+**法律适用：** 中华人民共和国法律。争议由权利人住所地有管辖权的人民法院管辖。
+
+> 📖 请于使用前完整阅读 [`LICENSE`](./LICENSE)。**通过访问、下载或克隆本仓库，即视为您已同意接受全部许可条款。**
+
+---
+
+<div align="center">
+
+**Prorise AI Teach Workspace** · Built with ❤️ for Education
+
+[文档体系](./docs/01开发人员手册/INDEX.md) · [BMAD SoT](./_bmad-output/INDEX.md) · [架构总览](./docs/01开发人员手册/003-架构设计/0001-系统架构总览.md) · [部署架构](./docs/01开发人员手册/008-部署与运维/0001-部署架构.md)
+
+Copyright © 2026 Prorise AI Teach Team. All Rights Reserved.
+
+</div>
