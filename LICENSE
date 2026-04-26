@@ -1,24 +1,122 @@
-This is free and unencumbered software released into the public domain.
+PRORISE AI TEACH —— 商业专有许可协议
+PRORISE AI TEACH —— PROPRIETARY COMMERCIAL LICENSE
 
-Anyone is free to copy, modify, publish, use, compile, sell, or
-distribute this software, either in source code form or as a compiled
-binary, for any purpose, commercial or non-commercial, and by any
-means.
+版本 / Version: 1.0
+生效日期 / Effective Date: 2026-04-25
+版权所有 / Copyright © 2026 Prorise AI Teach Team. All Rights Reserved.
 
-In jurisdictions that recognize copyright laws, the author or authors
-of this software dedicate any and all copyright interest in the
-software to the public domain. We make this dedication for the benefit
-of the public at large and to the detriment of our heirs and
-successors. We intend this dedication to be an overt act of
-relinquishment in perpetuity of all present and future rights to this
-software under copyright law.
+================================================================================
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+⚠ 重要声明 / IMPORTANT NOTICE
 
-For more information, please refer to <https://unlicense.org>
+本仓库（"Prorise AI Teach Workspace"，下称"本软件"）的全部源代码、文档、数据、
+配置、设计资产、商业逻辑、算法实现、提示词、数据库结构与训练数据，均为
+Prorise AI Teach 团队（下称"权利人"）的商业秘密与受著作权法保护的作品。
+
+本软件按 **专有许可（Proprietary License / All Rights Reserved）** 发布，
+**不属于任何开源协议**，未经权利人事先书面授权，任何个人或组织均不得对
+本软件进行复制、修改、合并、发布、分发、再许可、销售或用于任何形式的
+商业用途。
+
+================================================================================
+
+第 1 条 权利保留 / RESERVATION OF RIGHTS
+
+1.1 本软件涉及的所有知识产权——包括但不限于著作权、专利权、商标权、
+    商业秘密、技术诀窍（Know-how）、数据库权利及其他相关权益——均归权利人
+    单独所有。
+
+1.2 任何对本软件的访问行为均不构成对上述权利的转让、暗示授权或弃权。
+
+第 2 条 严格禁止行为 / STRICTLY PROHIBITED ACTS
+
+未经权利人事先签署的书面授权，任何接触者一律禁止：
+
+  (a) 复制、镜像、缓存或以任何形式存储本软件的全部或任何部分；
+  (b) 修改、改编、翻译、衍生、合并或制作派生作品；
+  (c) 分发、传播、上传、出售、出租、出借、转授权、共享或以任何形式公开本软件；
+  (d) 反向工程、反编译、反汇编、解密、提取或试图获取源代码、算法、模型权重；
+  (e) 将本软件全部或部分用于训练任何机器学习模型；
+  (f) 移除、修改或遮蔽任何版权声明、商标、署名或专有标识；
+  (g) 用于任何形式的竞品开发、商业产品、SaaS 服务、对外培训或学术发表；
+  (h) 将本软件接入任何未经授权的第三方系统、平台或公开仓库；
+  (i) 协助、教唆或便利任何第三方实施上述任一行为。
+
+第 3 条 内部使用授权 / INTERNAL USE GRANT
+
+3.1 经权利人书面记录在案的内部研发人员，可在 **本仓库内部、为本项目目的**
+    使用、修改和编译本软件，但不得将代码、产物或衍生物携带、复制、上传至
+    本仓库以外的任何系统、个人设备未授权位置或第三方平台。
+
+3.2 上述内部授权随员工离职、合作终止或权利人书面通知而 **立即自动终止**，
+    被授权方应立即销毁本地所有副本及衍生物。
+
+第 4 条 商业合作 / COMMERCIAL LICENSING
+
+如需商业使用、二次开发、集成、白标或采购授权，请通过下述渠道联系权利人，
+经签署正式商业许可协议并支付相应费用后方可获得授权：
+
+  • 商务联系 / Business Inquiries: 请联系 Prorise AI Teach 团队
+  • 任何未经书面授权的使用均视为侵权。
+
+第 5 条 第三方组件 / THIRD-PARTY COMPONENTS
+
+5.1 本软件可能引用、依赖或包含第三方开源组件（依其各自原始许可证发布），
+    其许可证条款见 docs/01开发人员手册/009-附录/0001-外部依赖与第三方服务.md。
+
+5.2 第三方组件的许可证仅约束其自身代码，**不改变本软件整体的专有性质**。
+    本软件作为整体仍受本许可证约束。
+
+第 6 条 不予担保 / NO WARRANTY
+
+本软件按"现状"提供，权利人不就适销性、特定用途适用性、不侵权、可用性、
+准确性、完整性或不间断运行作出任何明示或暗示的担保。
+
+第 7 条 责任限制 / LIMITATION OF LIABILITY
+
+在适用法律允许的最大范围内，权利人对任何因使用或无法使用本软件而产生的
+直接、间接、附带、特殊、衍生或惩罚性损害不承担任何责任。
+
+第 8 条 侵权救济 / REMEDIES FOR INFRINGEMENT
+
+8.1 任何违反本许可证的行为均构成侵权。权利人保留依法采取以下一项或多项
+    救济措施的权利：
+
+    (a) 立即终止全部授权；
+    (b) 要求侵权方立即停止侵害、销毁全部侵权副本及衍生物；
+    (c) 索赔实际损失、侵权所得或法定赔偿（以高者为准），并主张维权合理开支
+        （含律师费、公证费、调查费）；
+    (d) 提起民事诉讼、申请行政查处或追究刑事责任。
+
+8.2 侵权方应对其雇员、代理人、承包商及任何获其便利的第三方的违约行为
+    承担连带责任。
+
+第 9 条 法律适用与争议解决 / GOVERNING LAW AND DISPUTE RESOLUTION
+
+9.1 本许可证适用 **中华人民共和国法律**（不含冲突法规则）。
+
+9.2 因本许可证引起或与之相关的任何争议，应首先通过友好协商解决；协商不成的，
+    任一方均有权向权利人住所地有管辖权的人民法院提起诉讼。
+
+第 10 条 其他 / MISCELLANEOUS
+
+10.1 本许可证构成接触者与权利人就本软件使用的完整协议，取代此前所有口头
+     或书面的安排。
+
+10.2 本许可证任何条款若被认定为无效或不可执行，不影响其余条款的效力。
+
+10.3 权利人未行使或迟延行使任何权利不构成对该权利的弃权。
+
+10.4 本许可证的中、英文版本如存在歧义，**以中文版为准**。
+
+================================================================================
+
+通过访问、下载、克隆或以任何形式接触本仓库，即视为您已阅读、理解并同意
+受本许可证全部条款约束。如不同意，请立即停止访问并销毁所有本地副本。
+
+BY ACCESSING, DOWNLOADING, CLONING, OR OTHERWISE OBTAINING THIS REPOSITORY
+IN ANY MANNER, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREED
+TO BE BOUND BY ALL TERMS OF THIS LICENSE. IF YOU DO NOT AGREE, IMMEDIATELY
+CEASE ACCESS AND DESTROY ALL LOCAL COPIES.
+
+Copyright © 2026 Prorise AI Teach Team. All Rights Reserved.
