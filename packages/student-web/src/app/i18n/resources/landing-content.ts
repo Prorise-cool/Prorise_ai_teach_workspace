@@ -152,32 +152,32 @@ export const zhCnLandingResources = {
           badge: '输入',
           title: '输入知识点、题目或拍照上传',
           description:
-            '支持打字、粘贴与 OCR 识图，让用户只关注“我想学什么”。',
-          imageSrc: '/entry/roboto.png',
+            '支持打字、粘贴与视觉识图，让用户只关注“我想学什么”。',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb561805ea.png',
           imageAlt: '输入知识点的流程插画'
         },
         {
-          badge: '匹配',
-          title: '选择最适合你的 AI 老师',
+          badge: '响应',
+          title: '系统会在等待中快速给予你答复',
           description:
-            '严肃、幽默、耐心、高效四种风格对齐不同学习节奏和心理偏好。',
-          imageSrc: '/entry/runner.png',
-          imageAlt: 'AI 老师匹配流程插画'
+            '题目一提交即返回知识点摘要与解题脉络，等视频生成期间也能先理解题意。',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb5f52d87c.png',
+          imageAlt: '系统快速响应插画'
         },
         {
           badge: '生成',
-          title: '系统分阶段编排并透明反馈',
+          title: '全系统采用任务队列懒加载生成',
           description:
-            '题目理解、脚本编写、动画渲染、视频合成每一步都对用户可见。',
-          imageSrc: '/entry/pacheco.png',
-          imageAlt: '生成过程流程插画'
+            '脚本编写、动画渲染、配音合成分阶段排队执行，按需生产，最大限度减少等待。',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb9c5a9554.png',
+          imageAlt: '任务队列生成插画'
         },
         {
           badge: '扩展',
           title: '播放结果、继续追问、分享给同伴',
           description:
             '课堂不会停在一个视频上，而是能继续生成解释、测验和复习线索。',
-          imageSrc: '/entry/gamestation.png',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edbaba803b4.png',
           imageAlt: '结果扩展流程插画'
         }
       ]
@@ -599,32 +599,32 @@ export const enUsLandingResources = {
           badge: 'Input',
           title: 'Type a concept, paste text, or upload a snapshot',
           description:
-            'Users only focus on what they want to learn. XiaoMai handles the interface complexity.',
-          imageSrc: '/entry/roboto.png',
+            'Type, paste, or use vision OCR — focus only on what you want to learn.',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb561805ea.png',
           imageAlt: 'Input-step illustration'
         },
         {
-          badge: 'Match',
-          title: 'Choose the AI teacher that fits your rhythm',
+          badge: 'Respond',
+          title: 'Get an immediate answer while the video is being made',
           description:
-            'Serious, humorous, patient, and efficient cover different emotional and cognitive preferences.',
-          imageSrc: '/entry/runner.png',
-          imageAlt: 'Teacher-matching illustration'
+            'Submit a question and instantly receive a summary and reasoning outline — no idle waiting before the video is ready.',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb5f52d87c.png',
+          imageAlt: 'Quick response illustration'
         },
         {
           badge: 'Generate',
-          title: 'Watch the system work through visible stages',
+          title: 'Lazy-loaded task queue across the whole pipeline',
           description:
-            'Topic understanding, script drafting, animation rendering, and video compositing are all exposed clearly.',
-          imageSrc: '/entry/pacheco.png',
-          imageAlt: 'Generation-step illustration'
+            'Script drafting, animation rendering, and voice synthesis run as queued stages — produced on demand, with minimum wait.',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edb9c5a9554.png',
+          imageAlt: 'Task queue generation illustration'
         },
         {
           badge: 'Extend',
           title: 'Play the result, keep asking, and share it',
           description:
-            'The lesson does not stop at one video. XiaoMai keeps the learning loop alive with follow-up interactions.',
-          imageSrc: '/entry/gamestation.png',
+            'The lesson does not stop at one video. XiaoMai keeps the learning loop alive with follow-up explanations, quizzes, and review hints.',
+          imageSrc: 'https://bu.dusays.com/2026/04/26/69edbaba803b4.png',
           imageAlt: 'Extension-step illustration'
         }
       ]

@@ -101,7 +101,7 @@ export function LandingTopNav() {
 								<div className="grid gap-5 md:grid-cols-2">
 									<div className="overflow-hidden rounded-[var(--xm-radius-lg)] border border-border/60 bg-card">
 										<img
-											src="/entry/demo-img.jpg"
+											src="https://bu.dusays.com/2026/04/26/69edb5ab8dc8a.png"
 											alt=""
 											aria-hidden="true"
 											className="h-full w-full object-cover"
