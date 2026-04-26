@@ -367,10 +367,6 @@ contracts/
 
 跨包工具脚本（如批量 lint、批量发版预演、数据迁移）。包内脚本应放各 package 的 `scripts/` 子目录。
 
-### 🔍 `references/` —— 参考项目
-
-**只读** 的第三方参考实现（`OpenMAIC` 多智能体课堂、`manim-to-video-claw` 视频流水线、`ManimCat` 等）。**严禁** 引用 `references/*` 路径作为运行时依赖。
-
 ### 📄 顶层文档与配置
 
 | 文件 | 角色 |
@@ -394,7 +390,6 @@ contracts/
 | `xm_` 前缀 | 数据库表（"小麦"业务前缀） |
 | `@xiaomai/*` | npm 包作用域 |
 | `_bmad-output/` | SoT，绝对权威 |
-| `references/` | 只读参考，不可引入 |
 | `_artifacts/`、`.runtime/` | 运行时产物，**不进 git** |
 | `docs/01开发人员手册/000X-*.md` | 4 位编号的章节文件 |
 
