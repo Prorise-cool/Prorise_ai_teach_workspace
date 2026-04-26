@@ -199,3 +199,13 @@ references/
 
 # 部署产物缓存（jar/dist tar/dump.sql.gz/.env.prod 副本，全是密钥）
 deploy/_artifacts/
+
+# ===========================================
+# Bulky design / reference assets (history-cleaned, do not re-add)
+# ===========================================
+ManimToVideoClaw/
+docs/**/*.docx
+docs/**/*.psd
+docs/**/表情包/
+docs/03UI:UX 设计素材/
+docs/02UI与UX设计草稿/Ux/03UI:UX 设计素材/
